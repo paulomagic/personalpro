@@ -38,14 +38,6 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, onNavigate }) => {
                         onClick={() => onNavigate('calendar')}
                     />
 
-                    <div className="relative -top-6">
-                        <button
-                            className="size-16 rounded-full bg-blue-600 shadow-glow flex items-center justify-center text-white active:scale-95 transition-transform border-[6px] border-slate-950"
-                            onClick={() => { }}
-                        >
-                            <Plus size={32} strokeWidth={2.5} />
-                        </button>
-                    </div>
 
                     <NavButton
                         icon={Users}

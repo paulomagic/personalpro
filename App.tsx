@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Client, Workout } from './types';
-import { supabase, getCurrentUser } from './services/supabaseClient';
+// import { supabase, getCurrentUser } from './services/supabaseClient'; // REMOVED FOR DEMO MODE
 import LoginView from './views/LoginView';
 import DashboardView from './views/DashboardView';
 import AIBuilderView from './views/AIBuilderView';
@@ -12,47 +12,21 @@ import MetricsView from './views/MetricsView';
 import SettingsView from './views/SettingsView';
 import CalendarView from './views/CalendarView';
 import FinanceView from './views/FinanceView';
+import WorkoutBuilderView from './views/WorkoutBuilderView';
+import AssessmentView from './views/AssessmentView';
 import Layout from './components/Layout';
 
-const App: React.FC = () => {
+function App() {
   const [currentView, setCurrentView] = useState<View>(View.LOGIN);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [activeWorkout, setActiveWorkout] = useState<Workout | null>(null);
   const [user, setUser] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false); // No loading for demo
 
-  // Check for existing session on mount
-  useEffect(() => {
-    checkUser();
-
-    // Listen for auth changes
-    if (supabase) {
-      const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-        setUser(session?.user ?? null);
-        if (session?.user) {
-          setCurrentView(View.DASHBOARD);
-        } else {
-          setCurrentView(View.LOGIN);
-        }
-      });
-
-      return () => subscription.unsubscribe();
-    }
-  }, []);
-
-  const checkUser = async () => {
-    try {
-      const currentUser = await getCurrentUser();
-      setUser(currentUser);
-      if (currentUser) {
-        setCurrentView(View.DASHBOARD);
-      }
-    } catch (error) {
-      console.error('Error checking user:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Check for existing session on mount (Simulated)
+  // useEffect(() => {
+  //   checkUser();
+  // }, []);
 
   const navigateTo = (view: View, data?: any) => {
     if (view === View.CLIENT_PROFILE && data) {
@@ -84,21 +58,40 @@ const App: React.FC = () => {
       case 'finance':
         navigateTo(View.FINANCE);
         break;
+      case 'WORKOUT_BUILDER':
+        navigateTo(View.WORKOUT_BUILDER);
+        break;
     }
   };
 
   const handleLogout = async () => {
-    if (supabase) {
-      await supabase.auth.signOut();
-    }
+    // if (supabase) {
+    //   await supabase.auth.signOut();
+    // }
     setUser(null);
     navigateTo(View.LOGIN);
   };
 
   const handleLoginSuccess = (loggedUser: any) => {
-    setUser(loggedUser);
+    // Mock user for demo
+    const demoUser = {
+      id: 'demo-user-id',
+      email: 'demo@apex.com',
+      aud: 'authenticated',
+      created_at: new Date().toISOString(),
+      user_metadata: {
+        name: 'Rodrigo Campanato',
+        avatar_url: '/rodrigo-profile.png'
+      }
+    };
+    setUser(demoUser);
     navigateTo(View.DASHBOARD);
   };
+
+  const handleDemoLogin = () => {
+    handleLoginSuccess(null);
+  };
+
 
   // Helper to get active tab ID for the Layout Dock
   const getActiveTab = () => {
@@ -131,6 +124,7 @@ const App: React.FC = () => {
       case View.DASHBOARD:
         return (
           <DashboardView
+            user={user}
             onSelectClient={(client) => navigateTo(View.CLIENT_PROFILE, client)}
             onOpenAI={() => navigateTo(View.AI_BUILDER)}
             onOpenBrandHub={() => navigateTo(View.LOGO_LAB)}
@@ -138,15 +132,20 @@ const App: React.FC = () => {
           />
         );
       case View.AI_BUILDER:
-        return <AIBuilderView onBack={() => navigateTo(View.DASHBOARD)} onDone={() => navigateTo(View.DASHBOARD)} />;
+        return <AIBuilderView user={user} onBack={() => navigateTo(View.DASHBOARD)} onDone={() => navigateTo(View.DASHBOARD)} />;
       case View.CLIENT_PROFILE:
-        return <ClientProfileView client={selectedClient!} onBack={() => navigateTo(View.DASHBOARD)} onStartWorkout={(workout) => navigateTo(View.TRAINING_EXECUTION, workout)} />;
+        return <ClientProfileView
+          client={selectedClient!}
+          onBack={() => navigateTo(View.DASHBOARD)}
+          onStartWorkout={(workout) => navigateTo(View.TRAINING_EXECUTION, workout)}
+          onStartAssessment={() => navigateTo(View.ASSESSMENT)}
+        />;
       case View.TRAINING_EXECUTION:
         return <TrainingExecutionView workout={activeWorkout!} onFinish={() => navigateTo(View.DASHBOARD)} />;
       case View.LOGO_LAB:
         return <LogoLabView onBack={() => navigateTo(View.DASHBOARD)} />;
       case View.CLIENTS:
-        return <ClientsView onBack={() => navigateTo(View.DASHBOARD)} onSelectClient={(client) => navigateTo(View.CLIENT_PROFILE, client)} />;
+        return <ClientsView user={user} onBack={() => navigateTo(View.DASHBOARD)} onSelectClient={(client) => navigateTo(View.CLIENT_PROFILE, client)} />;
       case View.METRICS:
         return <MetricsView onBack={() => navigateTo(View.DASHBOARD)} />;
       case View.SETTINGS:
@@ -154,7 +153,36 @@ const App: React.FC = () => {
       case View.CALENDAR:
         return <CalendarView onBack={() => navigateTo(View.DASHBOARD)} />;
       case View.FINANCE:
-        return <FinanceView onBack={() => navigateTo(View.DASHBOARD)} />;
+        return <FinanceView user={user} onBack={() => navigateTo(View.DASHBOARD)} />;
+      case View.WORKOUT_BUILDER:
+        return (
+          <WorkoutBuilderView
+            user={user}
+            client={selectedClient}
+            onBack={() => navigateTo(View.DASHBOARD)}
+            onSave={() => {
+              navigateTo(View.DASHBOARD);
+            }}
+          />
+        );
+      case View.ASSESSMENT:
+        // Ensure we have a selected client, otherwise fallback
+        if (!selectedClient) {
+          // Ideally navigate to client selection, but for now back to Dashboard
+          return <DashboardView user={user} onSelectClient={setSelectedClient} onOpenAI={() => navigateTo(View.AI_BUILDER)} onNavigate={handleNavigation} />;
+        }
+        return (
+          <AssessmentView
+            user={user}
+            client={selectedClient}
+            onBack={() => navigateTo(View.CLIENT_PROFILE, selectedClient)}
+            onSave={(assessment) => {
+              // Here we would push the new assessment to the client object (mock logic for now)
+              // Then navigate back
+              navigateTo(View.CLIENT_PROFILE, selectedClient);
+            }}
+          />
+        );
       default:
         return <LoginView onLogin={handleLoginSuccess} />;
     }

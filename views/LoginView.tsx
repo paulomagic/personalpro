@@ -115,7 +115,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
       placeholder={placeholder}
       value={value}
       onChange={onChange}
-      className="w-full h-14 px-6 rounded-2xl border border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 outline-none transition-all font-medium shadow-sm hover:border-slate-300"
+      className="w-full h-14 px-6 rounded-2xl border border-white/10 bg-white/5 text-white placeholder:text-slate-500 focus:border-blue-500/50 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all font-medium"
     />
   );
 
@@ -123,12 +123,12 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
   if (showLogin || showRegister) {
     const isRegister = showRegister;
     return (
-      <div className="flex flex-col min-h-screen bg-slate-50 px-8 py-12">
+      <div className="flex flex-col min-h-screen bg-slate-950 px-8 py-12">
         <button
           onClick={() => { setShowLogin(false); setShowRegister(false); setError(null); }}
-          className="absolute top-12 left-6 size-10 rounded-full bg-white shadow-sm border border-slate-100 flex items-center justify-center hover:bg-slate-50 transition-colors"
+          className="absolute top-12 left-6 size-10 rounded-full bg-slate-900 border border-white/10 flex items-center justify-center text-slate-400 hover:text-white transition-colors"
         >
-          <span className="material-symbols-outlined text-slate-600">arrow_back</span>
+          <span className="material-symbols-outlined">arrow_back</span>
         </button>
 
         <div className="pt-12 pb-8 flex justify-center">
@@ -137,16 +137,16 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
           </div>
         </div>
 
-        <h1 className="text-3xl font-black text-slate-900 text-center mb-2 tracking-tight">
+        <h1 className="text-3xl font-black text-white text-center mb-2 tracking-tight">
           {isRegister ? 'Criar Conta' : 'Bem-vindo'}
         </h1>
-        <p className="text-slate-500 text-center mb-8 font-medium">
+        <p className="text-slate-400 text-center mb-8 font-medium">
           {isRegister ? 'Inicie sua jornada ultra-premium' : 'Acesse sua conta para continuar'}
         </p>
 
         {error && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-100 rounded-2xl">
-            <p className="text-red-600 text-sm text-center font-medium">{error}</p>
+          <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl">
+            <p className="text-red-400 text-sm text-center font-medium">{error}</p>
           </div>
         )}
 
@@ -159,7 +159,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
             <InputField type={showPassword ? "text" : "password"} placeholder="Senha" value={password} onChange={(e: any) => setPassword(e.target.value)} />
             <button
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300"
             >
               <span className="material-symbols-outlined text-xl">
                 {showPassword ? 'visibility' : 'visibility_off'}
@@ -171,7 +171,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
         <button
           onClick={isRegister ? handleRegister : handleLogin}
           disabled={loading}
-          className="w-full h-14 bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white font-bold rounded-2xl text-base transition-all shadow-xl shadow-blue-600/20 disabled:opacity-50 flex items-center justify-center"
+          className="w-full h-14 bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white font-bold rounded-2xl text-base transition-all shadow-xl shadow-blue-600/20 disabled:opacity-50 flex items-center justify-center border border-white/5"
         >
           {loading ? (
             <div className="size-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
@@ -182,7 +182,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
 
         <p className="text-center mt-6 text-sm text-slate-500">
           {isRegister ? 'Já tem uma conta?' : 'Não tem conta?'}
-          <button onClick={() => { setShowLogin(!isRegister); setShowRegister(!showRegister); setError(null); }} className="text-blue-600 font-bold ml-1 hover:underline">
+          <button onClick={() => { setShowLogin(!isRegister); setShowRegister(!showRegister); setError(null); }} className="text-blue-500 font-bold ml-1 hover:underline">
             {isRegister ? 'Entrar' : 'Criar conta'}
           </button>
         </p>
@@ -192,33 +192,33 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
 
   // Onboarding (Introduction)
   return (
-    <div className="flex flex-col min-h-screen bg-slate-50 text-slate-900 selection:bg-blue-100">
+    <div className="flex flex-col min-h-screen bg-slate-950 text-white selection:bg-blue-500/30">
       <div className="pt-14 pb-6 flex justify-center">
         <div className="flex items-center gap-2">
           <div className="size-8 bg-blue-600 rounded-lg flex items-center justify-center">
             <span className="material-symbols-outlined text-white text-lg">fitness_center</span>
           </div>
-          <span className="font-black text-xl tracking-tight text-slate-900">Apex Ultra</span>
+          <span className="font-black text-xl tracking-tight text-white">Apex Ultra</span>
         </div>
       </div>
 
       <div className="flex-1 flex items-center justify-center px-6 animate-fade-in py-8">
-        <div className="w-full max-w-sm aspect-[3/4] rounded-[32px] overflow-hidden shadow-2xl shadow-blue-900/10 border border-white bg-white relative group">
+        <div className="w-full max-w-sm aspect-[3/4] rounded-[32px] overflow-hidden shadow-2xl shadow-blue-900/10 border border-white/10 bg-slate-900 relative group">
           <img
             src="/hero.png"
             alt="Athlete"
-            className="w-full h-full object-cover"
+            className="w-full h-full object-cover opacity-80"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 via-transparent to-transparent"></div>
+          <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/20 to-transparent"></div>
         </div>
       </div>
 
       <div className="px-8 pb-8 pt-4 relative z-10">
         <div className="text-center mb-8 animate-slide-up">
-          <h1 className="text-3xl font-black text-slate-900 leading-tight tracking-tight mb-3">
+          <h1 className="text-3xl font-black text-white leading-tight tracking-tight mb-3">
             {slides[currentSlide].title}
           </h1>
-          <p className="text-sm text-slate-500 leading-relaxed max-w-[280px] mx-auto font-medium">
+          <p className="text-sm text-slate-400 leading-relaxed max-w-[280px] mx-auto font-medium">
             {slides[currentSlide].subtitle}
           </p>
         </div>
@@ -229,8 +229,8 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
               key={index}
               onClick={() => setCurrentSlide(index)}
               className={`h-1.5 rounded-full transition-all duration-300 ${index === currentSlide
-                ? 'w-8 bg-blue-600'
-                : 'w-2 bg-slate-200'
+                ? 'w-8 bg-blue-600 shadow-glow'
+                : 'w-2 bg-slate-800'
                 }`}
             />
           ))}
@@ -239,21 +239,21 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
         <div className="space-y-3 animate-slide-up stagger-2">
           <button
             onClick={() => setShowRegister(true)}
-            className="w-full h-14 bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white font-bold rounded-2xl text-sm transition-all shadow-xl shadow-blue-600/20 uppercase tracking-wider"
+            className="w-full h-14 bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white font-bold rounded-2xl text-sm transition-all shadow-xl shadow-blue-600/20 uppercase tracking-wider border border-white/5"
           >
             Começar Grátis
           </button>
 
           <button
             onClick={handleDemoLogin}
-            className="w-full h-14 bg-white hover:bg-slate-50 active:scale-[0.98] text-slate-900 font-bold rounded-2xl text-sm transition-all border border-slate-200 uppercase tracking-wider"
+            className="w-full h-14 bg-white/5 hover:bg-white/10 active:scale-[0.98] text-white font-bold rounded-2xl text-sm transition-all border border-white/10 uppercase tracking-wider"
           >
             Modo Demonstração
           </button>
         </div>
 
-        <p className="text-center mt-6 text-xs text-slate-400">
-          Já tem uma conta? <button onClick={() => setShowLogin(true)} className="text-blue-600 font-bold hover:underline">Entrar</button>
+        <p className="text-center mt-6 text-xs text-slate-500">
+          Já tem uma conta? <button onClick={() => setShowLogin(true)} className="text-blue-500 font-bold hover:underline">Entrar</button>
         </p>
       </div>
     </div>

@@ -1,40 +1,48 @@
 /* ================================================
-   APEX PREMIUM DESIGN SYSTEM - ULTRA LIGHT
+   APEX PREMIUM DESIGN SYSTEM - DARK MODE RESTORED
    ================================================ */
 
 :root {
-  /* Base Colors - Light & Clean */
-  --apex-bg: #F8FAFC;
-  --apex-white: #FFFFFF;
-  --apex-text-primary: #0F172A;
-  --apex-text-secondary: #64748B;
-  --apex-text-tertiary: #94A3B8;
+  /* Base Colors - Deep & Elegant */
+  --apex-bg: #020617;
+  /* Slate 950 */
+  --apex-surface: #0f172a;
+  /* Slate 900 */
+  --apex-surface-highlight: #1e293b;
+  /* Slate 800 */
 
-  /* Accent Colors - Vibrant */
+  --apex-text-primary: #F8FAFC;
+  /* Slate 50 */
+  --apex-text-secondary: #94A3B8;
+  /* Slate 400 */
+  --apex-text-tertiary: #64748B;
+  /* Slate 500 */
+
+  /* Accent Colors - Vibrant Neon */
   --apex-blue: #3B82F6;
-  --apex-blue-dark: #2563EB;
-  --apex-indigo: #4F46E5;
+  --apex-blue-glow: rgba(59, 130, 246, 0.5);
   --apex-violet: #8B5CF6;
   --apex-emerald: #10B981;
   --apex-amber: #F59E0B;
   --apex-rose: #F43F5E;
 
   /* Gradients */
-  --gradient-primary: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%);
-  --gradient-dark: linear-gradient(180deg, #1E293B 0%, #0F172A 100%);
-  --gradient-success: linear-gradient(135deg, #34D399 0%, #10B981 100%);
+  --gradient-main: linear-gradient(135deg, #0f172a 0%, #020617 100%);
+  --gradient-card: linear-gradient(145deg, rgba(30, 41, 59, 0.7) 0%, rgba(15, 23, 42, 0.6) 100%);
+  --gradient-blue: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%);
 
-  /* Shadows - Soft & Premium */
-  --shadow-sm: 0 2px 8px rgba(148, 163, 184, 0.1);
-  --shadow-md: 0 8px 24px rgba(148, 163, 184, 0.15);
-  --shadow-lg: 0 12px 32px rgba(148, 163, 184, 0.2);
-  --shadow-glow-blue: 0 8px 24px rgba(59, 130, 246, 0.25);
+  /* Glassmorphism */
+  --glass-bg: rgba(15, 23, 42, 0.6);
+  --glass-border: rgba(255, 255, 255, 0.08);
+
+  /* Shadows */
+  --shadow-lg: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+  --shadow-glow: 0 0 20px rgba(59, 130, 246, 0.25);
 
   /* Radius */
   --radius-lg: 16px;
   --radius-xl: 24px;
   --radius-2xl: 32px;
-  --radius-full: 9999px;
 }
 
 /* ================================================
@@ -58,61 +66,47 @@ body {
    ================================================ */
 
 /* Cards */
-.card-white {
-  background: var(--apex-white);
+.card-dark {
+  background: var(--gradient-card);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--glass-border);
   border-radius: var(--radius-2xl);
-  box-shadow: var(--shadow-sm);
-  border: 1px solid rgba(226, 232, 240, 0.8);
-  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: var(--shadow-lg);
 }
 
-.card-white:active {
+.card-dark:active {
   transform: scale(0.98);
+  transition: transform 0.2s;
 }
 
 .card-blue {
-  background: var(--gradient-primary);
+  background: var(--gradient-blue);
   border-radius: var(--radius-2xl);
-  box-shadow: var(--shadow-glow-blue);
+  box-shadow: var(--shadow-glow);
   color: white;
   border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.card-dark {
-  background: #0F172A;
-  border-radius: var(--radius-2xl);
-  color: white;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  position: relative;
+  overflow: hidden;
 }
 
 /* Pills / Quick Actions */
 .pill-action {
-  background: var(--apex-white);
+  background: rgba(30, 41, 59, 0.4);
   border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--glass-border);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 16px;
-  border: 1px solid rgba(226, 232, 240, 0.8);
+  padding: 12px;
   transition: all 0.2s ease;
 }
 
 .pill-action:active {
   transform: scale(0.95);
-  background: #F1F5F9;
-}
-
-.pill-icon {
-  width: 40px;
-  height: 40px;
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 8px;
-  font-size: 20px;
+  background: rgba(30, 41, 59, 0.6);
+  border-color: rgba(255, 255, 255, 0.15);
 }
 
 /* Typography */
@@ -124,67 +118,56 @@ body {
   color: var(--apex-text-secondary);
 }
 
-.text-value {
-  font-size: 24px;
-  font-weight: 800;
-  letter-spacing: -0.02em;
-  color: var(--apex-text-primary);
-}
-
-/* Avatars */
-.avatar-ring {
-  background: white;
-  padding: 2px;
-  border-radius: 50%;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
-
-/* Navigation */
-.nav-bar {
-  background: rgba(255, 255, 255, 0.9);
+/* Navigation - Bottom Bar */
+.nav-bar-dark {
+  background: rgba(2, 6, 23, 0.85);
+  /* Slate 950 with opacity */
   backdrop-filter: blur(20px);
-  border-top: 1px solid rgba(226, 232, 240, 0.8);
-  padding: 12px 24px 20px 24px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
 }
 
-.nav-item {
-  color: var(--apex-text-tertiary);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  font-size: 10px;
-  font-weight: 600;
-  transition: color 0.2s ease;
-}
-
-.nav-item.active {
-  color: var(--apex-blue);
-}
-
+/* Floating Action Button */
 .fab-main {
-  background: var(--gradient-primary);
-  box-shadow: var(--shadow-glow-blue);
+  background: var(--apex-blue);
+  box-shadow: 0 0 15px rgba(59, 130, 246, 0.4);
   color: white;
-  border-radius: 50%;
-  width: 64px;
-  height: 64px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-top: -32px;
   border: 4px solid var(--apex-bg);
 }
 
-/* Animations */
-.animate-fade-in {
-  animation: fadeIn 0.4s ease-out forwards;
+/* Inputs */
+.input-dark {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: white;
+  transition: all 0.2s;
 }
 
-@keyframes fadeIn {
+.input-dark:focus {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: var(--apex-blue);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+  outline: none;
+}
+
+.input-dark::placeholder {
+  color: rgba(255, 255, 255, 0.2);
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 0;
+  background: transparent;
+}
+
+/* Animations */
+.animate-slide-up {
+  animation: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes slideUp {
   from {
     opacity: 0;
-    transform: translateY(10px);
+    transform: translateY(20px);
   }
 
   to {
@@ -193,14 +176,16 @@ body {
   }
 }
 
-/* Layout Helpers */
-.glass-panel {
-  background: rgba(255, 255, 255, 0.7);
-  backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.5);
+.animate-fade-in {
+  animation: fadeIn 0.4s ease-out forwards;
 }
 
-::-webkit-scrollbar {
-  width: 0;
-  background: transparent;
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }

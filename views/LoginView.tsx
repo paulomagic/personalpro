@@ -1,13 +1,21 @@
 
 import React, { useState } from 'react';
+import { supabase } from '../services/supabaseClient';
 
 interface LoginViewProps {
-  onLogin: () => void;
+  onLogin: (user: any) => void;
 }
 
 const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [showLogin, setShowLogin] = useState(false);
+  const [showRegister, setShowRegister] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [name, setName] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
 
   const slides = [
     {
@@ -24,9 +32,142 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
     }
   ];
 
-  if (showLogin) {
+  const handleLogin = async () => {
+    if (!email || !password) {
+      setError('Preencha todos os campos');
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      if (!supabase) {
+        // Demo mode - skip auth
+        onLogin({ email, demo: true });
+        return;
+      }
+
+      const { data, error: authError } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
+
+      if (authError) {
+        setError(authError.message === 'Invalid login credentials'
+          ? 'Email ou senha incorretos'
+          : authError.message);
+        return;
+      }
+
+      if (data.user) {
+        onLogin(data.user);
+      }
+    } catch (err: any) {
+      setError('Erro ao fazer login. Tente novamente.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRegister = async () => {
+    if (!email || !password || !name) {
+      setError('Preencha todos os campos');
+      return;
+    }
+
+    if (password.length < 6) {
+      setError('A senha deve ter pelo menos 6 caracteres');
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      if (!supabase) {
+        // Demo mode - skip auth
+        onLogin({ email, name, demo: true });
+        return;
+      }
+
+      const { data, error: authError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: { name }
+        }
+      });
+
+      if (authError) {
+        if (authError.message.includes('already registered')) {
+          setError('Este email já está cadastrado');
+        } else {
+          setError(authError.message);
+        }
+        return;
+      }
+
+      if (data.user) {
+        // Check if email confirmation is required
+        if (data.user.identities?.length === 0) {
+          setError('Este email já está cadastrado');
+          return;
+        }
+
+        // If email confirmation is enabled, show message
+        if (!data.session) {
+          setError('Verifique seu email para confirmar o cadastro');
+          return;
+        }
+
+        onLogin(data.user);
+      }
+    } catch (err: any) {
+      setError('Erro ao criar conta. Tente novamente.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    if (!supabase) {
+      setError('Modo demo - login social indisponível');
+      return;
+    }
+
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: window.location.origin
+        }
+      });
+
+      if (error) {
+        setError(error.message);
+      }
+    } catch (err) {
+      setError('Erro ao fazer login com Google');
+    }
+  };
+
+  const handleDemoLogin = () => {
+    onLogin({ email: 'demo@personalpro.com', name: 'Rodrigo Campanato', demo: true });
+  };
+
+  // Register Form
+  if (showRegister) {
     return (
       <div className="flex flex-col min-h-screen bg-white px-8 py-12">
+        {/* Back Button */}
+        <button
+          onClick={() => { setShowRegister(false); setError(null); }}
+          className="absolute top-12 left-6 size-10 rounded-full bg-slate-50 flex items-center justify-center"
+        >
+          <span className="material-symbols-outlined text-slate-600">arrow_back</span>
+        </button>
+
         {/* Logo */}
         <div className="pt-12 pb-8 flex justify-center">
           <svg width="48" height="32" viewBox="0 0 48 32" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -35,38 +176,149 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
           </svg>
         </div>
 
-        <h1 className="text-[28px] font-bold text-slate-900 text-center mb-12">Bem-vindo de volta</h1>
+        <h1 className="text-[28px] font-bold text-slate-900 text-center mb-2">Criar Conta</h1>
+        <p className="text-slate-400 text-center mb-8">Comece sua jornada fitness</p>
+
+        {/* Error */}
+        {error && (
+          <div className="mb-4 p-4 bg-red-50 border border-red-100 rounded-2xl">
+            <p className="text-red-600 text-sm text-center">{error}</p>
+          </div>
+        )}
+
+        {/* Form */}
+        <div className="space-y-4 mb-6">
+          <input
+            type="text"
+            placeholder="Nome completo"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className="w-full h-14 px-5 rounded-2xl border border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:ring-0 outline-none transition-colors"
+          />
+          <input
+            type="email"
+            placeholder="Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="w-full h-14 px-5 rounded-2xl border border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:ring-0 outline-none transition-colors"
+          />
+          <div className="relative">
+            <input
+              type={showPassword ? "text" : "password"}
+              placeholder="Senha (mínimo 6 caracteres)"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full h-14 px-5 pr-12 rounded-2xl border border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:ring-0 outline-none transition-colors"
+            />
+            <button
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400"
+            >
+              <span className="material-symbols-outlined text-xl">
+                {showPassword ? 'visibility' : 'visibility_off'}
+              </span>
+            </button>
+          </div>
+        </div>
+
+        <button
+          onClick={handleRegister}
+          disabled={loading}
+          className="w-full h-14 bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white font-semibold rounded-2xl text-base transition-all shadow-lg shadow-blue-600/25 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+        >
+          {loading ? (
+            <div className="size-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+          ) : (
+            'Criar Conta'
+          )}
+        </button>
+
+        {/* Login Link */}
+        <p className="text-center mt-6 text-sm text-slate-400">
+          Já tem uma conta? <button onClick={() => { setShowRegister(false); setShowLogin(true); setError(null); }} className="text-blue-600 font-semibold hover:underline">Entrar</button>
+        </p>
+
+        <div className="flex-grow"></div>
+        <p className="text-center text-[10px] text-slate-300 font-medium tracking-widest uppercase pt-8">
+          PersonalPro
+        </p>
+      </div>
+    );
+  }
+
+  // Login Form
+  if (showLogin) {
+    return (
+      <div className="flex flex-col min-h-screen bg-white px-8 py-12">
+        {/* Back Button */}
+        <button
+          onClick={() => { setShowLogin(false); setError(null); }}
+          className="absolute top-12 left-6 size-10 rounded-full bg-slate-50 flex items-center justify-center"
+        >
+          <span className="material-symbols-outlined text-slate-600">arrow_back</span>
+        </button>
+
+        {/* Logo */}
+        <div className="pt-12 pb-8 flex justify-center">
+          <svg width="48" height="32" viewBox="0 0 48 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 16C12 9.373 17.373 4 24 4C30.627 4 36 9.373 36 16C36 22.627 30.627 28 24 28" stroke="#3B82F6" strokeWidth="3" strokeLinecap="round" fill="none" />
+            <path d="M36 16C36 22.627 30.627 28 24 28C17.373 28 12 22.627 12 16" stroke="#3B82F6" strokeWidth="3" strokeLinecap="round" fill="none" />
+          </svg>
+        </div>
+
+        <h1 className="text-[28px] font-bold text-slate-900 text-center mb-8">Bem-vindo de volta</h1>
+
+        {/* Error */}
+        {error && (
+          <div className="mb-4 p-4 bg-red-50 border border-red-100 rounded-2xl">
+            <p className="text-red-600 text-sm text-center">{error}</p>
+          </div>
+        )}
 
         {/* Form */}
         <div className="space-y-4 mb-6">
           <input
             type="email"
             placeholder="Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
             className="w-full h-14 px-5 rounded-2xl border border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:ring-0 outline-none transition-colors"
           />
           <div className="relative">
             <input
-              type="password"
+              type={showPassword ? "text" : "password"}
               placeholder="Senha"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
               className="w-full h-14 px-5 pr-12 rounded-2xl border border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:ring-0 outline-none transition-colors"
             />
-            <button className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400">
-              <span className="material-symbols-outlined text-xl">visibility_off</span>
+            <button
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400"
+            >
+              <span className="material-symbols-outlined text-xl">
+                {showPassword ? 'visibility' : 'visibility_off'}
+              </span>
             </button>
           </div>
         </div>
 
-        <button className="text-right text-sm text-slate-500 mb-8">Esqueci senha</button>
+        <button className="text-right text-sm text-slate-500 mb-6">Esqueci minha senha</button>
 
         <button
-          onClick={onLogin}
-          className="w-full h-14 bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white font-semibold rounded-2xl text-base transition-all shadow-lg shadow-blue-600/25"
+          onClick={handleLogin}
+          disabled={loading}
+          className="w-full h-14 bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white font-semibold rounded-2xl text-base transition-all shadow-lg shadow-blue-600/25 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
         >
-          Entrar
+          {loading ? (
+            <div className="size-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+          ) : (
+            'Entrar'
+          )}
         </button>
 
         {/* Divider */}
-        <div className="relative py-8">
+        <div className="relative py-6">
           <div className="absolute inset-0 flex items-center">
             <div className="w-full border-t border-slate-100"></div>
           </div>
@@ -77,13 +329,10 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
 
         {/* Social Buttons */}
         <div className="space-y-3">
-          <button className="w-full h-14 bg-white border border-slate-200 text-slate-900 font-medium rounded-2xl flex items-center justify-center gap-3 hover:bg-slate-50 transition-colors">
-            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none">
-              <path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09l.01-.01zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z" fill="currentColor" />
-            </svg>
-            Continuar com Apple
-          </button>
-          <button className="w-full h-14 bg-white border border-slate-200 text-slate-900 font-medium rounded-2xl flex items-center justify-center gap-3 hover:bg-slate-50 transition-colors">
+          <button
+            onClick={handleGoogleLogin}
+            className="w-full h-14 bg-white border border-slate-200 text-slate-900 font-medium rounded-2xl flex items-center justify-center gap-3 hover:bg-slate-50 transition-colors"
+          >
             <svg className="w-5 h-5" viewBox="0 0 24 24">
               <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
               <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
@@ -92,16 +341,30 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
             </svg>
             Continuar com Google
           </button>
+
+          <button
+            onClick={handleDemoLogin}
+            className="w-full h-14 bg-slate-900 text-white font-medium rounded-2xl flex items-center justify-center gap-3 hover:bg-slate-800 transition-colors"
+          >
+            <span className="material-symbols-outlined">play_arrow</span>
+            Entrar em Modo Demo
+          </button>
         </div>
+
+        {/* Register Link */}
+        <p className="text-center mt-6 text-sm text-slate-400">
+          Não tem conta? <button onClick={() => { setShowLogin(false); setShowRegister(true); setError(null); }} className="text-blue-600 font-semibold hover:underline">Criar conta</button>
+        </p>
 
         <div className="flex-grow"></div>
         <p className="text-center text-[10px] text-slate-300 font-medium tracking-widest uppercase pt-8">
-          Premium Fitness
+          PersonalPro
         </p>
       </div>
     );
   }
 
+  // Onboarding
   return (
     <div className="flex flex-col min-h-screen bg-white">
       {/* Logo */}
@@ -148,12 +411,20 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
           ))}
         </div>
 
-        {/* CTA Button */}
+        {/* CTA Buttons */}
         <button
-          onClick={onLogin}
-          className="w-full h-14 bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white font-semibold rounded-2xl text-base transition-all shadow-lg shadow-blue-600/25 flex items-center justify-center gap-2"
+          onClick={() => setShowRegister(true)}
+          className="w-full h-14 bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white font-semibold rounded-2xl text-base transition-all shadow-lg shadow-blue-600/25 flex items-center justify-center gap-2 mb-3"
         >
           Comece Sua Jornada
+        </button>
+
+        <button
+          onClick={handleDemoLogin}
+          className="w-full h-14 bg-slate-100 hover:bg-slate-200 active:scale-[0.98] text-slate-700 font-semibold rounded-2xl text-base transition-all flex items-center justify-center gap-2"
+        >
+          <span className="material-symbols-outlined text-lg">play_arrow</span>
+          Ver Demonstração
         </button>
 
         {/* Login Link */}

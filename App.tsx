@@ -1,6 +1,7 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Client, Workout } from './types';
+import { supabase, getCurrentUser } from './services/supabaseClient';
 import LoginView from './views/LoginView';
 import DashboardView from './views/DashboardView';
 import AIBuilderView from './views/AIBuilderView';
@@ -17,6 +18,41 @@ const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<View>(View.LOGIN);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [activeWorkout, setActiveWorkout] = useState<Workout | null>(null);
+  const [user, setUser] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  // Check for existing session on mount
+  useEffect(() => {
+    checkUser();
+
+    // Listen for auth changes
+    if (supabase) {
+      const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+        setUser(session?.user ?? null);
+        if (session?.user) {
+          setCurrentView(View.DASHBOARD);
+        } else {
+          setCurrentView(View.LOGIN);
+        }
+      });
+
+      return () => subscription.unsubscribe();
+    }
+  }, []);
+
+  const checkUser = async () => {
+    try {
+      const currentUser = await getCurrentUser();
+      setUser(currentUser);
+      if (currentUser) {
+        setCurrentView(View.DASHBOARD);
+      }
+    } catch (error) {
+      console.error('Error checking user:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const navigateTo = (view: View, data?: any) => {
     if (view === View.CLIENT_PROFILE && data) {
@@ -51,10 +87,35 @@ const App: React.FC = () => {
     }
   };
 
+  const handleLogout = async () => {
+    if (supabase) {
+      await supabase.auth.signOut();
+    }
+    setUser(null);
+    navigateTo(View.LOGIN);
+  };
+
+  const handleLoginSuccess = (loggedUser: any) => {
+    setUser(loggedUser);
+    navigateTo(View.DASHBOARD);
+  };
+
+  // Show loading screen while checking auth
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="size-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-slate-400 text-sm">Carregando...</p>
+        </div>
+      </div>
+    );
+  }
+
   const renderView = () => {
     switch (currentView) {
       case View.LOGIN:
-        return <LoginView onLogin={() => navigateTo(View.DASHBOARD)} />;
+        return <LoginView onLogin={handleLoginSuccess} />;
       case View.DASHBOARD:
         return (
           <DashboardView
@@ -77,13 +138,13 @@ const App: React.FC = () => {
       case View.METRICS:
         return <MetricsView onBack={() => navigateTo(View.DASHBOARD)} />;
       case View.SETTINGS:
-        return <SettingsView onBack={() => navigateTo(View.DASHBOARD)} onLogout={() => navigateTo(View.LOGIN)} />;
+        return <SettingsView onBack={() => navigateTo(View.DASHBOARD)} onLogout={handleLogout} />;
       case View.CALENDAR:
         return <CalendarView onBack={() => navigateTo(View.DASHBOARD)} />;
       case View.FINANCE:
         return <FinanceView onBack={() => navigateTo(View.DASHBOARD)} />;
       default:
-        return <LoginView onLogin={() => navigateTo(View.DASHBOARD)} />;
+        return <LoginView onLogin={handleLoginSuccess} />;
     }
   };
 

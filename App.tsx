@@ -103,10 +103,10 @@ const App: React.FC = () => {
   // Show loading screen while checking auth
   if (loading) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <div className="text-center">
-          <div className="size-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-slate-400 text-sm">Carregando...</p>
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+        <div className="text-center animate-fade-in">
+          <div className="size-16 border-4 border-blue-600/20 border-t-blue-500 rounded-full animate-spin mx-auto mb-6 shadow-glow"></div>
+          <p className="text-blue-400 font-black text-xs uppercase tracking-[0.3em] animate-pulse">Iniciando Protocolo Apex...</p>
         </div>
       </div>
     );
@@ -149,8 +149,12 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background-light dark:bg-slate-950 transition-colors duration-300">
-      {renderView()}
+    <div className="max-w-md mx-auto min-h-screen bg-slate-950 text-white selection:bg-blue-500/30 overflow-x-hidden relative">
+      <main className="animate-fade-in duration-700">
+        {renderView()}
+      </main>
+
+      {/* Global Toast / Notifications can go here */}
     </div>
   );
 };

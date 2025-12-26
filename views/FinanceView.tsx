@@ -90,215 +90,195 @@ const FinanceView: React.FC<FinanceViewProps> = ({ onBack }) => {
             : pendingPayments;
 
     return (
-        <div className="max-w-md mx-auto min-h-screen bg-slate-50 pb-8">
+        <div className="max-w-md mx-auto min-h-screen bg-slate-950 text-white selection:bg-blue-500/30 pb-12">
             {/* Success Toast */}
             {showSuccessToast && (
                 <div className="fixed top-4 left-4 right-4 max-w-md mx-auto z-50 animate-slide-down">
-                    <div className="bg-emerald-600 text-white px-4 py-3 rounded-2xl shadow-lg flex items-center gap-3">
+                    <div className="glass-card bg-emerald-500/10 border-emerald-500/20 text-emerald-400 px-4 py-3 rounded-2xl shadow-glow flex items-center gap-3">
                         <span className="material-symbols-outlined">check_circle</span>
-                        <span className="font-medium">{showSuccessToast}</span>
+                        <span className="font-black text-xs uppercase tracking-widest">{showSuccessToast}</span>
                     </div>
                 </div>
             )}
 
             {/* Header */}
-            <header className="bg-gradient-to-br from-emerald-500 to-emerald-600 px-6 pt-14 pb-8 rounded-b-[32px]">
-                <div className="flex items-center justify-between mb-6">
-                    <button onClick={onBack} className="size-10 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center active:scale-95 transition-transform">
+            <header className="px-6 pt-14 pb-8 animate-fade-in">
+                <div className="flex items-center justify-between mb-8">
+                    <button onClick={onBack} className="size-12 rounded-2xl glass-card flex items-center justify-center active:scale-90 transition-all">
                         <span className="material-symbols-outlined text-white">arrow_back</span>
                     </button>
-                    <h1 className="text-xl font-bold text-white">Financeiro</h1>
+                    <div className="text-center">
+                        <h1 className="text-xl font-black text-white tracking-tight">Financeiro</h1>
+                        <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest">Protocolo de Caixa</p>
+                    </div>
                     <button
                         onClick={handleGenerateReport}
-                        className="size-10 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center active:scale-95 transition-transform"
+                        className="size-12 rounded-2xl glass-card flex items-center justify-center active:scale-95 transition-all text-blue-400"
                     >
-                        <span className="material-symbols-outlined text-white">download</span>
+                        <span className="material-symbols-outlined">download</span>
                     </button>
                 </div>
 
-                {/* Monthly Revenue */}
-                <div className="text-center">
-                    <p className="text-emerald-100 text-sm font-medium mb-1">Receita de Dezembro</p>
-                    <h2 className="text-[48px] font-bold text-white leading-none">
+                {/* Monthly Revenue Card */}
+                <div className="glass-card rounded-[40px] p-8 text-center shadow-glow relative overflow-hidden group">
+                    <div className="absolute inset-0 bg-gradient-to-br from-blue-600/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                    <p className="text-slate-500 text-[10px] font-black uppercase tracking-[0.3em] mb-3">Receita Acumulada</p>
+                    <h2 className="text-5xl font-black text-white leading-none tracking-tighter mb-4 tabular-nums">
                         R$ {stats.monthlyRevenue.toLocaleString('pt-BR')}
                     </h2>
-                    <div className="flex items-center justify-center gap-1 mt-2 text-emerald-100">
-                        <span className="material-symbols-outlined text-lg">trending_up</span>
-                        <span className="text-sm font-medium">+18% vs mês anterior</span>
+                    <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/10">
+                        <span className="material-symbols-outlined text-sm">trending_up</span>
+                        <span className="text-[9px] font-black uppercase tracking-widest">+18.5% este mês</span>
                     </div>
                 </div>
             </header>
 
-            {/* Quick Stats */}
-            <div className="px-6 -mt-6">
-                <div className="bg-white rounded-[24px] p-4 shadow-lg shadow-slate-200/50 grid grid-cols-3 gap-4">
-                    <div className="text-center">
-                        <p className="text-2xl font-bold text-slate-900">{stats.clients}</p>
-                        <p className="text-xs text-slate-400">Alunos</p>
+            <main className="px-6 space-y-8">
+                {/* Quick Stats Grid */}
+                <div className="grid grid-cols-2 gap-4 animate-slide-up">
+                    <div className="glass-card rounded-[28px] p-5">
+                        <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Pendentes</p>
+                        <p className="text-xl font-black text-white tabular-nums">R$ {stats.pending.toLocaleString('pt-BR')}</p>
                     </div>
-                    <div className="text-center border-x border-slate-100">
-                        <p className="text-2xl font-bold text-amber-500">R$ {stats.pending.toLocaleString('pt-BR')}</p>
-                        <p className="text-xs text-slate-400">Pendente</p>
-                    </div>
-                    <div className="text-center">
-                        <p className="text-2xl font-bold text-red-500">R$ {stats.overdue.toLocaleString('pt-BR')}</p>
-                        <p className="text-xs text-slate-400">Atrasado</p>
+                    <div className="glass-card rounded-[28px] p-5">
+                        <p className="text-[9px] font-black text-red-500 uppercase tracking-widest mb-1">Atrasados</p>
+                        <p className="text-xl font-black text-red-400 tabular-nums">R$ {stats.overdue.toLocaleString('pt-BR')}</p>
                     </div>
                 </div>
-            </div>
 
-            {/* Tabs */}
-            <div className="px-6 mt-6">
-                <div className="flex bg-slate-100 rounded-2xl p-1">
-                    {(['overview', 'pending', 'history'] as const).map((tab) => (
-                        <button
-                            key={tab}
-                            onClick={() => setActiveTab(tab)}
-                            className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-colors ${activeTab === tab ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'
-                                }`}
-                        >
-                            {tab === 'overview' ? 'Visão Geral' : tab === 'pending' ? 'Pendentes' : 'Histórico'}
-                        </button>
-                    ))}
-                </div>
-            </div>
-
-            {/* Payments List */}
-            <div className="px-6 mt-6">
-                <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-bold text-slate-900">
-                        {activeTab === 'history' ? 'Pagamentos Recebidos' : 'Cobranças Pendentes'}
-                    </h3>
-                    {activeTab !== 'history' && (
-                        <span className="px-2 py-1 bg-amber-100 text-amber-700 text-xs font-bold rounded-full">
-                            {pendingPayments.length}
-                        </span>
-                    )}
-                </div>
-
-                <div className="space-y-3">
-                    {displayPayments.length === 0 ? (
-                        <div className="text-center py-8 text-slate-400">
-                            <span className="material-symbols-outlined text-4xl mb-2">check_circle</span>
-                            <p>Tudo em dia!</p>
-                        </div>
-                    ) : (
-                        displayPayments.map((payment) => (
+                {/* Tabs */}
+                <div className="animate-slide-up stagger-1">
+                    <div className="flex bg-white/5 rounded-2xl p-1 border border-white/5">
+                        {(['overview', 'pending', 'history'] as const).map((tab) => (
                             <button
-                                key={payment.id}
-                                onClick={() => setShowPaymentModal(payment)}
-                                className="w-full bg-white rounded-[20px] p-4 border border-slate-100 shadow-sm flex items-center gap-4 active:scale-[0.99] transition-all text-left"
+                                key={tab}
+                                onClick={() => setActiveTab(tab)}
+                                className={`flex-1 py-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${activeTab === tab ? 'bg-blue-600 text-white shadow-glow' : 'text-slate-500 hover:text-slate-300'
+                                    }`}
                             >
-                                <div
-                                    className="size-12 rounded-full bg-cover bg-center border-2 border-white shadow-sm"
-                                    style={{ backgroundImage: `url(${payment.clientAvatar})` }}
-                                />
-
-                                <div className="flex-1 min-w-0">
-                                    <h4 className="font-bold text-slate-900">{payment.clientName}</h4>
-                                    <p className="text-xs text-slate-400">{payment.plan} • Vence {payment.dueDate}</p>
-                                </div>
-
-                                <div className="text-right">
-                                    <p className="font-bold text-slate-900">R$ {payment.amount}</p>
-                                    <span className={`text-[10px] font-bold uppercase ${payment.status === 'paid' ? 'text-emerald-500' :
-                                            payment.status === 'overdue' ? 'text-red-500' : 'text-amber-500'
-                                        }`}>
-                                        {payment.status === 'paid' ? 'Pago' : payment.status === 'overdue' ? 'Atrasado' : 'Pendente'}
-                                    </span>
-                                </div>
+                                {tab === 'overview' ? 'Geral' : tab === 'pending' ? 'Pendentes' : 'Histórico'}
                             </button>
-                        ))
-                    )}
+                        ))}
+                    </div>
                 </div>
-            </div>
 
-            {/* Quick Actions */}
-            <div className="px-6 mt-6">
-                <h3 className="text-lg font-bold text-slate-900 mb-4">Ações Rápidas</h3>
+                {/* Payments List */}
+                <div className="animate-slide-up stagger-2">
+                    <div className="flex items-center justify-between mb-4 px-1">
+                        <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                            {activeTab === 'history' ? 'Transações Realizadas' : 'Fluxo de Recebíveis'}
+                        </h3>
+                        {activeTab !== 'history' && (
+                            <span className="size-5 rounded-md bg-blue-500/10 text-blue-400 text-[10px] font-black flex items-center justify-center">
+                                {pendingPayments.length}
+                            </span>
+                        )}
+                    </div>
 
-                <div className="grid grid-cols-2 gap-3">
-                    <button
-                        onClick={() => pendingPayments[0] && setShowPaymentModal(pendingPayments[0])}
-                        className="bg-white rounded-[20px] p-4 border border-slate-100 flex flex-col items-center gap-2 active:scale-[0.98] transition-transform"
-                    >
-                        <div className="size-12 rounded-xl bg-blue-50 flex items-center justify-center">
-                            <span className="material-symbols-outlined text-blue-600">send</span>
-                        </div>
-                        <p className="text-sm font-semibold text-slate-900">Enviar Cobrança</p>
-                    </button>
+                    <div className="space-y-3">
+                        {displayPayments.length === 0 ? (
+                            <div className="glass-card rounded-[32px] py-12 text-center text-slate-500">
+                                <span className="material-symbols-outlined text-3xl mb-2 opacity-20">verified</span>
+                                <p className="text-[10px] font-black uppercase tracking-widest">Tudo em conformidade</p>
+                            </div>
+                        ) : (
+                            displayPayments.map((payment) => (
+                                <button
+                                    key={payment.id}
+                                    onClick={() => setShowPaymentModal(payment)}
+                                    className="w-full glass-card rounded-[28px] p-4 flex items-center gap-4 active:scale-[0.99] transition-all group"
+                                >
+                                    <div
+                                        className="size-12 rounded-2xl bg-cover bg-center border-2 border-white/10 group-hover:border-blue-500/30 transition-colors"
+                                        style={{ backgroundImage: `url(${payment.clientAvatar})` }}
+                                    />
 
-                    <button
-                        onClick={() => pendingPayments[0] && setShowPaymentModal(pendingPayments[0])}
-                        className="bg-white rounded-[20px] p-4 border border-slate-100 flex flex-col items-center gap-2 active:scale-[0.98] transition-transform"
-                    >
-                        <div className="size-12 rounded-xl bg-emerald-50 flex items-center justify-center">
-                            <span className="material-symbols-outlined text-emerald-600">add_circle</span>
-                        </div>
-                        <p className="text-sm font-semibold text-slate-900">Registrar Pagamento</p>
-                    </button>
+                                    <div className="flex-1 min-w-0">
+                                        <h4 className="font-black text-white text-sm leading-tight mb-0.5 truncate">{payment.clientName}</h4>
+                                        <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">{payment.plan} • Venc {payment.dueDate}</p>
+                                    </div>
 
-                    <button
-                        onClick={handleGenerateReport}
-                        className="bg-white rounded-[20px] p-4 border border-slate-100 flex flex-col items-center gap-2 active:scale-[0.98] transition-transform"
-                    >
-                        <div className="size-12 rounded-xl bg-purple-50 flex items-center justify-center">
-                            <span className="material-symbols-outlined text-purple-600">receipt_long</span>
-                        </div>
-                        <p className="text-sm font-semibold text-slate-900">Gerar Relatório</p>
-                    </button>
-
-                    <button
-                        onClick={handleSendMassReminder}
-                        className="bg-white rounded-[20px] p-4 border border-slate-100 flex flex-col items-center gap-2 active:scale-[0.98] transition-transform"
-                    >
-                        <div className="size-12 rounded-xl bg-amber-50 flex items-center justify-center">
-                            <span className="material-symbols-outlined text-amber-600">notifications</span>
-                        </div>
-                        <p className="text-sm font-semibold text-slate-900">Lembrete em Massa</p>
-                    </button>
+                                    <div className="text-right">
+                                        <p className="font-black text-white text-sm tabular-nums">R$ {payment.amount}</p>
+                                        <span className={`text-[8px] font-black uppercase tracking-widest ${payment.status === 'paid' ? 'text-emerald-400' :
+                                            payment.status === 'overdue' ? 'text-red-400' : 'text-amber-400'
+                                            }`}>
+                                            {payment.status === 'paid' ? 'PAGO' : payment.status === 'overdue' ? 'ATRASO' : 'PENDENTE'}
+                                        </span>
+                                    </div>
+                                </button>
+                            ))
+                        )}
+                    </div>
                 </div>
-            </div>
+
+                {/* Quick Actions Grid */}
+                <div className="animate-slide-up stagger-3 pb-8">
+                    <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4 px-1">Ações de Gestão</h3>
+
+                    <div className="grid grid-cols-2 gap-3">
+                        <button
+                            onClick={() => pendingPayments[0] && setShowPaymentModal(pendingPayments[0])}
+                            className="glass-card rounded-[28px] p-5 flex flex-col items-center gap-4 active:scale-[0.98] transition-all hover:border-blue-500/30"
+                        >
+                            <div className="size-12 rounded-2xl bg-blue-500/10 flex items-center justify-center">
+                                <span className="material-symbols-outlined text-blue-400">send</span>
+                            </div>
+                            <p className="text-[10px] font-black text-white uppercase tracking-widest">Cobrar</p>
+                        </button>
+
+                        <button
+                            onClick={() => pendingPayments[0] && setShowPaymentModal(pendingPayments[0])}
+                            className="glass-card rounded-[28px] p-5 flex flex-col items-center gap-4 active:scale-[0.98] transition-all hover:border-emerald-500/30"
+                        >
+                            <div className="size-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center">
+                                <span className="material-symbols-outlined text-emerald-400">add_circle</span>
+                            </div>
+                            <p className="text-[10px] font-black text-white uppercase tracking-widest">Registrar</p>
+                        </button>
+                    </div>
+                </div>
+            </main>
 
             {/* Payment Modal */}
             {showPaymentModal && (
-                <div className="fixed inset-0 bg-black/50 z-50 flex items-end">
-                    <div className="w-full max-w-md mx-auto bg-white rounded-t-[32px] p-6 animate-slide-up">
-                        <div className="w-12 h-1 bg-slate-200 rounded-full mx-auto mb-6"></div>
+                <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-end">
+                    <div className="w-full max-w-md mx-auto bg-slate-900 rounded-t-[40px] p-10 animate-slide-up border-t border-white/10">
+                        <div className="w-12 h-1 bg-white/10 rounded-full mx-auto mb-10"></div>
 
-                        <div className="flex items-center gap-4 mb-6">
+                        <div className="flex items-center gap-5 mb-10">
                             <div
-                                className="size-16 rounded-full bg-cover bg-center border-2 border-white shadow-lg"
+                                className="size-20 rounded-3xl bg-cover bg-center border-2 border-white/10 shadow-glow"
                                 style={{ backgroundImage: `url(${showPaymentModal.clientAvatar})` }}
                             />
                             <div>
-                                <h3 className="text-xl font-bold text-slate-900">{showPaymentModal.clientName}</h3>
-                                <p className="text-slate-400">{showPaymentModal.plan} • R$ {showPaymentModal.amount}</p>
+                                <h3 className="text-2xl font-black text-white tracking-tight leading-tight">{showPaymentModal.clientName}</h3>
+                                <p className="text-slate-500 text-xs font-black uppercase tracking-widest mt-1">{showPaymentModal.plan} • R$ {showPaymentModal.amount}</p>
                             </div>
                         </div>
 
                         <div className="space-y-3">
                             <button
                                 onClick={() => handleSendReminder(showPaymentModal)}
-                                className="w-full h-14 bg-emerald-500 text-white font-bold rounded-2xl flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
+                                className="w-full h-16 bg-emerald-600 hover:bg-emerald-500 text-white font-black rounded-3xl flex items-center justify-center gap-3 active:scale-[0.98] transition-all uppercase tracking-widest shadow-lg shadow-emerald-900/20"
                             >
                                 <span className="material-symbols-outlined">send</span>
-                                Enviar Cobrança WhatsApp
+                                Cobrança WhatsApp
                             </button>
 
                             {showPaymentModal.status !== 'paid' && (
                                 <button
                                     onClick={() => handleMarkAsPaid(showPaymentModal)}
-                                    className="w-full h-14 bg-blue-600 text-white font-bold rounded-2xl flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
+                                    className="w-full h-16 bg-blue-600 hover:bg-blue-500 text-white font-black rounded-3xl flex items-center justify-center gap-3 active:scale-[0.98] transition-all uppercase tracking-widest shadow-lg shadow-blue-900/20"
                                 >
                                     <span className="material-symbols-outlined">check</span>
-                                    Marcar como Pago
+                                    Validar Pagamento
                                 </button>
                             )}
 
                             <button
                                 onClick={() => setShowPaymentModal(null)}
-                                className="w-full h-14 bg-slate-100 text-slate-700 font-bold rounded-2xl active:scale-[0.98] transition-transform"
+                                className="w-full h-14 bg-white/5 text-slate-500 font-bold rounded-2xl active:scale-[0.98] transition-all uppercase tracking-widest text-[10px]"
                             >
                                 Fechar
                             </button>

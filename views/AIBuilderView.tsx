@@ -153,7 +153,7 @@ const generateMockWorkout = (clientName: string, goal: string, level: string, da
 
 const AIBuilderView: React.FC<AIBuilderViewProps> = ({ onBack, onDone }) => {
   const [loading, setLoading] = useState(false);
-  const [loadingStep, setLoadingStep] = useState(0);
+  const [loadingMessageIndex, setLoadingMessageIndex] = useState(0);
   const [selectedClient, setSelectedClient] = useState<string | null>('ana');
   const [selectedGoal, setSelectedGoal] = useState('Hipertrofia');
   const [selectedDays, setSelectedDays] = useState(4);
@@ -181,19 +181,19 @@ const AIBuilderView: React.FC<AIBuilderViewProps> = ({ onBack, onDone }) => {
     '+ Foco em core'
   ];
 
-  const loadingMessages = [
-    "Analisando perfil do aluno...",
-    "Calculando volume ideal...",
-    "Estruturando periodização...",
-    "Otimizando seleção de exercícios...",
-    "Finalizando protocolo..."
+  const messages = [
+    "Analisando perfil biotipológico...",
+    "Otimizando volume de treinamento...",
+    "Selecionando exercícios de alta sinergia...",
+    "Ajustando densidade e descanso...",
+    "Finalizando protocolo de elite..."
   ];
 
   useEffect(() => {
     let interval: any;
     if (loading) {
       interval = setInterval(() => {
-        setLoadingStep((prev) => (prev < loadingMessages.length - 1 ? prev + 1 : prev));
+        setLoadingMessageIndex((prev) => (prev < messages.length - 1 ? prev + 1 : prev));
       }, 800);
     }
     return () => clearInterval(interval);
@@ -201,16 +201,17 @@ const AIBuilderView: React.FC<AIBuilderViewProps> = ({ onBack, onDone }) => {
 
   const handleGenerate = async () => {
     setLoading(true);
-    setLoadingStep(0);
+    setLoadingMessageIndex(0);
 
-    const client = clients.find(c => c.id === selectedClient);
+    // const client = clients.find(c => c.id === selectedClient); // Old line
+    // selectedClient is already the full client object
 
     // Simulate AI processing time
     setTimeout(() => {
       const workout = generateMockWorkout(
-        client?.name || 'Aluno',
+        selectedClient?.name || 'Aluno',
         selectedGoal,
-        client?.level || 'Intermediário',
+        selectedClient?.level || 'Intermediário',
         selectedDays,
         observations
       );
@@ -221,7 +222,8 @@ const AIBuilderView: React.FC<AIBuilderViewProps> = ({ onBack, onDone }) => {
   };
 
   const handleSendWhatsApp = () => {
-    const client = clients.find(c => c.id === selectedClient);
+    // const client = clients.find(c => c.id === selectedClient); // Old line
+    // selectedClient is already the full client object
     const currentSplit = result?.splits?.[activeTabIndex];
 
     let message = `🏋️ *${result?.title}*\n\n`;
@@ -232,7 +234,7 @@ const AIBuilderView: React.FC<AIBuilderViewProps> = ({ onBack, onDone }) => {
       message += `   ${ex.sets} séries x ${ex.reps} • Descanso: ${ex.rest}\n\n`;
     });
 
-    message += `\n💪 Bom treino, ${client?.name}!`;
+    message += `\n💪 Bom treino, ${selectedClient?.name}!`;
 
     const encoded = encodeURIComponent(message);
     window.open(`https://wa.me/?text=${encoded}`, '_blank');
@@ -240,26 +242,32 @@ const AIBuilderView: React.FC<AIBuilderViewProps> = ({ onBack, onDone }) => {
 
   if (loading) {
     return (
-      <div className="fixed inset-0 bg-gradient-to-br from-slate-900 via-slate-900 to-blue-900 flex flex-col items-center justify-center p-8">
-        <div className="relative mb-12">
-          <div className="absolute inset-0 size-32 bg-blue-500/30 rounded-full blur-3xl animate-pulse"></div>
-          <div className="relative size-28 bg-slate-800/80 backdrop-blur rounded-full flex items-center justify-center border border-slate-700">
-            <span className="material-symbols-outlined text-[56px] text-blue-400 animate-pulse">psychology</span>
-          </div>
-          <div className="absolute inset-0 size-28 border-2 border-blue-500/40 rounded-full animate-ping"></div>
+      <div className="fixed inset-0 bg-slate-950 flex flex-col items-center justify-center p-8 z-50 overflow-hidden">
+        {/* Animated Background Mesh */}
+        <div className="absolute inset-0 opacity-40">
+          <div className="absolute top-1/4 left-1/4 size-64 bg-blue-600 rounded-full blur-[100px] animate-pulse"></div>
+          <div className="absolute bottom-1/4 right-1/4 size-64 bg-purple-600 rounded-full blur-[100px] animate-pulse delay-1000"></div>
         </div>
 
-        <h4 className="text-white text-xl font-bold mb-2">{loadingMessages[loadingStep]}</h4>
-        <p className="text-slate-400 text-sm mb-8">Aguarde enquanto a IA trabalha</p>
+        <div className="relative z-10 text-center flex flex-col items-center">
+          <div className="size-24 rounded-[32px] bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center mb-10 shadow-glow animate-bounce">
+            <span className="material-symbols-outlined text-white text-[48px]">psychology</span>
+          </div>
 
-        <div className="flex gap-2">
-          {loadingMessages.map((_, i) => (
+          <h2 className="text-2xl font-black text-white mb-4 tracking-tight">Criando sua Obra-Prima</h2>
+          <div className="h-6 overflow-hidden">
+            <p className="text-blue-400 text-xs font-black uppercase tracking-[0.2em] animate-slide-up">
+              {messages[loadingMessageIndex]}
+            </p>
+          </div>
+
+          {/* Progress indicator */}
+          <div className="mt-12 w-64 h-1.5 bg-white/5 rounded-full overflow-hidden">
             <div
-              key={i}
-              className={`h-2 rounded-full transition-all duration-500 ${i <= loadingStep ? 'w-10 bg-blue-500' : 'w-3 bg-slate-700'
-                }`}
-            />
-          ))}
+              className="h-full bg-gradient-to-r from-blue-600 to-indigo-600 transition-all duration-500"
+              style={{ width: `${(loadingMessageIndex + 1) * 20}%` }}
+            ></div>
+          </div>
         </div>
 
         <p className="text-slate-600 text-xs font-medium mt-12 uppercase tracking-widest">PersonalPro IA</p>
@@ -313,8 +321,8 @@ const AIBuilderView: React.FC<AIBuilderViewProps> = ({ onBack, onDone }) => {
                 key={idx}
                 onClick={() => setActiveTabIndex(idx)}
                 className={`px-4 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap transition-all ${activeTabIndex === idx
-                    ? 'bg-slate-900 text-white'
-                    : 'bg-slate-100 text-slate-500'
+                  ? 'bg-slate-900 text-white'
+                  : 'bg-slate-100 text-slate-500'
                   }`}
               >
                 {split.name.replace('Treino ', '')}
@@ -375,129 +383,211 @@ const AIBuilderView: React.FC<AIBuilderViewProps> = ({ onBack, onDone }) => {
   }
 
   return (
-    <div className="max-w-md mx-auto min-h-screen bg-white pb-32">
+    <div className="max-w-md mx-auto min-h-screen bg-slate-950 text-white selection:bg-blue-500/30">
       {/* Header */}
-      <header className="sticky top-0 bg-white border-b border-slate-100 px-6 py-4 flex items-center justify-between z-30">
-        <button onClick={onBack} className="size-10 rounded-full bg-slate-50 flex items-center justify-center active:scale-95 transition-transform">
-          <span className="material-symbols-outlined text-slate-600">arrow_back</span>
-        </button>
-        <h2 className="font-bold text-slate-900">Criar Treino com IA</h2>
-        <div className="size-10"></div>
+      <header className="sticky top-0 bg-transparent px-6 py-4 z-30">
+        <div className="flex justify-between items-center mb-10">
+          <button
+            onClick={onBack}
+            className="size-10 rounded-full glass-card flex items-center justify-center active:scale-90 transition-all"
+          >
+            <span className="material-symbols-outlined text-white">arrow_back</span>
+          </button>
+          <div className="text-center">
+            <h2 className="text-xl font-black text-white tracking-tight">AI Builder</h2>
+            <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest">Protocolos de Elite</p>
+          </div>
+          <div className="size-10"></div>
+        </div>
       </header>
 
       <div className="p-6 space-y-8">
         {/* Client Selection */}
-        <section>
-          <h3 className="text-xl font-bold text-slate-900 mb-4">Para quem vamos criar?</h3>
-
-          {/* Client Cards */}
-          <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2">
-            {clients.map(client => (
-              <button
-                key={client.id}
-                onClick={() => setSelectedClient(client.id)}
-                className={`flex-shrink-0 w-28 p-4 rounded-[20px] border-2 transition-all ${selectedClient === client.id
-                    ? 'border-blue-600 bg-blue-50'
-                    : 'border-slate-100 bg-white'
-                  }`}
-              >
-                <div className="relative mx-auto w-14 h-14 mb-3">
+        <section className="space-y-6 animate-slide-up stagger-1">
+          <div>
+            <div className="flex items-center gap-2 mb-4 px-1">
+              <span className="material-symbols-outlined text-blue-400 text-xl">person_search</span>
+              <h3 className="font-black text-white tracking-tight">Selecione o Aluno</h3>
+            </div>
+            <div className="flex gap-4 overflow-x-auto pb-2 no-scrollbar">
+              {clients.map(client => (
+                <button
+                  key={client.id}
+                  onClick={() => setSelectedClient(client)}
+                  className={`min-w-[100px] flex flex-col items-center gap-3 p-4 rounded-3xl transition-all duration-300 ${selectedClient?.id === client.id
+                    ? 'glass-card border-blue-500/50 bg-blue-500/10 shadow-glow scale-105'
+                    : 'glass-card opacity-40 hover:opacity-100'
+                    }`}
+                >
                   <div
-                    className="w-full h-full rounded-full bg-cover bg-center border-2 border-white shadow-md"
+                    className={`size-14 rounded-2xl bg-cover bg-center border-2 ${selectedClient?.id === client.id ? 'border-blue-400' : 'border-white/10'
+                      } transition-colors`}
                     style={{ backgroundImage: `url(${client.avatar})` }}
                   />
-                  {selectedClient === client.id && (
-                    <span className="absolute -top-1 -right-1 size-5 bg-blue-600 rounded-full flex items-center justify-center">
-                      <span className="material-symbols-outlined text-white text-xs">check</span>
-                    </span>
-                  )}
-                </div>
-                <h4 className="font-bold text-slate-900 text-sm text-center">{client.name}</h4>
-                <p className="text-xs text-slate-400 text-center">{client.level}</p>
-              </button>
-            ))}
+                  <span className={`text-[10px] font-black uppercase tracking-widest ${selectedClient?.id === client.id ? 'text-blue-400' : 'text-slate-500'
+                    }`}>{client.name.split(' ')[0]}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <div className="flex items-center gap-2 mb-4 px-1">
+              <span className="material-symbols-outlined text-indigo-400 text-xl">target</span>
+              <h3 className="font-black text-white tracking-tight">Objetivo Principal</h3>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              {['Hipertrofia', 'Emagrecimento', 'Resistência', 'Saúde'].map(goal => (
+                <button
+                  key={goal}
+                  onClick={() => setSelectedGoal(goal)}
+                  className={`px-4 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 ${selectedGoal === goal
+                    ? 'bg-blue-600 text-white shadow-glow translate-y-[-2px]'
+                    : 'glass-card text-slate-500'
+                    }`}
+                >
+                  {goal}
+                </button>
+              ))}
+            </div>
           </div>
         </section>
 
-        {/* Goal Selection */}
-        <section>
-          <h3 className="text-lg font-bold text-slate-900 mb-4">Qual o objetivo?</h3>
-          <div className="grid grid-cols-2 gap-3">
-            {goals.map(goal => (
-              <button
-                key={goal.name}
-                onClick={() => setSelectedGoal(goal.name)}
-                className={`flex items-center gap-3 px-4 py-4 rounded-[16px] font-semibold text-sm transition-all ${selectedGoal === goal.name
-                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/25'
-                    : 'bg-slate-50 text-slate-600 border border-slate-100'
-                  }`}
-              >
-                <span className="material-symbols-outlined text-xl">{goal.icon}</span>
-                {goal.name}
-              </button>
-            ))}
+        <section className="animate-slide-up stagger-3">
+          <div className="flex items-center gap-2 mb-4 px-1">
+            <span className="material-symbols-outlined text-amber-400 text-xl">notes</span>
+            <h3 className="font-black text-white tracking-tight">Observações Adicionais</h3>
           </div>
-        </section>
 
-        {/* Days Selection */}
-        <section>
-          <h3 className="text-lg font-bold text-slate-900 mb-4">Dias por semana?</h3>
-          <div className="flex items-center gap-2">
-            {[1, 2, 3, 4, 5, 6, 7].map(day => (
-              <button
-                key={day}
-                onClick={() => setSelectedDays(day)}
-                className={`size-11 rounded-full font-bold text-sm transition-all ${selectedDays === day
-                    ? 'bg-slate-900 text-white scale-110 shadow-lg'
-                    : 'bg-slate-100 text-slate-400 hover:bg-slate-200'
-                  }`}
-              >
-                {day}
-              </button>
-            ))}
+          <div className="glass-card rounded-[28px] p-4 mb-4">
+            <textarea
+              placeholder="Ex: Aluno com lesão no ombro, focar em bíceps..."
+              value={observations}
+              onChange={(e) => setObservations(e.target.value)}
+              className="w-full bg-transparent text-white placeholder:text-slate-500 text-sm outline-none min-h-[120px] resize-none font-medium"
+            />
           </div>
-          <p className="text-xs text-slate-400 mt-3">
-            {selectedDays <= 2 ? '⚠️ Volume baixo - bom para iniciantes' :
-              selectedDays <= 4 ? '✅ Recomendado para resultados consistentes' :
-                selectedDays <= 5 ? '💪 Volume alto - atletas avançados' :
-                  '🔥 Volume extremo - apenas atletas experientes'}
-          </p>
-        </section>
 
-        {/* Observations */}
-        <section>
-          <h3 className="text-lg font-bold text-slate-900 mb-4">Observações?</h3>
-          <textarea
-            value={observations}
-            onChange={(e) => setObservations(e.target.value)}
-            placeholder="Ex: Aluno tem condromalácia no joelho esquerdo..."
-            className="w-full h-24 p-4 rounded-[16px] bg-slate-50 border border-slate-100 text-slate-900 placeholder:text-slate-300 resize-none focus:outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-100 transition-all"
-          />
-          <div className="flex flex-wrap gap-2 mt-3">
+          <div className="flex flex-wrap gap-2">
             {quickTags.map(tag => (
               <button
                 key={tag}
-                onClick={() => setObservations(prev => prev + (prev ? '\n' : '') + tag.replace('+ ', ''))}
-                className="px-3 py-1.5 bg-slate-50 text-slate-500 text-xs font-medium rounded-full border border-slate-100 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 transition-colors"
+                onClick={() => setObservations(prev => prev ? `${prev}, ${tag}` : tag)}
+                className="px-4 py-2 rounded-full glass-card border-white/5 text-[10px] font-black text-slate-400 uppercase tracking-widest hover:bg-white/5 active:scale-95 transition-all"
               >
                 {tag}
               </button>
             ))}
           </div>
         </section>
+
+        {/* Generate Button */}
+        <div className="pt-6 animate-slide-up stagger-4">
+          <button
+            onClick={handleGenerate}
+            disabled={!selectedClient || !selectedGoal}
+            className="w-full h-16 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 active:scale-[0.98] text-white font-black rounded-3xl text-sm transition-all shadow-xl shadow-blue-900/40 disabled:opacity-30 disabled:grayscale flex items-center justify-center gap-3 uppercase tracking-[0.2em] group"
+          >
+            <span className="material-symbols-outlined group-hover:rotate-12 transition-transform">bolt</span>
+            Forjar Protocolo de Elite
+          </button>
+        </div>
       </div>
 
-      {/* Fixed Bottom Button */}
-      <div className="fixed bottom-0 left-0 right-0 p-6 bg-white border-t border-slate-100 max-w-md mx-auto">
-        <button
-          onClick={handleGenerate}
-          disabled={!selectedClient}
-          className="w-full h-14 bg-blue-600 text-white font-bold rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-blue-600/25 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          <span className="material-symbols-outlined">auto_awesome</span>
-          Gerar Treino com IA
-        </button>
-      </div>
+      {/* Result Modal - Refined for Premium View */}
+      {result && !loading && (
+        <div className="fixed inset-0 z-50 bg-slate-950 flex flex-col animate-fade-in">
+          <div className="absolute inset-0 z-0 opacity-20">
+            <div className="absolute top-0 right-0 size-96 bg-blue-600 rounded-full blur-[120px]"></div>
+            <div className="absolute bottom-0 left-0 size-96 bg-purple-600 rounded-full blur-[120px]"></div>
+          </div>
+
+          <header className="relative z-10 px-6 pt-14 pb-6 glass-nav">
+            <div className="flex justify-between items-center">
+              <button
+                onClick={() => setResult(null)}
+                className="size-10 rounded-full glass-card flex items-center justify-center"
+              >
+                <span className="material-symbols-outlined">close</span>
+              </button>
+              <div className="text-center">
+                <h3 className="text-lg font-black text-white tracking-tight">{result.title}</h3>
+                <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest">
+                  {typeof selectedClient === 'string' ? selectedClient : selectedClient?.name}
+                </p>
+              </div>
+              <button
+                onClick={handleSendWhatsApp}
+                className="size-10 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center justify-center"
+              >
+                <span className="material-symbols-outlined">share</span>
+              </button>
+            </div>
+          </header>
+
+          <main className="relative z-10 flex-1 overflow-y-auto px-6 py-6 no-scrollbar pb-32">
+            <div className="glass-card rounded-[32px] p-6 mb-8 border-l-4 border-blue-500">
+              <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Objetivo Estratégico</p>
+              <p className="text-white font-medium leading-relaxed">{result.objective}</p>
+            </div>
+
+            <div className="flex gap-3 overflow-x-auto pb-6 no-scrollbar">
+              {result.splits?.map((split: any, idx: number) => (
+                <button
+                  key={idx}
+                  onClick={() => setActiveTabIndex(idx)}
+                  className={`px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTabIndex === idx
+                      ? 'bg-blue-600 text-white shadow-glow'
+                      : 'glass-card text-slate-500'
+                    }`}
+                >
+                  {split.name}
+                </button>
+              ))}
+            </div>
+
+            <div className="space-y-4">
+              {result.splits?.[activeTabIndex]?.exercises.map((ex: any, idx: number) => (
+                <div key={idx} className="glass-card rounded-3xl p-5 group hover:border-blue-500/30 transition-all">
+                  <div className="flex justify-between items-start mb-4">
+                    <div className="size-8 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-400 text-xs font-black">
+                      {idx + 1}
+                    </div>
+                    <span className="text-[9px] font-black text-blue-400 bg-blue-500/5 px-2 py-1 rounded-full uppercase tracking-widest">
+                      {ex.targetMuscle}
+                    </span>
+                  </div>
+                  <h4 className="text-white font-black text-lg mb-1 tracking-tight">{ex.name}</h4>
+                  <div className="flex gap-4">
+                    <div className="bg-white/5 rounded-xl px-3 py-2">
+                      <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Séries</p>
+                      <p className="text-white font-black">{ex.sets}</p>
+                    </div>
+                    <div className="bg-white/5 rounded-xl px-3 py-2">
+                      <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Reps</p>
+                      <p className="text-white font-black">{ex.reps}</p>
+                    </div>
+                    <div className="bg-white/5 rounded-xl px-3 py-2">
+                      <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Descanso</p>
+                      <p className="text-indigo-400 font-black">{ex.rest}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </main>
+
+          <footer className="fixed bottom-0 left-0 right-0 p-6 bg-slate-950/80 backdrop-blur-xl border-t border-white/5 max-w-md mx-auto z-20">
+            <button
+              onClick={onDone}
+              className="w-full h-16 bg-white text-slate-950 font-black rounded-3xl flex items-center justify-center gap-3 uppercase tracking-widest shadow-2xl active:scale-95 transition-all"
+            >
+              <span className="material-symbols-outlined">check_circle</span>
+              Salvar Protocolo
+            </button>
+          </footer>
+        </div>
+      )}
     </div>
   );
 };

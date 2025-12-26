@@ -102,39 +102,40 @@ const CalendarView: React.FC<CalendarViewProps> = ({ onBack, onSelectClient }) =
     };
 
     return (
-        <div className="max-w-md mx-auto min-h-screen bg-white pb-8">
+        <div className="max-w-md mx-auto min-h-screen bg-slate-950 text-white selection:bg-blue-500/30 pb-12">
             {/* Header */}
-            <header className="sticky top-0 bg-white border-b border-slate-100 px-6 py-4 z-30">
-                <div className="flex items-center justify-between mb-4">
-                    <button onClick={onBack} className="size-10 rounded-full bg-slate-50 flex items-center justify-center active:scale-95 transition-transform">
-                        <span className="material-symbols-outlined text-slate-600">arrow_back</span>
+            <header className="px-6 pt-14 pb-4 animate-fade-in relative z-30">
+                <div className="flex items-center justify-between mb-6">
+                    <button onClick={onBack} className="size-12 rounded-2xl glass-card flex items-center justify-center active:scale-90 transition-all">
+                        <span className="material-symbols-outlined text-white">arrow_back</span>
                     </button>
-                    <h1 className="text-xl font-bold text-slate-900">Agenda</h1>
+                    <div className="text-center">
+                        <h1 className="text-xl font-black text-white tracking-tight">Agenda</h1>
+                        <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest">Sincronização Elite</p>
+                    </div>
                     <button
                         onClick={() => setShowNewModal(true)}
-                        className="size-10 rounded-full bg-blue-600 flex items-center justify-center text-white shadow-lg shadow-blue-600/25 active:scale-95 transition-transform"
+                        className="size-12 rounded-2xl bg-blue-600 flex items-center justify-center text-white shadow-glow active:scale-95 transition-all"
                     >
                         <span className="material-symbols-outlined">add</span>
                     </button>
                 </div>
 
                 {/* Month & View Toggle */}
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                        <h2 className="text-lg font-bold text-slate-900">
-                            {monthNames[selectedDate.getMonth()]} {selectedDate.getFullYear()}
-                        </h2>
-                    </div>
-                    <div className="flex bg-slate-100 rounded-xl p-1">
+                <div className="flex items-center justify-between mb-6">
+                    <h2 className="text-lg font-black text-white tracking-tight">
+                        {monthNames[selectedDate.getMonth()]} {selectedDate.getFullYear()}
+                    </h2>
+                    <div className="flex bg-white/5 rounded-xl p-1 border border-white/5">
                         <button
                             onClick={() => setViewMode('day')}
-                            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${viewMode === 'day' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'}`}
+                            className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === 'day' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-500'}`}
                         >
                             Dia
                         </button>
                         <button
                             onClick={() => setViewMode('week')}
-                            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${viewMode === 'week' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'}`}
+                            className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === 'week' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-500'}`}
                         >
                             Semana
                         </button>
@@ -142,149 +143,155 @@ const CalendarView: React.FC<CalendarViewProps> = ({ onBack, onSelectClient }) =
                 </div>
 
                 {/* Week Days */}
-                <div className="flex gap-1 mt-4">
+                <div className="flex gap-2 overflow-x-auto no-scrollbar py-2">
                     {weekDays.map((day, i) => (
                         <button
                             key={i}
                             onClick={() => setSelectedDate(day)}
-                            className={`flex-1 py-2 rounded-xl text-center transition-all ${isSelected(day)
-                                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/25'
-                                    : isToday(day)
-                                        ? 'bg-blue-50 text-blue-600'
-                                        : 'text-slate-600 hover:bg-slate-50'
+                            className={`flex flex-col items-center min-w-[54px] py-4 rounded-[20px] transition-all duration-300 ${isSelected(day)
+                                ? 'bg-blue-600 text-white shadow-glow scale-105'
+                                : isToday(day)
+                                    ? 'glass-card border-blue-500/30 text-blue-400'
+                                    : 'glass-card text-slate-500'
                                 }`}
                         >
-                            <p className={`text-[10px] font-medium ${isSelected(day) ? 'text-blue-100' : 'text-slate-400'}`}>
+                            <span className="text-[9px] font-black uppercase tracking-widest mb-1">
                                 {dayNames[i]}
-                            </p>
-                            <p className="text-lg font-bold">{day.getDate()}</p>
+                            </span>
+                            <span className="text-lg font-black">{day.getDate()}</span>
                         </button>
                     ))}
                 </div>
             </header>
 
-            {/* Today Stats */}
-            <div className="px-6 py-4 flex gap-4">
-                <div className="flex-1 bg-slate-50 rounded-2xl p-4">
-                    <div className="flex items-center gap-2 mb-1">
-                        <span className="material-symbols-outlined text-blue-600 text-lg">event</span>
-                        <span className="text-sm font-medium text-slate-500">Hoje</span>
+            <main className="px-6 space-y-6">
+                {/* Stats Row */}
+                <div className="grid grid-cols-2 gap-3 animate-slide-up">
+                    <div className="glass-card rounded-[24px] p-4 border-l-4 border-blue-500">
+                        <div className="flex items-center gap-2 mb-1">
+                            <span className="material-symbols-outlined text-blue-400 text-lg">event</span>
+                            <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Hoje</span>
+                        </div>
+                        <p className="text-2xl font-black text-white">{appointments.length}</p>
                     </div>
-                    <p className="text-2xl font-bold text-slate-900">{appointments.length}</p>
-                    <p className="text-xs text-slate-400">agendamentos</p>
-                </div>
-                <div className="flex-1 bg-slate-50 rounded-2xl p-4">
-                    <div className="flex items-center gap-2 mb-1">
-                        <span className="material-symbols-outlined text-emerald-600 text-lg">schedule</span>
-                        <span className="text-sm font-medium text-slate-500">Próximo</span>
+                    <div className="glass-card rounded-[24px] p-4 border-l-4 border-emerald-500">
+                        <div className="flex items-center gap-2 mb-1">
+                            <span className="material-symbols-outlined text-emerald-400 text-lg">schedule</span>
+                            <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Próximo</span>
+                        </div>
+                        <p className="text-xl font-black text-white truncate">{appointments[0]?.time || '--:--'}</p>
                     </div>
-                    <p className="text-2xl font-bold text-slate-900">{appointments[0]?.time || '--:--'}</p>
-                    <p className="text-xs text-slate-400">{appointments[0]?.clientName || 'Nenhum'}</p>
                 </div>
-            </div>
 
-            {/* Appointments List */}
-            <div className="px-6">
-                <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-3">Agendamentos</h3>
+                {/* Appointments List */}
+                <div className="animate-slide-up stagger-1">
+                    <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-4">Fluxo de Protocolos</h3>
 
-                <div className="space-y-3">
-                    {appointments.map((apt) => (
-                        <button
-                            key={apt.id}
-                            onClick={() => setShowDetailModal(apt)}
-                            className="w-full bg-white rounded-[20px] p-4 border border-slate-100 shadow-sm flex items-center gap-4 active:scale-[0.99] transition-all text-left"
-                        >
-                            {/* Time */}
-                            <div className="text-center w-14">
-                                <p className="text-lg font-bold text-slate-900">{apt.time}</p>
-                                <p className="text-[10px] text-slate-400 font-medium">{apt.duration}</p>
-                            </div>
+                    <div className="space-y-3">
+                        {appointments.map((apt) => (
+                            <button
+                                key={apt.id}
+                                onClick={() => setShowDetailModal(apt)}
+                                className="w-full glass-card rounded-[28px] p-4 flex items-center gap-4 active:scale-[0.99] transition-all text-left group hover:border-blue-500/30"
+                            >
+                                {/* Time */}
+                                <div className="text-center w-14 border-r border-white/5 pr-4 mr-1">
+                                    <p className="text-lg font-black text-white leading-none mb-1">{apt.time}</p>
+                                    <p className="text-[9px] text-slate-500 font-black uppercase tracking-widest">{apt.duration}</p>
+                                </div>
 
-                            {/* Divider */}
-                            <div className={`w-1 h-12 rounded-full ${getTypeColor(apt.type)}`}></div>
-
-                            {/* Client Info */}
-                            <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2">
-                                    <div
-                                        className="size-10 rounded-full bg-cover bg-center border-2 border-white shadow-sm"
-                                        style={{ backgroundImage: `url(${apt.clientAvatar})` }}
-                                    />
-                                    <div>
-                                        <h4 className="font-bold text-slate-900">{apt.clientName}</h4>
-                                        <p className="text-xs text-slate-400">{getTypeLabel(apt.type)}</p>
+                                {/* Client Info */}
+                                <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-3">
+                                        <div
+                                            className="size-11 rounded-2xl bg-cover bg-center border-2 border-white/10 group-hover:border-blue-500/30 transition-colors"
+                                            style={{ backgroundImage: `url(${apt.clientAvatar})` }}
+                                        />
+                                        <div>
+                                            <h4 className="font-black text-white text-sm leading-tight mb-0.5">{apt.clientName}</h4>
+                                            <div className="flex items-center gap-1.5">
+                                                <div className={`size-1.5 rounded-full ${getTypeColor(apt.type)}`}></div>
+                                                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{getTypeLabel(apt.type)}</p>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
 
-                            {/* Status */}
-                            <div className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase ${apt.status === 'confirmed' ? 'bg-emerald-100 text-emerald-700' :
-                                    apt.status === 'pending' ? 'bg-amber-100 text-amber-700' :
-                                        'bg-slate-100 text-slate-600'
-                                }`}>
-                                {apt.status === 'confirmed' ? 'Confirmado' : apt.status === 'pending' ? 'Pendente' : 'Concluído'}
-                            </div>
-                        </button>
-                    ))}
+                                {/* Status */}
+                                <div className={`px-2 py-1 rounded-lg text-[8px] font-black uppercase tracking-widest ${apt.status === 'confirmed' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
+                                    apt.status === 'pending' ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' :
+                                        'bg-white/5 text-slate-500 border border-white/5'
+                                    }`}>
+                                    {apt.status === 'confirmed' ? '✓' : apt.status === 'pending' ? '⋯' : '●'}
+                                </div>
+                            </button>
+                        ))}
+                    </div>
                 </div>
-            </div>
 
-            {/* Available Slots */}
-            <div className="px-6 mt-6">
-                <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-3">Horários Livres</h3>
+                {/* Available Slots */}
+                <div className="animate-slide-up stagger-2 pb-8">
+                    <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-4">Janelas Disponíveis</h3>
 
-                <div className="flex flex-wrap gap-2">
-                    {availableSlots.map((time) => (
-                        <button
-                            key={time}
-                            onClick={() => handleBookSlot(time)}
-                            className="px-4 py-2 bg-slate-50 rounded-xl text-sm font-medium text-slate-600 border border-slate-100 hover:bg-blue-50 hover:border-blue-200 hover:text-blue-600 active:scale-95 transition-all"
-                        >
-                            {time}
-                        </button>
-                    ))}
+                    <div className="grid grid-cols-3 gap-2">
+                        {availableSlots.map((time) => (
+                            <button
+                                key={time}
+                                onClick={() => handleBookSlot(time)}
+                                className="py-3 glass-card rounded-xl text-[10px] font-black text-slate-400 uppercase tracking-widest hover:border-blue-500/50 hover:text-blue-400 active:scale-95 transition-all"
+                            >
+                                {time}
+                            </button>
+                        ))}
+                    </div>
                 </div>
-            </div>
+            </main>
 
             {/* Detail Modal */}
             {showDetailModal && (
-                <div className="fixed inset-0 bg-black/50 z-50 flex items-end">
-                    <div className="w-full max-w-md mx-auto bg-white rounded-t-[32px] p-6 animate-slide-up">
-                        <div className="w-12 h-1 bg-slate-200 rounded-full mx-auto mb-6"></div>
+                <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-end">
+                    <div className="w-full max-w-md mx-auto bg-slate-900 rounded-t-[40px] p-8 animate-slide-up border-t border-white/10">
+                        <div className="w-12 h-1 bg-white/10 rounded-full mx-auto mb-8"></div>
 
-                        <div className="flex items-center gap-4 mb-6">
+                        <div className="flex items-center gap-5 mb-8">
                             <div
-                                className="size-16 rounded-full bg-cover bg-center border-2 border-white shadow-lg"
+                                className="size-20 rounded-3xl bg-cover bg-center border-2 border-white/10 shadow-glow"
                                 style={{ backgroundImage: `url(${showDetailModal.clientAvatar})` }}
                             />
                             <div>
-                                <h3 className="text-xl font-bold text-slate-900">{showDetailModal.clientName}</h3>
-                                <p className="text-slate-400">{getTypeLabel(showDetailModal.type)} • {showDetailModal.time}</p>
+                                <h3 className="text-2xl font-black text-white tracking-tight">{showDetailModal.clientName}</h3>
+                                <div className="flex items-center gap-2 mt-1">
+                                    <span className={`px-2 py-0.5 rounded-full text-[9px] font-black text-white uppercase tracking-widest ${getTypeColor(showDetailModal.type)}`}>
+                                        {getTypeLabel(showDetailModal.type)}
+                                    </span>
+                                    <span className="text-slate-500 text-sm font-bold">•</span>
+                                    <span className="text-slate-400 font-black text-sm">{showDetailModal.time}</span>
+                                </div>
                             </div>
                         </div>
 
                         <div className="space-y-3">
                             <button
                                 onClick={() => handleSendReminder(showDetailModal)}
-                                className="w-full h-14 bg-emerald-500 text-white font-bold rounded-2xl flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
+                                className="w-full h-16 bg-emerald-600 hover:bg-emerald-500 text-white font-black rounded-3xl flex items-center justify-center gap-3 active:scale-[0.98] transition-all uppercase tracking-widest shadow-lg shadow-emerald-900/20"
                             >
                                 <span className="material-symbols-outlined">send</span>
-                                Enviar Lembrete WhatsApp
+                                Lembrete WhatsApp
                             </button>
 
                             {showDetailModal.status === 'pending' && (
                                 <button
                                     onClick={() => handleConfirmAppointment(showDetailModal)}
-                                    className="w-full h-14 bg-blue-600 text-white font-bold rounded-2xl flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
+                                    className="w-full h-16 bg-blue-600 hover:bg-blue-500 text-white font-black rounded-3xl flex items-center justify-center gap-3 active:scale-[0.98] transition-all uppercase tracking-widest shadow-lg shadow-blue-900/20"
                                 >
                                     <span className="material-symbols-outlined">check</span>
-                                    Confirmar Agendamento
+                                    Confirmar Protocolo
                                 </button>
                             )}
 
                             <button
                                 onClick={() => handleCancelAppointment(showDetailModal)}
-                                className="w-full h-14 bg-red-50 text-red-600 font-bold rounded-2xl flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
+                                className="w-full h-16 bg-red-500/10 border border-red-500/20 text-red-500 font-black rounded-3xl flex items-center justify-center gap-3 active:scale-[0.98] transition-all uppercase tracking-widest"
                             >
                                 <span className="material-symbols-outlined">close</span>
                                 Cancelar Agendamento
@@ -292,7 +299,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({ onBack, onSelectClient }) =
 
                             <button
                                 onClick={() => setShowDetailModal(null)}
-                                className="w-full h-14 bg-slate-100 text-slate-700 font-bold rounded-2xl active:scale-[0.98] transition-transform"
+                                className="w-full h-14 bg-white/5 text-slate-500 font-bold rounded-2xl active:scale-[0.98] transition-all uppercase tracking-widest text-[10px]"
                             >
                                 Fechar
                             </button>
@@ -303,21 +310,29 @@ const CalendarView: React.FC<CalendarViewProps> = ({ onBack, onSelectClient }) =
 
             {/* New Appointment Modal */}
             {showNewModal && (
-                <div className="fixed inset-0 bg-black/50 z-50 flex items-end">
-                    <div className="w-full max-w-md mx-auto bg-white rounded-t-[32px] p-6">
-                        <div className="w-12 h-1 bg-slate-200 rounded-full mx-auto mb-6"></div>
+                <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-end">
+                    <div className="w-full max-w-md mx-auto bg-slate-900 rounded-t-[40px] p-8 animate-slide-up border-t border-white/10">
+                        <div className="w-12 h-1 bg-white/10 rounded-full mx-auto mb-8"></div>
 
-                        <h3 className="text-xl font-bold text-slate-900 mb-6">Novo Agendamento</h3>
+                        <div className="text-center mb-10">
+                            <h3 className="text-2xl font-black text-white tracking-tight mb-2">Novo Agendamento</h3>
+                            <p className="text-slate-500 text-xs font-bold uppercase tracking-widest">Personalização de Agenda</p>
+                        </div>
 
-                        <p className="text-slate-500 text-center py-8">
-                            Em breve você poderá criar novos agendamentos aqui!
-                        </p>
+                        <div className="glass-card rounded-[32px] p-8 border-dashed flex flex-col items-center justify-center text-center gap-4 mb-8">
+                            <div className="size-16 rounded-full bg-blue-500/10 flex items-center justify-center">
+                                <span className="material-symbols-outlined text-blue-400 text-3xl">construction</span>
+                            </div>
+                            <p className="text-slate-400 text-sm font-medium leading-relaxed">
+                                O módulo de criação rápida está em fase de implantação premium.
+                            </p>
+                        </div>
 
                         <button
                             onClick={() => setShowNewModal(false)}
-                            className="w-full h-14 bg-slate-100 text-slate-700 font-bold rounded-2xl active:scale-[0.98] transition-transform"
+                            className="w-full h-16 bg-white text-slate-950 font-black rounded-3xl active:scale-[0.98] transition-all uppercase tracking-[0.2em]"
                         >
-                            Fechar
+                            Retornar
                         </button>
                     </div>
                 </div>

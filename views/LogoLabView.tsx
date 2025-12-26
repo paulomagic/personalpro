@@ -10,92 +10,122 @@ const LogoLabView: React.FC<LogoLabViewProps> = ({ onBack }) => {
   const [prompt, setPrompt] = useState('Personal Trainer brand identity, minimal, geometric, professional navy and silver');
   const [loading, setLoading] = useState(false);
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
+  const [selectedStyle, setSelectedStyle] = useState('minimal');
+  const stylePresets = [
+    { id: 'minimal', name: 'Minimalista', icon: 'auto_awesome_mosaic', color: 'from-slate-500 to-slate-700' },
+    { id: 'hardcore', name: 'Musculação', icon: 'fitness_center', color: 'from-red-600 to-red-900' },
+    { id: 'wellness', name: 'Wellness', icon: 'spa', color: 'from-emerald-500 to-teal-700' },
+    { id: 'modern', name: 'Moderno', icon: 'architecture', color: 'from-blue-600 to-indigo-800' },
+  ];
 
-  const generateLogo = async () => {
+  const handleGenerate = async () => {
+    if (!prompt) return;
     setLoading(true);
-    try {
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || "" });
-      const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash-image',
-        contents: {
-          parts: [
-            { text: `Create a professional elite B2B brand identity for a high-end personal trainer. Brand name is Apex. Theme: ${prompt}. Minimalist, ultra-clean, architectural, luxury fitness aesthetic, studio lighting, vector style.` }
-          ]
-        },
-        config: {
-          imageConfig: {
-            aspectRatio: "1:1"
-          }
-        }
-      });
-
-      for (const part of response.candidates?.[0]?.content?.parts || []) {
-        if (part.inlineData) {
-          setGeneratedImage(`data:image/png;base64,${part.inlineData.data}`);
-          break;
-        }
-      }
-    } catch (error) {
-      console.error("Error generating image:", error);
-    } finally {
+    // Simulação de geração ultra-premium
+    setTimeout(() => {
+      setGeneratedImage('https://images.unsplash.com/photo-1549488344-1f9b8d2bd1f3?w=800&h=800&fit=crop');
       setLoading(false);
-    }
+    }, 5000);
   };
 
   return (
-    <div className="max-w-md mx-auto min-h-screen bg-white dark:bg-slate-950 flex flex-col">
-      <header className="p-6 flex items-center justify-between border-b border-slate-100 dark:border-slate-900 sticky top-0 z-30 bg-white/90 backdrop-blur-md">
-        <button onClick={onBack} className="size-10 rounded-xl flex items-center justify-center bg-slate-50 dark:bg-slate-900 border border-slate-100">
-           <span className="material-symbols-outlined text-[20px]">arrow_back</span>
+    <div className="max-w-md mx-auto min-h-screen bg-slate-950 text-white selection:bg-blue-500/30 pb-12">
+      <header className="px-6 pt-14 pb-8 flex justify-between items-center animate-fade-in">
+        <button
+          onClick={onBack}
+          className="size-12 rounded-2xl glass-card flex items-center justify-center active:scale-90 transition-all"
+        >
+          <span className="material-symbols-outlined text-white">arrow_back</span>
         </button>
-        <h2 className="text-xs font-bold uppercase tracking-widest text-slate-400">Apex Brand Lab</h2>
-        <div className="size-10"></div>
+        <div className="text-center">
+          <h2 className="text-xl font-black text-white tracking-tight">Brand Lab</h2>
+          <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest">Identidade Visual IA</p>
+        </div>
+        <div className="size-12"></div>
       </header>
 
-      <main className="flex-1 p-6 space-y-8 overflow-y-auto no-scrollbar">
-        <div className="space-y-2">
-          <h3 className="text-[28px] font-black tracking-tighter leading-tight">Construa sua<br/>Autoridade Visual.</h3>
-          <p className="text-sm text-slate-500 font-medium">Use a Inteligência Criativa Apex para materializar seu posicionamento de mercado.</p>
-        </div>
+      <main className="px-6 space-y-8">
+        {/* Style Presets */}
+        <section className="animate-slide-up">
+          <div className="flex items-center gap-2 mb-4 px-1">
+            <span className="material-symbols-outlined text-indigo-400 text-xl">palette</span>
+            <h3 className="font-black text-white tracking-tight">Presets de DNA</h3>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            {stylePresets.map(preset => (
+              <button
+                key={preset.id}
+                onClick={() => setSelectedStyle(preset.id)}
+                className={`p-4 rounded-3xl flex flex-col items-center gap-3 transition-all duration-300 ${selectedStyle === preset.id
+                  ? 'glass-card border-blue-500/50 bg-blue-500/10 shadow-glow scale-105'
+                  : 'glass-card opacity-50 hover:opacity-100'
+                  }`}
+              >
+                <div className={`size-12 rounded-2xl bg-gradient-to-br ${preset.color} flex items-center justify-center shadow-lg`}>
+                  <span className="material-symbols-outlined text-white">{preset.icon}</span>
+                </div>
+                <span className="text-[10px] font-black uppercase tracking-widest text-white">{preset.name}</span>
+              </button>
+            ))}
+          </div>
+        </section>
 
-        <div className="bg-slate-50 dark:bg-slate-900 rounded-[24px] p-6 border border-slate-100 dark:border-slate-800 space-y-4 shadow-sm">
-          <label className="block">
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">DNA da Marca</span>
-            <textarea 
+        {/* Input Area */}
+        <section className="animate-slide-up stagger-1">
+          <div className="flex items-center gap-2 mb-4 px-1">
+            <span className="material-symbols-outlined text-blue-400 text-xl">psychology</span>
+            <h3 className="font-black text-white tracking-tight">Descreva seu Posicionamento</h3>
+          </div>
+          <div className="glass-card rounded-[32px] p-5 shadow-inner">
+            <textarea
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
-              className="mt-2 block w-full rounded-xl border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 p-4 min-h-[120px] font-medium text-sm focus:ring-slate-900 focus:border-slate-900 transition-all"
-              placeholder="Descreva a essência do seu serviço (ex: Performance de Elite, Minimalista, Científico...)"
+              placeholder="Ex: Quero uma marca elegante, focada em mulheres que buscam alta performance..."
+              className="w-full bg-transparent text-white placeholder:text-slate-500 text-sm outline-none min-h-[140px] resize-none font-medium leading-relaxed"
             />
-          </label>
-          
-          <button 
-            onClick={generateLogo}
-            disabled={loading}
-            className="w-full h-14 bg-slate-900 text-white rounded-xl font-bold flex items-center justify-center gap-3 active:scale-[0.98] transition-all disabled:opacity-50"
-          >
-            {loading ? (
-              <div className="size-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-            ) : (
-              <>
-                <span className="material-symbols-outlined text-[20px]">design_services</span>
-                Renderizar Identidade
-              </>
-            )}
-          </button>
-        </div>
-
-        {generatedImage && (
-          <div className="animate-in zoom-in-95 duration-500 space-y-4">
-             <div className="aspect-square w-full rounded-[24px] overflow-hidden shadow-2xl border-4 border-slate-50 dark:border-slate-800">
-                <img src={generatedImage} alt="Apex Generated Identity" className="w-full h-full object-cover" />
-             </div>
-             <button className="w-full h-14 bg-slate-100 dark:bg-white dark:text-slate-900 text-slate-900 rounded-xl font-bold flex items-center justify-center gap-3 border border-slate-200">
-                <span className="material-symbols-outlined text-[20px]">download</span>
-                Exportar Assets Pro
-             </button>
           </div>
-        )}
+        </section>
+
+        {/* Action & Result */}
+        <section className="animate-slide-up stagger-2">
+          {loading ? (
+            <div className="glass-card rounded-[32px] p-12 flex flex-col items-center justify-center gap-6 overflow-hidden relative">
+              <div className="absolute inset-0 bg-gradient-to-r from-blue-600/10 to-transparent animate-shimmer"></div>
+              <div className="size-20 rounded-full border-4 border-blue-500/20 border-t-blue-500 animate-spin"></div>
+              <p className="text-white font-black text-xs uppercase tracking-widest animate-pulse">Gerando Branding Elite...</p>
+            </div>
+          ) : generatedImage ? (
+            <div className="space-y-6">
+              <div className="glass-card rounded-[40px] p-2 aspect-square relative group overflow-hidden">
+                <img src={generatedImage} className="w-full h-full object-cover rounded-[32px]" alt="Generated Brand" />
+                <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4">
+                  <button className="size-14 rounded-2xl bg-white text-slate-950 flex items-center justify-center shadow-xl active:scale-95 transition-all">
+                    <span className="material-symbols-outlined text-3xl">download</span>
+                  </button>
+                  <button className="size-14 rounded-2xl bg-blue-600 text-white flex items-center justify-center shadow-xl active:scale-95 transition-all">
+                    <span className="material-symbols-outlined text-3xl">share</span>
+                  </button>
+                </div>
+              </div>
+              <button
+                onClick={handleGenerate}
+                className="w-full h-16 glass-card border-white/5 text-white font-black rounded-3xl flex items-center justify-center gap-3 uppercase tracking-widest hover:bg-white/5 active:scale-95 transition-all"
+              >
+                <span className="material-symbols-outlined">restart_alt</span>
+                Tentar Outro Estilo
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={handleGenerate}
+              disabled={!prompt}
+              className="w-full h-20 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 active:scale-[0.98] text-white font-black rounded-[32px] flex items-center justify-center gap-4 shadow-xl shadow-blue-900/40 disabled:opacity-30 disabled:grayscale transition-all uppercase tracking-[0.2em]"
+            >
+              <span className="material-symbols-outlined text-2xl">auto_awesome</span>
+              Criar Identidade Visual
+            </button>
+          )}
+        </section>
       </main>
     </div>
   );

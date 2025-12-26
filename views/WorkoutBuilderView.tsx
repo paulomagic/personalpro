@@ -40,8 +40,16 @@ const WorkoutBuilderView: React.FC<WorkoutBuilderViewProps> = ({ user, client, o
     const [showExerciseSelector, setShowExerciseSelector] = useState(false);
     const [selectedCategory, setSelectedCategory] = useState<ExerciseCategory>('musculacao');
 
+    // Filters State
+    const [bodyPartFilter, setBodyPartFilter] = useState<'superior' | 'inferior'>('superior');
+    const [selectedMuscleGroup, setSelectedMuscleGroup] = useState<string | null>(null);
+
     // Exercise Selector State
-    const availableExercises = mockExercises.filter(e => e.category === selectedCategory);
+    const availableExercises = mockExercises.filter(e => {
+        if (e.category !== selectedCategory) return false;
+        if (selectedCategory === 'musculacao' && selectedMuscleGroup) return e.targetMuscle === selectedMuscleGroup;
+        return true;
+    });
 
     const handleAddExercise = (exercise: WorkoutExercise) => {
         const newExercise = { ...exercise, id: Math.random().toString(36).substr(2, 9) };
@@ -181,11 +189,21 @@ const WorkoutBuilderView: React.FC<WorkoutBuilderViewProps> = ({ user, client, o
                                                 placeholder="s"
                                             />
                                         </div>
-                                        <div className="col-span-2 flex justify-end">
+                                        <div className="col-span-2 flex justify-end relative group/method">
                                             {setIndex === 0 && (
-                                                <span className={`text-[8px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider bg-gradient-to-r ${methodColors[set.method]} text-white/90`}>
-                                                    {methodLabels[set.method] || 'Simples'}
-                                                </span>
+                                                <>
+                                                    <select
+                                                        value={set.method}
+                                                        onChange={(e) => updateSet(index, setIndex, 'method', e.target.value)}
+                                                        className={`appearance-none text-[8px] font-black px-2 py-1 rounded uppercase tracking-wider bg-gradient-to-r ${methodColors[set.method || 'simples']} text-white/90 outline-none cursor-pointer hover:brightness-110 transition-all text-center w-full`}
+                                                    >
+                                                        {Object.entries(methodLabels).map(([key, label]) => (
+                                                            <option key={key} value={key} className="bg-slate-900 text-slate-300">
+                                                                {label}
+                                                            </option>
+                                                        ))}
+                                                    </select>
+                                                </>
                                             )}
                                         </div>
                                     </div>
@@ -236,7 +254,7 @@ const WorkoutBuilderView: React.FC<WorkoutBuilderViewProps> = ({ user, client, o
                                 {(['musculacao', 'cardio', 'funcional', 'esporte'] as ExerciseCategory[]).map(cat => (
                                     <button
                                         key={cat}
-                                        onClick={() => setSelectedCategory(cat)}
+                                        onClick={() => { setSelectedCategory(cat); setSelectedMuscleGroup(null); }}
                                         className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest whitespace-nowrap transition-all ${selectedCategory === cat
                                             ? 'bg-white text-slate-950 shadow-glow'
                                             : 'bg-slate-900 text-slate-500 border border-white/5'
@@ -246,6 +264,43 @@ const WorkoutBuilderView: React.FC<WorkoutBuilderViewProps> = ({ user, client, o
                                     </button>
                                 ))}
                             </div>
+
+                            {/* Sub-Category Filters (Musculação) */}
+                            {selectedCategory === 'musculacao' && (
+                                <div className="space-y-4 mb-6 animate-fade-in">
+                                    <div className="flex gap-2 bg-slate-900/50 p-1 rounded-xl">
+                                        <button
+                                            onClick={() => setBodyPartFilter('superior')}
+                                            className={`flex-1 py-2 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all ${bodyPartFilter === 'superior' ? 'bg-blue-600 text-white shadow-glow' : 'text-slate-500 hover:text-white'}`}
+                                        >
+                                            Superior
+                                        </button>
+                                        <button
+                                            onClick={() => setBodyPartFilter('inferior')}
+                                            className={`flex-1 py-2 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all ${bodyPartFilter === 'inferior' ? 'bg-blue-600 text-white shadow-glow' : 'text-slate-500 hover:text-white'}`}
+                                        >
+                                            Inferior
+                                        </button>
+                                    </div>
+                                    <div className="flex flex-wrap gap-2">
+                                        {(bodyPartFilter === 'superior'
+                                            ? ['Ombro/Trapézio', 'Peito', 'Costas', 'Bíceps', 'Tríceps']
+                                            : ['Quadríceps', 'Posterior de Coxa', 'Glúteo', 'Panturrilha', 'Parte Interna da Coxa']
+                                        ).map(muscle => (
+                                            <button
+                                                key={muscle}
+                                                onClick={() => setSelectedMuscleGroup(selectedMuscleGroup === muscle ? null : muscle)}
+                                                className={`px-3 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-wide border transition-all ${selectedMuscleGroup === muscle
+                                                    ? 'bg-blue-500/20 border-blue-500 text-blue-400'
+                                                    : 'bg-transparent border-white/10 text-slate-400 hover:border-white/30'
+                                                    }`}
+                                            >
+                                                {muscle}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
 
                             {/* List */}
                             <div className="space-y-3 pb-32">

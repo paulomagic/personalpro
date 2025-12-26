@@ -170,7 +170,7 @@ const App: React.FC = () => {
   }
 
   return (
-    <div className="max-w-md mx-auto bg-slate-950 shadow-2xl min-h-screen overflow-hidden">
+    <div className="max-w-md mx-auto bg-slate-50 shadow-2xl min-h-screen overflow-hidden">
       <Layout activeTab={getActiveTab()} onNavigate={handleNavigation}>
         {renderContent()}
       </Layout>

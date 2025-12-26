@@ -1,4 +1,4 @@
-const CACHE_NAME = 'personalpro-v2';
+const CACHE_NAME = 'personalpro-v3';
 const urlsToCache = [
     '/',
     '/index.html',

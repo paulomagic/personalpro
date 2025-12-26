@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { View, Client, Workout } from './types';
 import { supabase, getCurrentUser } from './services/supabaseClient';
@@ -13,6 +12,7 @@ import MetricsView from './views/MetricsView';
 import SettingsView from './views/SettingsView';
 import CalendarView from './views/CalendarView';
 import FinanceView from './views/FinanceView';
+import Layout from './components/Layout';
 
 const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<View>(View.LOGIN);
@@ -100,6 +100,18 @@ const App: React.FC = () => {
     navigateTo(View.DASHBOARD);
   };
 
+  // Helper to get active tab ID for the Layout Dock
+  const getActiveTab = () => {
+    switch (currentView) {
+      case View.DASHBOARD: return 'home';
+      case View.CLIENTS: return 'clients';
+      case View.METRICS: return 'metrics';
+      case View.CALENDAR: return 'calendar';
+      case View.FINANCE: return 'finance';
+      default: return 'home';
+    }
+  };
+
   // Show loading screen while checking auth
   if (loading) {
     return (
@@ -112,7 +124,7 @@ const App: React.FC = () => {
     );
   }
 
-  const renderView = () => {
+  const renderContent = () => {
     switch (currentView) {
       case View.LOGIN:
         return <LoginView onLogin={handleLoginSuccess} />;
@@ -148,13 +160,20 @@ const App: React.FC = () => {
     }
   };
 
-  return (
-    <div className="max-w-md mx-auto min-h-screen bg-slate-950 text-white selection:bg-blue-500/30 overflow-x-hidden relative">
-      <main className="animate-fade-in duration-700">
-        {renderView()}
-      </main>
+  // Don't show Layout on Login screen
+  if (currentView === View.LOGIN) {
+    return (
+      <div className="max-w-md mx-auto min-h-screen bg-slate-950">
+        <LoginView onLogin={handleLoginSuccess} />
+      </div>
+    );
+  }
 
-      {/* Global Toast / Notifications can go here */}
+  return (
+    <div className="max-w-md mx-auto bg-slate-950 shadow-2xl min-h-screen overflow-hidden">
+      <Layout activeTab={getActiveTab()} onNavigate={handleNavigation}>
+        {renderContent()}
+      </Layout>
     </div>
   );
 };

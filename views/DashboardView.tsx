@@ -5,7 +5,7 @@ import {
   ArrowRight,
   BarChart2,
   Calendar,
-  Plus,
+  Plus as PlusIcon,
   TrendingUp,
   Users,
   Wallet
@@ -231,11 +231,11 @@ const DashboardView: React.FC<DashboardViewProps> = ({ user, onSelectClient, onO
       {/* Create Workout AI Action */}
       <motion.div variants={itemVariants}>
         <button
-          onClick={() => onNavigate && onNavigate('WORKOUT_BUILDER')}
+          onClick={onOpenAI}
           className="w-full py-4 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl font-black text-white shadow-lg shadow-blue-900/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2 group"
         >
           <div className="p-1 rounded-full bg-white/20 group-hover:bg-white/30 transition-colors">
-            <Plus size={18} />
+            <PlusIcon size={18} />
           </div>
           NOVO TREINO COM IA
         </button>

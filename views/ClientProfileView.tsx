@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Settings, Play, Pause, AlertTriangle, CheckCircle, Calendar, FileText, TrendingUp, Camera, Dumbbell, Clock, Phone, Mail, Edit, Save, X, PlusCircle } from 'lucide-react';
+import { ArrowLeft, Settings, Play, Pause, AlertTriangle, CheckCircle, Calendar, FileText, TrendingUp, Camera, Dumbbell, Clock, Phone, Mail, Edit, Save, X, PlusCircle, User, Zap } from 'lucide-react';
 import { Client, MissedClass } from '../types';
 
 interface ClientProfileViewProps {
@@ -9,9 +9,12 @@ interface ClientProfileViewProps {
   onStartWorkout: (workout: any) => void;
   onStartAssessment: () => void;
   onCreateWorkout?: () => void;
+  onStudentView?: () => void;
+  onSportTraining?: () => void;
 }
 
-const ClientProfileView: React.FC<ClientProfileViewProps> = ({ client: initialClient, onBack, onStartWorkout, onStartAssessment, onCreateWorkout }) => {
+const ClientProfileView: React.FC<ClientProfileViewProps> = ({ client: initialClient, onBack, onStartWorkout, onStartAssessment, onCreateWorkout, onStudentView, onSportTraining }) => {
+
 
   const [client, setClient] = useState(initialClient);
   const [activeTab, setActiveTab] = useState('Evolução');
@@ -341,6 +344,27 @@ const ClientProfileView: React.FC<ClientProfileViewProps> = ({ client: initialCl
                 Criar Novo Treino
               </button>
 
+              {/* Quick Actions */}
+              <div className="grid grid-cols-2 gap-3">
+                {onStudentView && (
+                  <button
+                    onClick={onStudentView}
+                    className="py-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-bold text-xs uppercase tracking-widest flex items-center justify-center gap-2 active:scale-[0.98] transition-all"
+                  >
+                    <User size={16} />
+                    Ver como Aluno
+                  </button>
+                )}
+                {onSportTraining && (
+                  <button
+                    onClick={onSportTraining}
+                    className="py-3 rounded-xl bg-purple-500/10 border border-purple-500/30 text-purple-400 font-bold text-xs uppercase tracking-widest flex items-center justify-center gap-2 active:scale-[0.98] transition-all"
+                  >
+                    <Zap size={16} />
+                    Esportivo ⭐
+                  </button>
+                )}
+              </div>
 
               {/* Missed Classes Section */}
               <div className="glass-card rounded-2xl p-4 border border-amber-500/20">

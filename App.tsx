@@ -14,6 +14,8 @@ import CalendarView from './views/CalendarView';
 import FinanceView from './views/FinanceView';
 import WorkoutBuilderView from './views/WorkoutBuilderView';
 import AssessmentView from './views/AssessmentView';
+import StudentView from './views/StudentView';
+import SportTrainingView from './views/SportTrainingView';
 import Layout from './components/Layout';
 
 function App() {
@@ -21,12 +23,7 @@ function App() {
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [activeWorkout, setActiveWorkout] = useState<Workout | null>(null);
   const [user, setUser] = useState<any>(null);
-  const [loading, setLoading] = useState(false); // No loading for demo
-
-  // Check for existing session on mount (Simulated)
-  // useEffect(() => {
-  //   checkUser();
-  // }, []);
+  const [loading, setLoading] = useState(false);
 
   const navigateTo = (view: View, data?: any) => {
     if (view === View.CLIENT_PROFILE && data) {
@@ -61,19 +58,21 @@ function App() {
       case 'WORKOUT_BUILDER':
         navigateTo(View.WORKOUT_BUILDER);
         break;
+      case 'student':
+        navigateTo(View.STUDENT);
+        break;
+      case 'sport_training':
+        navigateTo(View.SPORT_TRAINING);
+        break;
     }
   };
 
   const handleLogout = async () => {
-    // if (supabase) {
-    //   await supabase.auth.signOut();
-    // }
     setUser(null);
     navigateTo(View.LOGIN);
   };
 
   const handleLoginSuccess = (loggedUser: any) => {
-    // Mock user for demo
     const demoUser = {
       id: 'demo-user-id',
       email: 'demo@apex.com',
@@ -92,8 +91,6 @@ function App() {
     handleLoginSuccess(null);
   };
 
-
-  // Helper to get active tab ID for the Layout Dock
   const getActiveTab = () => {
     switch (currentView) {
       case View.DASHBOARD: return 'home';
@@ -105,7 +102,6 @@ function App() {
     }
   };
 
-  // Show loading screen while checking auth
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-950 flex items-center justify-center">
@@ -166,9 +162,7 @@ function App() {
           />
         );
       case View.ASSESSMENT:
-        // Ensure we have a selected client, otherwise fallback
         if (!selectedClient) {
-          // Ideally navigate to client selection, but for now back to Dashboard
           return <DashboardView user={user} onSelectClient={setSelectedClient} onOpenAI={() => navigateTo(View.AI_BUILDER)} onNavigate={handleNavigation} />;
         }
         return (
@@ -177,9 +171,26 @@ function App() {
             client={selectedClient}
             onBack={() => navigateTo(View.CLIENT_PROFILE, selectedClient)}
             onSave={(assessment) => {
-              // Here we would push the new assessment to the client object (mock logic for now)
-              // Then navigate back
               navigateTo(View.CLIENT_PROFILE, selectedClient);
+            }}
+          />
+        );
+      case View.STUDENT:
+        return (
+          <StudentView
+            studentName={selectedClient?.name || 'Aluno Demo'}
+            coachName={user?.user_metadata?.name || 'Personal'}
+            onCompleteWorkout={() => navigateTo(View.DASHBOARD)}
+          />
+        );
+      case View.SPORT_TRAINING:
+        return (
+          <SportTrainingView
+            clientName={selectedClient?.name}
+            onBack={() => navigateTo(View.DASHBOARD)}
+            onSave={(workout) => {
+              console.log('Sport workout saved:', workout);
+              navigateTo(View.DASHBOARD);
             }}
           />
         );
@@ -188,11 +199,19 @@ function App() {
     }
   };
 
-  // Don't show Layout on Login screen
   if (currentView === View.LOGIN) {
     return (
       <div className="max-w-md mx-auto min-h-screen bg-slate-950">
         <LoginView onLogin={handleLoginSuccess} />
+      </div>
+    );
+  }
+
+  // StudentView doesn't need the Layout dock
+  if (currentView === View.STUDENT) {
+    return (
+      <div className="max-w-md mx-auto bg-slate-950 shadow-2xl min-h-screen overflow-hidden">
+        {renderContent()}
       </div>
     );
   }
@@ -207,3 +226,4 @@ function App() {
 };
 
 export default App;
+

@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { mockClients } from '../mocks/demoData';
 
+
 interface DashboardViewProps {
   user: any;
   onSelectClient: (client: Client) => void;

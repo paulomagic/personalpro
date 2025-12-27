@@ -1,6 +1,7 @@
-
 import React, { useState } from 'react';
-import { Client } from '../types';
+import { motion, AnimatePresence } from 'framer-motion';
+import { ArrowLeft, Settings, Play, Pause, AlertTriangle, CheckCircle, Calendar, FileText, TrendingUp, Camera, Dumbbell, Clock, Phone, Mail, Edit, Save, X, PlusCircle } from 'lucide-react';
+import { Client, MissedClass } from '../types';
 
 interface ClientProfileViewProps {
   client: Client;
@@ -9,20 +10,97 @@ interface ClientProfileViewProps {
   onStartAssessment: () => void;
 }
 
-const ClientProfileView: React.FC<ClientProfileViewProps> = ({ client, onBack, onStartWorkout, onStartAssessment }) => {
+const ClientProfileView: React.FC<ClientProfileViewProps> = ({ client: initialClient, onBack, onStartWorkout, onStartAssessment }) => {
+  const [client, setClient] = useState(initialClient);
   const [activeTab, setActiveTab] = useState('Evolução');
+  const [isEditing, setIsEditing] = useState(false);
+  const [showStatusModal, setShowStatusModal] = useState(false);
+  const [showMissedClassModal, setShowMissedClassModal] = useState(false);
+
+  // Editable fields
+  const [editedObservations, setEditedObservations] = useState(client.observations || '');
+  const [editedInjuries, setEditedInjuries] = useState(client.injuries || '');
+  const [editedPreferences, setEditedPreferences] = useState(client.preferences || '');
+
+  // Missed class form
+  const [missedDate, setMissedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [missedReason, setMissedReason] = useState<MissedClass['reason']>('sick');
+  const [missedNotes, setMissedNotes] = useState('');
+
   const tabs = ['Evolução', 'Avaliações', 'Treinos', 'Bio'];
 
-  const badges = [
-    { icon: 'military_tech', label: '100 Treinos', color: 'bg-amber-400' },
-    { icon: 'emoji_events', label: 'Novo Recorde', color: 'bg-blue-500' },
-  ];
+  const handleSaveNotes = () => {
+    setClient(prev => ({
+      ...prev,
+      observations: editedObservations,
+      injuries: editedInjuries,
+      preferences: editedPreferences
+    }));
+    setIsEditing(false);
+  };
 
-  const mainLoads = [
-    { name: 'Agachamento Livre', load: '85 kg', trend: 'up', icon: 'fitness_center' },
-    { name: 'Supino Reto', load: '42 kg', trend: 'equal', icon: 'exercise' },
-    { name: 'Levantamento Terra', load: '90 kg', trend: 'up', icon: 'sports_martial_arts' },
-  ];
+  const handleToggleStatus = (newStatus: Client['status'], reason?: Client['suspensionReason']) => {
+    setClient(prev => ({
+      ...prev,
+      status: newStatus,
+      suspensionReason: reason,
+      suspensionStartDate: newStatus === 'paused' ? new Date().toISOString() : undefined,
+      suspensionEndDate: undefined
+    }));
+    setShowStatusModal(false);
+  };
+
+  const handleAddMissedClass = () => {
+    const newMissedClass: MissedClass = {
+      id: Math.random().toString(36).substr(2, 9),
+      date: missedDate,
+      reason: missedReason,
+      replaced: false,
+      notes: missedNotes
+    };
+    setClient(prev => ({
+      ...prev,
+      missedClasses: [...prev.missedClasses, newMissedClass]
+    }));
+    setShowMissedClassModal(false);
+    setMissedNotes('');
+  };
+
+  const handleMarkAsReplaced = (missedClassId: string) => {
+    setClient(prev => ({
+      ...prev,
+      missedClasses: prev.missedClasses.map(mc =>
+        mc.id === missedClassId ? { ...mc, replaced: true, replacementDate: new Date().toISOString() } : mc
+      )
+    }));
+  };
+
+  const getStatusColor = (status: Client['status']) => {
+    const colors = {
+      'active': 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
+      'at-risk': 'bg-amber-500/20 text-amber-400 border-amber-500/30',
+      'paused': 'bg-slate-500/20 text-slate-400 border-slate-500/30',
+      'inactive': 'bg-red-500/20 text-red-400 border-red-500/30'
+    };
+    return colors[status] || colors.inactive;
+  };
+
+  const getStatusIcon = (status: Client['status']) => {
+    const icons = {
+      'active': TrendingUp,
+      'at-risk': AlertTriangle,
+      'paused': Pause,
+      'inactive': X
+    };
+    return icons[status] || X;
+  };
+
+  const getReasonLabel = (reason: MissedClass['reason']) => {
+    const labels = { sick: 'Doença', travel: 'Viagem', personal: 'Pessoal', other: 'Outro' };
+    return labels[reason] || reason;
+  };
+
+  const StatusIcon = getStatusIcon(client.status);
 
   return (
     <div className="max-w-md mx-auto min-h-screen bg-slate-950 text-white selection:bg-blue-500/30">
@@ -30,231 +108,569 @@ const ClientProfileView: React.FC<ClientProfileViewProps> = ({ client, onBack, o
       <header className="relative h-72 w-full overflow-hidden">
         <div className="absolute inset-0 z-0">
           <img
-            src="https://images.unsplash.com/photo-1541534741688-6078c6bfb5c5?w=800&h=600&fit=crop"
+            src={client.avatar || "https://images.unsplash.com/photo-1541534741688-6078c6bfb5c5?w=800&h=600&fit=crop"}
             className="w-full h-full object-cover scale-110 blur-[2px] opacity-60"
             alt="Hero"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/40 to-transparent"></div>
         </div>
+
         {/* Top Actions */}
         <div className="absolute top-12 left-0 right-0 px-6 flex justify-between items-center z-10">
           <button
             onClick={onBack}
             className="size-10 rounded-full bg-white/10 backdrop-blur-md text-white border border-white/20 flex items-center justify-center"
           >
-            <span className="material-symbols-outlined">arrow_back</span>
+            <ArrowLeft size={20} />
           </button>
-          <button className="size-10 rounded-full bg-white/10 backdrop-blur-md text-white border border-white/20 flex items-center justify-center">
-            <span className="material-symbols-outlined">settings</span>
+          <button
+            onClick={() => setShowStatusModal(true)}
+            className="size-10 rounded-full bg-white/10 backdrop-blur-md text-white border border-white/20 flex items-center justify-center"
+          >
+            <Settings size={20} />
           </button>
         </div>
 
         {/* Profile Info */}
         <div className="absolute bottom-6 left-0 right-0 px-6 z-10">
           <h1 className="text-white text-[28px] font-bold leading-tight">{client.name}</h1>
-          <div className="flex items-center gap-2 mt-1">
-            <p className="text-white/90 text-base font-medium">32 anos • {client.goal}</p>
+          <div className="flex items-center gap-2 mt-1 flex-wrap">
+            <p className="text-white/90 text-base font-medium">{client.goal}</p>
+            <span className="text-white/40">•</span>
+            <span className="text-white/70 text-sm">{client.level}</span>
             <span className="text-white/40">•</span>
 
-            {/* Status Badge (Clickable for MVP Demo) */}
+            {/* Status Badge */}
             <button
-              onClick={() => {
-                const newStatus = client.status === 'active' ? 'paused' : 'active';
-                // In real app, call API. For demo, we just toggle local prop visual or show toast
-                alert(`Status alterado para: ${newStatus === 'active' ? 'Ativo' : 'Pausado'}`);
-                // client.status = newStatus; // Force update for demo
-              }}
-              className={`flex items-center gap-1 px-2 py-0.5 rounded-full border border-white/10 backdrop-blur-md transition-colors ${client.status === 'active' ? 'bg-emerald-500/20 text-emerald-400' :
-                  client.status === 'paused' ? 'bg-slate-500/20 text-slate-400' :
-                    'bg-amber-500/20 text-amber-400'
-                }`}>
-              <span className="material-symbols-outlined text-sm">
-                {client.status === 'active' ? 'trending_up' : client.status === 'paused' ? 'pause_circle' : 'warning'}
-              </span>
-              <span className="text-xs font-semibold uppercase">
-                {client.status === 'active' ? 'Ativo' : client.status === 'paused' ? 'Pausado' : 'Risco'}
+              onClick={() => setShowStatusModal(true)}
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full border backdrop-blur-md transition-colors ${getStatusColor(client.status)}`}
+            >
+              <StatusIcon size={12} />
+              <span className="text-xs font-bold uppercase">
+                {client.status === 'active' ? 'Ativo' :
+                  client.status === 'paused' ? 'Pausado' :
+                    client.status === 'at-risk' ? 'Risco' : 'Inativo'}
               </span>
             </button>
           </div>
+          {client.suspensionReason && client.status === 'paused' && (
+            <p className="text-xs text-slate-400 mt-1">
+              ⏸️ Pausado por: {client.suspensionReason === 'travel' ? 'Viagem' :
+                client.suspensionReason === 'sick' ? 'Doença' :
+                  client.suspensionReason === 'financial' ? 'Financeiro' : 'Outro'}
+            </p>
+          )}
         </div>
       </header>
 
       {/* Tabs */}
-      <div className="px-6 pt-6 border-b border-slate-100">
-        <div className="flex gap-8">
+      <div className="px-6 pt-4 border-b border-white/5">
+        <div className="flex gap-6">
           {tabs.map(tab => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`pb-4 text-sm font-semibold transition-all relative ${activeTab === tab ? 'text-slate-900' : 'text-slate-400'
+              className={`pb-3 text-sm font-bold transition-all relative ${activeTab === tab ? 'text-white' : 'text-slate-500 hover:text-slate-300'
                 }`}
             >
               {tab}
               {activeTab === tab && (
-                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 rounded-full" />
+                <motion.div
+                  layoutId="tabIndicator"
+                  className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-500 rounded-full"
+                />
               )}
             </button>
           ))}
         </div>
       </div>
 
-      <main className="px-6 space-y-6 pb-28">
-        {/* Main Stats Card */}
-        <div className="grid grid-cols-2 gap-3 animate-slide-up stagger-1">
-          <div className="glass-card rounded-3xl p-5 border-l-4 border-blue-500">
-            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mb-1">Aderência</p>
+      <main className="px-6 space-y-6 pb-28 pt-6">
+        {/* Stats Cards */}
+        <div className="grid grid-cols-2 gap-3">
+          <div className="glass-card rounded-2xl p-4 border-l-4 border-blue-500">
+            <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mb-1">Aderência</p>
             <div className="flex items-end gap-2">
               <span className="text-3xl font-black text-white">{client.adherence}%</span>
-              <span className="text-emerald-400 text-[10px] font-bold mb-1">+5%</span>
+              {client.adherence >= 80 && <span className="text-emerald-400 text-xs font-bold mb-1">Excelente!</span>}
             </div>
           </div>
-          <div className="glass-card rounded-3xl p-5 border-l-4 border-purple-500">
-            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mb-1">Próxima Meta</p>
-            <div className="flex items-end gap-2">
-              <span className="text-3xl font-black text-white">82kg</span>
-              <span className="material-symbols-outlined text-purple-400 text-sm mb-1">target</span>
+          <div className="glass-card rounded-2xl p-4 border-l-4 border-purple-500">
+            <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mb-1">Treinos</p>
+            <div className="flex items-end gap-1">
+              <span className="text-3xl font-black text-white">{client.completedClasses || 0}</span>
+              <span className="text-slate-500 text-sm font-bold mb-1">/{client.totalClasses || 0}</span>
             </div>
           </div>
         </div>
 
-        {/* Evolution Chart Section */}
-        {activeTab === 'Evolução' && (
-          <div className="glass-card rounded-[32px] p-6 animate-slide-up stagger-2">
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="font-black text-white tracking-tight">Evolução de Peso</h3>
-              <div className="flex gap-2">
-                <button className="px-3 py-1 bg-blue-500 text-white text-[10px] font-black rounded-full uppercase">Peso</button>
-                <button className="px-3 py-1 bg-white/5 text-slate-500 text-[10px] font-black rounded-full uppercase">Gordura</button>
-              </div>
-            </div>
-
-            <div className="h-48 flex items-end justify-between gap-2 px-2">
-              {[65, 59, 80, 81, 56, 55, 40].map((height, i) => (
-                <div key={i} className="flex-1 group relative">
-                  <div
-                    className="w-full bg-gradient-to-t from-blue-600/20 to-blue-500/80 rounded-t-lg transition-all duration-500 group-hover:to-blue-400"
-                    style={{ height: `${height}%` }}
-                  >
-                    <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-blue-500 text-white text-[10px] font-black px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity">
-                      {85 + i}kg
-                    </div>
+        {/* Tab Content */}
+        <AnimatePresence mode="wait">
+          {/* Evolution Tab */}
+          {activeTab === 'Evolução' && (
+            <motion.div
+              key="evolution"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="space-y-6"
+            >
+              {/* Weight Chart */}
+              <div className="glass-card rounded-[24px] p-6">
+                <div className="flex justify-between items-center mb-6">
+                  <h3 className="font-black text-white tracking-tight">Evolução de Peso</h3>
+                  <div className="flex gap-2">
+                    <button className="px-3 py-1 bg-blue-500 text-white text-[10px] font-black rounded-full uppercase">Peso</button>
+                    <button className="px-3 py-1 bg-white/5 text-slate-500 text-[10px] font-black rounded-full uppercase">Gordura</button>
                   </div>
                 </div>
-              ))}
-            </div>
-            <div className="flex justify-between mt-4 px-2">
-              {['Set', 'Out', 'Nov', 'Dez', 'Jan', 'Fev', 'Mar'].map(mes => (
-                <span key={mes} className="text-[9px] font-black text-slate-600 uppercase tracking-widest">{mes}</span>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Avaliações Tab Content */}
-        {activeTab === 'Avaliações' && (
-          <div className="space-y-4 animate-slide-up">
-            <button
-              onClick={onStartAssessment}
-              className="w-full py-4 rounded-2xl bg-blue-600 text-white font-black uppercase tracking-widest shadow-lg shadow-blue-900/40 flex items-center justify-center gap-2 active:scale-[0.98] transition-all"
-            >
-              <span className="material-symbols-outlined">add_circle</span>
-              Nova Avaliação
-            </button>
-
-            <div className="space-y-3">
-              <h3 className="font-black text-white tracking-tight px-1 text-sm mt-4">Histórico</h3>
-              {/* Mock Assessments */}
-              {[
-                { date: '15 FEV 2024', weight: '82.5 kg', bf: '14%' },
-                { date: '12 JAN 2024', weight: '84.0 kg', bf: '15.2%' },
-                { date: '10 DEZ 2023', weight: '86.1 kg', bf: '16%' },
-              ].map((item, idx) => (
-                <div key={idx} className="glass-card p-4 rounded-2xl flex items-center justify-between border border-white/5 active:bg-white/5 transition-colors">
-                  <div className="flex items-center gap-4">
-                    <div className="size-10 rounded-xl bg-slate-800 flex items-center justify-center text-slate-400 font-bold text-xs uppercase">
-                      {item.date.split(' ')[0]}
+                <div className="h-40 flex items-end justify-between gap-2">
+                  {[65, 59, 80, 81, 56, 55, 70].map((height, i) => (
+                    <div key={i} className="flex-1 group relative">
+                      <motion.div
+                        initial={{ height: 0 }}
+                        animate={{ height: `${height}%` }}
+                        transition={{ delay: i * 0.1 }}
+                        className="w-full bg-gradient-to-t from-blue-600/20 to-blue-500/80 rounded-t-lg group-hover:to-blue-400"
+                      />
                     </div>
-                    <div>
-                      <p className="text-xs font-black text-white uppercase tracking-wider">{item.date}</p>
-                      <div className="flex gap-3 text-[10px] text-slate-400 font-medium mt-0.5">
-                        <span>Peso: <b className="text-white">{item.weight}</b></span>
-                        <span>BF: <b className="text-blue-400">{item.bf}</b></span>
+                  ))}
+                </div>
+                <div className="flex justify-between mt-4 px-1">
+                  {['Set', 'Out', 'Nov', 'Dez', 'Jan', 'Fev', 'Mar'].map(mes => (
+                    <span key={mes} className="text-[9px] font-black text-slate-600 uppercase tracking-widest">{mes}</span>
+                  ))}
+                </div>
+              </div>
+
+              {/* Photo Gallery */}
+              <div className="space-y-4">
+                <div className="flex justify-between items-center px-1">
+                  <h3 className="font-black text-white tracking-tight">Galeria de Evolução</h3>
+                  <button className="text-[10px] font-black text-blue-400 uppercase tracking-widest">Ver Todas</button>
+                </div>
+                <div className="flex gap-4 overflow-x-auto pb-4 no-scrollbar">
+                  {client.assessments.slice(0, 3).map((assessment, i) => (
+                    <div key={i} className="min-w-[120px] aspect-[3/4] rounded-2xl overflow-hidden relative glass-card p-1">
+                      <div className="w-full h-full bg-gradient-to-br from-slate-700 to-slate-800 rounded-xl flex items-center justify-center">
+                        <Camera size={24} className="text-slate-600" />
+                      </div>
+                      <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 to-transparent flex items-end p-3">
+                        <span className="text-[9px] font-black text-white uppercase tracking-widest">
+                          {new Date(assessment.date).toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' })}
+                        </span>
                       </div>
                     </div>
-                  </div>
-                  <span className="material-symbols-outlined text-slate-600">chevron_right</span>
+                  ))}
+                  <button
+                    onClick={onStartAssessment}
+                    className="min-w-[120px] aspect-[3/4] rounded-2xl border-2 border-dashed border-white/10 flex flex-col items-center justify-center gap-2 group hover:border-blue-500/50 transition-all"
+                  >
+                    <div className="size-10 rounded-full bg-blue-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                      <Camera size={20} className="text-blue-400" />
+                    </div>
+                    <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Nova Foto</span>
+                  </button>
                 </div>
-              ))}
-            </div>
-          </div>
-        )}
+              </div>
+            </motion.div>
+          )}
 
-        {/* Photo Gallery - Always Visible or only on Evolution/Bio? Let's keep it on Evolution for now */}
-        {activeTab === 'Evolução' && (
-          <div className="space-y-4 animate-slide-up stagger-3 mt-6">
-            <div className="flex justify-between items-center px-1">
-              <h3 className="font-black text-white tracking-tight">Galeria de Evolução</h3>
-              <button className="text-[10px] font-black text-blue-400 uppercase tracking-widest">Ver Todas</button>
-            </div>
-            <div className="flex gap-4 overflow-x-auto pb-4 no-scrollbar">
-              {[
-                { label: 'JAN 2024', img: 'https://images.unsplash.com/photo-1571019623129-fbf8a4f44097?w=300&h=400&fit=crop' },
-                { label: 'FEV 2024', img: 'https://images.unsplash.com/photo-1583454110551-21f2fa202214?w=300&h=400&fit=crop' },
-                { label: 'MAR 2024', img: 'https://images.unsplash.com/photo-1544033527-b192daee1f5b?w=300&h=400&fit=crop' },
-              ].map((foto, i) => (
-                <div key={i} className="min-w-[140px] aspect-[3/4] rounded-3xl overflow-hidden relative glass-card p-1">
-                  <img src={foto.img} className="w-full h-full object-cover rounded-2xl opacity-80" alt={foto.label} />
-                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 to-transparent flex items-end p-4">
-                    <span className="text-[10px] font-black text-white uppercase tracking-widest">{foto.label}</span>
-                  </div>
-                </div>
-              ))}
+          {/* Assessments Tab */}
+          {activeTab === 'Avaliações' && (
+            <motion.div
+              key="assessments"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="space-y-4"
+            >
               <button
                 onClick={onStartAssessment}
-                className="min-w-[140px] aspect-[3/4] rounded-3xl border-2 border-dashed border-white/10 flex flex-col items-center justify-center gap-2 group hover:border-blue-500/50 transition-all"
+                className="w-full py-4 rounded-2xl bg-blue-600 text-white font-black uppercase tracking-widest shadow-lg shadow-blue-900/40 flex items-center justify-center gap-2 active:scale-[0.98] transition-all"
               >
-                <div className="size-10 rounded-full bg-blue-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <span className="material-symbols-outlined text-blue-400">add_a_photo</span>
-                </div>
-                <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Adicionar Foto</span>
+                <PlusCircle size={20} />
+                Nova Avaliação
               </button>
-            </div>
-          </div>
-        )}
 
-        {/* Badges Section */}
-        <div className="glass-card rounded-[32px] p-6 animate-slide-up stagger-4">
-          <h3 className="font-black text-white tracking-tight mb-4">Conquistas</h3>
-          <div className="flex gap-4 overflow-x-auto pb-2 no-scrollbar">
-            <div className="flex flex-col items-center gap-2 shrink-0">
-              <div className="size-16 rounded-full bg-gradient-to-br from-amber-300 to-amber-600 flex items-center justify-center shadow-lg shadow-amber-500/20">
-                <span className="material-symbols-outlined text-white text-3xl">workspace_premium</span>
+              <h3 className="font-black text-white tracking-tight text-sm mt-4">Histórico</h3>
+              <div className="space-y-3">
+                {client.assessments.length > 0 ? client.assessments.map((assessment, idx) => (
+                  <div key={idx} className="glass-card p-4 rounded-2xl flex items-center justify-between border border-white/5 active:bg-white/5 transition-colors">
+                    <div className="flex items-center gap-4">
+                      <div className="size-12 rounded-xl bg-slate-800 flex items-center justify-center text-slate-400">
+                        <Calendar size={20} />
+                      </div>
+                      <div>
+                        <p className="text-xs font-black text-white uppercase tracking-wider">
+                          {new Date(assessment.date).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })}
+                        </p>
+                        <div className="flex gap-3 text-[10px] text-slate-400 font-medium mt-0.5">
+                          <span>Peso: <b className="text-white">{assessment.weight}kg</b></span>
+                          {assessment.bodyFat && <span>BF: <b className="text-blue-400">{assessment.bodyFat}%</b></span>}
+                        </div>
+                      </div>
+                    </div>
+                    <span className="material-symbols-outlined text-slate-600">chevron_right</span>
+                  </div>
+                )) : (
+                  <div className="py-8 text-center text-slate-500 text-xs">
+                    Nenhuma avaliação registrada ainda.
+                  </div>
+                )}
               </div>
-              <span className="text-[9px] font-black text-slate-500 uppercase">10 Noites</span>
-            </div>
-            <div className="flex flex-col items-center gap-2 shrink-0">
-              <div className="size-16 rounded-full bg-gradient-to-br from-blue-300 to-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/20">
-                <span className="material-symbols-outlined text-white text-3xl">bolt</span>
+            </motion.div>
+          )}
+
+          {/* Treinos Tab */}
+          {activeTab === 'Treinos' && (
+            <motion.div
+              key="workouts"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="space-y-4"
+            >
+              <button
+                onClick={() => onStartWorkout({ title: 'Novo Treino', exercises: [] })}
+                className="w-full py-4 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-black uppercase tracking-widest shadow-lg flex items-center justify-center gap-2 active:scale-[0.98] transition-all"
+              >
+                <Dumbbell size={20} />
+                Criar Novo Treino
+              </button>
+
+              {/* Missed Classes Section */}
+              <div className="glass-card rounded-2xl p-4 border border-amber-500/20">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="font-bold text-white flex items-center gap-2">
+                    <Clock size={16} className="text-amber-400" />
+                    Aulas Perdidas
+                  </h3>
+                  <button
+                    onClick={() => setShowMissedClassModal(true)}
+                    className="text-xs font-bold text-amber-400 uppercase tracking-widest"
+                  >
+                    + Registrar
+                  </button>
+                </div>
+
+                {client.missedClasses.length > 0 ? (
+                  <div className="space-y-2">
+                    {client.missedClasses.map((mc, idx) => (
+                      <div key={idx} className="flex items-center justify-between bg-slate-800/50 rounded-xl p-3">
+                        <div>
+                          <p className="text-xs font-bold text-white">
+                            {new Date(mc.date).toLocaleDateString('pt-BR')}
+                          </p>
+                          <p className="text-[10px] text-slate-400">{getReasonLabel(mc.reason)}</p>
+                        </div>
+                        {mc.replaced ? (
+                          <span className="text-[9px] bg-emerald-500/20 text-emerald-400 px-2 py-1 rounded-full font-bold">
+                            ✓ Reposta
+                          </span>
+                        ) : (
+                          <button
+                            onClick={() => handleMarkAsReplaced(mc.id!)}
+                            className="text-[9px] bg-blue-500/20 text-blue-400 px-2 py-1 rounded-full font-bold hover:bg-blue-500/30 transition-colors"
+                          >
+                            Marcar como Reposta
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-slate-500 text-center py-2">
+                    Nenhuma aula perdida registrada 🎉
+                  </p>
+                )}
               </div>
-              <span className="text-[9px] font-black text-slate-500 uppercase">Frequência</span>
-            </div>
-            <div className="flex flex-col items-center gap-2 shrink-0 opacity-40 grayscale">
-              <div className="size-16 rounded-full bg-slate-800 flex items-center justify-center">
-                <span className="material-symbols-outlined text-slate-600 text-3xl">lock</span>
+            </motion.div>
+          )}
+
+          {/* Bio Tab */}
+          {activeTab === 'Bio' && (
+            <motion.div
+              key="bio"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="space-y-4"
+            >
+              {/* Contact Info */}
+              <div className="glass-card rounded-2xl p-4 space-y-3">
+                <h3 className="font-bold text-white text-sm flex items-center gap-2">
+                  <Phone size={14} className="text-blue-400" />
+                  Contato
+                </h3>
+                {client.email && (
+                  <div className="flex items-center gap-3 text-sm text-slate-300">
+                    <Mail size={14} className="text-slate-500" />
+                    {client.email}
+                  </div>
+                )}
+                {client.phone && (
+                  <div className="flex items-center gap-3 text-sm text-slate-300">
+                    <Phone size={14} className="text-slate-500" />
+                    {client.phone}
+                    <a
+                      href={`https://wa.me/55${client.phone.replace(/\D/g, '')}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="ml-auto text-[9px] bg-emerald-500/20 text-emerald-400 px-2 py-1 rounded-full font-bold"
+                    >
+                      WhatsApp
+                    </a>
+                  </div>
+                )}
               </div>
-              <span className="text-[9px] font-black text-slate-600 uppercase">Nível Pro</span>
-            </div>
-          </div>
-        </div>
+
+              {/* Notes Section */}
+              <div className="glass-card rounded-2xl p-4 space-y-4">
+                <div className="flex justify-between items-center">
+                  <h3 className="font-bold text-white text-sm flex items-center gap-2">
+                    <FileText size={14} className="text-blue-400" />
+                    Notas do Aluno
+                  </h3>
+                  <button
+                    onClick={() => isEditing ? handleSaveNotes() : setIsEditing(true)}
+                    className={`text-xs font-bold px-3 py-1 rounded-full transition-all ${isEditing
+                        ? 'bg-emerald-500 text-white'
+                        : 'bg-white/5 text-slate-400 hover:text-white'
+                      }`}
+                  >
+                    {isEditing ? <><Save size={12} className="inline mr-1" /> Salvar</> : <><Edit size={12} className="inline mr-1" /> Editar</>}
+                  </button>
+                </div>
+
+                {/* Observations */}
+                <div>
+                  <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest block mb-1">
+                    📝 Observações Gerais
+                  </label>
+                  {isEditing ? (
+                    <textarea
+                      value={editedObservations}
+                      onChange={(e) => setEditedObservations(e.target.value)}
+                      className="w-full bg-slate-800/50 border border-white/10 rounded-xl p-3 text-sm text-white outline-none focus:border-blue-500/50 resize-none"
+                      rows={2}
+                      placeholder="Observações gerais sobre o aluno..."
+                    />
+                  ) : (
+                    <p className="text-sm text-slate-300">
+                      {client.observations || <span className="text-slate-500 italic">Sem observações</span>}
+                    </p>
+                  )}
+                </div>
+
+                {/* Injuries */}
+                <div>
+                  <label className="text-[9px] font-black text-amber-400 uppercase tracking-widest block mb-1">
+                    ⚠️ Lesões / Restrições
+                  </label>
+                  {isEditing ? (
+                    <textarea
+                      value={editedInjuries}
+                      onChange={(e) => setEditedInjuries(e.target.value)}
+                      className="w-full bg-amber-500/5 border border-amber-500/20 rounded-xl p-3 text-sm text-white outline-none focus:border-amber-500/50 resize-none"
+                      rows={2}
+                      placeholder="Lesões e restrições de movimento..."
+                    />
+                  ) : (
+                    <p className="text-sm text-slate-300">
+                      {client.injuries || <span className="text-slate-500 italic">Nenhuma lesão registrada</span>}
+                    </p>
+                  )}
+                </div>
+
+                {/* Preferences */}
+                <div>
+                  <label className="text-[9px] font-black text-pink-400 uppercase tracking-widest block mb-1">
+                    ❤️ Preferências de Treino
+                  </label>
+                  {isEditing ? (
+                    <textarea
+                      value={editedPreferences}
+                      onChange={(e) => setEditedPreferences(e.target.value)}
+                      className="w-full bg-pink-500/5 border border-pink-500/20 rounded-xl p-3 text-sm text-white outline-none focus:border-pink-500/50 resize-none"
+                      rows={2}
+                      placeholder="Exercícios favoritos, estilos de treino..."
+                    />
+                  ) : (
+                    <p className="text-sm text-slate-300">
+                      {client.preferences || <span className="text-slate-500 italic">Sem preferências registradas</span>}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Dates */}
+              <div className="glass-card rounded-2xl p-4">
+                <h3 className="font-bold text-white text-sm mb-3">📅 Datas</h3>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Início</p>
+                    <p className="text-white font-bold">{client.startDate ? new Date(client.startDate).toLocaleDateString('pt-BR') : '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Último Treino</p>
+                    <p className="text-white font-bold">{client.lastTraining}</p>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </main>
 
       {/* FAB */}
       <button
         onClick={() => onStartWorkout({ title: 'Peito e Tríceps', objective: 'Hipertrofia', duration: '45min', exercises: [] })}
-        className="fixed bottom-8 right-8 size-14 rounded-full bg-blue-600 text-white shadow-xl shadow-blue-600/30 flex items-center justify-center hover:bg-blue-700 active:scale-95 transition-all"
+        className="fixed bottom-8 right-8 size-14 rounded-full bg-blue-600 text-white shadow-xl shadow-blue-600/30 flex items-center justify-center hover:bg-blue-700 active:scale-95 transition-all z-30"
       >
-        <span className="material-symbols-outlined text-[28px]">edit</span>
+        <Play size={28} className="ml-1" />
       </button>
+
+      {/* Status Modal */}
+      <AnimatePresence>
+        {showStatusModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4"
+            onClick={() => setShowStatusModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95 }}
+              animate={{ scale: 1 }}
+              exit={{ scale: 0.95 }}
+              className="bg-slate-900 rounded-[28px] p-6 w-full max-w-sm border border-white/10"
+              onClick={e => e.stopPropagation()}
+            >
+              <h3 className="text-xl font-black text-white mb-2">Status do Aluno</h3>
+              <p className="text-sm text-slate-400 mb-6">Alterar status de {client.name}</p>
+
+              <div className="space-y-3">
+                <button
+                  onClick={() => handleToggleStatus('active')}
+                  className={`w-full p-4 rounded-2xl flex items-center gap-3 transition-all ${client.status === 'active' ? 'bg-emerald-500/20 border border-emerald-500/50' : 'bg-white/5 hover:bg-white/10'}`}
+                >
+                  <CheckCircle size={20} className="text-emerald-400" />
+                  <span className="font-bold text-white">Ativo</span>
+                </button>
+
+                <button
+                  onClick={() => handleToggleStatus('paused', 'travel')}
+                  className={`w-full p-4 rounded-2xl flex items-center gap-3 transition-all ${client.status === 'paused' && client.suspensionReason === 'travel' ? 'bg-blue-500/20 border border-blue-500/50' : 'bg-white/5 hover:bg-white/10'}`}
+                >
+                  <Pause size={20} className="text-blue-400" />
+                  <span className="font-bold text-white">Pausado - Viagem</span>
+                </button>
+
+                <button
+                  onClick={() => handleToggleStatus('paused', 'sick')}
+                  className={`w-full p-4 rounded-2xl flex items-center gap-3 transition-all ${client.status === 'paused' && client.suspensionReason === 'sick' ? 'bg-amber-500/20 border border-amber-500/50' : 'bg-white/5 hover:bg-white/10'}`}
+                >
+                  <AlertTriangle size={20} className="text-amber-400" />
+                  <span className="font-bold text-white">Pausado - Doença</span>
+                </button>
+
+                <button
+                  onClick={() => handleToggleStatus('paused', 'financial')}
+                  className={`w-full p-4 rounded-2xl flex items-center gap-3 transition-all ${client.status === 'paused' && client.suspensionReason === 'financial' ? 'bg-red-500/20 border border-red-500/50' : 'bg-white/5 hover:bg-white/10'}`}
+                >
+                  <X size={20} className="text-red-400" />
+                  <span className="font-bold text-white">Pausado - Financeiro</span>
+                </button>
+              </div>
+
+              <button
+                onClick={() => setShowStatusModal(false)}
+                className="w-full mt-6 py-3 rounded-xl bg-white/5 text-slate-400 font-bold hover:bg-white/10 transition-colors"
+              >
+                Cancelar
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Missed Class Modal */}
+      <AnimatePresence>
+        {showMissedClassModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4"
+            onClick={() => setShowMissedClassModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95 }}
+              animate={{ scale: 1 }}
+              exit={{ scale: 0.95 }}
+              className="bg-slate-900 rounded-[28px] p-6 w-full max-w-sm border border-white/10"
+              onClick={e => e.stopPropagation()}
+            >
+              <h3 className="text-xl font-black text-white mb-4">Registrar Aula Perdida</h3>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-2">Data</label>
+                  <input
+                    type="date"
+                    value={missedDate}
+                    onChange={(e) => setMissedDate(e.target.value)}
+                    className="w-full bg-slate-800/50 border border-white/10 rounded-xl py-3 px-4 text-white font-bold outline-none focus:border-blue-500/50"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-2">Motivo</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {(['sick', 'travel', 'personal', 'other'] as MissedClass['reason'][]).map(reason => (
+                      <button
+                        key={reason}
+                        onClick={() => setMissedReason(reason)}
+                        className={`py-2 px-3 rounded-xl text-xs font-bold transition-all ${missedReason === reason ? 'bg-blue-600 text-white' : 'bg-slate-800/50 text-slate-400'}`}
+                      >
+                        {getReasonLabel(reason)}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-2">Notas (opcional)</label>
+                  <input
+                    type="text"
+                    value={missedNotes}
+                    onChange={(e) => setMissedNotes(e.target.value)}
+                    className="w-full bg-slate-800/50 border border-white/10 rounded-xl py-3 px-4 text-white outline-none focus:border-blue-500/50"
+                    placeholder="Ex: Gripe forte"
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-3 mt-6">
+                <button
+                  onClick={() => setShowMissedClassModal(false)}
+                  className="flex-1 py-3 rounded-xl bg-white/5 text-slate-400 font-bold hover:bg-white/10 transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleAddMissedClass}
+                  className="flex-1 py-3 rounded-xl bg-blue-600 text-white font-bold shadow-glow hover:bg-blue-500 transition-all"
+                >
+                  Registrar
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

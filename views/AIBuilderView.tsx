@@ -8,71 +8,119 @@ interface AIBuilderViewProps {
   onDone: () => void;
 }
 
-// Mock workout generator for DEMO
-const generateMockWorkout = (clientName: string, goal: string, level: string, days: number, observations: string) => {
-  const workouts: { [key: string]: any } = {
-    'Hipertrofia': {
-      title: `Protocolo de Hipertrofia - ${clientName}`,
-      objective: 'Ganho de massa muscular com foco em volume progressivo',
-      duration: '60-75 min',
-      splits: [
-        {
-          name: 'Treino A - Peito e Tríceps',
-          exercises: [
-            { name: 'Supino Reto com Barra', sets: 4, reps: '8-10', rest: '90s', targetMuscle: 'Peitoral Maior' },
-            { name: 'Supino Inclinado Halteres', sets: 4, reps: '10-12', rest: '75s', targetMuscle: 'Peitoral Superior' },
-            { name: 'Crucifixo Máquina', sets: 3, reps: '12-15', rest: '60s', targetMuscle: 'Peitoral' },
-            { name: 'Tríceps Pulley Corda', sets: 4, reps: '12-15', rest: '60s', targetMuscle: 'Tríceps' },
-            { name: 'Tríceps Francês', sets: 3, reps: '10-12', rest: '60s', targetMuscle: 'Tríceps Longo' },
-          ]
-        },
-        {
-          name: 'Treino B - Costas e Bíceps',
-          exercises: [
-            { name: 'Puxada Frontal', sets: 4, reps: '8-10', rest: '90s', targetMuscle: 'Dorsal' },
-            { name: 'Remada Curvada', sets: 4, reps: '8-10', rest: '90s', targetMuscle: 'Costas Média' },
-            { name: 'Remada Unilateral', sets: 3, reps: '10-12', rest: '60s', targetMuscle: 'Dorsal' },
-            { name: 'Rosca Direta Barra', sets: 4, reps: '10-12', rest: '60s', targetMuscle: 'Bíceps' },
-            { name: 'Rosca Martelo', sets: 3, reps: '12-15', rest: '60s', targetMuscle: 'Braquial' },
-          ]
-        },
-        {
-          name: 'Treino C - Pernas',
-          exercises: [
-            { name: 'Agachamento Livre', sets: 4, reps: '8-10', rest: '120s', targetMuscle: 'Quadríceps' },
-            { name: 'Leg Press 45°', sets: 4, reps: '10-12', rest: '90s', targetMuscle: 'Quadríceps' },
-            { name: 'Cadeira Extensora', sets: 3, reps: '12-15', rest: '60s', targetMuscle: 'Quadríceps' },
-            { name: 'Mesa Flexora', sets: 4, reps: '10-12', rest: '60s', targetMuscle: 'Posterior' },
-            { name: 'Panturrilha Sentado', sets: 4, reps: '15-20', rest: '45s', targetMuscle: 'Panturrilha' },
-          ]
-        }
-      ]
-    },
-    'Emagrecimento': {
-      title: `Protocolo Fat Burn - ${clientName}`,
-      objective: 'Emagrecimento com preservação de massa muscular',
-      duration: '45-60 min',
-      splits: [
-        {
-          name: 'Treino A - Full Body Intenso',
-          exercises: [
-            { name: 'Agachamento com Salto', sets: 4, reps: '15', rest: '45s', targetMuscle: 'Pernas' },
-            { name: 'Flexão de Braço', sets: 4, reps: '12-15', rest: '45s', targetMuscle: 'Peito' },
-            { name: 'Remada com Halteres', sets: 4, reps: '12', rest: '45s', targetMuscle: 'Costas' },
-            { name: 'Burpees', sets: 3, reps: '10', rest: '60s', targetMuscle: 'Full Body' },
-            { name: 'Prancha', sets: 3, reps: '45s', rest: '30s', targetMuscle: 'Core' },
-          ]
-        }
-      ]
-    }
+// Smart workout generator using mockExercises DB
+import { mockExercises } from '../mocks/demoData';
+
+const generateSmartWorkout = (clientName: string, goal: string, days: number, observations: string) => {
+  // Helper to get exercises by muscle
+  const getEx = (muscle: string, count: number) => {
+    return mockExercises
+      .filter(e => (e.targetMuscle?.includes(muscle) ?? false) || (muscle === 'Cardio' && e.category === 'cardio'))
+      .sort(() => 0.5 - Math.random())
+      .slice(0, count)
+      .map(e => ({
+        name: e.name,
+        sets: 4, // Default to 4 sets for Elite Protocol
+        reps: e.sets?.[0]?.reps || '12',
+        rest: e.sets?.[0]?.rest || '60s',
+        targetMuscle: e.targetMuscle || 'Geral'
+      }));
   };
 
-  const selectedWorkout = JSON.parse(JSON.stringify(workouts[goal] || workouts['Hipertrofia']));
-  selectedWorkout.splits = selectedWorkout.splits.slice(0, Math.min(days, selectedWorkout.splits.length));
-  if (observations) {
-    selectedWorkout.notes = `Observações especiais: ${observations}`;
+  // Define Splits based on Goal
+  let steps: any[] = [];
+  let title = '';
+  let objective = '';
+
+  if (goal === 'Hipertrofia') {
+    title = `Protocolo de Hipertrofia - ${clientName}`;
+    objective = 'Foco em tensão mecânica e volume progressivo para maximizar ganho muscular.';
+
+    // Logic for splits based on days
+    const splitA = {
+      name: 'Treino A - Superior (Empurrar)',
+      exercises: [
+        ...getEx('Peito', 2),
+        ...getEx('Ombro', 1),
+        ...getEx('Tríceps', 1),
+        ...getEx('Cardio', 1)
+      ]
+    };
+
+    const splitB = {
+      name: 'Treino B - Superior (Puxar)',
+      exercises: [
+        ...getEx('Costas', 2),
+        ...getEx('Bíceps', 2),
+        ...getEx('Posterior de Coxa', 0), // Hack to just shuffle
+        ...getEx('Cardio', 1)
+      ]
+    };
+
+    const splitC = {
+      name: 'Treino C - Inferior Completo',
+      exercises: [
+        ...getEx('Quadríceps', 2),
+        ...getEx('Posterior de Coxa', 1),
+        ...getEx('Glúteo', 1),
+        ...getEx('Panturrilha', 1)
+      ]
+    };
+
+    steps = [splitA, splitB, splitC];
+  } else if (goal === 'Emagrecimento') {
+    title = `Protocolo Fat Burn - ${clientName}`;
+    objective = 'Alta intensidade metabólica para queima de gordura acelerada.';
+
+    const splitA = {
+      name: 'Treino A - Full Body Metabólico',
+      exercises: [
+        ...getEx('Pernas', 0), // Hack
+        ...getEx('Quadríceps', 1),
+        ...getEx('Peito', 1),
+        ...getEx('Costas', 1),
+        ...getEx('Cardio', 2)
+      ]
+    };
+
+    const splitB = {
+      name: 'Treino B - Inferior & Cardio',
+      exercises: [
+        ...getEx('Posterior de Coxa', 1),
+        ...getEx('Glúteo', 1),
+        ...getEx('Panturrilha', 1),
+        ...getEx('Cardio', 2)
+      ]
+    };
+    steps = [splitA, splitB];
+  } else {
+    // Default / Other goals
+    title = `Protocolo Personalizado - ${clientName}`;
+    objective = 'Adaptação geral e condicionamento físico.';
+    steps = [
+      {
+        name: 'Treino Adaptativo',
+        exercises: [
+          ...getEx('Quadríceps', 1),
+          ...getEx('Peito', 1),
+          ...getEx('Costas', 1),
+          ...getEx('Cardio', 1)
+        ]
+      }
+    ];
   }
-  return selectedWorkout;
+
+  // Ensure enough splits for days selected (repeat if needed)
+  const finalSplits = [];
+  for (let i = 0; i < days; i++) {
+    finalSplits.push(steps[i % steps.length]);
+  }
+
+  return {
+    title,
+    objective,
+    splits: finalSplits
+  };
 };
 
 const AIBuilderView: React.FC<AIBuilderViewProps> = ({ user, onBack, onDone }) => {
@@ -128,10 +176,9 @@ const AIBuilderView: React.FC<AIBuilderViewProps> = ({ user, onBack, onDone }) =
     setLoadingMessageIndex(0);
 
     setTimeout(() => {
-      const workout = generateMockWorkout(
+      const workout = generateSmartWorkout(
         selectedClient.name,
         selectedGoal,
-        selectedClient.level,
         selectedDays,
         observations
       );

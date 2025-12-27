@@ -8,9 +8,11 @@ interface ClientProfileViewProps {
   onBack: () => void;
   onStartWorkout: (workout: any) => void;
   onStartAssessment: () => void;
+  onCreateWorkout?: () => void;
 }
 
-const ClientProfileView: React.FC<ClientProfileViewProps> = ({ client: initialClient, onBack, onStartWorkout, onStartAssessment }) => {
+const ClientProfileView: React.FC<ClientProfileViewProps> = ({ client: initialClient, onBack, onStartWorkout, onStartAssessment, onCreateWorkout }) => {
+
   const [client, setClient] = useState(initialClient);
   const [activeTab, setActiveTab] = useState('Evolução');
   const [isEditing, setIsEditing] = useState(false);
@@ -332,12 +334,13 @@ const ClientProfileView: React.FC<ClientProfileViewProps> = ({ client: initialCl
               className="space-y-4"
             >
               <button
-                onClick={() => onStartWorkout({ title: 'Novo Treino', exercises: [] })}
+                onClick={() => onCreateWorkout ? onCreateWorkout() : onStartWorkout({ title: 'Novo Treino', exercises: [] })}
                 className="w-full py-4 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-black uppercase tracking-widest shadow-lg flex items-center justify-center gap-2 active:scale-[0.98] transition-all"
               >
                 <Dumbbell size={20} />
                 Criar Novo Treino
               </button>
+
 
               {/* Missed Classes Section */}
               <div className="glass-card rounded-2xl p-4 border border-amber-500/20">
@@ -435,8 +438,8 @@ const ClientProfileView: React.FC<ClientProfileViewProps> = ({ client: initialCl
                   <button
                     onClick={() => isEditing ? handleSaveNotes() : setIsEditing(true)}
                     className={`text-xs font-bold px-3 py-1 rounded-full transition-all ${isEditing
-                        ? 'bg-emerald-500 text-white'
-                        : 'bg-white/5 text-slate-400 hover:text-white'
+                      ? 'bg-emerald-500 text-white'
+                      : 'bg-white/5 text-slate-400 hover:text-white'
                       }`}
                   >
                     {isEditing ? <><Save size={12} className="inline mr-1" /> Salvar</> : <><Edit size={12} className="inline mr-1" /> Editar</>}

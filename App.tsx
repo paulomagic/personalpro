@@ -135,6 +135,7 @@ function App() {
           onBack={() => navigateTo(View.DASHBOARD)}
           onStartWorkout={(workout) => navigateTo(View.TRAINING_EXECUTION, workout)}
           onStartAssessment={() => navigateTo(View.ASSESSMENT)}
+          onCreateWorkout={() => navigateTo(View.WORKOUT_BUILDER)}
         />;
       case View.TRAINING_EXECUTION:
         return <TrainingExecutionView workout={activeWorkout!} onFinish={() => navigateTo(View.DASHBOARD)} />;

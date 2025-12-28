@@ -205,16 +205,24 @@ export async function getAIMetrics() {
         actionCounts[log.action_type] = (actionCounts[log.action_type] || 0) + 1;
     });
 
-    // Total tokens used
+    // Total tokens used & Breakdown by action
     const { data: tokenData } = await supabase
         .from('ai_logs')
-        .select('tokens_input, tokens_output');
+        .select('action_type, tokens_input, tokens_output');
 
     let totalTokensInput = 0;
     let totalTokensOutput = 0;
+    const tokensByAction: Record<string, number> = {};
+
     tokenData?.forEach(log => {
-        totalTokensInput += log.tokens_input || 0;
-        totalTokensOutput += log.tokens_output || 0;
+        const input = log.tokens_input || 0;
+        const output = log.tokens_output || 0;
+        const total = input + output;
+
+        totalTokensInput += input;
+        totalTokensOutput += output;
+
+        tokensByAction[log.action_type] = (tokensByAction[log.action_type] || 0) + total;
     });
 
     return {
@@ -226,7 +234,8 @@ export async function getAIMetrics() {
         byAction: actionCounts,
         totalTokensInput,
         totalTokensOutput,
-        totalTokens: totalTokensInput + totalTokensOutput
+        totalTokens: totalTokensInput + totalTokensOutput,
+        tokensByAction
     };
 }
 

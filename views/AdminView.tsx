@@ -200,6 +200,28 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack, onNavigate }) => {
                     </div>
                 </motion.div>
 
+                {/* Token Breakdown */}
+                {aiMetrics?.tokensByAction && Object.keys(aiMetrics.tokensByAction).length > 0 && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.48 }}
+                        className="glass-card rounded-2xl p-4 mt-2"
+                    >
+                        <div className="flex items-center gap-2 mb-3">
+                            <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Detalhamento por Função</span>
+                        </div>
+                        <div className="space-y-2">
+                            {Object.entries(aiMetrics.tokensByAction).map(([action, count]: [string, any]) => (
+                                <div key={action} className="flex justify-between items-center text-xs">
+                                    <span className="text-slate-400 capitalize">{action.replace(/_/g, ' ')}</span>
+                                    <span className="font-mono text-slate-300">{(count as number).toLocaleString('pt-BR')}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </motion.div>
+                )}
+
                 {/* Navigation Menu */}
                 <div className="space-y-3">
                     <h2 className="text-sm font-black text-white">Módulos</h2>

@@ -227,8 +227,8 @@ Responda APENAS com JSON válido (sem markdown):
   ],
   "splits": [
     {
-      "name": "Treino A - Nome Criativo",
-      "focus": "Foco principal deste treino",
+      "name": "Treino A",
+      "focus": "Foco do treino",
       "exercises": [
         {
           "name": "Nome do exercício",
@@ -236,8 +236,7 @@ Responda APENAS com JSON válido (sem markdown):
           "reps": "8-12",
           "rest": "60s",
           "targetMuscle": "Músculo alvo",
-          "technique": "Dica de execução ou método avançado",
-          "progression": "Como progredir neste exercício"
+          "technique": "Dica de execução"
         }
       ]
     }

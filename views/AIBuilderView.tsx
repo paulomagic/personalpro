@@ -867,100 +867,106 @@ const AIBuilderView: React.FC<AIBuilderViewProps> = ({ user, onBack, onDone }) =
             </div>
 
             <div className="space-y-4">
-              {result.splits?.[activeTabIndex]?.exercises.map((ex: any, idx: number) => {
-                const isEditing = editingExercise?.splitIdx === activeTabIndex && editingExercise?.exIdx === idx;
+              {(result.splits?.[activeTabIndex]?.exercises || []).length === 0 ? (
+                <div className="text-center py-10 text-slate-500">
+                  <p>Nenhum exercício gerado para este treino.</p>
+                </div>
+              ) : (
+                (result.splits?.[activeTabIndex]?.exercises || []).map((ex: any, idx: number) => {
+                  const isEditing = editingExercise?.splitIdx === activeTabIndex && editingExercise?.exIdx === idx;
 
-                return (
-                  <div key={idx} className={`glass-card rounded-3xl p-5 transition-all ${isEditing ? 'border border-blue-500/50 bg-blue-500/5' : 'hover:border-blue-500/30'}`}>
-                    <div className="flex justify-between items-start mb-4">
-                      <div className="size-8 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-400 text-xs font-black">{idx + 1}</div>
-                      <div className="flex gap-2 items-center">
-                        {ex.isVerified && (
-                          <span className="text-[9px] font-black text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded-full uppercase tracking-widest flex items-center gap-1">
-                            <span className="material-symbols-outlined text-[10px]">database</span>
-                            Validado
-                          </span>
-                        )}
-                        <span className="text-[9px] font-black text-blue-400 bg-blue-500/5 px-2 py-1 rounded-full uppercase tracking-widest">{ex.targetMuscle}</span>
-                        <button
-                          onClick={() => handleRegenerateExercise(activeTabIndex, idx, ex)}
-                          disabled={regeneratingId === `${activeTabIndex}-${idx}`}
-                          className={`size-7 rounded-lg flex items-center justify-center transition-all bg-white/5 text-slate-400 hover:text-blue-400 hover:bg-blue-500/10`}
-                          title="Regenerar com IA"
-                        >
-                          <RefreshCw size={14} className={regeneratingId === `${activeTabIndex}-${idx}` ? "animate-spin text-blue-500" : ""} />
-                        </button>
-                        <button
-                          onClick={() => setEditingExercise(isEditing ? null : { splitIdx: activeTabIndex, exIdx: idx })}
-                          className={`size-7 rounded-lg flex items-center justify-center transition-all ${isEditing ? 'bg-blue-500 text-white' : 'bg-white/5 text-slate-400 hover:text-white'}`}
-                        >
-                          <span className="material-symbols-outlined text-sm">{isEditing ? 'check' : 'edit'}</span>
-                        </button>
+                  return (
+                    <div key={idx} className={`glass-card rounded-3xl p-5 transition-all ${isEditing ? 'border border-blue-500/50 bg-blue-500/5' : 'hover:border-blue-500/30'}`}>
+                      <div className="flex justify-between items-start mb-4">
+                        <div className="size-8 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-400 text-xs font-black">{idx + 1}</div>
+                        <div className="flex gap-2 items-center">
+                          {ex.isVerified && (
+                            <span className="text-[9px] font-black text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded-full uppercase tracking-widest flex items-center gap-1">
+                              <span className="material-symbols-outlined text-[10px]">database</span>
+                              Validado
+                            </span>
+                          )}
+                          <span className="text-[9px] font-black text-blue-400 bg-blue-500/5 px-2 py-1 rounded-full uppercase tracking-widest">{ex.targetMuscle}</span>
+                          <button
+                            onClick={() => handleRegenerateExercise(activeTabIndex, idx, ex)}
+                            disabled={regeneratingId === `${activeTabIndex}-${idx}`}
+                            className={`size-7 rounded-lg flex items-center justify-center transition-all bg-white/5 text-slate-400 hover:text-blue-400 hover:bg-blue-500/10`}
+                            title="Regenerar com IA"
+                          >
+                            <RefreshCw size={14} className={regeneratingId === `${activeTabIndex}-${idx}` ? "animate-spin text-blue-500" : ""} />
+                          </button>
+                          <button
+                            onClick={() => setEditingExercise(isEditing ? null : { splitIdx: activeTabIndex, exIdx: idx })}
+                            className={`size-7 rounded-lg flex items-center justify-center transition-all ${isEditing ? 'bg-blue-500 text-white' : 'bg-white/5 text-slate-400 hover:text-white'}`}
+                          >
+                            <span className="material-symbols-outlined text-sm">{isEditing ? 'check' : 'edit'}</span>
+                          </button>
+                        </div>
                       </div>
+
+                      <h4 className="text-white font-black text-lg mb-3 tracking-tight">{ex.name}</h4>
+
+                      {isEditing ? (
+                        /* Edit Mode */
+                        <div className="space-y-4">
+                          <div className="grid grid-cols-3 gap-3">
+                            <div>
+                              <label className="text-[8px] font-black text-slate-500 uppercase tracking-widest block mb-1">Séries</label>
+                              <input
+                                type="number"
+                                value={ex.sets}
+                                onChange={(e) => updateExercise(activeTabIndex, idx, 'sets', parseInt(e.target.value) || 0)}
+                                className="w-full bg-slate-800 border border-white/10 rounded-xl px-3 py-2 text-white font-bold text-center outline-none focus:border-blue-500"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-[8px] font-black text-slate-500 uppercase tracking-widest block mb-1">Reps</label>
+                              <input
+                                type="text"
+                                value={ex.reps}
+                                onChange={(e) => updateExercise(activeTabIndex, idx, 'reps', e.target.value)}
+                                className="w-full bg-slate-800 border border-white/10 rounded-xl px-3 py-2 text-white font-bold text-center outline-none focus:border-blue-500"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-[8px] font-black text-slate-500 uppercase tracking-widest block mb-1">Descanso</label>
+                              <input
+                                type="text"
+                                value={ex.rest}
+                                onChange={(e) => updateExercise(activeTabIndex, idx, 'rest', e.target.value)}
+                                className="w-full bg-slate-800 border border-white/10 rounded-xl px-3 py-2 text-indigo-400 font-bold text-center outline-none focus:border-blue-500"
+                              />
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => removeExercise(activeTabIndex, idx)}
+                            className="w-full py-2 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-bold uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-red-500/20 transition-colors"
+                          >
+                            <span className="material-symbols-outlined text-sm">delete</span>
+                            Remover Exercício
+                          </button>
+                        </div>
+                      ) : (
+                        /* View Mode */
+                        <div className="flex gap-4">
+                          <div className="bg-white/5 rounded-xl px-3 py-2">
+                            <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Séries</p>
+                            <p className="text-white font-black">{ex.sets}</p>
+                          </div>
+                          <div className="bg-white/5 rounded-xl px-3 py-2">
+                            <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Reps</p>
+                            <p className="text-white font-black">{ex.reps}</p>
+                          </div>
+                          <div className="bg-white/5 rounded-xl px-3 py-2">
+                            <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Descanso</p>
+                            <p className="text-indigo-400 font-black">{ex.rest}</p>
+                          </div>
+                        </div>
+                      )}
                     </div>
-
-                    <h4 className="text-white font-black text-lg mb-3 tracking-tight">{ex.name}</h4>
-
-                    {isEditing ? (
-                      /* Edit Mode */
-                      <div className="space-y-4">
-                        <div className="grid grid-cols-3 gap-3">
-                          <div>
-                            <label className="text-[8px] font-black text-slate-500 uppercase tracking-widest block mb-1">Séries</label>
-                            <input
-                              type="number"
-                              value={ex.sets}
-                              onChange={(e) => updateExercise(activeTabIndex, idx, 'sets', parseInt(e.target.value) || 0)}
-                              className="w-full bg-slate-800 border border-white/10 rounded-xl px-3 py-2 text-white font-bold text-center outline-none focus:border-blue-500"
-                            />
-                          </div>
-                          <div>
-                            <label className="text-[8px] font-black text-slate-500 uppercase tracking-widest block mb-1">Reps</label>
-                            <input
-                              type="text"
-                              value={ex.reps}
-                              onChange={(e) => updateExercise(activeTabIndex, idx, 'reps', e.target.value)}
-                              className="w-full bg-slate-800 border border-white/10 rounded-xl px-3 py-2 text-white font-bold text-center outline-none focus:border-blue-500"
-                            />
-                          </div>
-                          <div>
-                            <label className="text-[8px] font-black text-slate-500 uppercase tracking-widest block mb-1">Descanso</label>
-                            <input
-                              type="text"
-                              value={ex.rest}
-                              onChange={(e) => updateExercise(activeTabIndex, idx, 'rest', e.target.value)}
-                              className="w-full bg-slate-800 border border-white/10 rounded-xl px-3 py-2 text-indigo-400 font-bold text-center outline-none focus:border-blue-500"
-                            />
-                          </div>
-                        </div>
-                        <button
-                          onClick={() => removeExercise(activeTabIndex, idx)}
-                          className="w-full py-2 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-bold uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-red-500/20 transition-colors"
-                        >
-                          <span className="material-symbols-outlined text-sm">delete</span>
-                          Remover Exercício
-                        </button>
-                      </div>
-                    ) : (
-                      /* View Mode */
-                      <div className="flex gap-4">
-                        <div className="bg-white/5 rounded-xl px-3 py-2">
-                          <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Séries</p>
-                          <p className="text-white font-black">{ex.sets}</p>
-                        </div>
-                        <div className="bg-white/5 rounded-xl px-3 py-2">
-                          <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Reps</p>
-                          <p className="text-white font-black">{ex.reps}</p>
-                        </div>
-                        <div className="bg-white/5 rounded-xl px-3 py-2">
-                          <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Descanso</p>
-                          <p className="text-indigo-400 font-black">{ex.rest}</p>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
+                  );
+                })
+              )}
 
               {/* Add Exercise Button */}
               <button

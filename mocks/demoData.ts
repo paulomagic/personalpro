@@ -158,6 +158,150 @@ export const mockClients: Client[] = [
         assessments: [],
         totalClasses: 36,
         completedClasses: 28
+    },
+    // ============ PERFIS ESPECIAIS ============
+    {
+        id: '7',
+        name: 'Gabriel Ferreira',
+        avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=200&h=200&fit=crop',
+        goal: 'Desenvolvimento Atlético',
+        level: 'Intermediário',
+        adherence: 85,
+        lastTraining: 'Ontem',
+        status: 'active',
+        email: 'gabriel@email.com',
+        phone: '11999999999',
+        birthDate: '2008-05-20', // 16 anos - ADOLESCENTE
+        startDate: '2024-06-01',
+        paymentStatus: 'paid',
+        observations: '🧒 ADOLESCENTE 16 anos. Joga futebol na base do Palmeiras. Precisa desenvolver força funcional sem comprometer crescimento. Responsável: mãe (Carla).',
+        injuries: 'Dor no joelho direito após treinos intensos (crescimento)',
+        preferences: 'Ama exercícios explosivos e funcionais. Não pode treino muito pesado ainda.',
+        missedClasses: [],
+        assessments: [
+            { id: 'g1', date: '2024-12-15', photos: [], weight: 62, bodyFat: 14, measures: { chest: 85, waist: 70, hips: 88, thighRight: 50, thighLeft: 50 }, skinfolds: { triceps: 8, abdomen: 10, thigh: 12 } },
+            { id: 'g2', date: '2024-11-01', photos: [], weight: 60, bodyFat: 15, measures: { chest: 83, waist: 69, hips: 86, thighRight: 48, thighLeft: 48 }, skinfolds: { triceps: 9, abdomen: 11, thigh: 13 } },
+            { id: 'g3', date: '2024-09-15', photos: [], weight: 58, bodyFat: 16, measures: { chest: 80, waist: 68, hips: 84, thighRight: 46, thighLeft: 46 }, skinfolds: { triceps: 10, abdomen: 12, thigh: 14 } },
+            { id: 'g4', date: '2024-08-01', photos: [], weight: 56, bodyFat: 17, measures: { chest: 78, waist: 67, hips: 82, thighRight: 44, thighLeft: 44 }, skinfolds: { triceps: 11, abdomen: 14, thigh: 15 } },
+            { id: 'g5', date: '2024-07-01', photos: [], weight: 54, bodyFat: 18, measures: { chest: 76, waist: 66, hips: 80, thighRight: 42, thighLeft: 42 }, skinfolds: { triceps: 12, abdomen: 16, thigh: 16 } }
+        ],
+        totalClasses: 28,
+        completedClasses: 24
+    },
+    {
+        id: '8',
+        name: 'Dona Margarete Lima',
+        avatar: 'https://images.unsplash.com/photo-1566616213894-2d4e1baee5d8?w=200&h=200&fit=crop',
+        goal: 'Qualidade de Vida',
+        level: 'Iniciante',
+        adherence: 92,
+        lastTraining: 'Hoje',
+        status: 'active',
+        email: 'margarete@email.com',
+        phone: '11999999999',
+        birthDate: '1956-08-12', // 68 anos - IDOSA
+        startDate: '2024-06-15',
+        paymentStatus: 'paid',
+        observations: '👵 IDOSA 68 anos. Objetivo: manter independência funcional, prevenir quedas, controlar osteoporose. Tem hipertensão controlada com medicação. Muito dedicada!',
+        injuries: 'Artrose leve no joelho direito. Osteoporose. Evitar impacto.',
+        preferences: 'Prefere exercícios sentada ou com apoio. Adora hidroginástica.',
+        missedClasses: [],
+        assessments: [
+            { id: 'm1', date: '2024-12-10', photos: [], weight: 68, bodyFat: 32, measures: { chest: 98, waist: 88, hips: 102, thighRight: 52, thighLeft: 51 }, skinfolds: { triceps: 28, abdomen: 32, thigh: 30 } },
+            { id: 'm2', date: '2024-10-15', photos: [], weight: 69, bodyFat: 33, measures: { chest: 99, waist: 90, hips: 103, thighRight: 52, thighLeft: 51 }, skinfolds: { triceps: 29, abdomen: 33, thigh: 31 } },
+            { id: 'm3', date: '2024-09-01', photos: [], weight: 70, bodyFat: 34, measures: { chest: 100, waist: 92, hips: 104, thighRight: 51, thighLeft: 50 }, skinfolds: { triceps: 30, abdomen: 35, thigh: 32 } },
+            { id: 'm4', date: '2024-07-20', photos: [], weight: 71, bodyFat: 35, measures: { chest: 101, waist: 94, hips: 105, thighRight: 50, thighLeft: 49 }, skinfolds: { triceps: 32, abdomen: 38, thigh: 34 } }
+        ],
+        totalClasses: 26,
+        completedClasses: 24
+    },
+    {
+        id: '9',
+        name: 'Camila Rodrigues',
+        avatar: 'https://images.unsplash.com/photo-1489424731084-a5d8b219a5bb?w=200&h=200&fit=crop',
+        goal: 'Recuperação Pós-Parto',
+        level: 'Iniciante',
+        adherence: 70,
+        lastTraining: '2 dias atrás',
+        status: 'active',
+        email: 'camila@email.com',
+        phone: '11999999999',
+        birthDate: '1994-02-28',
+        startDate: '2024-08-01',
+        paymentStatus: 'paid',
+        observations: '🤱 PÓS-PARTO (4 meses). Parto cesárea em agosto/2024. Diástase abdominal de 2 dedos. Amamentando. Foco: recuperar core, assoalho pélvico, perder gordura localizada.',
+        injuries: 'Diástase abdominal - evitar crunches tradicionais. Sensibilidade na cicatriz da cesárea.',
+        preferences: 'Prefere treinos curtos (30-40min) por conta do bebê. Horário flexível.',
+        missedClasses: [
+            { id: 'c1', date: '2024-12-18', reason: 'personal', replaced: false, notes: 'Bebê doente' },
+            { id: 'c2', date: '2024-12-10', reason: 'personal', replaced: false, notes: 'Consulta pediatra' }
+        ],
+        assessments: [
+            { id: 'c1', date: '2024-12-20', photos: [], weight: 68, bodyFat: 29, measures: { chest: 94, waist: 82, hips: 100, thighRight: 58, thighLeft: 57 }, skinfolds: { triceps: 22, abdomen: 28, thigh: 26 } },
+            { id: 'c2', date: '2024-11-01', photos: [], weight: 70, bodyFat: 31, measures: { chest: 95, waist: 86, hips: 102, thighRight: 59, thighLeft: 58 }, skinfolds: { triceps: 24, abdomen: 32, thigh: 28 } },
+            { id: 'c3', date: '2024-09-15', photos: [], weight: 73, bodyFat: 34, measures: { chest: 98, waist: 92, hips: 106, thighRight: 61, thighLeft: 60 }, skinfolds: { triceps: 28, abdomen: 38, thigh: 32 } },
+            { id: 'c4', date: '2024-08-05', photos: [], weight: 76, bodyFat: 36, measures: { chest: 100, waist: 98, hips: 110, thighRight: 63, thighLeft: 62 }, skinfolds: { triceps: 30, abdomen: 42, thigh: 35 } }
+        ],
+        totalClasses: 20,
+        completedClasses: 14
+    },
+    {
+        id: '10',
+        name: 'Fernanda Alves',
+        avatar: 'https://images.unsplash.com/photo-1502323777036-f29e3972d82f?w=200&h=200&fit=crop',
+        goal: 'Gestação Saudável',
+        level: 'Intermediário',
+        adherence: 88,
+        lastTraining: 'Ontem',
+        status: 'active',
+        email: 'fernanda@email.com',
+        phone: '11999999999',
+        birthDate: '1991-11-05',
+        startDate: '2024-04-01',
+        paymentStatus: 'paid',
+        observations: '🤰 GESTANTE 28 semanas. DPP: março/2025. Já treinava antes da gestação. Liberada pelo obstetra. Foco: manter condicionamento, preparar para parto, controlar ganho de peso.',
+        injuries: 'Leve dor lombar. Evitar posição supina prolongada (síndrome da veia cava).',
+        preferences: 'Prefere exercícios funcionais e pilates. Evitar exercícios de impacto.',
+        missedClasses: [],
+        assessments: [
+            { id: 'f1', date: '2024-12-15', photos: [], weight: 72, bodyFat: null, measures: { chest: 96, waist: 95, hips: 104, thighRight: 55, thighLeft: 55 }, skinfolds: null },
+            { id: 'f2', date: '2024-11-01', photos: [], weight: 70, bodyFat: null, measures: { chest: 94, waist: 90, hips: 102, thighRight: 54, thighLeft: 54 }, skinfolds: null },
+            { id: 'f3', date: '2024-09-15', photos: [], weight: 67, bodyFat: null, measures: { chest: 92, waist: 82, hips: 100, thighRight: 53, thighLeft: 53 }, skinfolds: null },
+            { id: 'f4', date: '2024-07-01', photos: [], weight: 64, bodyFat: 23, measures: { chest: 90, waist: 72, hips: 98, thighRight: 52, thighLeft: 52 }, skinfolds: { triceps: 18, abdomen: 20, thigh: 22 } },
+            { id: 'f5', date: '2024-05-01', photos: [], weight: 62, bodyFat: 22, measures: { chest: 88, waist: 70, hips: 96, thighRight: 51, thighLeft: 51 }, skinfolds: { triceps: 16, abdomen: 18, thigh: 20 } }
+        ],
+        totalClasses: 35,
+        completedClasses: 31
+    },
+    {
+        id: '11',
+        name: 'Roberto Nascimento',
+        avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop',
+        goal: 'Controle Diabetes',
+        level: 'Iniciante',
+        adherence: 75,
+        lastTraining: '1 dia atrás',
+        status: 'active',
+        email: 'roberto@email.com',
+        phone: '11999999999',
+        birthDate: '1975-04-10', // 49 anos
+        startDate: '2024-06-01',
+        paymentStatus: 'paid',
+        observations: '💉 DIABÉTICO TIPO 2. HbA1c inicial: 8.2%, atual: 6.8%. Usa metformina. Pressão alta controlada. Objetivo: perder peso, melhorar sensibilidade insulínica, ganhar massa muscular.',
+        injuries: 'Neuropatia leve nos pés - cuidado com exercícios de impacto. Cuidado com hipoglicemia.',
+        preferences: 'Prefere treinos pela manhã. Sempre traz lanche no caso de hipo.',
+        missedClasses: [
+            { id: 'r1', date: '2024-12-16', reason: 'sick', replaced: false, notes: 'Glicemia descompensada' }
+        ],
+        assessments: [
+            { id: 'r1', date: '2024-12-18', photos: [], weight: 92, bodyFat: 28, measures: { chest: 108, waist: 102, hips: 104, thighRight: 58, thighLeft: 57 }, skinfolds: { triceps: 22, abdomen: 35, thigh: 24 } },
+            { id: 'r2', date: '2024-10-20', photos: [], weight: 95, bodyFat: 30, measures: { chest: 110, waist: 106, hips: 106, thighRight: 58, thighLeft: 57 }, skinfolds: { triceps: 24, abdomen: 38, thigh: 25 } },
+            { id: 'r3', date: '2024-09-01', photos: [], weight: 98, bodyFat: 32, measures: { chest: 112, waist: 110, hips: 108, thighRight: 57, thighLeft: 56 }, skinfolds: { triceps: 26, abdomen: 42, thigh: 26 } },
+            { id: 'r4', date: '2024-07-15', photos: [], weight: 102, bodyFat: 35, measures: { chest: 114, waist: 115, hips: 110, thighRight: 56, thighLeft: 55 }, skinfolds: { triceps: 28, abdomen: 48, thigh: 28 } },
+            { id: 'r5', date: '2024-06-05', photos: [], weight: 105, bodyFat: 37, measures: { chest: 116, waist: 118, hips: 112, thighRight: 55, thighLeft: 54 }, skinfolds: { triceps: 30, abdomen: 52, thigh: 30 } }
+        ],
+        totalClasses: 28,
+        completedClasses: 21
     }
 ];
 

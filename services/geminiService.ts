@@ -137,18 +137,48 @@ Crie exercícios específicos, variados e adequados ao perfil. Seja criativo nos
 
     // Clean up the response - remove markdown code blocks if present
     let cleanText = text.trim();
-    if (cleanText.startsWith('```json')) {
-      cleanText = cleanText.slice(7);
-    }
-    if (cleanText.startsWith('```')) {
-      cleanText = cleanText.slice(3);
-    }
-    if (cleanText.endsWith('```')) {
-      cleanText = cleanText.slice(0, -3);
-    }
+
+    // Remove markdown code blocks
+    cleanText = cleanText.replace(/```json\n?/gi, '');
+    cleanText = cleanText.replace(/```\n?/gi, '');
     cleanText = cleanText.trim();
 
-    return JSON.parse(cleanText);
+    // Try to find JSON object boundaries
+    const jsonStart = cleanText.indexOf('{');
+    const jsonEnd = cleanText.lastIndexOf('}');
+
+    if (jsonStart !== -1 && jsonEnd !== -1 && jsonEnd > jsonStart) {
+      cleanText = cleanText.slice(jsonStart, jsonEnd + 1);
+    }
+
+    // Fix common JSON issues
+    cleanText = cleanText
+      .replace(/,\s*}/g, '}')  // Remove trailing commas before }
+      .replace(/,\s*]/g, ']')  // Remove trailing commas before ]
+      .replace(/'/g, '"')       // Replace single quotes with double
+      .replace(/\n/g, ' ')      // Remove newlines inside strings
+      .replace(/\t/g, ' ');     // Remove tabs
+
+    try {
+      return JSON.parse(cleanText);
+    } catch (parseError) {
+      console.warn("JSON parse failed, attempting repair...", parseError);
+
+      // Last resort: try to extract just the essential structure
+      const titleMatch = cleanText.match(/"title"\s*:\s*"([^"]+)"/);
+      const objectiveMatch = cleanText.match(/"objective"\s*:\s*"([^"]+)"/);
+
+      if (titleMatch && objectiveMatch) {
+        // Return a minimal valid structure
+        return {
+          title: titleMatch[1],
+          objective: objectiveMatch[1],
+          splits: [{ name: "Treino A", exercises: [] }],
+          parseError: true
+        };
+      }
+      throw parseError;
+    }
   } catch (error) {
     console.error("Error generating workout with AI:", error);
     return null; // Returns null to trigger fallback

@@ -136,8 +136,8 @@ const AddClientModal: React.FC<AddClientModalProps> = ({ isOpen, onClose, onSave
                             key={tab.id}
                             onClick={() => setActiveTab(tab.id as any)}
                             className={`flex-1 py-3 px-4 flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-wider transition-all ${activeTab === tab.id
-                                    ? 'text-blue-400 border-b-2 border-blue-400 bg-blue-500/5'
-                                    : 'text-slate-500 hover:text-slate-300'
+                                ? 'text-blue-400 border-b-2 border-blue-400 bg-blue-500/5'
+                                : 'text-slate-500 hover:text-slate-300'
                                 }`}
                         >
                             <tab.icon size={14} />
@@ -198,7 +198,18 @@ const AddClientModal: React.FC<AddClientModalProps> = ({ isOpen, onClose, onSave
                                     <input
                                         type="tel"
                                         value={phone}
-                                        onChange={(e) => setPhone(e.target.value)}
+                                        onChange={(e) => {
+                                            // Extract digits
+                                            const digits = e.target.value.replace(/\D/g, '').slice(0, 11);
+
+                                            // Apply mask (xx) xxxxx-xxxx
+                                            let formatted = '';
+                                            if (digits.length > 0) formatted += `(${digits.slice(0, 2)}`;
+                                            if (digits.length > 2) formatted += `) ${digits.slice(2, 7)}`;
+                                            if (digits.length > 7) formatted += `-${digits.slice(7)}`;
+
+                                            setPhone(formatted);
+                                        }}
                                         className="w-full bg-slate-800/50 border border-white/5 rounded-xl py-3 pl-11 pr-4 text-white font-bold outline-none focus:border-blue-500/50 transition-colors"
                                         placeholder="(11) 99999-9999"
                                     />
@@ -238,8 +249,8 @@ const AddClientModal: React.FC<AddClientModalProps> = ({ isOpen, onClose, onSave
                                             key={g}
                                             onClick={() => setGoal(g)}
                                             className={`py-2 px-3 rounded-xl text-xs font-bold transition-all ${goal === g
-                                                    ? 'bg-blue-600 text-white shadow-glow'
-                                                    : 'bg-slate-800/50 text-slate-400 hover:text-white border border-white/5'
+                                                ? 'bg-blue-600 text-white shadow-glow'
+                                                : 'bg-slate-800/50 text-slate-400 hover:text-white border border-white/5'
                                                 }`}
                                         >
                                             {g}
@@ -260,8 +271,8 @@ const AddClientModal: React.FC<AddClientModalProps> = ({ isOpen, onClose, onSave
                                             key={l}
                                             onClick={() => setLevel(l)}
                                             className={`py-2 px-2 rounded-xl text-[10px] font-bold transition-all ${level === l
-                                                    ? 'bg-purple-600 text-white shadow-glow'
-                                                    : 'bg-slate-800/50 text-slate-400 hover:text-white border border-white/5'
+                                                ? 'bg-purple-600 text-white shadow-glow'
+                                                : 'bg-slate-800/50 text-slate-400 hover:text-white border border-white/5'
                                                 }`}
                                         >
                                             {l}

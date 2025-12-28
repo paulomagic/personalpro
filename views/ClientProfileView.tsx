@@ -44,26 +44,24 @@ const ClientProfileView: React.FC<ClientProfileViewProps> = ({ client: initialCl
   } | null>(null);
   const [loadingAnalysis, setLoadingAnalysis] = useState(false);
 
-  useEffect(() => {
-    const fetchAnalysis = async () => {
-      if (client.assessments && client.assessments.length > 0) {
-        setLoadingAnalysis(true);
-        const analysis = await analyzeClientProgress({
-          name: client.name,
-          assessments: client.assessments.map(a => ({
-            date: a.date,
-            weight: a.weight,
-            bodyFat: a.bodyFat,
-            measures: a.measures
-          })),
-          goal: client.goal
-        });
-        setProgressAnalysis(analysis);
-        setLoadingAnalysis(false);
-      }
-    };
-    fetchAnalysis();
-  }, [client.assessments, client.name, client.goal]);
+  // Manual progress analysis - only when user clicks the button
+  const handleAnalyzeProgress = async () => {
+    if (client.assessments && client.assessments.length > 0) {
+      setLoadingAnalysis(true);
+      const analysis = await analyzeClientProgress({
+        name: client.name,
+        assessments: client.assessments.map(a => ({
+          date: a.date,
+          weight: a.weight,
+          bodyFat: a.bodyFat,
+          measures: a.measures
+        })),
+        goal: client.goal
+      });
+      setProgressAnalysis(analysis);
+      setLoadingAnalysis(false);
+    }
+  };
 
   const handleSaveNotes = () => {
     setClient(prev => ({
@@ -252,6 +250,35 @@ const ClientProfileView: React.FC<ClientProfileViewProps> = ({ client: initialCl
               className="space-y-6"
             >
               {/* AI Progress Analysis */}
+              {!progressAnalysis && client.assessments && client.assessments.length > 0 && (
+                <div className="glass-card rounded-[24px] p-5 border border-purple-500/20 bg-purple-500/5">
+                  <div className="flex items-center gap-2 mb-4">
+                    <Sparkles size={18} className="text-purple-400" />
+                    <h3 className="font-black text-white tracking-tight">Análise de IA</h3>
+                  </div>
+                  <p className="text-sm text-slate-400 mb-4">
+                    Clique para gerar uma análise personalizada do progresso de {client.name} com base nas avaliações.
+                  </p>
+                  <button
+                    onClick={handleAnalyzeProgress}
+                    disabled={loadingAnalysis}
+                    className="w-full py-3 bg-purple-600 hover:bg-purple-700 disabled:bg-purple-600/50 text-white font-bold rounded-xl transition-colors flex items-center justify-center gap-2"
+                  >
+                    {loadingAnalysis ? (
+                      <>
+                        <div className="size-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        Analisando...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles size={16} />
+                        Analisar Progresso com IA
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
+
               {progressAnalysis && (
                 <div className="glass-card rounded-[24px] p-5 border border-purple-500/20 bg-purple-500/5">
                   <div className="flex items-center gap-2 mb-4">
@@ -638,7 +665,7 @@ const ClientProfileView: React.FC<ClientProfileViewProps> = ({ client: initialCl
       {/* FAB */}
       <button
         onClick={() => onStartWorkout({ title: 'Peito e Tríceps', objective: 'Hipertrofia', duration: '45min', exercises: [] })}
-        className="fixed bottom-8 right-8 size-14 rounded-full bg-blue-600 text-white shadow-xl shadow-blue-600/30 flex items-center justify-center hover:bg-blue-700 active:scale-95 transition-all z-30"
+        className="fixed bottom-24 right-6 size-14 rounded-full bg-blue-600 text-white shadow-xl shadow-blue-600/30 flex items-center justify-center hover:bg-blue-700 active:scale-95 transition-all z-30"
       >
         <Play size={28} className="ml-1" />
       </button>

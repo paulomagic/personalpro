@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Client } from '../types';
 import { mockClients } from '../mocks/demoData';
-import { generateWorkoutWithAI, isAIAvailable, regenerateExerciseWithAI, refineWorkoutWithAI } from '../services/geminiService';
+import { generateWorkoutWithAI, isAIAvailable, regenerateExerciseWithAI, refineWorkoutWithAI, handleAIError } from '../services/geminiService';
 import { saveAIWorkout } from '../services/supabaseClient';
 import { ThumbsUp, ThumbsDown, RefreshCw, Download } from 'lucide-react';
 
@@ -302,10 +302,20 @@ const AIBuilderView: React.FC<AIBuilderViewProps> = ({ user, onBack, onDone }) =
 
   const [refinementInput, setRefinementInput] = useState('');
   const [isRefining, setIsRefining] = useState(false);
+  const [errorToast, setErrorToast] = useState<string | null>(null);
+
+  // Auto-hide error toast after 5 seconds
+  useEffect(() => {
+    if (errorToast) {
+      const timer = setTimeout(() => setErrorToast(null), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [errorToast]);
 
   const handleRefine = async () => {
     if (!refinementInput || !result) return;
     setIsRefining(true);
+    setErrorToast(null);
 
     try {
       const refinedResult = await refineWorkoutWithAI(result, refinementInput);
@@ -320,9 +330,13 @@ const AIBuilderView: React.FC<AIBuilderViewProps> = ({ user, onBack, onDone }) =
 
         setResult(mappedResult);
         setRefinementInput('');
+      } else {
+        setErrorToast('🤖 Não foi possível refinar. Tente novamente.');
       }
-    } catch (error) {
-      console.error('Error refining workout:', error);
+    } catch (error: any) {
+      const aiError = handleAIError(error);
+      setErrorToast(aiError.userMessage);
+      console.error('Error refining workout:', aiError.message);
     } finally {
       setIsRefining(false);
     }
@@ -725,6 +739,18 @@ const AIBuilderView: React.FC<AIBuilderViewProps> = ({ user, onBack, onDone }) =
             <div className="absolute top-0 right-0 size-96 bg-blue-600 rounded-full blur-[120px]"></div>
             <div className="absolute bottom-0 left-0 size-96 bg-purple-600 rounded-full blur-[120px]"></div>
           </div>
+
+          {/* Error Toast */}
+          {errorToast && (
+            <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[60] animate-fade-in">
+              <div className="bg-red-500/90 backdrop-blur-md text-white px-6 py-3 rounded-2xl shadow-2xl border border-red-400/30 flex items-center gap-3">
+                <span className="text-sm font-medium">{errorToast}</span>
+                <button onClick={() => setErrorToast(null)} className="text-white/80 hover:text-white">
+                  <span className="material-symbols-outlined text-sm">close</span>
+                </button>
+              </div>
+            </div>
+          )}
 
           <header className="relative z-10 px-6 pt-14 pb-6 glass-card bg-slate-950/50 border-0 border-b border-white/10 rounded-0">
             <div className="flex justify-between items-center">

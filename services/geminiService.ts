@@ -26,6 +26,57 @@ try {
   console.warn('Gemini API not initialized - using fallback', e);
 }
 
+// Error types for user-friendly messages
+export interface AIError {
+  type: 'rate_limit' | 'quota_exceeded' | 'network' | 'parse' | 'unknown';
+  message: string;
+  userMessage: string;
+  retryAfter?: number;
+}
+
+// Helper to create friendly error messages
+function handleAIError(error: any): AIError {
+  const errorMessage = error?.message || error?.toString() || 'Unknown error';
+
+  // Rate limit / Quota exceeded (429)
+  if (errorMessage.includes('429') || errorMessage.includes('quota') || errorMessage.includes('RESOURCE_EXHAUSTED')) {
+    return {
+      type: 'quota_exceeded',
+      message: errorMessage,
+      userMessage: '⏳ Limite de requisições atingido. Aguarde 1 minuto e tente novamente.',
+      retryAfter: 60
+    };
+  }
+
+  // Network errors
+  if (errorMessage.includes('network') || errorMessage.includes('fetch') || errorMessage.includes('ECONNREFUSED')) {
+    return {
+      type: 'network',
+      message: errorMessage,
+      userMessage: '🌐 Erro de conexão. Verifique sua internet e tente novamente.'
+    };
+  }
+
+  // JSON parse errors
+  if (errorMessage.includes('JSON') || errorMessage.includes('parse') || errorMessage.includes('Unexpected')) {
+    return {
+      type: 'parse',
+      message: errorMessage,
+      userMessage: '🤖 A IA retornou uma resposta inválida. Tente novamente.'
+    };
+  }
+
+  // Unknown
+  return {
+    type: 'unknown',
+    message: errorMessage,
+    userMessage: '❌ Erro inesperado. Usando geração local.'
+  };
+}
+
+// Export for use in components
+export { handleAIError };
+
 // Enhanced workout generation with rich client data
 interface ClientWorkoutData {
   name: string;

@@ -1,29 +1,73 @@
 
 import { GoogleGenAI } from "@google/genai";
 
-// API Key - read from Vite environment variables
-// Try multiple sources
-const envKey = import.meta.env?.VITE_GEMINI_API_KEY;
-const API_KEY = envKey || '';
+// API Keys - read from Vite environment variables
+// Primary: gemini-2.5-flash | Fallback: gemini-2.5-flash-lite
+const API_KEY_PRIMARY = import.meta.env?.VITE_GEMINI_API_KEY || '';
+const API_KEY_FALLBACK = import.meta.env?.VITE_GEMINI_API_KEY_LITE || '';
 
-console.log('🔍 ENV Debug:', {
-  hasImportMeta: typeof import.meta !== 'undefined',
-  hasEnv: typeof import.meta?.env !== 'undefined',
-  keyLength: API_KEY?.length || 0,
-  keyPrefix: API_KEY?.substring(0, 6) || 'empty'
+console.log('🔍 Gemini Config:', {
+  primaryKey: API_KEY_PRIMARY ? `${API_KEY_PRIMARY.substring(0, 6)}...` : 'not set',
+  fallbackKey: API_KEY_FALLBACK ? `${API_KEY_FALLBACK.substring(0, 6)}...` : 'not set',
 });
 
-let ai: GoogleGenAI | null = null;
+// AI Clients
+let aiPrimary: GoogleGenAI | null = null;
+let aiFallback: GoogleGenAI | null = null;
+
+// Models
+const MODEL_PRIMARY = "gemini-2.5-flash";
+const MODEL_FALLBACK = "gemini-2.5-flash-lite";
 
 try {
-  if (API_KEY && API_KEY.length > 10) {
-    ai = new GoogleGenAI({ apiKey: API_KEY });
-    console.log('✅ Gemini AI initialized successfully');
-  } else {
-    console.log('⚠️ No Gemini API key found - using local fallback');
+  if (API_KEY_PRIMARY && API_KEY_PRIMARY.length > 10) {
+    aiPrimary = new GoogleGenAI({ apiKey: API_KEY_PRIMARY });
+    console.log('✅ Gemini Primary (Flash) initialized');
+  }
+  if (API_KEY_FALLBACK && API_KEY_FALLBACK.length > 10) {
+    aiFallback = new GoogleGenAI({ apiKey: API_KEY_FALLBACK });
+    console.log('✅ Gemini Fallback (Flash-Lite) initialized');
+  }
+  if (!aiPrimary && !aiFallback) {
+    console.log('⚠️ No Gemini API keys found - using local fallback only');
   }
 } catch (e) {
   console.warn('Gemini API not initialized - using fallback', e);
+}
+
+// Helper to try primary then fallback
+async function callGeminiWithFallback(prompt: string): Promise<string | null> {
+  // Try primary first
+  if (aiPrimary) {
+    try {
+      console.log('🚀 Trying Gemini Flash (primary)...');
+      const response = await aiPrimary.models.generateContent({
+        model: MODEL_PRIMARY,
+        contents: prompt,
+      });
+      console.log('✅ Gemini Flash succeeded');
+      return response.text || '';
+    } catch (error: any) {
+      console.warn('⚠️ Primary failed, trying fallback...', error?.message?.substring(0, 100));
+    }
+  }
+
+  // Try fallback
+  if (aiFallback) {
+    try {
+      console.log('🔄 Trying Gemini Flash-Lite (fallback)...');
+      const response = await aiFallback.models.generateContent({
+        model: MODEL_FALLBACK,
+        contents: prompt,
+      });
+      console.log('✅ Gemini Flash-Lite succeeded');
+      return response.text || '';
+    } catch (error: any) {
+      console.warn('❌ Fallback also failed:', error?.message?.substring(0, 100));
+    }
+  }
+
+  return null; // Both failed, trigger local fallback
 }
 
 // Error types for user-friendly messages
@@ -101,7 +145,7 @@ export async function generateWorkoutWithAI(
   observations: string,
   extendedData?: Partial<ClientWorkoutData>
 ): Promise<any> {
-  if (!ai || !API_KEY) {
+  if (!aiPrimary && !aiFallback) {
     console.log('Using fallback workout generator');
     return null;
   }
@@ -179,12 +223,11 @@ Responda APENAS com JSON válido (sem markdown):
 
 Crie exercícios específicos, variados e adequados ao perfil. Seja criativo nos nomes dos treinos.`;
 
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: prompt,
-    });
+    const text = await callGeminiWithFallback(prompt);
 
-    const text = response.text || '';
+    if (!text) {
+      return null; // Both APIs failed, trigger local fallback
+    }
 
     // Clean up the response - remove markdown code blocks if present
     let cleanText = text.trim();
@@ -244,7 +287,7 @@ export async function* generateWorkoutWithAIStream(
   days: number,
   observations: string
 ): AsyncGenerator<string, void, unknown> {
-  if (!ai || !API_KEY) {
+  if (!aiPrimary && !aiFallback) {
     yield '{"error": "AI not available"}';
     return;
   }
@@ -263,8 +306,11 @@ export async function* generateWorkoutWithAIStream(
       "splits": [{ "name": "Treino A", "exercises": [{ "name": "...", "sets": 4, "reps": "10-12", "rest": "60s", "targetMuscle": "..." }] }]
     }`;
 
-    const response = await ai.models.generateContentStream({
-      model: "gemini-2.5-flash",
+    const ai = aiPrimary || aiFallback;
+    const model = aiPrimary ? MODEL_PRIMARY : MODEL_FALLBACK;
+
+    const response = await ai!.models.generateContentStream({
+      model: model,
       contents: prompt,
     });
 
@@ -297,7 +343,7 @@ export async function analyzeClientProgress(clientData: {
   concerns: string[];
   recommendations: string[];
 } | null> {
-  if (!ai || !API_KEY) {
+  if (!aiPrimary && !aiFallback) {
     return {
       summary: `${clientData.name} está progredindo. Continue o bom trabalho!`,
       improvements: ['Consistência nos treinos'],
@@ -323,12 +369,12 @@ export async function analyzeClientProgress(clientData: {
       "recommendations": ["Recomendações específicas para evoluir"]
     }`;
 
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: prompt,
-    });
+    const text = await callGeminiWithFallback(
 
-    const text = response.text || '';
+      prompt
+    );
+
+    if (!text) return null;
     let cleanText = text.replace(/```json|```/g, '').trim();
     return JSON.parse(cleanText);
   } catch (error) {
@@ -344,7 +390,7 @@ export async function regenerateExerciseWithAI(
   injuries: string,
   equipment: string = 'Academia completa'
 ): Promise<any> {
-  if (!ai || !API_KEY) return null;
+  if (!aiPrimary && !aiFallback) return null;
 
   try {
     const prompt = `Atue como um treinador especialista. Sugira UMA alternativa excelente para substituir o exercício "${currentExercise}" (foco: ${targetMuscle}).
@@ -365,12 +411,12 @@ export async function regenerateExerciseWithAI(
       "technique": "Dica rápida de execução"
     }`;
 
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: prompt,
-    });
+    const text = await callGeminiWithFallback(
 
-    const text = response.text || '';
+      prompt
+    );
+
+    if (!text) return null;
     let cleanText = text.replace(/```json|```/g, '').trim();
     return JSON.parse(cleanText);
   } catch (error) {
@@ -383,7 +429,7 @@ export async function refineWorkoutWithAI(
   currentWorkout: any,
   instruction: string
 ): Promise<any> {
-  if (!ai || !API_KEY) return null;
+  if (!aiPrimary && !aiFallback) return null;
 
   try {
     const prompt = `Você é um editor de treinos especialista.
@@ -399,12 +445,12 @@ export async function refineWorkoutWithAI(
     
     Responda APENAS com o JSON modificado válido (sem markdown).`;
 
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: prompt,
-    });
+    const text = await callGeminiWithFallback(
 
-    const text = response.text || '';
+      prompt
+    );
+
+    if (!text) return null;
     let cleanText = text.replace(/```json|```/g, '').trim();
     return JSON.parse(cleanText);
   } catch (error) {
@@ -419,7 +465,7 @@ export async function getAIInsight(clientData: {
   lastTraining: string;
   daysWithoutTraining?: number;
 }): Promise<string> {
-  if (!ai || !API_KEY) {
+  if (!aiPrimary && !aiFallback) {
     // Fallback insights
     if (clientData.adherence < 30) {
       return `⚠️ ${clientData.name} está com aderência baixa (${clientData.adherence}%). Considere entrar em contato para motivação.`;
@@ -437,12 +483,9 @@ ${clientData.daysWithoutTraining ? `Dias sem treinar: ${clientData.daysWithoutTr
 
 Seja direto e acionável. Use emojis apropriados.`;
 
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: prompt,
-    });
+    const text = await callGeminiWithFallback(prompt);
 
-    return response.text || 'Análise não disponível';
+    return text || 'Análise não disponível';
   } catch (error) {
     console.error("Error getting AI insight:", error);
     if (clientData.adherence < 30) {
@@ -464,7 +507,7 @@ export async function generateMessageTemplate(
     congratulation: `Parabéns ${clientName}! 🎉\n\nVocê está arrasando nos treinos! Continue assim que os resultados vão aparecer.\n\n💪🔥`
   };
 
-  if (!ai || !API_KEY) {
+  if (!aiPrimary && !aiFallback) {
     return fallbackMessages[type] || fallbackMessages.reminder;
   }
 
@@ -487,12 +530,9 @@ A mensagem deve ser:
 
 Responda apenas com a mensagem, sem explicações.`;
 
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: prompt,
-    });
+    const text = await callGeminiWithFallback(prompt);
 
-    return response.text || fallbackMessages[type];
+    return text || fallbackMessages[type];
   } catch (error) {
     console.error("Error generating message:", error);
     return fallbackMessages[type];
@@ -501,5 +541,5 @@ Responda apenas com a mensagem, sem explicações.`;
 
 // Check if AI is available
 export function isAIAvailable(): boolean {
-  return !!ai && !!API_KEY;
+  return !!aiPrimary || !!aiFallback;
 }

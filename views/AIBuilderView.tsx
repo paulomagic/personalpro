@@ -474,6 +474,11 @@ const AIBuilderView: React.FC<AIBuilderViewProps> = ({ user, onBack, onDone }) =
   };
 
   const handleSaveWorkout = async () => {
+    if (!user?.id) {
+      alert('Você precisa estar logado para salvar treinos.');
+      return;
+    }
+
     setLoading(true);
     // Use a loading message if available or just wait
 
@@ -491,9 +496,7 @@ const AIBuilderView: React.FC<AIBuilderViewProps> = ({ user, onBack, onDone }) =
           }
         };
 
-        // Use the user prop (coach) if available, otherwise use a default or handle error
-        // The View receives 'user' prop
-        const coachId = user?.id || 'demo-coach-id';
+        const coachId = user.id;
 
         await saveAIWorkout(
           selectedClient.id,

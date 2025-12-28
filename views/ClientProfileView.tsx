@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Settings, Play, Pause, AlertTriangle, CheckCircle, Calendar, FileText, TrendingUp, Camera, Dumbbell, Clock, Phone, Mail, Edit, Save, X, PlusCircle, User, Zap, Sparkles } from 'lucide-react';
 import { Client, MissedClass } from '../types';
 import { analyzeClientProgress } from '../services/geminiService';
+import { updateClient } from '../services/supabaseClient';
 
 interface ClientProfileViewProps {
   client: Client;
@@ -63,25 +64,46 @@ const ClientProfileView: React.FC<ClientProfileViewProps> = ({ client: initialCl
     }
   };
 
-  const handleSaveNotes = () => {
-    setClient(prev => ({
-      ...prev,
-      observations: editedObservations,
-      injuries: editedInjuries,
-      preferences: editedPreferences
-    }));
-    setIsEditing(false);
+  const handleSaveNotes = async () => {
+    try {
+      await updateClient(client.id, {
+        observations: editedObservations,
+        injuries: editedInjuries,
+        preferences: editedPreferences
+      });
+
+      setClient(prev => ({
+        ...prev,
+        observations: editedObservations,
+        injuries: editedInjuries,
+        preferences: editedPreferences
+      }));
+      setIsEditing(false);
+    } catch (error) {
+      console.error('Error updating client notes:', error);
+    }
   };
 
-  const handleToggleStatus = (newStatus: Client['status'], reason?: Client['suspensionReason']) => {
-    setClient(prev => ({
-      ...prev,
-      status: newStatus,
-      suspensionReason: reason,
-      suspensionStartDate: newStatus === 'paused' ? new Date().toISOString() : undefined,
-      suspensionEndDate: undefined
-    }));
-    setShowStatusModal(false);
+  const handleToggleStatus = async (newStatus: Client['status'], reason?: Client['suspensionReason']) => {
+    try {
+      const updates: any = {
+        status: newStatus,
+        suspensionReason: reason,
+      };
+
+      await updateClient(client.id, updates);
+
+      setClient(prev => ({
+        ...prev,
+        status: newStatus,
+        suspensionReason: reason,
+        suspensionStartDate: newStatus === 'paused' ? new Date().toISOString() : undefined,
+        suspensionEndDate: undefined
+      }));
+      setShowStatusModal(false);
+    } catch (error) {
+      console.error('Error updating status:', error);
+    }
   };
 
   const handleAddMissedClass = () => {

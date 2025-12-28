@@ -71,11 +71,24 @@ const ClientsView: React.FC<ClientsViewProps> = ({ user, onBack, onSelectClient 
                 ...newClientData
             };
 
-            // Remove non-DB fields
+            // Remove non-DB fields and map camelCase to snake_case
+            if (newClientData.birthDate) {
+                clientToCreate.birth_date = newClientData.birthDate;
+                delete clientToCreate.birthDate;
+            }
+
             delete clientToCreate.missedClasses;
             delete clientToCreate.assessments;
             delete clientToCreate.lastTraining;
             delete clientToCreate.avatar; // types uses avatar, db uses avatar_url
+            delete clientToCreate.totalClasses;
+            delete clientToCreate.completedClasses;
+            delete clientToCreate.paymentStatus; // separate table usually, or keep if column exists (not in current schema)
+
+            // Fix: ensure paymentStatus is not sent if column doesn't exist (it doesn't in schema provided to user)
+            // But types.ts has it. Schema has payments table. 
+            // We should probably rely on default or separate insert. For now delete it to avoid error.
+            if ('paymentStatus' in clientToCreate) delete clientToCreate.paymentStatus;
 
             await createClient(clientToCreate);
             await fetchClients(); // Refresh list

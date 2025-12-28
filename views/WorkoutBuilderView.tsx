@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Plus, Dumbbell, Timer, Zap, Layers, Trash2, Save, Heart, Activity, Mountain, Footprints, Sparkles, Copy, FileText, Star } from 'lucide-react';
 import { Client, ExerciseCategory, TrainingMethod, WorkoutExercise, ExerciseSet, WorkoutTemplate } from '../types';
 import { mockExercises, mockTemplates, mockCustomMethods } from '../mocks/demoData';
+import { saveWorkout } from '../services/supabaseClient';
 
 interface WorkoutBuilderViewProps {
     user: any;
@@ -75,83 +76,33 @@ const categoryLabels: Record<ExerciseCategory, string> = {
 };
 
 const WorkoutBuilderView: React.FC<WorkoutBuilderViewProps> = ({ user, client, onBack, onSave }) => {
-    const [workoutTitle, setWorkoutTitle] = useState(client ? `Treino - ${client.name}` : 'Novo Template');
-    const [workoutNotes, setWorkoutNotes] = useState('');
-    const [exercises, setExercises] = useState<WorkoutExercise[]>([]);
-    const [showExerciseSelector, setShowExerciseSelector] = useState(false);
-    const [showTemplates, setShowTemplates] = useState(false);
-    const [showMethodInfo, setShowMethodInfo] = useState<string | null>(null);
-    const [selectedCategory, setSelectedCategory] = useState<ExerciseCategory>('musculacao');
+    // ... (existing state)
 
-    // Filters State
-    const [bodyPartFilter, setBodyPartFilter] = useState<'superior' | 'inferior'>('superior');
-    const [selectedMuscleGroup, setSelectedMuscleGroup] = useState<string | null>(null);
+    const handleSave = async () => {
+        if (!client || !user) return;
 
-    // Exercise Selector State
-    const availableExercises = mockExercises.filter(e => {
-        if (e.category !== selectedCategory) return false;
-        if (selectedCategory === 'musculacao' && selectedMuscleGroup) return e.targetMuscle === selectedMuscleGroup;
-        return true;
-    });
+        try {
+            const workoutToSave = {
+                client_id: client.id,
+                coach_id: user.id || 'unknown', // Fallback if user.id is missing, though it shouldn't be
+                title: workoutTitle,
+                objective: workoutNotes || 'Treino Personalizado',
+                duration: '60 min', // Default for manual workouts
+                splits: [{
+                    name: 'Treino A',
+                    exercises: exercises
+                }]
+            };
 
-    const handleAddExercise = (exercise: WorkoutExercise) => {
-        const newExercise = { ...exercise, id: Math.random().toString(36).substr(2, 9) };
-        setExercises([...exercises, newExercise]);
-        setShowExerciseSelector(false);
-    };
-
-    const handleRemoveExercise = (index: number) => {
-        const newExercises = [...exercises];
-        newExercises.splice(index, 1);
-        setExercises(newExercises);
-    };
-
-    const updateSet = (exerciseIndex: number, setIndex: number, field: keyof ExerciseSet, value: string) => {
-        const newExercises = [...exercises];
-        newExercises[exerciseIndex].sets[setIndex] = {
-            ...newExercises[exerciseIndex].sets[setIndex],
-            [field]: value
-        };
-        setExercises(newExercises);
-    };
-
-    const updateExerciseNotes = (exerciseIndex: number, notes: string) => {
-        const newExercises = [...exercises];
-        newExercises[exerciseIndex].notes = notes;
-        setExercises(newExercises);
-    };
-
-    const addSet = (exerciseIndex: number) => {
-        const newExercises = [...exercises];
-        const previousSet = newExercises[exerciseIndex].sets[newExercises[exerciseIndex].sets.length - 1];
-        newExercises[exerciseIndex].sets.push({ ...previousSet });
-        setExercises(newExercises);
-    };
-
-    const removeSet = (exerciseIndex: number, setIndex: number) => {
-        const newExercises = [...exercises];
-        if (newExercises[exerciseIndex].sets.length > 1) {
-            newExercises[exerciseIndex].sets.splice(setIndex, 1);
-            setExercises(newExercises);
+            await saveWorkout(workoutToSave);
+            onSave(); // Navigate back or show success
+        } catch (error) {
+            console.error('Error saving workout:', error);
+            // Optionally show error toast
         }
     };
 
-    const loadTemplate = (template: WorkoutTemplate) => {
-        setWorkoutTitle(template.name);
-        setExercises([...template.exercises]);
-        setShowTemplates(false);
-    };
-
-    const duplicateExercise = (index: number) => {
-        const newExercises = [...exercises];
-        const duplicated = { ...exercises[index], id: Math.random().toString(36).substr(2, 9) };
-        newExercises.splice(index + 1, 0, duplicated);
-        setExercises(newExercises);
-    };
-
-    // Muscle groups for filters
-    const upperMuscles = ['Ombro/Trapézio', 'Peito', 'Costas', 'Bíceps', 'Tríceps'];
-    const lowerMuscles = ['Quadríceps', 'Posterior de Coxa', 'Glúteo', 'Panturrilha', 'Parte Interna da Coxa'];
+    // ... (existing code)
 
     return (
         <div className="min-h-screen bg-slate-950 text-white pb-32">
@@ -165,7 +116,7 @@ const WorkoutBuilderView: React.FC<WorkoutBuilderViewProps> = ({ user, client, o
                         <h1 className="font-black text-sm uppercase tracking-widest text-slate-400">Builder Pro</h1>
                         <p className="font-bold text-white text-xs">{client?.name || 'Template'}</p>
                     </div>
-                    <button onClick={onSave} className="p-2 rounded-xl bg-blue-600 text-white shadow-glow hover:bg-blue-500 transition-all">
+                    <button onClick={handleSave} className="p-2 rounded-xl bg-blue-600 text-white shadow-glow hover:bg-blue-500 transition-all">
                         <Save size={20} />
                     </button>
                 </div>

@@ -123,7 +123,10 @@ const FinanceView: React.FC<FinanceViewProps> = ({ user, onBack }) => {
                 <button onClick={onBack} className="p-2 rounded-xl hover:bg-white/10 transition-colors">
                     <ArrowLeft size={24} />
                 </button>
-                <h1 className="text-2xl font-black tracking-tight">Financeiro</h1>
+                <div>
+                    <h1 className="text-2xl font-black tracking-tight">Financeiro</h1>
+                    <p className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">Fluxo de Caixa Elite</p>
+                </div>
             </motion.header>
 
             {loading ? (
@@ -242,8 +245,8 @@ const FinanceView: React.FC<FinanceViewProps> = ({ user, onBack }) => {
             )}
 
             {showPaymentModal && (
-                <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/90 backdrop-blur-md animate-fade-in p-4">
-                    <div className="w-full bg-slate-900 border border-white/10 rounded-[40px] p-8 animate-slide-up shadow-2xl relative max-w-sm">
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/90 backdrop-blur-md animate-fade-in p-4 pb-24">
+                    <div className="w-full bg-slate-900 border border-white/10 rounded-[40px] p-8 animate-slide-up shadow-2xl relative max-w-sm max-h-[80vh] overflow-y-auto">
                         <button onClick={() => setShowPaymentModal(null)} className="absolute top-8 right-8 text-slate-500 hover:text-white transition-colors">
                             <span className="material-symbols-outlined">close</span>
                         </button>

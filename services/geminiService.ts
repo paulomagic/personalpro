@@ -1,17 +1,45 @@
 
 import { GoogleGenAI } from "@google/genai";
 
-// API Key - você pode definir via variável de ambiente ou diretamente aqui
-const API_KEY = (typeof process !== 'undefined' && process.env?.API_KEY) || '';
+// API Key - read from Vite environment variables
+// Try multiple sources
+const envKey = import.meta.env?.VITE_GEMINI_API_KEY;
+const API_KEY = envKey || '';
+
+console.log('🔍 ENV Debug:', {
+  hasImportMeta: typeof import.meta !== 'undefined',
+  hasEnv: typeof import.meta?.env !== 'undefined',
+  keyLength: API_KEY?.length || 0,
+  keyPrefix: API_KEY?.substring(0, 6) || 'empty'
+});
 
 let ai: GoogleGenAI | null = null;
 
 try {
-  if (API_KEY) {
+  if (API_KEY && API_KEY.length > 10) {
     ai = new GoogleGenAI({ apiKey: API_KEY });
+    console.log('✅ Gemini AI initialized successfully');
+  } else {
+    console.log('⚠️ No Gemini API key found - using local fallback');
   }
 } catch (e) {
-  console.warn('Gemini API not initialized - using fallback');
+  console.warn('Gemini API not initialized - using fallback', e);
+}
+
+// Enhanced workout generation with rich client data
+interface ClientWorkoutData {
+  name: string;
+  goal: string;
+  level: string;
+  days: number;
+  observations?: string;
+  injuries?: string;
+  preferences?: string;
+  adherence?: number;
+  equipment?: string[];
+  sessionDuration?: number; // minutes
+  previousWorkouts?: { name: string; date: string }[];
+  recentProgress?: string;
 }
 
 export async function generateWorkoutWithAI(
@@ -19,47 +47,89 @@ export async function generateWorkoutWithAI(
   goal: string,
   level: string,
   days: number,
-  observations: string
+  observations: string,
+  extendedData?: Partial<ClientWorkoutData>
 ): Promise<any> {
   if (!ai || !API_KEY) {
     console.log('Using fallback workout generator');
-    return null; // Returns null to trigger fallback
+    return null;
   }
 
   try {
-    const prompt = `Você é um personal trainer experiente. Crie um programa de treino personalizado.
+    // Build rich context
+    const injuries = extendedData?.injuries || 'Nenhuma';
+    const preferences = extendedData?.preferences || 'Não especificadas';
+    const adherence = extendedData?.adherence || 80;
+    const equipment = extendedData?.equipment?.join(', ') || 'Academia completa';
+    const sessionDuration = extendedData?.sessionDuration || 60;
+    const previousWorkouts = extendedData?.previousWorkouts?.slice(0, 3) || [];
+    const recentProgress = extendedData?.recentProgress || '';
 
-CLIENTE: ${clientName}
-OBJETIVO: ${goal}
-NÍVEL: ${level}
-DIAS POR SEMANA: ${days}
-OBSERVAÇÕES: ${observations || 'Nenhuma'}
+    const historyContext = previousWorkouts.length > 0
+      ? `HISTÓRICO RECENTE:\n${previousWorkouts.map(w => `- ${w.name} (${w.date})`).join('\n')}`
+      : '';
 
-Responda APENAS com um JSON válido no seguinte formato (sem markdown, sem explicações):
+    const prompt = `Você é um personal trainer de elite com 15 anos de experiência. Crie um programa de treino ALTAMENTE PERSONALIZADO.
+
+===== PERFIL DO CLIENTE =====
+NOME: ${clientName}
+OBJETIVO PRINCIPAL: ${goal}
+NÍVEL DE CONDICIONAMENTO: ${level}
+FREQUÊNCIA SEMANAL: ${days} dias
+TAXA DE ADERÊNCIA: ${adherence}%
+DURAÇÃO DA SESSÃO: ${sessionDuration} minutos
+
+===== CONSIDERAÇÕES ESPECIAIS =====
+LESÕES/LIMITAÇÕES: ${injuries}
+PREFERÊNCIAS DE TREINO: ${preferences}
+EQUIPAMENTOS DISPONÍVEIS: ${equipment}
+OBSERVAÇÕES DO PERSONAL: ${observations || 'Nenhuma'}
+
+${historyContext}
+${recentProgress ? `PROGRESSO RECENTE: ${recentProgress}` : ''}
+
+===== INSTRUÇÕES =====
+1. Crie ${days} splits otimizados para o objetivo
+2. Adapte o volume baseado na aderência (${adherence}% = ${adherence >= 85 ? 'volume alto' : adherence >= 70 ? 'volume moderado' : 'volume conservador'})
+3. EVITE exercícios que agravam: ${injuries}
+4. PRIORIZE exercícios que o cliente gosta: ${preferences}
+5. Cada sessão deve durar aprox. ${sessionDuration} minutos
+
+Responda APENAS com JSON válido (sem markdown):
 {
-  "title": "Protocolo de ${goal} - ${clientName}",
-  "objective": "Descrição breve do objetivo",
-  "duration": "Duração estimada do treino",
+  "title": "Protocolo ${goal} - ${clientName}",
+  "objective": "Descrição detalhada da estratégia e benefícios esperados",
+  "duration": "${sessionDuration} min por sessão",
+  "periodization": "Resumo da estratégia de periodização",
+  "mesocycle": [
+    { "week": 1, "phase": "Fase 1", "focus": "Foco da semana", "instruction": "Instrução de carga/volume" },
+    { "week": 2, "phase": "Fase 2", "focus": "Foco da semana", "instruction": "Instrução de carga/volume" },
+    { "week": 3, "phase": "Fase 3", "focus": "Foco da semana", "instruction": "Instrução de carga/volume" },
+    { "week": 4, "phase": "Deload", "focus": "Recuperação", "instruction": "Instrução de carga/volume" }
+  ],
   "splits": [
     {
-      "name": "Treino A - Nome do treino",
+      "name": "Treino A - Nome Criativo",
+      "focus": "Foco principal deste treino",
       "exercises": [
         {
           "name": "Nome do exercício",
           "sets": 4,
           "reps": "8-12",
           "rest": "60s",
-          "targetMuscle": "Músculo alvo"
+          "targetMuscle": "Músculo alvo",
+          "technique": "Dica de execução ou método avançado",
+          "progression": "Como progredir neste exercício"
         }
       ]
     }
   ]
 }
 
-Crie ${days} splits diferentes com 5-6 exercícios cada. Seja específico e profissional.`;
+Crie exercícios específicos, variados e adequados ao perfil. Seja criativo nos nomes dos treinos.`;
 
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash-preview-05-20",
+      model: "gemini-2.5-flash",
       contents: prompt,
     });
 
@@ -82,6 +152,183 @@ Crie ${days} splits diferentes com 5-6 exercícios cada. Seja específico e prof
   } catch (error) {
     console.error("Error generating workout with AI:", error);
     return null; // Returns null to trigger fallback
+  }
+}
+
+// Streaming version for real-time UI updates
+export async function* generateWorkoutWithAIStream(
+  clientName: string,
+  goal: string,
+  level: string,
+  days: number,
+  observations: string
+): AsyncGenerator<string, void, unknown> {
+  if (!ai || !API_KEY) {
+    yield '{"error": "AI not available"}';
+    return;
+  }
+
+  try {
+    const prompt = `Crie um treino detalhado para ${clientName}.
+    Objetivo: ${goal}
+    Nível: ${level}
+    Dias por semana: ${days}
+    Observações: ${observations}
+    
+    Responda APENAS com JSON válido com a estrutura:
+    {
+      "title": "Nome do Protocolo",
+      "objective": "Descrição",
+      "splits": [{ "name": "Treino A", "exercises": [{ "name": "...", "sets": 4, "reps": "10-12", "rest": "60s", "targetMuscle": "..." }] }]
+    }`;
+
+    const response = await ai.models.generateContentStream({
+      model: "gemini-2.5-flash",
+      contents: prompt,
+    });
+
+    for await (const chunk of response) {
+      const text = chunk.text || '';
+      if (text) {
+        yield text;
+      }
+    }
+  } catch (error) {
+    console.error("Streaming error:", error);
+    yield '{"error": "Streaming failed"}';
+  }
+}
+
+// Analyze client progress over time
+export async function analyzeClientProgress(clientData: {
+  name: string;
+  assessments: Array<{
+    date: string;
+    weight?: number;
+    bodyFat?: number;
+    measures?: Record<string, number>;
+  }>;
+  workoutHistory?: Array<{ date: string; completed: boolean }>;
+  goal: string;
+}): Promise<{
+  summary: string;
+  improvements: string[];
+  concerns: string[];
+  recommendations: string[];
+} | null> {
+  if (!ai || !API_KEY) {
+    return {
+      summary: `${clientData.name} está progredindo. Continue o bom trabalho!`,
+      improvements: ['Consistência nos treinos'],
+      concerns: [],
+      recommendations: ['Manter a rotina atual']
+    };
+  }
+
+  try {
+    const prompt = `Analise o progresso do cliente ${clientData.name} (objetivo: ${clientData.goal}).
+
+    DADOS DE AVALIAÇÕES:
+    ${JSON.stringify(clientData.assessments, null, 2)}
+
+    HISTÓRICO DE TREINOS:
+    ${clientData.workoutHistory ? `${clientData.workoutHistory.filter(w => w.completed).length} treinos completados` : 'Não disponível'}
+
+    Faça uma análise profissional. Responda APENAS com JSON:
+    {
+      "summary": "Resumo geral do progresso em 2-3 frases",
+      "improvements": ["Pontos de melhoria observados"],
+      "concerns": ["Pontos de atenção/preocupação"],
+      "recommendations": ["Recomendações específicas para evoluir"]
+    }`;
+
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: prompt,
+    });
+
+    const text = response.text || '';
+    let cleanText = text.replace(/```json|```/g, '').trim();
+    return JSON.parse(cleanText);
+  } catch (error) {
+    console.error("Error analyzing progress:", error);
+    return null;
+  }
+}
+
+export async function regenerateExerciseWithAI(
+  currentExercise: string,
+  targetMuscle: string,
+  goal: string,
+  injuries: string,
+  equipment: string = 'Academia completa'
+): Promise<any> {
+  if (!ai || !API_KEY) return null;
+
+  try {
+    const prompt = `Atue como um treinador especialista. Sugira UMA alternativa excelente para substituir o exercício "${currentExercise}" (foco: ${targetMuscle}).
+
+    CONTEXTO:
+    - Objetivo: ${goal}
+    - Equipamentos: ${equipment}
+    - Lesões a evitar: ${injuries || 'Nenhuma'}
+
+    A alternativa deve ser biomecanicamente similar mas oferecer um estímulo diferente.
+    Responda APENAS com JSON (sem markdown):
+    {
+      "name": "Nome do Novo Exercício",
+      "sets": 4,
+      "reps": "8-12",
+      "rest": "60s",
+      "targetMuscle": "${targetMuscle}",
+      "technique": "Dica rápida de execução"
+    }`;
+
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: prompt,
+    });
+
+    const text = response.text || '';
+    let cleanText = text.replace(/```json|```/g, '').trim();
+    return JSON.parse(cleanText);
+  } catch (error) {
+    console.error("Error regenerating exercise:", error);
+    return null;
+  }
+}
+
+export async function refineWorkoutWithAI(
+  currentWorkout: any,
+  instruction: string
+): Promise<any> {
+  if (!ai || !API_KEY) return null;
+
+  try {
+    const prompt = `Você é um editor de treinos especialista.
+    
+    TREINO ATUAL (JSON):
+    ${JSON.stringify(currentWorkout)}
+
+    INSTRUÇÃO DE ALTERAÇÃO:
+    "${instruction}"
+
+    Modifique o JSON do treino para atender exatamente à instrução. Mantenha a estrutura, apenas altere o necessário.
+    Se a instrução for "Adicionar exercício", insira-o no split mais apropriado.
+    
+    Responda APENAS com o JSON modificado válido (sem markdown).`;
+
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: prompt,
+    });
+
+    const text = response.text || '';
+    let cleanText = text.replace(/```json|```/g, '').trim();
+    return JSON.parse(cleanText);
+  } catch (error) {
+    console.error("Error refining workout:", error);
+    return null;
   }
 }
 
@@ -110,7 +357,7 @@ ${clientData.daysWithoutTraining ? `Dias sem treinar: ${clientData.daysWithoutTr
 Seja direto e acionável. Use emojis apropriados.`;
 
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash-preview-05-20",
+      model: "gemini-2.5-flash",
       contents: prompt,
     });
 
@@ -160,7 +407,7 @@ A mensagem deve ser:
 Responda apenas com a mensagem, sem explicações.`;
 
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash-preview-05-20",
+      model: "gemini-2.5-flash",
       contents: prompt,
     });
 

@@ -184,6 +184,7 @@ function App() {
             studentName={selectedClient?.name || 'Aluno Demo'}
             coachName={user?.user_metadata?.name || 'Personal'}
             onCompleteWorkout={() => navigateTo(View.DASHBOARD)}
+            onBack={() => selectedClient ? navigateTo(View.CLIENT_PROFILE, selectedClient) : navigateTo(View.DASHBOARD)}
           />
         );
       case View.SPORT_TRAINING:

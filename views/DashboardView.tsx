@@ -5,7 +5,7 @@ import {
   ArrowRight,
   BarChart2,
   Calendar,
-  Plus as PlusIcon,
+  Plus,
   TrendingUp,
   Users,
   Wallet
@@ -152,7 +152,14 @@ const DashboardView: React.FC<DashboardViewProps> = ({ user, onSelectClient, onO
       </motion.div>
 
       {/* Smart Alert */}
-      <motion.div variants={itemVariants} className="bg-slate-900/50 border border-amber-500/20 p-4 rounded-2xl flex items-center justify-between group active:scale-[0.99] transition-all">
+      <motion.div
+        variants={itemVariants}
+        onClick={() => {
+          const carlosClient = clients.find(c => c.name === 'Carlos Mendes') || clients[1];
+          if (carlosClient) onSelectClient(carlosClient);
+        }}
+        className="bg-slate-900/50 border border-amber-500/20 p-4 rounded-2xl flex items-center justify-between group active:scale-[0.99] transition-all cursor-pointer hover:border-amber-500/40"
+      >
         <div className="flex items-center gap-4">
           <div className="size-10 rounded-xl bg-amber-500/20 flex items-center justify-center text-amber-500">
             <span className="material-symbols-outlined">warning</span>
@@ -168,9 +175,9 @@ const DashboardView: React.FC<DashboardViewProps> = ({ user, onSelectClient, onO
             <p className="text-[10px] text-slate-500 mt-0.5">Considere entrar em contato.</p>
           </div>
         </div>
-        <button className="size-8 rounded-full bg-white/5 flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 transition-colors">
+        <div className="size-8 rounded-full bg-white/5 flex items-center justify-center text-slate-400 group-hover:text-white group-hover:bg-white/10 transition-colors">
           <span className="material-symbols-outlined text-sm">chevron_right</span>
-        </button>
+        </div>
       </motion.div>
 
       {/* Recent Students */}
@@ -236,7 +243,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ user, onSelectClient, onO
           className="w-full py-4 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl font-black text-white shadow-lg shadow-blue-900/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2 group"
         >
           <div className="p-1 rounded-full bg-white/20 group-hover:bg-white/30 transition-colors">
-            <PlusIcon size={18} />
+            <Plus size={18} />
           </div>
           NOVO TREINO COM IA
         </button>

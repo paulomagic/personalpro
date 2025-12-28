@@ -1,11 +1,14 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 
 interface MetricsViewProps {
     onBack: () => void;
 }
 
 const MetricsView: React.FC<MetricsViewProps> = ({ onBack }) => {
+    const [activePeriod, setActivePeriod] = useState('30D');
+    const periods = ['7D', '30D', '90D', 'Ano'];
+
     return (
         <div className="max-w-md mx-auto min-h-screen bg-slate-950 text-white selection:bg-blue-500/30 pb-12">
             {/* Header */}
@@ -22,10 +25,11 @@ const MetricsView: React.FC<MetricsViewProps> = ({ onBack }) => {
             <main className="px-6 space-y-8">
                 {/* Period Selector */}
                 <div className="flex bg-white/5 rounded-2xl p-1 border border-white/5 animate-slide-up">
-                    {['7D', '30D', '90D', 'Ano'].map((period, i) => (
+                    {periods.map((period) => (
                         <button
                             key={period}
-                            className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${i === 1 ? 'bg-blue-600 text-white shadow-glow' : 'text-slate-500 hover:text-slate-300'
+                            onClick={() => setActivePeriod(period)}
+                            className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${period === activePeriod ? 'bg-blue-600 text-white shadow-glow' : 'text-slate-500 hover:text-slate-300'
                                 }`}
                         >
                             {period}

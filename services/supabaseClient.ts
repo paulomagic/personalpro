@@ -299,6 +299,50 @@ export async function saveWorkout(workout: Omit<Workout, 'id' | 'created_at'>): 
     return data;
 }
 
+// Save AI-generated workout with metadata
+export interface AIWorkoutMetadata {
+    model: string;
+    optionSelected?: string;
+    generatedAt: string;
+    clientData?: {
+        injuries?: string;
+        preferences?: string;
+        adherence?: number;
+    };
+}
+
+export async function saveAIWorkout(
+    clientId: string,
+    coachId: string,
+    workout: any,
+    metadata: AIWorkoutMetadata
+): Promise<Workout | null> {
+    if (!supabase) return null;
+
+    const workoutWithMetadata = {
+        client_id: clientId,
+        coach_id: coachId,
+        title: workout.title || 'Treino IA',
+        objective: workout.objective || '',
+        duration: workout.duration || '60 min',
+        splits: workout.splits || [],
+        ai_metadata: metadata, // Extra metadata column
+    };
+
+    const { data, error } = await supabase
+        .from('workouts')
+        .insert(workoutWithMetadata)
+        .select()
+        .single();
+
+    if (error) {
+        console.error('Error saving AI workout:', error);
+        return null;
+    }
+
+    return data;
+}
+
 // ============ AUTH ============
 
 export async function signIn(email: string, password: string) {

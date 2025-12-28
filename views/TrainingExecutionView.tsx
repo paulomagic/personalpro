@@ -60,7 +60,7 @@ const TrainingExecutionView: React.FC<TrainingExecutionViewProps> = ({ workout, 
           onClick={onFinish}
           className="size-12 rounded-2xl glass-card flex items-center justify-center active:scale-90 transition-all"
         >
-          <span className="material-symbols-outlined text-white">close</span>
+          <span className="material-symbols-outlined text-white">arrow_back</span>
         </button>
 
         <div className="text-center">

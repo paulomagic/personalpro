@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Settings, Play, Pause, AlertTriangle, CheckCircle, Calendar, FileText, TrendingUp, Camera, Dumbbell, Clock, Phone, Mail, Edit, Save, X, PlusCircle, User, Zap } from 'lucide-react';
+import { ArrowLeft, Settings, Play, Pause, AlertTriangle, CheckCircle, Calendar, FileText, TrendingUp, Camera, Dumbbell, Clock, Phone, Mail, Edit, Save, X, PlusCircle, User, Zap, Sparkles } from 'lucide-react';
 import { Client, MissedClass } from '../types';
+import { analyzeClientProgress } from '../services/geminiService';
 
 interface ClientProfileViewProps {
   client: Client;
@@ -33,6 +34,36 @@ const ClientProfileView: React.FC<ClientProfileViewProps> = ({ client: initialCl
   const [missedNotes, setMissedNotes] = useState('');
 
   const tabs = ['Evolução', 'Avaliações', 'Treinos', 'Bio'];
+
+  // Progress Analysis State
+  const [progressAnalysis, setProgressAnalysis] = useState<{
+    summary: string;
+    improvements: string[];
+    concerns: string[];
+    recommendations: string[];
+  } | null>(null);
+  const [loadingAnalysis, setLoadingAnalysis] = useState(false);
+
+  useEffect(() => {
+    const fetchAnalysis = async () => {
+      if (client.assessments && client.assessments.length > 0) {
+        setLoadingAnalysis(true);
+        const analysis = await analyzeClientProgress({
+          name: client.name,
+          assessments: client.assessments.map(a => ({
+            date: a.date,
+            weight: a.weight,
+            bodyFat: a.bodyFat,
+            measures: a.measures
+          })),
+          goal: client.goal
+        });
+        setProgressAnalysis(analysis);
+        setLoadingAnalysis(false);
+      }
+    };
+    fetchAnalysis();
+  }, [client.assessments, client.name, client.goal]);
 
   const handleSaveNotes = () => {
     setClient(prev => ({
@@ -220,6 +251,60 @@ const ClientProfileView: React.FC<ClientProfileViewProps> = ({ client: initialCl
               exit={{ opacity: 0, y: -10 }}
               className="space-y-6"
             >
+              {/* AI Progress Analysis */}
+              {progressAnalysis && (
+                <div className="glass-card rounded-[24px] p-5 border border-purple-500/20 bg-purple-500/5">
+                  <div className="flex items-center gap-2 mb-4">
+                    <Sparkles size={18} className="text-purple-400" />
+                    <h3 className="font-black text-white tracking-tight">Análise de IA</h3>
+                    <span className="px-2 py-0.5 bg-purple-500 text-[9px] font-black text-white rounded-full uppercase">Gemini</span>
+                  </div>
+                  <p className="text-sm text-slate-300 mb-4">{progressAnalysis.summary}</p>
+
+                  {progressAnalysis.improvements.length > 0 && (
+                    <div className="mb-3">
+                      <p className="text-[10px] font-black text-emerald-400 uppercase tracking-widest mb-2">✅ Melhorias</p>
+                      <ul className="space-y-1">
+                        {progressAnalysis.improvements.map((item, i) => (
+                          <li key={i} className="text-xs text-slate-400 pl-3 border-l-2 border-emerald-500/30">{item}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {progressAnalysis.concerns.length > 0 && (
+                    <div className="mb-3">
+                      <p className="text-[10px] font-black text-amber-400 uppercase tracking-widest mb-2">⚠️ Atenção</p>
+                      <ul className="space-y-1">
+                        {progressAnalysis.concerns.map((item, i) => (
+                          <li key={i} className="text-xs text-slate-400 pl-3 border-l-2 border-amber-500/30">{item}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {progressAnalysis.recommendations.length > 0 && (
+                    <div>
+                      <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-2">💡 Recomendações</p>
+                      <ul className="space-y-1">
+                        {progressAnalysis.recommendations.map((item, i) => (
+                          <li key={i} className="text-xs text-slate-400 pl-3 border-l-2 border-blue-500/30">{item}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {loadingAnalysis && (
+                <div className="glass-card rounded-[24px] p-5 border border-purple-500/20 bg-purple-500/5 animate-pulse">
+                  <div className="flex items-center gap-2">
+                    <Sparkles size={18} className="text-purple-400 animate-spin" />
+                    <p className="text-sm text-slate-400">Analisando progresso com IA...</p>
+                  </div>
+                </div>
+              )}
+
               {/* Weight Chart */}
               <div className="glass-card rounded-[24px] p-6">
                 <div className="flex justify-between items-center mb-6">

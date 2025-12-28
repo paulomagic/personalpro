@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Check, Clock, Dumbbell, ChevronRight, Play, Pause, RotateCcw, Trophy, Flame, Timer as TimerIcon } from 'lucide-react';
+import { Check, Clock, Dumbbell, ChevronRight, Play, Pause, RotateCcw, Trophy, Flame, Timer as TimerIcon, ArrowLeft } from 'lucide-react';
 import { WorkoutExercise, ExerciseSet } from '../types';
 import { mockExercises } from '../mocks/demoData';
 
@@ -9,6 +9,7 @@ interface StudentViewProps {
     coachName?: string;
     coachLogo?: string;
     onCompleteWorkout?: () => void;
+    onBack?: () => void;
 }
 
 interface ExerciseCompletion {
@@ -20,7 +21,8 @@ const StudentView: React.FC<StudentViewProps> = ({
     studentName,
     coachName = 'Seu Personal',
     coachLogo,
-    onCompleteWorkout
+    onCompleteWorkout,
+    onBack
 }) => {
     // Sample workout - in real app this would come from props or API
     const [workout] = useState({
@@ -110,9 +112,19 @@ const StudentView: React.FC<StudentViewProps> = ({
             <header className="sticky top-0 z-40 bg-slate-950/90 backdrop-blur-md border-b border-white/5 px-4 py-4 safe-area-top">
                 <div className="max-w-md mx-auto">
                     <div className="flex items-center justify-between mb-3">
-                        <div>
-                            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Olá, {studentName.split(' ')[0]}! 👋</p>
-                            <h1 className="text-lg font-black text-white">{workout.title}</h1>
+                        <div className="flex items-center gap-3">
+                            {onBack && (
+                                <button
+                                    onClick={onBack}
+                                    className="size-10 rounded-full bg-white/10 backdrop-blur-md text-white border border-white/20 flex items-center justify-center active:scale-90 transition-all"
+                                >
+                                    <ArrowLeft size={20} />
+                                </button>
+                            )}
+                            <div>
+                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Olá, {studentName.split(' ')[0]}! 👋</p>
+                                <h1 className="text-lg font-black text-white">{workout.title}</h1>
+                            </div>
                         </div>
                         {coachLogo ? (
                             <img src={coachLogo} alt={coachName} className="h-10 w-auto" />
@@ -194,17 +206,17 @@ const StudentView: React.FC<StudentViewProps> = ({
                             transition={{ delay: exerciseIndex * 0.1 }}
                             onClick={() => setActiveExercise(exerciseIndex)}
                             className={`rounded-[24px] overflow-hidden transition-all ${isComplete
-                                    ? 'bg-emerald-500/10 border border-emerald-500/30'
-                                    : isActive
-                                        ? 'bg-white/5 border border-blue-500/30'
-                                        : 'bg-white/5 border border-white/5'
+                                ? 'bg-emerald-500/10 border border-emerald-500/30'
+                                : isActive
+                                    ? 'bg-white/5 border border-blue-500/30'
+                                    : 'bg-white/5 border border-white/5'
                                 }`}
                         >
                             {/* Exercise Header */}
                             <div className="p-4 flex items-center gap-4">
                                 <div className={`size-12 rounded-xl flex items-center justify-center transition-all ${isComplete
-                                        ? 'bg-emerald-500 text-white'
-                                        : 'bg-slate-800 text-slate-400'
+                                    ? 'bg-emerald-500 text-white'
+                                    : 'bg-slate-800 text-slate-400'
                                     }`}>
                                     {isComplete ? <Check size={24} /> : <Dumbbell size={20} />}
                                 </div>
@@ -247,8 +259,8 @@ const StudentView: React.FC<StudentViewProps> = ({
                                                 <div
                                                     key={setIndex}
                                                     className={`grid grid-cols-5 gap-2 items-center p-3 rounded-xl transition-all ${isSetComplete
-                                                            ? 'bg-emerald-500/10'
-                                                            : 'bg-slate-800/50'
+                                                        ? 'bg-emerald-500/10'
+                                                        : 'bg-slate-800/50'
                                                         }`}
                                                 >
                                                     <div className="text-sm font-bold text-slate-400">
@@ -267,8 +279,8 @@ const StudentView: React.FC<StudentViewProps> = ({
                                                         <button
                                                             onClick={(e) => { e.stopPropagation(); toggleSetComplete(exerciseIndex, setIndex); }}
                                                             className={`size-10 rounded-full border-2 flex items-center justify-center transition-all active:scale-90 ${isSetComplete
-                                                                    ? 'bg-emerald-500 border-emerald-400 text-white'
-                                                                    : 'border-slate-600 text-slate-600 hover:border-blue-500 hover:text-blue-500'
+                                                                ? 'bg-emerald-500 border-emerald-400 text-white'
+                                                                : 'border-slate-600 text-slate-600 hover:border-blue-500 hover:text-blue-500'
                                                                 }`}
                                                         >
                                                             <Check size={18} />
@@ -301,8 +313,8 @@ const StudentView: React.FC<StudentViewProps> = ({
                         onClick={handleFinishWorkout}
                         disabled={progress < 100}
                         className={`w-full py-4 rounded-2xl font-black text-lg uppercase tracking-widest flex items-center justify-center gap-3 transition-all ${progress >= 100
-                                ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-lg shadow-emerald-500/30 active:scale-[0.98]'
-                                : 'bg-slate-800 text-slate-500 cursor-not-allowed'
+                            ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-lg shadow-emerald-500/30 active:scale-[0.98]'
+                            : 'bg-slate-800 text-slate-500 cursor-not-allowed'
                             }`}
                     >
                         <Trophy size={24} />

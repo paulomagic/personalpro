@@ -4,8 +4,7 @@ import {
     Home,
     CalendarDays,
     Users,
-    User,
-    Plus
+    User
 } from 'lucide-react';
 
 interface LayoutProps {

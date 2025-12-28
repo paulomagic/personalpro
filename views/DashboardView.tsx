@@ -35,7 +35,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ user, onSelectClient, onO
         setLoadingClients(true);
         try {
           const { getClients } = await import('../services/supabaseClient');
-          const data = await getClients();
+          const data = await getClients(user.id);
           // Filter for recent or relevant clients (for now just take top 3)
           setClients(data.slice(0, 3));
         } catch (error) {

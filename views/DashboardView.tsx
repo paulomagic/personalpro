@@ -8,7 +8,8 @@ import {
   Plus,
   TrendingUp,
   Users,
-  Wallet
+  Wallet,
+  Shield
 } from 'lucide-react';
 import { mockClients } from '../mocks/demoData';
 
@@ -72,16 +73,26 @@ const DashboardView: React.FC<DashboardViewProps> = ({ user, onSelectClient, onO
           </p>
           <h1 className="text-2xl font-black text-white mt-1">Olá, {user?.user_metadata?.name?.split(' ')[0] || 'Coach'}! 👋</h1>
         </div>
-        <button
-          onClick={() => onNavigate && onNavigate('settings')}
-          className="size-10 rounded-full bg-slate-800 flex items-center justify-center ring-2 ring-white/10 shadow-glow overflow-hidden"
-        >
-          {user?.user_metadata?.avatar_url ? (
-            <img src={user.user_metadata.avatar_url} alt="Profile" className="w-full h-full object-cover" />
-          ) : (
-            <span className="material-symbols-outlined text-slate-400">person</span>
-          )}
-        </button>
+        <div className="flex gap-2">
+          {/* Admin Button */}
+          <button
+            onClick={() => onNavigate && onNavigate('admin')}
+            className="size-10 rounded-full bg-amber-500/10 flex items-center justify-center ring-2 ring-amber-500/20 hover:bg-amber-500/20 transition-colors"
+            title="Área Admin"
+          >
+            <Shield size={18} className="text-amber-400" />
+          </button>
+          <button
+            onClick={() => onNavigate && onNavigate('settings')}
+            className="size-10 rounded-full bg-slate-800 flex items-center justify-center ring-2 ring-white/10 shadow-glow overflow-hidden"
+          >
+            {user?.user_metadata?.avatar_url ? (
+              <img src={user.user_metadata.avatar_url} alt="Profile" className="w-full h-full object-cover" />
+            ) : (
+              <span className="material-symbols-outlined text-slate-400">person</span>
+            )}
+          </button>
+        </div>
       </motion.header>
 
       {/* Quick Actions Grid */}

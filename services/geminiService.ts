@@ -1,5 +1,6 @@
 
 import { GoogleGenAI } from "@google/genai";
+import { logAIAction } from './loggingService';
 
 // API Keys - read from Vite environment variables
 // Primary: gemini-2.5-flash | Fallback: gemini-2.5-flash-lite
@@ -35,8 +36,16 @@ try {
   console.warn('Gemini API not initialized - using fallback', e);
 }
 
-// Helper to try primary then fallback
-async function callGeminiWithFallback(prompt: string): Promise<string | null> {
+// Helper to try primary then fallback - returns text and model used
+interface GeminiResponse {
+  text: string | null;
+  model: string | null;
+  latencyMs: number;
+}
+
+async function callGeminiWithFallback(prompt: string): Promise<GeminiResponse> {
+  const startTime = Date.now();
+
   // Try primary first
   if (aiPrimary) {
     try {
@@ -45,8 +54,9 @@ async function callGeminiWithFallback(prompt: string): Promise<string | null> {
         model: MODEL_PRIMARY,
         contents: prompt,
       });
-      console.log('✅ Gemini Flash succeeded');
-      return response.text || '';
+      const latencyMs = Date.now() - startTime;
+      console.log(`✅ Gemini Flash succeeded (${latencyMs}ms)`);
+      return { text: response.text || '', model: MODEL_PRIMARY, latencyMs };
     } catch (error: any) {
       console.warn('⚠️ Primary failed, trying fallback...', error?.message?.substring(0, 100));
     }
@@ -60,14 +70,15 @@ async function callGeminiWithFallback(prompt: string): Promise<string | null> {
         model: MODEL_FALLBACK,
         contents: prompt,
       });
-      console.log('✅ Gemini Flash-Lite succeeded');
-      return response.text || '';
+      const latencyMs = Date.now() - startTime;
+      console.log(`✅ Gemini Flash-Lite succeeded (${latencyMs}ms)`);
+      return { text: response.text || '', model: MODEL_FALLBACK, latencyMs };
     } catch (error: any) {
       console.warn('❌ Fallback also failed:', error?.message?.substring(0, 100));
     }
   }
 
-  return null; // Both failed, trigger local fallback
+  return { text: null, model: null, latencyMs: Date.now() - startTime }; // Both failed
 }
 
 // Error types for user-friendly messages
@@ -223,9 +234,20 @@ Responda APENAS com JSON válido (sem markdown):
 
 Crie exercícios específicos, variados e adequados ao perfil. Seja criativo nos nomes dos treinos.`;
 
-    const text = await callGeminiWithFallback(prompt);
+    const { text, model, latencyMs } = await callGeminiWithFallback(prompt);
 
     if (!text) {
+      // Log failure
+      logAIAction({
+        action_type: 'generate_workout',
+        model_used: 'none',
+        prompt: prompt.substring(0, 500) + '...',
+        response: null,
+        latency_ms: latencyMs,
+        success: false,
+        error_message: 'Both APIs failed',
+        metadata: { clientName, goal, level, days }
+      });
       return null; // Both APIs failed, trigger local fallback
     }
 
@@ -369,13 +391,21 @@ export async function analyzeClientProgress(clientData: {
       "recommendations": ["Recomendações específicas para evoluir"]
     }`;
 
-    const text = await callGeminiWithFallback(
-
-      prompt
-    );
+    const { text, model, latencyMs } = await callGeminiWithFallback(prompt);
 
     if (!text) return null;
     let cleanText = text.replace(/```json|```/g, '').trim();
+
+    // Log success
+    logAIAction({
+      action_type: 'analyze_progress',
+      model_used: model || 'unknown',
+      prompt: prompt.substring(0, 300) + '...',
+      response: cleanText.substring(0, 500),
+      latency_ms: latencyMs,
+      success: true,
+      metadata: { clientName: clientData.name }
+    });
     return JSON.parse(cleanText);
   } catch (error) {
     console.error("Error analyzing progress:", error);
@@ -411,10 +441,7 @@ export async function regenerateExerciseWithAI(
       "technique": "Dica rápida de execução"
     }`;
 
-    const text = await callGeminiWithFallback(
-
-      prompt
-    );
+    const { text, model, latencyMs } = await callGeminiWithFallback(prompt);
 
     if (!text) return null;
     let cleanText = text.replace(/```json|```/g, '').trim();
@@ -445,12 +472,19 @@ export async function refineWorkoutWithAI(
     
     Responda APENAS com o JSON modificado válido (sem markdown).`;
 
-    const text = await callGeminiWithFallback(
-
-      prompt
-    );
+    const { text, model, latencyMs } = await callGeminiWithFallback(prompt);
 
     if (!text) return null;
+
+    // Log refine action
+    logAIAction({
+      action_type: 'refine',
+      model_used: model || 'unknown',
+      prompt: instruction,
+      response: text.substring(0, 500),
+      latency_ms: latencyMs,
+      success: true
+    });
     let cleanText = text.replace(/```json|```/g, '').trim();
     return JSON.parse(cleanText);
   } catch (error) {
@@ -483,7 +517,7 @@ ${clientData.daysWithoutTraining ? `Dias sem treinar: ${clientData.daysWithoutTr
 
 Seja direto e acionável. Use emojis apropriados.`;
 
-    const text = await callGeminiWithFallback(prompt);
+    const { text } = await callGeminiWithFallback(prompt);
 
     return text || 'Análise não disponível';
   } catch (error) {
@@ -530,7 +564,7 @@ A mensagem deve ser:
 
 Responda apenas com a mensagem, sem explicações.`;
 
-    const text = await callGeminiWithFallback(prompt);
+    const { text } = await callGeminiWithFallback(prompt);
 
     return text || fallbackMessages[type];
   } catch (error) {

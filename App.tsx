@@ -16,6 +16,11 @@ import WorkoutBuilderView from './views/WorkoutBuilderView';
 import AssessmentView from './views/AssessmentView';
 import StudentView from './views/StudentView';
 import SportTrainingView from './views/SportTrainingView';
+import AdminView from './views/AdminView';
+import AdminUsersView from './views/AdminUsersView';
+import AdminAILogsView from './views/AdminAILogsView';
+import AdminActivityLogsView from './views/AdminActivityLogsView';
+import AdminSettingsView from './views/AdminSettingsView';
 import Layout from './components/Layout';
 
 function App() {
@@ -63,6 +68,9 @@ function App() {
         break;
       case 'sport_training':
         navigateTo(View.SPORT_TRAINING);
+        break;
+      case 'admin':
+        navigateTo(View.ADMIN);
         break;
     }
   };
@@ -198,6 +206,29 @@ function App() {
             }}
           />
         );
+      // Admin Views
+      case View.ADMIN:
+        return (
+          <AdminView
+            onBack={() => navigateTo(View.DASHBOARD)}
+            onNavigate={(subView) => {
+              switch (subView) {
+                case 'users': navigateTo(View.ADMIN_USERS); break;
+                case 'ai-logs': navigateTo(View.ADMIN_AI_LOGS); break;
+                case 'activity-logs': navigateTo(View.ADMIN_ACTIVITY_LOGS); break;
+                case 'settings': navigateTo(View.ADMIN_SETTINGS); break;
+              }
+            }}
+          />
+        );
+      case View.ADMIN_USERS:
+        return <AdminUsersView onBack={() => navigateTo(View.ADMIN)} />;
+      case View.ADMIN_AI_LOGS:
+        return <AdminAILogsView onBack={() => navigateTo(View.ADMIN)} />;
+      case View.ADMIN_ACTIVITY_LOGS:
+        return <AdminActivityLogsView onBack={() => navigateTo(View.ADMIN)} />;
+      case View.ADMIN_SETTINGS:
+        return <AdminSettingsView onBack={() => navigateTo(View.ADMIN)} />;
       default:
         return <LoginView onLogin={handleLoginSuccess} />;
     }

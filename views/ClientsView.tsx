@@ -318,17 +318,43 @@ const ClientsView: React.FC<ClientsViewProps> = ({ user, onBack, onSelectClient 
                             <Users size={32} className="text-slate-600" />
                         </div>
                         <p className="font-bold text-sm mb-2">Nenhum aluno encontrado</p>
-                        <p className="text-xs text-slate-500">
+                        <p className="text-xs text-slate-500 mb-6">
                             {searchTerm ? 'Tente outra busca' : 'Comece adicionando seu primeiro protocolo de elite'}
                         </p>
-                        {!searchTerm && (
-                            <button
-                                onClick={() => setShowAddModal(true)}
-                                className="mt-4 px-4 py-2 bg-blue-600 text-white font-bold text-sm rounded-xl shadow-glow active:scale-95 transition-all"
-                            >
-                                Adicionar Aluno
-                            </button>
-                        )}
+
+                        <div className="flex flex-col gap-3 items-center">
+                            {!searchTerm && (
+                                <button
+                                    onClick={() => setShowAddModal(true)}
+                                    className="px-6 py-3 bg-blue-600 text-white font-bold text-sm rounded-xl shadow-glow active:scale-95 transition-all w-full max-w-[200px]"
+                                >
+                                    Adicionar Aluno
+                                </button>
+                            )}
+
+                            {!searchTerm && clients.length === 0 && (
+                                <button
+                                    onClick={async () => {
+                                        if (!user?.id) return;
+                                        setLoading(true);
+                                        try {
+                                            const { seedDatabase } = await import('../services/seedDatabase');
+                                            const count = await seedDatabase(user.id);
+                                            alert(`${count} alunos demonstrativos gerados com sucesso!`);
+                                            await fetchClients();
+                                        } catch (error) {
+                                            console.error(error);
+                                            alert('Erro ao gerar dados.');
+                                        } finally {
+                                            setLoading(false);
+                                        }
+                                    }}
+                                    className="px-6 py-3 bg-slate-800 text-slate-400 font-bold text-xs rounded-xl border border-white/5 hover:bg-slate-700 hover:text-white transition-all w-full max-w-[200px]"
+                                >
+                                    🪄 Gerar Alunos Demo
+                                </button>
+                            )}
+                        </div>
                     </div>
                 )}
             </motion.div>

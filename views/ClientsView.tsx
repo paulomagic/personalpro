@@ -35,6 +35,7 @@ const ClientsView: React.FC<ClientsViewProps> = ({ user, onBack, onSelectClient 
                 adherence: dbClient.adherence || 0,
                 lastTraining: 'Hoje', // Placeholder for now
                 status: dbClient.status as any,
+                startDate: dbClient.created_at, // Map created_at to startDate
                 email: dbClient.email,
                 phone: dbClient.phone,
                 observations: dbClient.observations,
@@ -79,6 +80,7 @@ const ClientsView: React.FC<ClientsViewProps> = ({ user, onBack, onSelectClient 
 
             delete clientToCreate.missedClasses;
             delete clientToCreate.assessments;
+            delete clientToCreate.startDate; // Database uses created_at
             delete clientToCreate.lastTraining;
             delete clientToCreate.avatar; // types uses avatar, db uses avatar_url
             delete clientToCreate.totalClasses;

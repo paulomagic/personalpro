@@ -1,4 +1,18 @@
 
+// ============ USER TYPE ============
+export interface AppUser {
+  id: string;
+  email?: string;
+  user_metadata?: {
+    full_name?: string;
+    avatar_url?: string;
+  };
+  app_metadata?: {
+    provider?: string;
+  };
+  created_at?: string;
+}
+
 export enum View {
   LOGIN = 'LOGIN',
   DASHBOARD = 'DASHBOARD',

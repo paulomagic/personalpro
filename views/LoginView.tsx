@@ -157,17 +157,6 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
     }
   }, []);
 
-  // Check for session on mount (handle OAuth redirect)
-  useEffect(() => {
-    if (supabase) {
-      supabase.auth.getSession().then(({ data: { session } }) => {
-        if (session?.user) {
-          onLogin(session.user);
-        }
-      });
-    }
-  }, []);
-
   // Auth Form (Shared for Login/Register)
   if (showLogin || showRegister) {
     const isRegister = showRegister;

@@ -36,8 +36,15 @@ const DashboardView: React.FC<DashboardViewProps> = ({ user, onSelectClient, onO
         try {
           const { getClients } = await import('../services/supabaseClient');
           const data = await getClients(user.id);
+          // Map DBClient to Client type structure that ProfileView expects
+          const mappedData = data.map((c: any) => ({
+            ...c,
+            startDate: c.created_at,
+            avatar: c.avatar || c.avatar_url // Handle alias if not already done by supabaseClient (it is, but safe to be sure)
+          }));
+
           // Filter for recent or relevant clients (for now just take top 3)
-          setClients(data.slice(0, 3));
+          setClients(mappedData.slice(0, 3));
         } catch (error) {
           console.error("Error loading dashboard data:", error);
         } finally {

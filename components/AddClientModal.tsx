@@ -53,6 +53,15 @@ const AddClientModal: React.FC<AddClientModalProps> = ({ isOpen, onClose, onSave
             return;
         }
 
+        // Validate email format if provided
+        if (email.trim()) {
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(email.trim())) {
+                alert('Formato de email inválido');
+                return;
+            }
+        }
+
         const newClient: Partial<Client> = {
             id: Math.random().toString(36).substr(2, 9),
             name: name.trim(),

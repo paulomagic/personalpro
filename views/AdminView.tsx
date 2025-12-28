@@ -39,11 +39,39 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack, onNavigate }) => {
         fetchMetrics();
     }, []);
 
+    // Color style mappings for Tailwind JIT (dynamic classes don't work)
+    const colorStyles = {
+        blue: {
+            bg: 'bg-blue-500/10',
+            bgHover: 'hover:bg-blue-500/10 group-hover:bg-blue-500/20',
+            border: 'hover:border-blue-500/20',
+            text: 'text-blue-400'
+        },
+        purple: {
+            bg: 'bg-purple-500/10',
+            bgHover: 'hover:bg-purple-500/10 group-hover:bg-purple-500/20',
+            border: 'hover:border-purple-500/20',
+            text: 'text-purple-400'
+        },
+        emerald: {
+            bg: 'bg-emerald-500/10',
+            bgHover: 'hover:bg-emerald-500/10 group-hover:bg-emerald-500/20',
+            border: 'hover:border-emerald-500/20',
+            text: 'text-emerald-400'
+        },
+        slate: {
+            bg: 'bg-slate-500/10',
+            bgHover: 'hover:bg-slate-500/10 group-hover:bg-slate-500/20',
+            border: 'hover:border-slate-500/20',
+            text: 'text-slate-400'
+        }
+    };
+
     const menuItems = [
-        { id: 'users', label: 'Gestão de Usuários', icon: Users, color: 'blue', description: 'Adicionar, editar e gerenciar personal trainers' },
-        { id: 'ai-logs', label: 'Logs de IA', icon: Brain, color: 'purple', description: 'Histórico completo de gerações com IA' },
-        { id: 'activity-logs', label: 'Logs de Atividade', icon: Activity, color: 'emerald', description: 'Todas as ações realizadas no sistema' },
-        { id: 'settings', label: 'Configurações', icon: Settings, color: 'slate', description: 'Preferências e limites do sistema' },
+        { id: 'users', label: 'Gestão de Usuários', icon: Users, color: 'blue' as const, description: 'Adicionar, editar e gerenciar personal trainers' },
+        { id: 'ai-logs', label: 'Logs de IA', icon: Brain, color: 'purple' as const, description: 'Histórico completo de gerações com IA' },
+        { id: 'activity-logs', label: 'Logs de Atividade', icon: Activity, color: 'emerald' as const, description: 'Todas as ações realizadas no sistema' },
+        { id: 'settings', label: 'Configurações', icon: Settings, color: 'slate' as const, description: 'Preferências e limites do sistema' },
     ];
 
     return (
@@ -225,25 +253,28 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack, onNavigate }) => {
                 {/* Navigation Menu */}
                 <div className="space-y-3">
                     <h2 className="text-sm font-black text-white">Módulos</h2>
-                    {menuItems.map((item, idx) => (
-                        <motion.button
-                            key={item.id}
-                            initial={{ opacity: 0, x: -20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ delay: 0.5 + idx * 0.1 }}
-                            onClick={() => onNavigate(item.id as any)}
-                            className={`w-full glass-card rounded-2xl p-4 flex items-center gap-4 hover:bg-${item.color}-500/10 border border-transparent hover:border-${item.color}-500/20 transition-all text-left group`}
-                        >
-                            <div className={`size-12 rounded-xl bg-${item.color}-500/10 flex items-center justify-center group-hover:bg-${item.color}-500/20 transition-colors`}>
-                                <item.icon size={24} className={`text-${item.color}-400`} />
-                            </div>
-                            <div className="flex-1">
-                                <p className="font-bold text-white">{item.label}</p>
-                                <p className="text-xs text-slate-500">{item.description}</p>
-                            </div>
-                            <ArrowLeft size={16} className="text-slate-600 rotate-180" />
-                        </motion.button>
-                    ))}
+                    {menuItems.map((item, idx) => {
+                        const styles = colorStyles[item.color];
+                        return (
+                            <motion.button
+                                key={item.id}
+                                initial={{ opacity: 0, x: -20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ delay: 0.5 + idx * 0.1 }}
+                                onClick={() => onNavigate(item.id as any)}
+                                className={`w-full glass-card rounded-2xl p-4 flex items-center gap-4 ${styles.bgHover} border border-transparent ${styles.border} transition-all text-left group`}
+                            >
+                                <div className={`size-12 rounded-xl ${styles.bg} flex items-center justify-center ${styles.bgHover} transition-colors`}>
+                                    <item.icon size={24} className={styles.text} />
+                                </div>
+                                <div className="flex-1">
+                                    <p className="font-bold text-white">{item.label}</p>
+                                    <p className="text-xs text-slate-500">{item.description}</p>
+                                </div>
+                                <ArrowLeft size={16} className="text-slate-600 rotate-180" />
+                            </motion.button>
+                        );
+                    })}
                 </div>
             </main>
         </div>

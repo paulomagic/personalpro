@@ -1,27 +1,39 @@
-import React, { useState, useEffect } from 'react';
-import { View, Client, Workout } from './types';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
+import { View, Client, Workout, AppUser } from './types';
 // import { supabase, getCurrentUser } from './services/supabaseClient'; // REMOVED FOR DEMO MODE
 import LoginView from './views/LoginView';
 import DashboardView from './views/DashboardView';
-import AIBuilderView from './views/AIBuilderView';
 import ClientProfileView from './views/ClientProfileView';
 import TrainingExecutionView from './views/TrainingExecutionView';
-import LogoLabView from './views/LogoLabView';
 import ClientsView from './views/ClientsView';
-import MetricsView from './views/MetricsView';
 import SettingsView from './views/SettingsView';
 import CalendarView from './views/CalendarView';
-import FinanceView from './views/FinanceView';
-import WorkoutBuilderView from './views/WorkoutBuilderView';
-import AssessmentView from './views/AssessmentView';
-import StudentView from './views/StudentView';
-import SportTrainingView from './views/SportTrainingView';
-import AdminView from './views/AdminView';
-import AdminUsersView from './views/AdminUsersView';
-import AdminAILogsView from './views/AdminAILogsView';
-import AdminActivityLogsView from './views/AdminActivityLogsView';
-import AdminSettingsView from './views/AdminSettingsView';
 import Layout from './components/Layout';
+
+// Lazy load heavy views to reduce initial bundle size
+const AIBuilderView = lazy(() => import('./views/AIBuilderView'));
+const LogoLabView = lazy(() => import('./views/LogoLabView'));
+const MetricsView = lazy(() => import('./views/MetricsView'));
+const FinanceView = lazy(() => import('./views/FinanceView'));
+const WorkoutBuilderView = lazy(() => import('./views/WorkoutBuilderView'));
+const AssessmentView = lazy(() => import('./views/AssessmentView'));
+const StudentView = lazy(() => import('./views/StudentView'));
+const SportTrainingView = lazy(() => import('./views/SportTrainingView'));
+const AdminView = lazy(() => import('./views/AdminView'));
+const AdminUsersView = lazy(() => import('./views/AdminUsersView'));
+const AdminAILogsView = lazy(() => import('./views/AdminAILogsView'));
+const AdminActivityLogsView = lazy(() => import('./views/AdminActivityLogsView'));
+const AdminSettingsView = lazy(() => import('./views/AdminSettingsView'));
+
+// Loading fallback component
+const ViewLoader = () => (
+  <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+    <div className="text-center">
+      <div className="size-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+      <p className="text-slate-400 text-sm font-medium">Carregando...</p>
+    </div>
+  </div>
+);
 
 function App() {
   const [currentView, setCurrentView] = useState<View>(View.LOGIN);
@@ -250,7 +262,9 @@ function App() {
   if (currentView === View.STUDENT) {
     return (
       <div className="max-w-md mx-auto bg-slate-950 shadow-2xl min-h-screen overflow-hidden">
-        {renderContent()}
+        <Suspense fallback={<ViewLoader />}>
+          {renderContent()}
+        </Suspense>
       </div>
     );
   }
@@ -258,7 +272,9 @@ function App() {
   return (
     <div className="max-w-md mx-auto bg-slate-950 shadow-2xl min-h-screen overflow-hidden">
       <Layout activeTab={getActiveTab()} onNavigate={handleNavigation}>
-        {renderContent()}
+        <Suspense fallback={<ViewLoader />}>
+          {renderContent()}
+        </Suspense>
       </Layout>
     </div>
   );

@@ -35,6 +35,28 @@ export interface DBClient {
     coach_id: string;
 }
 
+// Helper function to map DB snake_case to frontend camelCase
+export function mapDBClientToClient(dbClient: DBClient & { avatar?: string }): any {
+    return {
+        id: dbClient.id,
+        name: dbClient.name,
+        email: dbClient.email,
+        phone: dbClient.phone,
+        avatar: dbClient.avatar || dbClient.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(dbClient.name)}&background=3b82f6&color=fff`,
+        goal: dbClient.goal,
+        level: dbClient.level as 'Iniciante' | 'Intermediário' | 'Avançado' | 'Atleta',
+        status: dbClient.status === 'inactive' ? 'paused' : dbClient.status,
+        adherence: dbClient.adherence || 0,
+        startDate: dbClient.created_at,
+        lastTraining: 'Não registrado',
+        observations: dbClient.observations,
+        missedClasses: [],
+        assessments: [],
+        totalClasses: 0,
+        completedClasses: 0,
+    };
+}
+
 export interface Appointment {
     id: string;
     client_id: string;

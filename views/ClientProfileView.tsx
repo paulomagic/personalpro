@@ -18,11 +18,50 @@ interface ClientProfileViewProps {
 const ClientProfileView: React.FC<ClientProfileViewProps> = ({ client: initialClient, onBack, onStartWorkout, onStartAssessment, onCreateWorkout, onStudentView, onSportTraining }) => {
 
 
-  const [client, setClient] = useState(initialClient);
+  const [client, setClient] = useState<Client>({
+    assessments: [],
+    missedClasses: [],
+    workouts: [],
+    ...initialClient
+  });
   const [activeTab, setActiveTab] = useState('Evolução');
   const [isEditing, setIsEditing] = useState(false);
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [showMissedClassModal, setShowMissedClassModal] = useState(false);
+
+  // Fetch full client data on mount
+  useEffect(() => {
+    const loadFullData = async () => {
+      try {
+        const { getAssessments, getWorkouts } = await import('../services/supabaseClient');
+
+        const [assessmentsData, workoutsData] = await Promise.all([
+          getAssessments(client.id),
+          getWorkouts(client.id)
+        ]);
+
+        // Map backend snake_case to frontend camelCase
+        const mappedAssessments = assessmentsData.map(a => ({
+          ...a,
+          bodyFat: a.body_fat, // Map body_fat -> bodyFat
+          muscleMass: a.muscle_mass, // Map muscle_mass -> muscleMass
+          visceralFat: a.visceral_fat // Map visceral_fat -> visceralFat
+        }));
+
+        setClient(prev => ({
+          ...prev,
+          assessments: mappedAssessments as any[], // Force type
+          workouts: workoutsData
+        }));
+
+      } catch (error) {
+        console.error("Error loading client details:", error);
+      }
+    };
+    if (client.id) {
+      loadFullData();
+    }
+  }, [client.id]);
 
   // Editable fields
   const [editedObservations, setEditedObservations] = useState(client.observations || '');

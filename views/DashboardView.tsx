@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Client } from '../types';
 import { motion } from 'framer-motion';
 import {
@@ -24,7 +24,29 @@ interface DashboardViewProps {
 
 const DashboardView: React.FC<DashboardViewProps> = ({ user, onSelectClient, onOpenAI, onNavigate }) => {
   // Mock Data for Demo
-  const [clients] = useState<Client[]>(mockClients.slice(0, 3));
+  // State
+  const [clients, setClients] = useState<Client[]>([]);
+  const [loadingClients, setLoadingClients] = useState(false);
+
+  // Fetch Data
+  useEffect(() => {
+    const loadData = async () => {
+      if (user?.id) {
+        setLoadingClients(true);
+        try {
+          const { getClients } = await import('../services/supabaseClient');
+          const data = await getClients();
+          // Filter for recent or relevant clients (for now just take top 3)
+          setClients(data.slice(0, 3));
+        } catch (error) {
+          console.error("Error loading dashboard data:", error);
+        } finally {
+          setLoadingClients(false);
+        }
+      }
+    };
+    loadData();
+  }, [user]);
 
   const appointments = [
     { id: '1', time: '08:00', clientName: 'Júlia Costa' },
@@ -33,15 +55,9 @@ const DashboardView: React.FC<DashboardViewProps> = ({ user, onSelectClient, onO
   ];
 
   const revenue = 12450;
-  const loading = false;
 
-  /* REMOVED FETCH LOGIC
-  useEffect(() => {
-    if (user?.id) {
-      loadData();
-    }
-  }, [user]);
-  */
+  // Find an at-risk client for the notification
+  const atRiskClient = clients.find(c => c.status === 'at-risk' || c.adherence < 60) || clients[0];
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -163,33 +179,32 @@ const DashboardView: React.FC<DashboardViewProps> = ({ user, onSelectClient, onO
       </motion.div>
 
       {/* Smart Alert */}
-      <motion.div
-        variants={itemVariants}
-        onClick={() => {
-          const carlosClient = clients.find(c => c.name === 'Carlos Mendes') || clients[1];
-          if (carlosClient) onSelectClient(carlosClient);
-        }}
-        className="bg-slate-900/50 border border-amber-500/20 p-4 rounded-2xl flex items-center justify-between group active:scale-[0.99] transition-all cursor-pointer hover:border-amber-500/40"
-      >
-        <div className="flex items-center gap-4">
-          <div className="size-10 rounded-xl bg-amber-500/20 flex items-center justify-center text-amber-500">
-            <span className="material-symbols-outlined">warning</span>
-          </div>
-          <div>
-            <div className="flex items-center gap-2 mb-0.5">
-              <p className="text-xs font-bold text-white">Alerta Inteligente</p>
-              <span className="px-1.5 py-0.5 bg-amber-500 text-slate-950 text-[9px] font-black rounded uppercase">IA</span>
+      {atRiskClient && (
+        <motion.div
+          variants={itemVariants}
+          onClick={() => onSelectClient(atRiskClient)}
+          className="bg-slate-900/50 border border-amber-500/20 p-4 rounded-2xl flex items-center justify-between group active:scale-[0.99] transition-all cursor-pointer hover:border-amber-500/40"
+        >
+          <div className="flex items-center gap-4">
+            <div className="size-10 rounded-xl bg-amber-500/20 flex items-center justify-center text-amber-500">
+              <span className="material-symbols-outlined">warning</span>
             </div>
-            <p className="text-[10px] text-slate-400 font-medium">
-              <span className="text-white font-bold">Carlos Mendes</span> não treina há 5 dias.
-            </p>
-            <p className="text-[10px] text-slate-500 mt-0.5">Considere entrar em contato.</p>
+            <div>
+              <div className="flex items-center gap-2 mb-0.5">
+                <p className="text-xs font-bold text-white">Alerta Inteligente</p>
+                <span className="px-1.5 py-0.5 bg-amber-500 text-slate-950 text-[9px] font-black rounded uppercase">IA</span>
+              </div>
+              <p className="text-[10px] text-slate-400 font-medium">
+                <span className="text-white font-bold">{atRiskClient.name}</span> {(atRiskClient.status === 'at-risk' || atRiskClient.adherence < 50) ? 'não treina há dias' : 'precisa de atenção'}.
+              </p>
+              <p className="text-[10px] text-slate-500 mt-0.5">Considere entrar em contato.</p>
+            </div>
           </div>
-        </div>
-        <div className="size-8 rounded-full bg-white/5 flex items-center justify-center text-slate-400 group-hover:text-white group-hover:bg-white/10 transition-colors">
-          <span className="material-symbols-outlined text-sm">chevron_right</span>
-        </div>
-      </motion.div>
+          <div className="size-8 rounded-full bg-white/5 flex items-center justify-center text-slate-400 group-hover:text-white group-hover:bg-white/10 transition-colors">
+            <span className="material-symbols-outlined text-sm">chevron_right</span>
+          </div>
+        </motion.div>
+      )}
 
       {/* Recent Students */}
       <motion.div variants={itemVariants} className="space-y-4 pt-2">
@@ -204,7 +219,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ user, onSelectClient, onO
         </div>
 
         <div className="space-y-3">
-          {loading ? (
+          {loadingClients ? (
             <div className="py-8 text-center text-slate-600 text-xs animate-pulse uppercase tracking-widest font-black">
               Sincronizando...
             </div>

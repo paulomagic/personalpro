@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { supabase } from '../services/supabaseClient';
 
 interface LoginViewProps {
@@ -109,6 +109,44 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
     onLogin({ email: 'demo@personalpro.com', name: 'Rodrigo Campanato', demo: true });
   };
 
+  const handleGoogleLogin = async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      if (!supabase) {
+        setError('Supabase não configurado');
+        return;
+      }
+
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: window.location.origin
+        }
+      });
+
+      if (error) {
+        setError(error.message);
+        setLoading(false);
+      }
+    } catch (err: any) {
+      setError('Erro ao conectar com Google');
+      setLoading(false);
+    }
+  };
+
+  // Check for session on mount (handle OAuth redirect)
+  useEffect(() => {
+    if (supabase) {
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (session?.user) {
+          onLogin(session.user);
+        }
+      });
+    }
+  }, []);
+
   const InputField = ({ type, placeholder, value, onChange }: any) => (
     <input
       type={type}
@@ -150,7 +188,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
           </div>
         )}
 
-        <div className="space-y-4 mb-8 animate-slide-up">
+        <div className="space-y-4 mb-4 animate-slide-up">
           {isRegister && (
             <InputField type="text" placeholder="Nome completo" value={name} onChange={(e: any) => setName(e.target.value)} />
           )}
@@ -171,13 +209,23 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
         <button
           onClick={isRegister ? handleRegister : handleLogin}
           disabled={loading}
-          className="w-full h-14 bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white font-bold rounded-2xl text-base transition-all shadow-xl shadow-blue-600/20 disabled:opacity-50 flex items-center justify-center border border-white/5"
+          className="w-full h-14 bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white font-bold rounded-2xl text-base transition-all shadow-xl shadow-blue-600/20 disabled:opacity-50 flex items-center justify-center border border-white/5 mb-4"
         >
           {loading ? (
             <div className="size-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
           ) : (
             isRegister ? 'Começar Agora' : 'Entrar'
           )}
+        </button>
+
+        {/* Google Login Button */}
+        <button
+          onClick={handleGoogleLogin}
+          disabled={loading}
+          className="w-full h-14 bg-white text-slate-900 hover:bg-slate-100 active:scale-[0.98] font-bold rounded-2xl text-base transition-all shadow-lg disabled:opacity-50 flex items-center justify-center gap-3"
+        >
+          <img src="https://www.google.com/favicon.ico" alt="Google" className="w-5 h-5" />
+          <span>Entrar com Google</span>
         </button>
 
         <p className="text-center mt-6 text-sm text-slate-500">
@@ -242,6 +290,15 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
             className="w-full h-14 bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white font-bold rounded-2xl text-sm transition-all shadow-xl shadow-blue-600/20 uppercase tracking-wider border border-white/5"
           >
             Começar Grátis
+          </button>
+
+          {/* Google Login Button (Onboarding) */}
+          <button
+            onClick={handleGoogleLogin}
+            className="w-full h-14 bg-white text-slate-900 hover:bg-slate-100 active:scale-[0.98] font-bold rounded-2xl text-sm transition-all shadow-lg uppercase tracking-wider flex items-center justify-center gap-2"
+          >
+            <img src="https://www.google.com/favicon.ico" alt="Google" className="w-4 h-4" />
+            <span>Entrar com Google</span>
           </button>
 
           <button

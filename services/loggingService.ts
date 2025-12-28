@@ -205,13 +205,28 @@ export async function getAIMetrics() {
         actionCounts[log.action_type] = (actionCounts[log.action_type] || 0) + 1;
     });
 
+    // Total tokens used
+    const { data: tokenData } = await supabase
+        .from('ai_logs')
+        .select('tokens_input, tokens_output');
+
+    let totalTokensInput = 0;
+    let totalTokensOutput = 0;
+    tokenData?.forEach(log => {
+        totalTokensInput += log.tokens_input || 0;
+        totalTokensOutput += log.tokens_output || 0;
+    });
+
     return {
         totalLogs: totalLogs || 0,
         todayLogs: todayLogs || 0,
         successRate: totalLogs ? Math.round((successLogs || 0) / totalLogs * 100) : 0,
         errorsToday: errorsToday || 0,
         byModel: modelCounts,
-        byAction: actionCounts
+        byAction: actionCounts,
+        totalTokensInput,
+        totalTokensOutput,
+        totalTokens: totalTokensInput + totalTokensOutput
     };
 }
 

@@ -41,10 +41,18 @@ interface GeminiResponse {
   text: string | null;
   model: string | null;
   latencyMs: number;
+  tokensInput: number;
+  tokensOutput: number;
+}
+
+// Estimate tokens (~4 characters per token on average)
+function estimateTokens(text: string): number {
+  return Math.ceil(text.length / 4);
 }
 
 async function callGeminiWithFallback(prompt: string): Promise<GeminiResponse> {
   const startTime = Date.now();
+  const tokensInput = estimateTokens(prompt);
 
   // Try primary first
   if (aiPrimary) {
@@ -55,8 +63,10 @@ async function callGeminiWithFallback(prompt: string): Promise<GeminiResponse> {
         contents: prompt,
       });
       const latencyMs = Date.now() - startTime;
-      console.log(`✅ Gemini Flash succeeded (${latencyMs}ms)`);
-      return { text: response.text || '', model: MODEL_PRIMARY, latencyMs };
+      const responseText = response.text || '';
+      const tokensOutput = estimateTokens(responseText);
+      console.log(`✅ Gemini Flash succeeded (${latencyMs}ms, ~${tokensInput + tokensOutput} tokens)`);
+      return { text: responseText, model: MODEL_PRIMARY, latencyMs, tokensInput, tokensOutput };
     } catch (error: any) {
       console.warn('⚠️ Primary failed, trying fallback...', error?.message?.substring(0, 100));
     }
@@ -71,14 +81,16 @@ async function callGeminiWithFallback(prompt: string): Promise<GeminiResponse> {
         contents: prompt,
       });
       const latencyMs = Date.now() - startTime;
-      console.log(`✅ Gemini Flash-Lite succeeded (${latencyMs}ms)`);
-      return { text: response.text || '', model: MODEL_FALLBACK, latencyMs };
+      const responseText = response.text || '';
+      const tokensOutput = estimateTokens(responseText);
+      console.log(`✅ Gemini Flash-Lite succeeded (${latencyMs}ms, ~${tokensInput + tokensOutput} tokens)`);
+      return { text: responseText, model: MODEL_FALLBACK, latencyMs, tokensInput, tokensOutput };
     } catch (error: any) {
       console.warn('❌ Fallback also failed:', error?.message?.substring(0, 100));
     }
   }
 
-  return { text: null, model: null, latencyMs: Date.now() - startTime }; // Both failed
+  return { text: null, model: null, latencyMs: Date.now() - startTime, tokensInput, tokensOutput: 0 }; // Both failed
 }
 
 // Error types for user-friendly messages
@@ -234,7 +246,7 @@ Responda APENAS com JSON válido (sem markdown):
 
 Crie exercícios específicos, variados e adequados ao perfil. Seja criativo nos nomes dos treinos.`;
 
-    const { text, model, latencyMs } = await callGeminiWithFallback(prompt);
+    const { text, model, latencyMs, tokensInput, tokensOutput } = await callGeminiWithFallback(prompt);
 
     if (!text) {
       // Log failure
@@ -244,6 +256,8 @@ Crie exercícios específicos, variados e adequados ao perfil. Seja criativo nos
         prompt: prompt.substring(0, 500) + '...',
         response: null,
         latency_ms: latencyMs,
+        tokens_input: tokensInput,
+        tokens_output: 0,
         success: false,
         error_message: 'Both APIs failed',
         metadata: { clientName, goal, level, days }
@@ -285,6 +299,8 @@ Crie exercícios específicos, variados e adequados ao perfil. Seja criativo nos
         prompt: prompt.substring(0, 500) + '...',
         response: cleanText.substring(0, 1000),
         latency_ms: latencyMs,
+        tokens_input: tokensInput,
+        tokens_output: tokensOutput,
         success: true,
         metadata: { clientName, goal, level, days }
       });

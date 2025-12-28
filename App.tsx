@@ -81,17 +81,21 @@ function App() {
   };
 
   const handleLoginSuccess = (loggedUser: any) => {
-    const demoUser = {
-      id: 'demo-user-id',
-      email: 'demo@apex.com',
-      aud: 'authenticated',
-      created_at: new Date().toISOString(),
-      user_metadata: {
-        name: 'Rodrigo Campanato',
-        avatar_url: '/rodrigo-profile.png'
-      }
-    };
-    setUser(demoUser);
+    if (loggedUser) {
+      setUser(loggedUser);
+    } else {
+      // Fallback or explicit demo (should trigger restricted mode)
+      const demoUser = {
+        id: 'demo-user-id',
+        email: 'demo@apex.com',
+        user_metadata: {
+          name: 'Modo Demonstração',
+          avatar_url: ''
+        },
+        isDemo: true
+      };
+      setUser(demoUser);
+    }
     navigateTo(View.DASHBOARD);
   };
 

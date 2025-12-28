@@ -335,7 +335,10 @@ const ClientsView: React.FC<ClientsViewProps> = ({ user, onBack, onSelectClient 
                             {!searchTerm && clients.length === 0 && (
                                 <button
                                     onClick={async () => {
-                                        if (!user?.id) return;
+                                        if (!user?.id || user.id === 'demo-user-id' || user.isDemo) {
+                                            alert('O Modo Demonstração não permite salvar dados no banco. Por favor, faça login com Google ou Email para usar este recurso.');
+                                            return;
+                                        }
                                         setLoading(true);
                                         try {
                                             const { seedDatabase } = await import('../services/seedDatabase');
@@ -344,7 +347,7 @@ const ClientsView: React.FC<ClientsViewProps> = ({ user, onBack, onSelectClient 
                                             await fetchClients();
                                         } catch (error) {
                                             console.error(error);
-                                            alert('Erro ao gerar dados.');
+                                            alert('Erro ao gerar dados. Verifique se você está conectado.');
                                         } finally {
                                             setLoading(false);
                                         }

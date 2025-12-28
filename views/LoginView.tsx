@@ -6,6 +6,16 @@ interface LoginViewProps {
   onLogin: (user: any) => void;
 }
 
+const InputField = ({ type, placeholder, value, onChange }: any) => (
+  <input
+    type={type}
+    placeholder={placeholder}
+    value={value}
+    onChange={onChange}
+    className="w-full h-14 px-6 rounded-2xl border border-white/10 bg-white/5 text-white placeholder:text-slate-500 focus:border-blue-500/50 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all font-medium"
+  />
+);
+
 const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [showRegister, setShowRegister] = useState(false);
@@ -147,15 +157,16 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
     }
   }, []);
 
-  const InputField = ({ type, placeholder, value, onChange }: any) => (
-    <input
-      type={type}
-      placeholder={placeholder}
-      value={value}
-      onChange={onChange}
-      className="w-full h-14 px-6 rounded-2xl border border-white/10 bg-white/5 text-white placeholder:text-slate-500 focus:border-blue-500/50 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all font-medium"
-    />
-  );
+  // Check for session on mount (handle OAuth redirect)
+  useEffect(() => {
+    if (supabase) {
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (session?.user) {
+          onLogin(session.user);
+        }
+      });
+    }
+  }, []);
 
   // Auth Form (Shared for Login/Register)
   if (showLogin || showRegister) {

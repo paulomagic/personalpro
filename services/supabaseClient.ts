@@ -78,7 +78,7 @@ export async function getClients(coachId: string): Promise<DBClient[]> {
 
     const { data, error } = await supabase
         .from('clients')
-        .select('*')
+        .select('*, avatar:avatar_url')
         .eq('coach_id', coachId)
         .order('name');
 
@@ -95,7 +95,7 @@ export async function getClient(clientId: string): Promise<DBClient | null> {
 
     const { data, error } = await supabase
         .from('clients')
-        .select('*')
+        .select('*, avatar:avatar_url')
         .eq('id', clientId)
         .single();
 

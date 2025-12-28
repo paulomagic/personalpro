@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, Plus, Filter, Users, AlertTriangle, Pause, CheckCircle } from 'lucide-react';
 import { Client } from '../types';
-import { mockClients } from '../mocks/demoData';
+import { getClients, createClient, DBClient } from '../services/supabaseClient';
 import AddClientModal from '../components/AddClientModal';
 
 interface ClientsViewProps {
@@ -12,12 +12,78 @@ interface ClientsViewProps {
 }
 
 const ClientsView: React.FC<ClientsViewProps> = ({ user, onBack, onSelectClient }) => {
-    const [clients, setClients] = useState<Client[]>(mockClients);
+    const [clients, setClients] = useState<Client[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'at-risk' | 'paused'>('all');
     const [showFilters, setShowFilters] = useState(false);
     const [showAddModal, setShowAddModal] = useState(false);
-    const loading = false;
+    const [loading, setLoading] = useState(true);
+
+    // Fetch clients from Supabase
+    const fetchClients = async () => {
+        if (!user?.id) return;
+        setLoading(true);
+        try {
+            const data = await getClients(user.id);
+            // Map DBClient to Client type
+            const mappedClients: Client[] = data.map(dbClient => ({
+                id: dbClient.id,
+                name: dbClient.name,
+                avatar: dbClient.avatar_url || '',
+                goal: dbClient.goal,
+                level: dbClient.level as any,
+                adherence: dbClient.adherence || 0,
+                lastTraining: 'Hoje', // Placeholder for now
+                status: dbClient.status as any,
+                email: dbClient.email,
+                phone: dbClient.phone,
+                observations: dbClient.observations,
+                missedClasses: [],
+                assessments: [],
+                paymentStatus: 'paid' // Default
+            }));
+            setClients(mappedClients);
+        } catch (error) {
+            console.error('Error loading clients:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchClients();
+    }, [user?.id]);
+
+    // Handle new client
+    const handleAddClient = async (newClientData: Partial<Client>) => {
+        if (!user?.id) return;
+
+        try {
+            const clientToCreate: any = {
+                coach_id: user.id,
+                name: newClientData.name,
+                email: newClientData.email,
+                phone: newClientData.phone,
+                goal: 'Hipertrofia', // Default for now if missing
+                level: 'Iniciante',  // Default
+                status: 'active',
+                adherence: 0,
+                ...newClientData
+            };
+
+            // Remove non-DB fields
+            delete clientToCreate.missedClasses;
+            delete clientToCreate.assessments;
+            delete clientToCreate.lastTraining;
+            delete clientToCreate.avatar; // types uses avatar, db uses avatar_url
+
+            await createClient(clientToCreate);
+            await fetchClients(); // Refresh list
+            setShowAddModal(false);
+        } catch (error) {
+            console.error('Error creating client:', error);
+        }
+    };
 
     // Filter clients
     const filteredClients = clients.filter(client => {
@@ -32,12 +98,6 @@ const ClientsView: React.FC<ClientsViewProps> = ({ user, onBack, onSelectClient 
         active: clients.filter(c => c.status === 'active').length,
         atRisk: clients.filter(c => c.status === 'at-risk').length,
         paused: clients.filter(c => c.status === 'paused').length,
-    };
-
-    // Handle new client
-    const handleAddClient = (newClient: Partial<Client>) => {
-        // In real app, this would be an API call
-        setClients(prev => [newClient as Client, ...prev]);
     };
 
     // Status badge component
@@ -149,8 +209,8 @@ const ClientsView: React.FC<ClientsViewProps> = ({ user, onBack, onSelectClient 
                     <div className="flex items-center gap-2">
                         <span className="text-xs text-slate-500">Filtrado por:</span>
                         <span className={`text-xs font-bold px-2 py-1 rounded-full ${statusFilter === 'active' ? 'bg-emerald-500/20 text-emerald-400' :
-                                statusFilter === 'at-risk' ? 'bg-amber-500/20 text-amber-400' :
-                                    'bg-slate-500/20 text-slate-400'
+                            statusFilter === 'at-risk' ? 'bg-amber-500/20 text-amber-400' :
+                                'bg-slate-500/20 text-slate-400'
                             }`}>
                             {statusFilter === 'active' ? 'Ativos' : statusFilter === 'at-risk' ? 'Em Alerta' : 'Pausados'}
                         </span>

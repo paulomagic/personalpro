@@ -276,7 +276,20 @@ Crie exercícios específicos, variados e adequados ao perfil. Seja criativo nos
       .replace(/\t/g, ' ');     // Remove tabs
 
     try {
-      return JSON.parse(cleanText);
+      const parsedResult = JSON.parse(cleanText);
+
+      // Log success
+      logAIAction({
+        action_type: 'generate_workout',
+        model_used: model || 'unknown',
+        prompt: prompt.substring(0, 500) + '...',
+        response: cleanText.substring(0, 1000),
+        latency_ms: latencyMs,
+        success: true,
+        metadata: { clientName, goal, level, days }
+      });
+
+      return parsedResult;
     } catch (parseError) {
       console.warn("JSON parse failed, attempting repair...", parseError);
 
@@ -285,6 +298,17 @@ Crie exercícios específicos, variados e adequados ao perfil. Seja criativo nos
       const objectiveMatch = cleanText.match(/"objective"\s*:\s*"([^"]+)"/);
 
       if (titleMatch && objectiveMatch) {
+        // Log partial success
+        logAIAction({
+          action_type: 'generate_workout',
+          model_used: model || 'unknown',
+          prompt: prompt.substring(0, 300) + '...',
+          response: cleanText.substring(0, 500),
+          latency_ms: latencyMs,
+          success: true,
+          metadata: { clientName, goal, level, days, parseRepaired: true }
+        });
+
         // Return a minimal valid structure
         return {
           title: titleMatch[1],
@@ -445,7 +469,20 @@ export async function regenerateExerciseWithAI(
 
     if (!text) return null;
     let cleanText = text.replace(/```json|```/g, '').trim();
-    return JSON.parse(cleanText);
+    const result = JSON.parse(cleanText);
+
+    // Log success
+    logAIAction({
+      action_type: 'regenerate_exercise',
+      model_used: model || 'unknown',
+      prompt: prompt.substring(0, 300),
+      response: cleanText,
+      latency_ms: latencyMs,
+      success: true,
+      metadata: { currentExercise, targetMuscle, goal }
+    });
+
+    return result;
   } catch (error) {
     console.error("Error regenerating exercise:", error);
     return null;

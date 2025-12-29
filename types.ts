@@ -112,6 +112,14 @@ export interface WorkoutExercise {
   supersetGroupId?: string;    // ID do grupo se for parte de superset
 }
 
+// ============ WORKOUT SPLIT ============
+export interface WorkoutSplit {
+  id: string;
+  name: string;              // "A", "B", "C"...
+  description: string;       // "Peito/Tríceps", "Costas/Bíceps", etc.
+  exercises: WorkoutExercise[];
+}
+
 // ============ ASSESSMENT ============
 export interface Assessment {
   id?: string;
@@ -255,6 +263,7 @@ export interface Workout {
   objective: string;
   duration: string;
   days: number;
+  splits?: WorkoutSplit[];  // Treino A, B, C... com exercícios separados
   isTemplate?: boolean;
   templateId?: string;
   sportParams?: SportTrainingParams;  // Premium: Para treinos esportivos

@@ -227,6 +227,7 @@ function App() {
       case View.STUDENT:
         return (
           <StudentView
+            clientId={selectedClient?.id}
             studentName={selectedClient?.name || 'Aluno Demo'}
             coachName={user?.user_metadata?.name || 'Personal'}
             onCompleteWorkout={() => navigateTo(View.DASHBOARD)}

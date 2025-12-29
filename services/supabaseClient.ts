@@ -349,6 +349,29 @@ export async function saveWorkout(workout: Omit<Workout, 'id' | 'created_at'>): 
     return data;
 }
 
+// Buscar o treino atual do cliente (mais recente) com splits
+export async function getClientCurrentWorkout(clientId: string): Promise<Workout | null> {
+    if (!supabase) return null;
+
+    const { data, error } = await supabase
+        .from('workouts')
+        .select('*')
+        .eq('client_id', clientId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+
+    if (error) {
+        // Não logar erro se for "not found" - é esperado se o cliente não tem treino
+        if (error.code !== 'PGRST116') {
+            console.error('Error fetching client workout:', error);
+        }
+        return null;
+    }
+
+    return data;
+}
+
 // Save AI-generated workout with metadata
 export interface AIWorkoutMetadata {
     model: string;

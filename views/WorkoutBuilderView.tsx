@@ -76,33 +76,124 @@ const categoryLabels: Record<ExerciseCategory, string> = {
 };
 
 const WorkoutBuilderView: React.FC<WorkoutBuilderViewProps> = ({ user, client, onBack, onSave }) => {
-    // ... (existing state)
+    // State declarations
+    const [workoutTitle, setWorkoutTitle] = useState('Novo Treino');
+    const [workoutNotes, setWorkoutNotes] = useState('');
+    const [exercises, setExercises] = useState<WorkoutExercise[]>([]);
+    const [showExerciseSelector, setShowExerciseSelector] = useState(false);
+    const [showTemplates, setShowTemplates] = useState(false);
+    const [showMethodInfo, setShowMethodInfo] = useState<string | null>(null);
+    const [selectedCategory, setSelectedCategory] = useState<ExerciseCategory>('musculacao');
+    const [selectedMuscleGroup, setSelectedMuscleGroup] = useState<string | null>(null);
+    const [bodyPartFilter, setBodyPartFilter] = useState<'superior' | 'inferior'>('superior');
+
+    // Muscle group lists
+    const upperMuscles = ['Peito', 'Costas', 'Ombro/Trapézio', 'Bíceps', 'Tríceps'];
+    const lowerMuscles = ['Quadríceps', 'Posterior de Coxa', 'Glúteo', 'Panturrilha', 'Parte Interna da Coxa'];
+
+    // Get available exercises based on filters
+    const availableExercises = mockExercises.filter(ex => {
+        if (ex.category !== selectedCategory) return false;
+        if (selectedCategory === 'musculacao' && selectedMuscleGroup) {
+            return ex.targetMuscle === selectedMuscleGroup;
+        }
+        return true;
+    });
+
+    // Add exercise to workout
+    const handleAddExercise = (exercise: WorkoutExercise) => {
+        const newExercise = {
+            ...exercise,
+            id: `${exercise.id}-${Date.now()}`,
+            sets: [...exercise.sets]
+        };
+        setExercises([...exercises, newExercise]);
+        setShowExerciseSelector(false);
+    };
+
+    // Remove exercise
+    const handleRemoveExercise = (index: number) => {
+        setExercises(exercises.filter((_, i) => i !== index));
+    };
+
+    // Duplicate exercise
+    const duplicateExercise = (index: number) => {
+        const exerciseToDuplicate = exercises[index];
+        const duplicated = {
+            ...exerciseToDuplicate,
+            id: `${exerciseToDuplicate.id}-copy-${Date.now()}`
+        };
+        const newExercises = [...exercises];
+        newExercises.splice(index + 1, 0, duplicated);
+        setExercises(newExercises);
+    };
+
+    // Add set to exercise
+    const addSet = (exerciseIndex: number) => {
+        const newExercises = [...exercises];
+        const lastSet = newExercises[exerciseIndex].sets[newExercises[exerciseIndex].sets.length - 1];
+        newExercises[exerciseIndex].sets.push({ ...lastSet });
+        setExercises(newExercises);
+    };
+
+    // Remove set from exercise
+    const removeSet = (exerciseIndex: number, setIndex: number) => {
+        const newExercises = [...exercises];
+        if (newExercises[exerciseIndex].sets.length > 1) {
+            newExercises[exerciseIndex].sets.splice(setIndex, 1);
+            setExercises(newExercises);
+        }
+    };
+
+    // Update set property
+    const updateSet = (exerciseIndex: number, setIndex: number, field: string, value: string) => {
+        const newExercises = [...exercises];
+        (newExercises[exerciseIndex].sets[setIndex] as any)[field] = value;
+        setExercises(newExercises);
+    };
+
+    // Update exercise notes
+    const updateExerciseNotes = (exerciseIndex: number, notes: string) => {
+        const newExercises = [...exercises];
+        newExercises[exerciseIndex].notes = notes;
+        setExercises(newExercises);
+    };
+
+    // Load template
+    const loadTemplate = (template: WorkoutTemplate) => {
+        setWorkoutTitle(template.name);
+        setExercises([...template.exercises]);
+        setShowTemplates(false);
+    };
 
     const handleSave = async () => {
         if (!client || !user) return;
 
         try {
+            // Determinar descrição baseado nos grupos musculares
+            const muscleGroups = [...new Set(exercises.map(e => e.targetMuscle).filter(Boolean))];
+            const splitDescription = muscleGroups.slice(0, 3).join('/') || 'Treino Geral';
+
             const workoutToSave = {
                 client_id: client.id,
-                coach_id: user.id || 'unknown', // Fallback if user.id is missing, though it shouldn't be
+                coach_id: user.id || 'unknown',
                 title: workoutTitle,
                 objective: workoutNotes || 'Treino Personalizado',
-                duration: '60 min', // Default for manual workouts
+                duration: '60 min',
                 splits: [{
-                    name: 'Treino A',
+                    id: `split-${Date.now()}`,
+                    name: 'A',
+                    description: splitDescription,
                     exercises: exercises
                 }]
             };
 
             await saveWorkout(workoutToSave);
-            onSave(); // Navigate back or show success
+            onSave();
         } catch (error) {
             console.error('Error saving workout:', error);
-            // Optionally show error toast
         }
     };
-
-    // ... (existing code)
 
     return (
         <div className="min-h-screen bg-slate-950 text-white pb-32">

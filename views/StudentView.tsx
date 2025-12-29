@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Check, Clock, Dumbbell, ChevronRight, Play, Pause, RotateCcw, Trophy, Flame, Timer as TimerIcon, ArrowLeft } from 'lucide-react';
-import { WorkoutExercise, ExerciseSet } from '../types';
+import { Check, Clock, Dumbbell, ChevronRight, Play, Pause, RotateCcw, Trophy, Flame, Timer as TimerIcon, ArrowLeft, Layers, AlertCircle } from 'lucide-react';
+import { WorkoutExercise, ExerciseSet, WorkoutSplit } from '../types';
+import { getClientCurrentWorkout } from '../services/supabaseClient';
 import { mockExercises } from '../mocks/demoData';
 
 interface StudentViewProps {
+    clientId?: string;          // ID do cliente para buscar treinos reais
     studentName: string;
     coachName?: string;
     coachLogo?: string;
@@ -17,39 +19,104 @@ interface ExerciseCompletion {
     setCompletions: boolean[];
 }
 
+// Fallback workout para demo (quando não há treino no banco)
+const createDemoWorkout = (studentName: string) => ({
+    title: 'Treino Demo',
+    objective: 'Demonstração',
+    duration: '45 min',
+    splits: [
+        {
+            id: 'demo-a',
+            name: 'A',
+            description: 'Superior (Demo)',
+            exercises: mockExercises.filter(e => ['ch1', 'ch2', 'sh1', 'sh2', 'tri1', 'bi1'].includes(e.id))
+        },
+        {
+            id: 'demo-b',
+            name: 'B',
+            description: 'Inferior (Demo)',
+            exercises: mockExercises.filter(e => ['quad1', 'quad2', 'ham1', 'glut1', 'calf1'].includes(e.id))
+        }
+    ]
+});
+
 const StudentView: React.FC<StudentViewProps> = ({
+    clientId,
     studentName,
     coachName = 'Seu Personal',
     coachLogo,
     onCompleteWorkout,
     onBack
 }) => {
-    // Sample workout - in real app this would come from props or API
-    const [workout] = useState({
-        title: 'Treino A - Superior',
-        objective: 'Hipertrofia',
-        duration: '45 min',
-        exercises: mockExercises.filter(e => ['ch1', 'ch2', 'sh1', 'sh2', 'tri1', 'bi1'].includes(e.id))
-    });
-
-    const [completions, setCompletions] = useState<ExerciseCompletion[]>(
-        workout.exercises.map(ex => ({
-            exerciseId: ex.id,
-            setCompletions: ex.sets.map(() => false)
-        }))
-    );
-
+    // States
+    const [loading, setLoading] = useState(true);
+    const [workout, setWorkout] = useState<{
+        title: string;
+        objective: string;
+        duration: string;
+        splits: WorkoutSplit[];
+    } | null>(null);
+    const [selectedSplit, setSelectedSplit] = useState<WorkoutSplit | null>(null);
+    const [completions, setCompletions] = useState<ExerciseCompletion[]>([]);
     const [activeExercise, setActiveExercise] = useState<number>(0);
     const [isResting, setIsResting] = useState(false);
     const [restTime, setRestTime] = useState(0);
     const [showCompleteModal, setShowCompleteModal] = useState(false);
 
+    // Fetch workout data on mount
+    useEffect(() => {
+        const fetchWorkout = async () => {
+            setLoading(true);
+
+            if (clientId) {
+                try {
+                    const workoutData = await getClientCurrentWorkout(clientId);
+
+                    if (workoutData && workoutData.splits && Array.isArray(workoutData.splits) && workoutData.splits.length > 0) {
+                        setWorkout({
+                            title: workoutData.title,
+                            objective: workoutData.objective,
+                            duration: workoutData.duration,
+                            splits: workoutData.splits as WorkoutSplit[]
+                        });
+                    } else {
+                        // Fallback to demo workout
+                        setWorkout(createDemoWorkout(studentName));
+                    }
+                } catch (error) {
+                    console.error('Error fetching workout:', error);
+                    setWorkout(createDemoWorkout(studentName));
+                }
+            } else {
+                // No clientId - use demo workout
+                setWorkout(createDemoWorkout(studentName));
+            }
+
+            setLoading(false);
+        };
+
+        fetchWorkout();
+    }, [clientId, studentName]);
+
+    // Initialize completions when split is selected
+    useEffect(() => {
+        if (selectedSplit) {
+            setCompletions(
+                selectedSplit.exercises.map(ex => ({
+                    exerciseId: ex.id,
+                    setCompletions: ex.sets.map(() => false)
+                }))
+            );
+            setActiveExercise(0);
+        }
+    }, [selectedSplit]);
+
     // Calculate progress
-    const totalSets = workout.exercises.reduce((acc, ex) => acc + ex.sets.length, 0);
+    const totalSets = selectedSplit?.exercises.reduce((acc, ex) => acc + ex.sets.length, 0) || 0;
     const completedSets = completions.reduce((acc, comp) =>
         acc + comp.setCompletions.filter(Boolean).length, 0
     );
-    const progress = (completedSets / totalSets) * 100;
+    const progress = totalSets > 0 ? (completedSets / totalSets) * 100 : 0;
 
     // Toggle set completion
     const toggleSetComplete = (exerciseIndex: number, setIndex: number) => {
@@ -58,8 +125,8 @@ const StudentView: React.FC<StudentViewProps> = ({
         setCompletions(newCompletions);
 
         // Auto-start rest timer if completing a set
-        if (newCompletions[exerciseIndex].setCompletions[setIndex]) {
-            const restTimeSeconds = parseInt(workout.exercises[exerciseIndex].sets[setIndex].rest) || 60;
+        if (newCompletions[exerciseIndex].setCompletions[setIndex] && selectedSplit) {
+            const restTimeSeconds = parseInt(selectedSplit.exercises[exerciseIndex].sets[setIndex].rest) || 60;
             startRestTimer(restTimeSeconds);
         }
     };
@@ -70,7 +137,7 @@ const StudentView: React.FC<StudentViewProps> = ({
         setIsResting(true);
     };
 
-    React.useEffect(() => {
+    useEffect(() => {
         let interval: NodeJS.Timeout | null = null;
         if (isResting && restTime > 0) {
             interval = setInterval(() => {
@@ -88,7 +155,7 @@ const StudentView: React.FC<StudentViewProps> = ({
 
     // Check if exercise is complete
     const isExerciseComplete = (exerciseIndex: number) => {
-        return completions[exerciseIndex].setCompletions.every(Boolean);
+        return completions[exerciseIndex]?.setCompletions.every(Boolean) || false;
     };
 
     // Format rest time
@@ -106,6 +173,132 @@ const StudentView: React.FC<StudentViewProps> = ({
         }
     };
 
+    // Loading state
+    if (loading) {
+        return (
+            <div className="min-h-screen bg-slate-950 text-white flex items-center justify-center">
+                <div className="text-center">
+                    <div className="size-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+                    <p className="text-slate-400 text-sm font-medium">Carregando treino...</p>
+                </div>
+            </div>
+        );
+    }
+
+    // No workout available
+    if (!workout) {
+        return (
+            <div className="min-h-screen bg-slate-950 text-white flex items-center justify-center p-6">
+                <div className="text-center max-w-sm">
+                    <div className="size-20 rounded-full bg-slate-800 flex items-center justify-center mx-auto mb-6">
+                        <AlertCircle size={40} className="text-slate-500" />
+                    </div>
+                    <h2 className="text-xl font-bold text-white mb-2">Nenhum Treino Encontrado</h2>
+                    <p className="text-slate-400 text-sm mb-6">
+                        Seu personal ainda não criou um treino para você. Entre em contato para solicitar.
+                    </p>
+                    {onBack && (
+                        <button
+                            onClick={onBack}
+                            className="px-6 py-3 bg-blue-600 text-white font-bold rounded-xl"
+                        >
+                            Voltar
+                        </button>
+                    )}
+                </div>
+            </div>
+        );
+    }
+
+    // Split Selection View
+    if (!selectedSplit) {
+        return (
+            <div className="min-h-screen bg-slate-950 text-white">
+                {/* Header */}
+                <header className="sticky top-0 z-40 bg-slate-950/90 backdrop-blur-md border-b border-white/5 px-4 py-4 safe-area-top">
+                    <div className="max-w-md mx-auto">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                {onBack && (
+                                    <button
+                                        onClick={onBack}
+                                        className="size-10 rounded-full bg-white/10 backdrop-blur-md text-white border border-white/20 flex items-center justify-center active:scale-90 transition-all"
+                                    >
+                                        <ArrowLeft size={20} />
+                                    </button>
+                                )}
+                                <div>
+                                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Olá, {studentName.split(' ')[0]}! 👋</p>
+                                    <h1 className="text-lg font-black text-white">{workout.title}</h1>
+                                </div>
+                            </div>
+                            {coachLogo ? (
+                                <img src={coachLogo} alt={coachName} className="h-10 w-auto" />
+                            ) : (
+                                <div className="text-right">
+                                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Personal</p>
+                                    <p className="text-sm font-bold text-white">{coachName}</p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </header>
+
+                {/* Split Selection */}
+                <main className="max-w-md mx-auto px-4 py-6 pb-32">
+                    <div className="mb-6">
+                        <h2 className="text-xl font-black text-white mb-2">Escolha seu Treino</h2>
+                        <p className="text-sm text-slate-400">Selecione qual treino você vai fazer hoje</p>
+                    </div>
+
+                    <div className="space-y-4">
+                        {workout.splits.map((split, index) => (
+                            <motion.button
+                                key={split.id}
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: index * 0.1 }}
+                                onClick={() => setSelectedSplit(split)}
+                                className="w-full glass-card p-5 rounded-[24px] text-left border border-white/5 hover:border-blue-500/50 active:scale-[0.98] transition-all group"
+                            >
+                                <div className="flex items-center gap-4">
+                                    <div className="size-16 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/20">
+                                        <span className="text-2xl font-black text-white">{split.name}</span>
+                                    </div>
+                                    <div className="flex-1">
+                                        <h3 className="font-bold text-white text-lg mb-1">
+                                            Treino {split.name}
+                                        </h3>
+                                        <p className="text-sm text-slate-400">{split.description}</p>
+                                        <div className="flex items-center gap-3 mt-2">
+                                            <span className="text-[10px] font-bold text-slate-500 flex items-center gap-1">
+                                                <Dumbbell size={12} /> {split.exercises.length} exercícios
+                                            </span>
+                                            <span className="text-[10px] font-bold text-slate-500 flex items-center gap-1">
+                                                <Layers size={12} /> {split.exercises.reduce((acc, e) => acc + e.sets.length, 0)} séries
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <ChevronRight size={24} className="text-slate-600 group-hover:text-blue-400 transition-colors" />
+                                </div>
+                            </motion.button>
+                        ))}
+                    </div>
+
+                    {/* Demo Indicator */}
+                    {!clientId && (
+                        <div className="mt-6 p-4 bg-amber-500/10 border border-amber-500/20 rounded-2xl">
+                            <p className="text-xs text-amber-400 text-center">
+                                ⚠️ Modo demonstração - Treinos de exemplo
+                            </p>
+                        </div>
+                    )}
+                </main>
+            </div>
+        );
+    }
+
+    // Workout Execution View (existing functionality)
     return (
         <div className="min-h-screen bg-slate-950 text-white">
             {/* Header */}
@@ -113,17 +306,15 @@ const StudentView: React.FC<StudentViewProps> = ({
                 <div className="max-w-md mx-auto">
                     <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center gap-3">
-                            {onBack && (
-                                <button
-                                    onClick={onBack}
-                                    className="size-10 rounded-full bg-white/10 backdrop-blur-md text-white border border-white/20 flex items-center justify-center active:scale-90 transition-all"
-                                >
-                                    <ArrowLeft size={20} />
-                                </button>
-                            )}
+                            <button
+                                onClick={() => setSelectedSplit(null)}
+                                className="size-10 rounded-full bg-white/10 backdrop-blur-md text-white border border-white/20 flex items-center justify-center active:scale-90 transition-all"
+                            >
+                                <ArrowLeft size={20} />
+                            </button>
                             <div>
                                 <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Olá, {studentName.split(' ')[0]}! 👋</p>
-                                <h1 className="text-lg font-black text-white">{workout.title}</h1>
+                                <h1 className="text-lg font-black text-white">Treino {selectedSplit.name} - {selectedSplit.description}</h1>
                             </div>
                         </div>
                         {coachLogo ? (
@@ -193,7 +384,7 @@ const StudentView: React.FC<StudentViewProps> = ({
 
             {/* Exercises List */}
             <main className="max-w-md mx-auto px-4 py-6 pb-32 space-y-4">
-                {workout.exercises.map((exercise, exerciseIndex) => {
+                {selectedSplit.exercises.map((exercise, exerciseIndex) => {
                     const isComplete = isExerciseComplete(exerciseIndex);
                     const isActive = exerciseIndex === activeExercise;
 
@@ -253,7 +444,7 @@ const StudentView: React.FC<StudentViewProps> = ({
                                         </div>
 
                                         {exercise.sets.map((set, setIndex) => {
-                                            const isSetComplete = completions[exerciseIndex].setCompletions[setIndex];
+                                            const isSetComplete = completions[exerciseIndex]?.setCompletions[setIndex] || false;
 
                                             return (
                                                 <div
@@ -373,7 +564,7 @@ const StudentView: React.FC<StudentViewProps> = ({
                                 className="grid grid-cols-3 gap-4 mb-8"
                             >
                                 <div className="bg-white/5 rounded-2xl p-4">
-                                    <p className="text-2xl font-black text-emerald-400">{workout.exercises.length}</p>
+                                    <p className="text-2xl font-black text-emerald-400">{selectedSplit?.exercises.length || 0}</p>
                                     <p className="text-[9px] font-black text-slate-500 uppercase">Exercícios</p>
                                 </div>
                                 <div className="bg-white/5 rounded-2xl p-4">
@@ -393,7 +584,10 @@ const StudentView: React.FC<StudentViewProps> = ({
                                 initial={{ y: 20, opacity: 0 }}
                                 animate={{ y: 0, opacity: 1 }}
                                 transition={{ delay: 0.7 }}
-                                onClick={() => setShowCompleteModal(false)}
+                                onClick={() => {
+                                    setShowCompleteModal(false);
+                                    setSelectedSplit(null);
+                                }}
                                 className="px-8 py-4 bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-black rounded-2xl shadow-lg shadow-emerald-500/30 active:scale-95 transition-transform"
                             >
                                 Fechar

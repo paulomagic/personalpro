@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Camera, Ruler, Save, Calendar, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Camera, Ruler, Save, Calendar, X, Trash2 } from 'lucide-react';
 import { Client, Assessment } from '../types';
+import { uploadAssessmentPhoto, createAssessment } from '../services/supabaseClient';
 
 interface AssessmentViewProps {
     user: any;
@@ -13,6 +14,9 @@ interface AssessmentViewProps {
 const AssessmentView: React.FC<AssessmentViewProps> = ({ user, client, onBack, onSave }) => {
     const [activeTab, setActiveTab] = useState<'measures' | 'photos'>('measures');
     const [weight, setWeight] = useState<string>('');
+    const [bodyFat, setBodyFat] = useState<string>('');
+    const [saving, setSaving] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     // Measures State (Circumferences)
     const [measures, setMeasures] = useState({
@@ -39,7 +43,7 @@ const AssessmentView: React.FC<AssessmentViewProps> = ({ user, client, onBack, o
         axillary: ''
     });
 
-    // Mock Photo Upload State
+    // Photo Upload State
     const [photos, setPhotos] = useState<string[]>([]);
     const [uploading, setUploading] = useState(false);
 
@@ -70,29 +74,69 @@ const AssessmentView: React.FC<AssessmentViewProps> = ({ user, client, onBack, o
         setSkinfolds(prev => ({ ...prev, [field]: value }));
     };
 
-    const handlePhotoUpload = () => {
+    const handlePhotoSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = e.target.files;
+        if (!files || files.length === 0) return;
+
         setUploading(true);
-        // Simulate upload delay
-        setTimeout(() => {
-            // Add a mock placeholder image
-            const newPhoto = `https://source.unsplash.com/random/300x400/?fitness&${photos.length}`;
-            // In a real app, this would be the URL returned from storage
-            // Since unsplash source is deprecated sometimes, let's use a solid color placeholder or local asset if available
-            // For MVP demo, we can just use a colored div placeholder representation in the UI, 
-            // but here we store a string.
-            setPhotos(prev => [...prev, 'photo_placeholder']);
-            setUploading(false);
-        }, 1500);
+
+        for (const file of Array.from(files)) {
+            // Validate file type
+            if (!file.type.startsWith('image/')) {
+                console.warn('File is not an image:', file.name);
+                continue;
+            }
+
+            // Upload to Supabase Storage or create local preview
+            const photoUrl = await uploadAssessmentPhoto(file, client.id, user?.id || 'demo');
+
+            if (photoUrl) {
+                setPhotos(prev => [...prev, photoUrl]);
+            } else {
+                // If upload fails, create local preview as fallback
+                const localUrl = URL.createObjectURL(file);
+                setPhotos(prev => [...prev, localUrl]);
+            }
+        }
+
+        setUploading(false);
+        // Reset input
+        if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+        }
     };
 
-    const handleSave = () => {
+    const handleRemovePhoto = (index: number) => {
+        setPhotos(prev => prev.filter((_, i) => i !== index));
+    };
+
+    const handleSave = async () => {
+        setSaving(true);
+
         const assessment: Assessment = {
             date: new Date().toISOString(),
             weight: parseFloat(weight) || 0,
-            measures: Object.entries(measures).reduce((acc, [k, v]) => ({ ...acc, [k]: parseFloat(v) || 0 }), {}),
-            skinfolds: Object.entries(skinfolds).reduce((acc, [k, v]) => ({ ...acc, [k]: parseFloat(v) || 0 }), {}),
+            bodyFat: parseFloat(bodyFat) || undefined,
+            measures: Object.entries(measures).reduce<Record<string, number>>((acc, [k, v]) => ({ ...acc, [k]: parseFloat(v) || 0 }), {}),
+            skinfolds: Object.entries(skinfolds).reduce<Record<string, number>>((acc, [k, v]) => ({ ...acc, [k]: parseFloat(v) || 0 }), {}),
             photos: photos
         };
+
+        // Try to save to Supabase
+        if (user?.id && client.id) {
+            await createAssessment({
+                client_id: client.id,
+                coach_id: user.id,
+                date: new Date().toISOString().split('T')[0],
+                weight: parseFloat(weight) || undefined,
+                body_fat: parseFloat(bodyFat) || undefined,
+                measures: assessment.measures,
+                skinfolds: assessment.skinfolds,
+                photos: photos
+            });
+        }
+
+        setSaving(false);
         onSave(assessment);
     };
 
@@ -216,35 +260,58 @@ const AssessmentView: React.FC<AssessmentViewProps> = ({ user, client, onBack, o
                         animate={{ opacity: 1, y: 0 }}
                         className="space-y-4"
                     >
+                        {/* Hidden file input */}
+                        <input
+                            ref={fileInputRef}
+                            type="file"
+                            accept="image/*"
+                            multiple
+                            capture="environment"
+                            onChange={handlePhotoSelect}
+                            className="hidden"
+                        />
+
+                        {/* Upload button */}
                         <button
-                            onClick={handlePhotoUpload}
+                            onClick={() => fileInputRef.current?.click()}
                             disabled={uploading}
                             className="w-full h-32 rounded-2xl border-2 border-dashed border-white/10 bg-white/5 flex flex-col items-center justify-center gap-2 text-slate-400 hover:border-blue-500/50 hover:text-blue-400 transition-all active:scale-[0.98]"
                         >
                             {uploading ? (
-                                <div className="size-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                                <>
+                                    <div className="size-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                                    <span className="text-xs font-bold uppercase tracking-widest">Enviando...</span>
+                                </>
                             ) : (
                                 <>
                                     <div className="size-10 rounded-full bg-slate-800 flex items-center justify-center">
                                         <Camera size={20} />
                                     </div>
-                                    <span className="text-xs font-bold uppercase tracking-widest">Adicionar Foto</span>
+                                    <span className="text-xs font-bold uppercase tracking-widest">Tirar Foto ou Selecionar</span>
+                                    <span className="text-[9px] text-slate-600">Clique para abrir câmera/galeria</span>
                                 </>
                             )}
                         </button>
 
+                        {/* Photos grid */}
                         <div className="grid grid-cols-2 gap-3">
                             {photos.map((photo, idx) => (
                                 <div key={idx} className="aspect-[3/4] bg-slate-800 rounded-xl overflow-hidden relative group">
-                                    {photo === 'photo_placeholder' ? (
-                                        <div className="w-full h-full bg-gradient-to-br from-slate-700 to-slate-800 flex items-center justify-center">
-                                            <span className="text-xs font-black text-slate-500 uppercase tracking-widest">Foto {idx + 1}</span>
-                                        </div>
-                                    ) : (
-                                        <img src={photo} alt={`Assessment ${idx}`} className="w-full h-full object-cover" />
-                                    )}
-                                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                        <button className="text-white font-bold text-xs uppercase tracking-widest hover:underline">Ver</button>
+                                    <img
+                                        src={photo}
+                                        alt={`Foto ${idx + 1}`}
+                                        className="w-full h-full object-cover"
+                                    />
+                                    {/* Delete button */}
+                                    <button
+                                        onClick={() => handleRemovePhoto(idx)}
+                                        className="absolute top-2 right-2 size-8 rounded-full bg-red-500/90 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
+                                    >
+                                        <Trash2 size={14} className="text-white" />
+                                    </button>
+                                    {/* Photo number */}
+                                    <div className="absolute bottom-2 left-2 px-2 py-1 bg-black/60 rounded-lg">
+                                        <span className="text-[10px] font-black text-white uppercase">Foto {idx + 1}</span>
                                     </div>
                                 </div>
                             ))}
@@ -252,7 +319,9 @@ const AssessmentView: React.FC<AssessmentViewProps> = ({ user, client, onBack, o
 
                         {photos.length === 0 && !uploading && (
                             <div className="text-center py-8">
+                                <Camera size={32} className="text-slate-700 mx-auto mb-3" />
                                 <p className="text-slate-600 text-xs">Nenhuma foto registrada nesta avaliação.</p>
+                                <p className="text-slate-700 text-[10px] mt-1">Clique no botão acima para adicionar</p>
                             </div>
                         )}
                     </motion.div>

@@ -84,6 +84,7 @@ const ClientProfileView: React.FC<ClientProfileViewProps> = ({ client: initialCl
   } | null>(null);
   const [loadingAnalysis, setLoadingAnalysis] = useState(false);
   const [showGalleryModal, setShowGalleryModal] = useState(false);
+  const [chartMode, setChartMode] = useState<'weight' | 'fat'>('weight');
 
   // Manual progress analysis - only when user clicks the button
   const handleAnalyzeProgress = async () => {
@@ -397,29 +398,96 @@ const ClientProfileView: React.FC<ClientProfileViewProps> = ({ client: initialCl
               {/* Weight Chart */}
               <div className="glass-card rounded-[24px] p-6">
                 <div className="flex justify-between items-center mb-6">
-                  <h3 className="font-black text-white tracking-tight">Evolução de Peso</h3>
+                  <h3 className="font-black text-white tracking-tight">
+                    Evolução de {chartMode === 'weight' ? 'Peso' : 'Gordura'}
+                  </h3>
                   <div className="flex gap-2">
-                    <button className="px-3 py-1 bg-blue-500 text-white text-[10px] font-black rounded-full uppercase">Peso</button>
-                    <button className="px-3 py-1 bg-white/5 text-slate-500 text-[10px] font-black rounded-full uppercase">Gordura</button>
+                    <button
+                      onClick={() => setChartMode('weight')}
+                      className={`px-3 py-1 text-[10px] font-black rounded-full uppercase transition-all ${chartMode === 'weight'
+                          ? 'bg-blue-500 text-white'
+                          : 'bg-white/5 text-slate-500 hover:bg-white/10'
+                        }`}
+                    >
+                      Peso
+                    </button>
+                    <button
+                      onClick={() => setChartMode('fat')}
+                      className={`px-3 py-1 text-[10px] font-black rounded-full uppercase transition-all ${chartMode === 'fat'
+                          ? 'bg-amber-500 text-white'
+                          : 'bg-white/5 text-slate-500 hover:bg-white/10'
+                        }`}
+                    >
+                      Gordura
+                    </button>
                   </div>
                 </div>
-                <div className="h-40 flex items-end justify-between gap-2">
-                  {[65, 59, 80, 81, 56, 55, 70].map((height, i) => (
-                    <div key={i} className="flex-1 group relative">
-                      <motion.div
-                        initial={{ height: 0 }}
-                        animate={{ height: `${height}%` }}
-                        transition={{ delay: i * 0.1 }}
-                        className="w-full bg-gradient-to-t from-blue-600/20 to-blue-500/80 rounded-t-lg group-hover:to-blue-400"
-                      />
+
+                {client.assessments && client.assessments.length > 0 ? (
+                  <>
+                    <div className="h-40 flex items-end justify-between gap-2">
+                      {(() => {
+                        // Get last 7 assessments, sorted by date
+                        const sortedAssessments = [...client.assessments]
+                          .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+                          .slice(-7);
+
+                        // Get values based on mode
+                        const values = sortedAssessments.map(a =>
+                          chartMode === 'weight' ? (a.weight || 0) : (a.bodyFat || 0)
+                        );
+
+                        // Calculate min/max for scaling
+                        const minVal = Math.min(...values.filter(v => v > 0)) * 0.9;
+                        const maxVal = Math.max(...values) * 1.1;
+                        const range = maxVal - minVal || 1;
+
+                        return sortedAssessments.map((assessment, i) => {
+                          const value = chartMode === 'weight' ? (assessment.weight || 0) : (assessment.bodyFat || 0);
+                          const heightPercent = value > 0 ? ((value - minVal) / range) * 100 : 0;
+
+                          return (
+                            <div key={i} className="flex-1 group relative flex flex-col items-center">
+                              <motion.div
+                                initial={{ height: 0 }}
+                                animate={{ height: `${Math.max(heightPercent, 5)}%` }}
+                                transition={{ delay: i * 0.1 }}
+                                className={`w-full rounded-t-lg cursor-pointer ${chartMode === 'weight'
+                                    ? 'bg-gradient-to-t from-blue-600/20 to-blue-500/80 group-hover:to-blue-400'
+                                    : 'bg-gradient-to-t from-amber-600/20 to-amber-500/80 group-hover:to-amber-400'
+                                  }`}
+                              />
+                              {/* Tooltip on hover */}
+                              <div className="absolute bottom-full mb-2 px-2 py-1 bg-slate-800 rounded-lg text-[10px] font-bold text-white opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                                {value > 0 ? (
+                                  chartMode === 'weight' ? `${value} kg` : `${value}%`
+                                ) : 'N/A'}
+                              </div>
+                            </div>
+                          );
+                        });
+                      })()}
                     </div>
-                  ))}
-                </div>
-                <div className="flex justify-between mt-4 px-1">
-                  {['Set', 'Out', 'Nov', 'Dez', 'Jan', 'Fev', 'Mar'].map(mes => (
-                    <span key={mes} className="text-[9px] font-black text-slate-600 uppercase tracking-widest">{mes}</span>
-                  ))}
-                </div>
+                    <div className="flex justify-between mt-4 px-1">
+                      {[...client.assessments]
+                        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+                        .slice(-7)
+                        .map((a, i) => (
+                          <span key={i} className="text-[9px] font-black text-slate-600 uppercase tracking-widest">
+                            {new Date(a.date).toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '')}
+                          </span>
+                        ))}
+                    </div>
+                  </>
+                ) : (
+                  <div className="h-40 flex flex-col items-center justify-center text-center">
+                    <div className="size-12 rounded-full bg-white/5 flex items-center justify-center mb-3">
+                      <TrendingUp size={24} className="text-slate-600" />
+                    </div>
+                    <p className="text-slate-500 text-sm font-medium">Nenhuma avaliação registrada</p>
+                    <p className="text-slate-600 text-xs mt-1">Adicione avaliações para ver a evolução</p>
+                  </div>
+                )}
               </div>
 
               {/* Photo Gallery */}

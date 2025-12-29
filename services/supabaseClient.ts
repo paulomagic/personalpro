@@ -435,3 +435,142 @@ export async function getCurrentUser() {
 export function isSupabaseConfigured(): boolean {
     return !!supabase;
 }
+
+// ============ PHOTO STORAGE ============
+
+const STORAGE_BUCKET = 'assessment-photos';
+
+export async function uploadAssessmentPhoto(
+    file: File,
+    clientId: string,
+    coachId: string
+): Promise<string | null> {
+    if (!supabase) {
+        console.warn('Supabase not configured - photo upload skipped');
+        return null;
+    }
+
+    try {
+        // Create unique filename
+        const timestamp = Date.now();
+        const extension = file.name.split('.').pop() || 'jpg';
+        const filePath = `${coachId}/${clientId}/${timestamp}.${extension}`;
+
+        // Upload to Supabase Storage
+        const { data, error } = await supabase.storage
+            .from(STORAGE_BUCKET)
+            .upload(filePath, file, {
+                cacheControl: '3600',
+                upsert: false
+            });
+
+        if (error) {
+            console.error('Error uploading photo:', error.message);
+            // If bucket doesn't exist, return a demo URL
+            if (error.message.includes('Bucket not found') || error.message.includes('not found')) {
+                console.warn('Storage bucket not configured - using placeholder');
+                return `https://ui-avatars.com/api/?name=Photo&background=3b82f6&color=fff&size=400`;
+            }
+            return null;
+        }
+
+        // Get public URL
+        const { data: urlData } = supabase.storage
+            .from(STORAGE_BUCKET)
+            .getPublicUrl(data.path);
+
+        return urlData.publicUrl;
+    } catch (error) {
+        console.error('Error in uploadAssessmentPhoto:', error);
+        return null;
+    }
+}
+
+export async function deleteAssessmentPhoto(photoUrl: string): Promise<boolean> {
+    if (!supabase) return false;
+
+    try {
+        // Extract file path from URL
+        const urlParts = photoUrl.split(`${STORAGE_BUCKET}/`);
+        if (urlParts.length < 2) return false;
+
+        const filePath = urlParts[1];
+        const { error } = await supabase.storage
+            .from(STORAGE_BUCKET)
+            .remove([filePath]);
+
+        return !error;
+    } catch (error) {
+        console.error('Error deleting photo:', error);
+        return false;
+    }
+}
+
+// ============ ASSESSMENTS (Create & Update) ============
+
+export interface CreateAssessmentData {
+    client_id: string;
+    coach_id: string;
+    date: string;
+    weight?: number;
+    body_fat?: number;
+    muscle_mass?: number;
+    measures?: Record<string, number>;
+    skinfolds?: Record<string, number>;
+    photos?: string[];
+    notes?: string;
+}
+
+export async function createAssessment(data: CreateAssessmentData): Promise<any | null> {
+    if (!supabase) {
+        console.warn('Supabase not configured - assessment not saved');
+        return null;
+    }
+
+    try {
+        const { data: result, error } = await supabase
+            .from('assessments')
+            .insert({
+                client_id: data.client_id,
+                coach_id: data.coach_id,
+                date: data.date,
+                weight: data.weight,
+                body_fat: data.body_fat,
+                muscle_mass: data.muscle_mass,
+                measures: data.measures || {},
+                skinfolds: data.skinfolds || {},
+                photos: data.photos || [],
+                notes: data.notes
+            })
+            .select()
+            .single();
+
+        if (error) {
+            console.error('Error creating assessment:', error.message);
+            return null;
+        }
+
+        return result;
+    } catch (error) {
+        console.error('Error in createAssessment:', error);
+        return null;
+    }
+}
+
+export async function getAssessmentsWithPhotos(clientId: string): Promise<any[]> {
+    if (!supabase) return [];
+
+    const { data, error } = await supabase
+        .from('assessments')
+        .select('*')
+        .eq('client_id', clientId)
+        .order('date', { ascending: false });
+
+    if (error) {
+        console.error('Error fetching assessments with photos:', error);
+        return [];
+    }
+
+    return data || [];
+}
+

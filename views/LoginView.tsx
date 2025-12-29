@@ -27,6 +27,10 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
   const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
 
+  // Rate limiting states
+  const [loginAttempts, setLoginAttempts] = useState(0);
+  const [lockUntil, setLockUntil] = useState<number | null>(null);
+
   const slides = [
     {
       title: "Performance de Elite",
@@ -43,6 +47,13 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
   ];
 
   const handleLogin = async () => {
+    // Check if user is locked out
+    if (lockUntil && Date.now() < lockUntil) {
+      const remainingSeconds = Math.ceil((lockUntil - Date.now()) / 1000);
+      setError(`Muitas tentativas. Aguarde ${remainingSeconds}s`);
+      return;
+    }
+
     if (!email || !password) {
       setError('Preencha todos os campos');
       return;
@@ -63,10 +74,26 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
       });
 
       if (authError) {
-        setError(authError.message === 'Invalid login credentials' ? 'Email ou senha incorretos' : authError.message);
+        // Increment failed attempts
+        const newAttempts = loginAttempts + 1;
+        setLoginAttempts(newAttempts);
+
+        // Lock after 5 failed attempts with exponential backoff
+        if (newAttempts >= 5) {
+          const lockDuration = 30000 * Math.pow(2, newAttempts - 5); // 30s, 60s, 120s...
+          setLockUntil(Date.now() + lockDuration);
+          setError(`Conta bloqueada por ${lockDuration / 1000}s após ${newAttempts} tentativas`);
+        } else {
+          setError(authError.message === 'Invalid login credentials'
+            ? `Email ou senha incorretos (${5 - newAttempts} tentativas restantes)`
+            : authError.message);
+        }
         return;
       }
 
+      // Reset on successful login
+      setLoginAttempts(0);
+      setLockUntil(null);
       if (data.user) onLogin(data.user);
     } catch (err: any) {
       setError('Erro ao fazer login. Tente novamente.');

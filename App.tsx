@@ -1,6 +1,6 @@
 import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { View, Client, Workout, AppUser } from './types';
-// import { supabase, getCurrentUser } from './services/supabaseClient'; // REMOVED FOR DEMO MODE
+import { supabase } from './services/supabaseClient';
 import LoginView from './views/LoginView';
 import DashboardView from './views/DashboardView';
 import ClientProfileView from './views/ClientProfileView';
@@ -41,6 +41,24 @@ function App() {
   const [activeWorkout, setActiveWorkout] = useState<Workout | null>(null);
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(false);
+
+  // Auth state listener - handle session expiration and logout from other tabs
+  useEffect(() => {
+    if (!supabase) return;
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        if (event === 'SIGNED_OUT' || !session) {
+          setUser(null);
+          setCurrentView(View.LOGIN);
+        } else if (event === 'SIGNED_IN' && session?.user) {
+          setUser(session.user);
+        }
+      }
+    );
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   const navigateTo = (view: View, data?: any) => {
     if (view === View.CLIENT_PROFILE && data) {

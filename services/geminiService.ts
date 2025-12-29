@@ -8,8 +8,8 @@ const API_KEY_PRIMARY = import.meta.env?.VITE_GEMINI_API_KEY || '';
 const API_KEY_FALLBACK = import.meta.env?.VITE_GEMINI_API_KEY_LITE || '';
 
 console.log('🔍 Gemini Config:', {
-  primaryKey: API_KEY_PRIMARY ? `${API_KEY_PRIMARY.substring(0, 6)}...` : 'not set',
-  fallbackKey: API_KEY_FALLBACK ? `${API_KEY_FALLBACK.substring(0, 6)}...` : 'not set',
+  primaryKey: API_KEY_PRIMARY ? '✅ configurada' : '❌ não configurada',
+  fallbackKey: API_KEY_FALLBACK ? '✅ configurada' : '❌ não configurada',
 });
 
 // AI Clients

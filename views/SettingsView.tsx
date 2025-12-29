@@ -1,5 +1,6 @@
 
 import React from 'react';
+import { getSafeAvatarUrl } from '../utils/validation';
 
 interface SettingsViewProps {
     user?: any;
@@ -11,7 +12,9 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user, onBack, onLogout }) =
     // Extract user info from Supabase Auth
     const coachName = user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email?.split('@')[0] || 'Usuário';
     const coachEmail = user?.email || 'email@exemplo.com';
-    const coachAvatar = user?.user_metadata?.avatar_url || user?.user_metadata?.picture || `https://ui-avatars.com/api/?name=${encodeURIComponent(coachName)}&background=3b82f6&color=fff`;
+    // Use validated avatar URL to prevent untrusted image sources
+    const rawAvatarUrl = user?.user_metadata?.avatar_url || user?.user_metadata?.picture;
+    const coachAvatar = getSafeAvatarUrl(rawAvatarUrl, coachName);
     const isDemo = user?.isDemo || !user?.id;
     // States for Modals
     const [activeModal, setActiveModal] = React.useState<'profile' | 'notifications' | 'security' | 'help' | null>(null);

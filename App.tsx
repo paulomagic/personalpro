@@ -106,8 +106,12 @@ function App() {
   };
 
   const handleLogout = async () => {
+    // Sign out from Supabase first
+    if (supabase) {
+      await supabase.auth.signOut();
+    }
     setUser(null);
-    navigateTo(View.LOGIN);
+    setCurrentView(View.LOGIN);
   };
 
   const handleLoginSuccess = (loggedUser: any) => {

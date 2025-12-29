@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Client } from '../types';
 import { mockClients } from '../mocks/demoData';
 import { generateWorkoutWithAI, isAIAvailable, regenerateExerciseWithAI, refineWorkoutWithAI, handleAIError } from '../services/geminiService';
-import { saveAIWorkout } from '../services/supabaseClient';
+import { saveAIWorkout, getClients, mapDBClientToClient } from '../services/supabaseClient';
 import { ThumbsUp, ThumbsDown, RefreshCw, Download } from 'lucide-react';
 
 interface AIBuilderViewProps {
@@ -292,13 +292,38 @@ const AIBuilderView: React.FC<AIBuilderViewProps> = ({ user, onBack, onDone }) =
 
 
   useEffect(() => {
-    // Mock loading clients for Demo
-    setTimeout(() => {
-      setClients(mockClients);
-      setSelectedClient(mockClients[0]);
-      setFetchingClients(false);
-    }, 1000);
-  }, []);
+    const fetchClients = async () => {
+      setFetchingClients(true);
+      try {
+        // Buscar clientes reais do banco de dados
+        if (user?.id) {
+          const dbClients = await getClients(user.id);
+          if (dbClients && dbClients.length > 0) {
+            const mappedClients = dbClients.map(mapDBClientToClient);
+            setClients(mappedClients);
+            setSelectedClient(mappedClients[0]);
+          } else {
+            // Fallback para mockClients se não houver clientes no banco
+            setClients(mockClients);
+            setSelectedClient(mockClients[0]);
+          }
+        } else {
+          // Sem user logado - usar mockClients
+          setClients(mockClients);
+          setSelectedClient(mockClients[0]);
+        }
+      } catch (error) {
+        console.error('Error fetching clients:', error);
+        // Fallback para mockClients em caso de erro
+        setClients(mockClients);
+        setSelectedClient(mockClients[0]);
+      } finally {
+        setFetchingClients(false);
+      }
+    };
+
+    fetchClients();
+  }, [user?.id]);
 
   const [refinementInput, setRefinementInput] = useState('');
   const [isRefining, setIsRefining] = useState(false);

@@ -63,7 +63,7 @@ const AddClientModal: React.FC<AddClientModalProps> = ({ isOpen, onClose, onSave
         }
 
         const newClient: Partial<Client> = {
-            id: Math.random().toString(36).substr(2, 9),
+            // Note: Don't set id here - Supabase will generate UUID automatically
             name: name.trim(),
             email: email.trim() || undefined,
             phone: phone.trim() || undefined,

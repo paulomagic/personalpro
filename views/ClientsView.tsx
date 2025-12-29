@@ -86,6 +86,7 @@ const ClientsView: React.FC<ClientsViewProps> = ({ user, onBack, onSelectClient 
             delete clientToCreate.totalClasses;
             delete clientToCreate.completedClasses;
             delete clientToCreate.paymentStatus; // separate table usually, or keep if column exists (not in current schema)
+            delete clientToCreate.id; // Supabase generates UUID automatically
 
             // Fix: ensure paymentStatus is not sent if column doesn't exist (it doesn't in schema provided to user)
             // But types.ts has it. Schema has payments table. 

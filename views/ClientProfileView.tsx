@@ -83,6 +83,7 @@ const ClientProfileView: React.FC<ClientProfileViewProps> = ({ client: initialCl
     recommendations: string[];
   } | null>(null);
   const [loadingAnalysis, setLoadingAnalysis] = useState(false);
+  const [showGalleryModal, setShowGalleryModal] = useState(false);
 
   // Manual progress analysis - only when user clicks the button
   const handleAnalyzeProgress = async () => {
@@ -425,7 +426,10 @@ const ClientProfileView: React.FC<ClientProfileViewProps> = ({ client: initialCl
               <div className="space-y-4">
                 <div className="flex justify-between items-center px-1">
                   <h3 className="font-black text-white tracking-tight">Galeria de Evolução</h3>
-                  <button className="text-[10px] font-black text-blue-400 uppercase tracking-widest">Ver Todas</button>
+                  <button
+                    onClick={() => setShowGalleryModal(true)}
+                    className="text-[10px] font-black text-blue-400 uppercase tracking-widest hover:text-blue-300 transition-colors"
+                  >Ver Todas</button>
                 </div>
                 <div className="flex gap-4 overflow-x-auto pb-4 no-scrollbar">
                   {client.assessments.slice(0, 3).map((assessment, i) => (
@@ -868,6 +872,93 @@ const ClientProfileView: React.FC<ClientProfileViewProps> = ({ client: initialCl
                 </button>
               </div>
             </motion.div>
+          </motion.div>
+        )}
+
+        {/* Gallery Modal */}
+        {showGalleryModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-slate-950/95 backdrop-blur-md z-50 flex flex-col"
+            onClick={() => setShowGalleryModal(false)}
+          >
+            <header className="px-6 pt-14 pb-4 flex items-center justify-between">
+              <button
+                onClick={() => setShowGalleryModal(false)}
+                className="size-12 rounded-2xl glass-card flex items-center justify-center"
+              >
+                <span className="material-symbols-outlined text-white">close</span>
+              </button>
+              <div className="text-center">
+                <h2 className="text-lg font-black text-white">Galeria de Evolução</h2>
+                <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest">
+                  {client.assessments.length} Avaliações
+                </p>
+              </div>
+              <button
+                onClick={onStartAssessment}
+                className="size-12 rounded-2xl bg-blue-600 flex items-center justify-center"
+              >
+                <Camera size={20} className="text-white" />
+              </button>
+            </header>
+
+            <div
+              className="flex-1 overflow-y-auto px-4 pb-8"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {client.assessments.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-full text-center p-8">
+                  <div className="size-20 rounded-full bg-white/5 flex items-center justify-center mb-4">
+                    <Camera size={32} className="text-slate-600" />
+                  </div>
+                  <h3 className="text-lg font-bold text-white mb-2">Nenhuma foto ainda</h3>
+                  <p className="text-sm text-slate-500 mb-6">Registre a primeira avaliação para começar a acompanhar a evolução</p>
+                  <button
+                    onClick={onStartAssessment}
+                    className="px-6 py-3 bg-blue-600 rounded-xl text-white font-bold"
+                  >
+                    Nova Avaliação
+                  </button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-3">
+                  {client.assessments.map((assessment, i) => (
+                    <motion.div
+                      key={i}
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: i * 0.05 }}
+                      className="aspect-[3/4] rounded-2xl overflow-hidden relative glass-card p-1 group"
+                    >
+                      <div className="w-full h-full bg-gradient-to-br from-slate-700 to-slate-800 rounded-xl flex items-center justify-center">
+                        <Camera size={32} className="text-slate-600" />
+                      </div>
+                      <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-transparent to-transparent flex flex-col justify-end p-4">
+                        <span className="text-xs font-black text-white mb-1">
+                          {new Date(assessment.date).toLocaleDateString('pt-BR', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        </span>
+                        <span className="text-[10px] font-bold text-slate-400">
+                          {assessment.weight ? `${assessment.weight} kg` : 'Peso não registrado'}
+                        </span>
+                      </div>
+                    </motion.div>
+                  ))}
+                  {/* Add new photo card */}
+                  <button
+                    onClick={onStartAssessment}
+                    className="aspect-[3/4] rounded-2xl border-2 border-dashed border-white/10 flex flex-col items-center justify-center gap-3 hover:border-blue-500/50 transition-all group"
+                  >
+                    <div className="size-12 rounded-full bg-blue-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                      <Camera size={24} className="text-blue-400" />
+                    </div>
+                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Nova Foto</span>
+                  </button>
+                </div>
+              )}
+            </div>
           </motion.div>
         )}
       </AnimatePresence>

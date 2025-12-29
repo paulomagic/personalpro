@@ -172,9 +172,9 @@ function App() {
       case View.METRICS:
         return <MetricsView onBack={() => navigateTo(View.DASHBOARD)} />;
       case View.SETTINGS:
-        return <SettingsView onBack={() => navigateTo(View.DASHBOARD)} onLogout={handleLogout} />;
+        return <SettingsView user={user} onBack={() => navigateTo(View.DASHBOARD)} onLogout={handleLogout} />;
       case View.CALENDAR:
-        return <CalendarView onBack={() => navigateTo(View.DASHBOARD)} />;
+        return <CalendarView user={user} onBack={() => navigateTo(View.DASHBOARD)} />;
       case View.FINANCE:
         return <FinanceView user={user} onBack={() => navigateTo(View.DASHBOARD)} />;
       case View.WORKOUT_BUILDER:

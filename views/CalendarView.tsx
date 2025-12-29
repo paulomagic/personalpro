@@ -1,13 +1,18 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { getAppointments, createAppointment, updateAppointment, getClients, DBClient, Appointment as DBAppointment } from '../services/supabaseClient';
+import { mockClients } from '../mocks/demoData';
 
 interface CalendarViewProps {
+    user?: any;
     onBack: () => void;
     onSelectClient?: (clientId: string) => void;
 }
 
-interface Appointment {
+interface DisplayAppointment {
     id: string;
+    clientId?: string;
     clientName: string;
     clientAvatar: string;
     time: string;
@@ -17,11 +22,83 @@ interface Appointment {
     phone?: string;
 }
 
-const CalendarView: React.FC<CalendarViewProps> = ({ onBack, onSelectClient }) => {
+// Demo appointments for fallback
+const demoAppointments: DisplayAppointment[] = [
+    { id: '1', clientName: 'Ana Silva', clientAvatar: 'https://images.unsplash.com/photo-1594381898411-846e7d193883?w=100', time: '07:00', duration: '1h', type: 'training', status: 'confirmed', phone: '5561999999999' },
+    { id: '2', clientName: 'Carlos Mendes', clientAvatar: 'https://images.unsplash.com/photo-1567013127542-490d757e51fc?w=100', time: '08:30', duration: '1h', type: 'training', status: 'confirmed', phone: '5561988888888' },
+    { id: '3', clientName: 'Júlia Costa', clientAvatar: 'https://images.unsplash.com/photo-1518611012118-696072aa579a?w=100', time: '10:00', duration: '1h30', type: 'assessment', status: 'pending', phone: '5561977777777' },
+    { id: '4', clientName: 'Ricardo Sousa', clientAvatar: 'https://images.unsplash.com/photo-1583468982228-19f19164aee2?w=100', time: '14:00', duration: '1h', type: 'training', status: 'confirmed', phone: '5561966666666' },
+    { id: '5', clientName: 'Marina Santos', clientAvatar: 'https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?w=100', time: '16:00', duration: '1h', type: 'training', status: 'confirmed', phone: '5561955555555' },
+];
+
+const CalendarView: React.FC<CalendarViewProps> = ({ user, onBack, onSelectClient }) => {
     const [selectedDate, setSelectedDate] = useState(new Date());
     const [viewMode, setViewMode] = useState<'day' | 'week'>('day');
     const [showNewModal, setShowNewModal] = useState(false);
-    const [showDetailModal, setShowDetailModal] = useState<Appointment | null>(null);
+    const [showDetailModal, setShowDetailModal] = useState<DisplayAppointment | null>(null);
+    const [appointments, setAppointments] = useState<DisplayAppointment[]>(demoAppointments);
+    const [clients, setClients] = useState<DBClient[]>([]);
+    const [loading, setLoading] = useState(false);
+    const [saving, setSaving] = useState(false);
+
+    // New appointment form state
+    const [newAppointment, setNewAppointment] = useState({
+        clientId: '',
+        time: '09:00',
+        duration: '1h',
+        type: 'training' as 'training' | 'assessment' | 'consultation',
+    });
+
+    const isDemo = user?.isDemo || !user?.id;
+
+    // Fetch data on mount
+    useEffect(() => {
+        const fetchData = async () => {
+            if (isDemo) {
+                // Use demo data
+                setAppointments(demoAppointments);
+                setClients(mockClients as unknown as DBClient[]);
+                return;
+            }
+
+            setLoading(true);
+            try {
+                // Fetch real clients
+                const clientsData = await getClients(user.id);
+                setClients(clientsData);
+
+                // Fetch real appointments for selected date
+                const dateStr = selectedDate.toISOString().split('T')[0];
+                const appointmentsData = await getAppointments(user.id, dateStr);
+
+                if (appointmentsData.length > 0) {
+                    // Map DB appointments to display format
+                    const mapped = appointmentsData.map((apt: any) => ({
+                        id: apt.id,
+                        clientId: apt.client_id,
+                        clientName: apt.clients?.name || 'Cliente',
+                        clientAvatar: apt.clients?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(apt.clients?.name || 'C')}&background=3b82f6&color=fff`,
+                        time: apt.time,
+                        duration: apt.duration,
+                        type: apt.type,
+                        status: apt.status,
+                        phone: apt.clients?.phone,
+                    }));
+                    setAppointments(mapped);
+                } else {
+                    // No appointments for this date, show empty
+                    setAppointments([]);
+                }
+            } catch (error) {
+                console.error('Error fetching calendar data:', error);
+                setAppointments(demoAppointments);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchData();
+    }, [user, selectedDate, isDemo]);
 
     // Generate week days
     const getWeekDays = () => {
@@ -41,16 +118,11 @@ const CalendarView: React.FC<CalendarViewProps> = ({ onBack, onSelectClient }) =
     const dayNames = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
     const monthNames = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
 
-    // Mock appointments
-    const [appointments, setAppointments] = useState<Appointment[]>([
-        { id: '1', clientName: 'Ana Silva', clientAvatar: 'https://images.unsplash.com/photo-1594381898411-846e7d193883?w=100', time: '07:00', duration: '1h', type: 'training', status: 'confirmed', phone: '5561999999999' },
-        { id: '2', clientName: 'Carlos Mendes', clientAvatar: 'https://images.unsplash.com/photo-1567013127542-490d757e51fc?w=100', time: '08:30', duration: '1h', type: 'training', status: 'confirmed', phone: '5561988888888' },
-        { id: '3', clientName: 'Júlia Costa', clientAvatar: 'https://images.unsplash.com/photo-1518611012118-696072aa579a?w=100', time: '10:00', duration: '1h30', type: 'assessment', status: 'pending', phone: '5561977777777' },
-        { id: '4', clientName: 'Ricardo Sousa', clientAvatar: 'https://images.unsplash.com/photo-1583468982228-19f19164aee2?w=100', time: '14:00', duration: '1h', type: 'training', status: 'confirmed', phone: '5561966666666' },
-        { id: '5', clientName: 'Marina Santos', clientAvatar: 'https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?w=100', time: '16:00', duration: '1h', type: 'training', status: 'confirmed', phone: '5561955555555' },
-    ]);
+    const availableSlots = ['06:00', '07:00', '08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00', '21:00'];
 
-    const availableSlots = ['09:00', '11:00', '12:00', '13:00', '15:00', '17:00', '18:00', '19:00', '20:00'];
+    // Filter out already booked times
+    const bookedTimes = appointments.map(a => a.time);
+    const freeSlots = availableSlots.filter(s => !bookedTimes.includes(s));
 
     const getTypeColor = (type: string) => {
         switch (type) {
@@ -79,26 +151,86 @@ const CalendarView: React.FC<CalendarViewProps> = ({ onBack, onSelectClient }) =
         return date.toDateString() === selectedDate.toDateString();
     };
 
-    const handleConfirmAppointment = (apt: Appointment) => {
+    const handleConfirmAppointment = async (apt: DisplayAppointment) => {
+        if (!isDemo && apt.id) {
+            await updateAppointment(apt.id, { status: 'confirmed' });
+        }
         setAppointments(prev => prev.map(a =>
             a.id === apt.id ? { ...a, status: 'confirmed' as const } : a
         ));
         setShowDetailModal(null);
     };
 
-    const handleCancelAppointment = (apt: Appointment) => {
+    const handleCancelAppointment = async (apt: DisplayAppointment) => {
+        if (!isDemo && apt.id) {
+            await updateAppointment(apt.id, { status: 'cancelled' });
+        }
         setAppointments(prev => prev.filter(a => a.id !== apt.id));
         setShowDetailModal(null);
     };
 
-    const handleSendReminder = (apt: Appointment) => {
+    const handleSendReminder = (apt: DisplayAppointment) => {
         const message = `Olá ${apt.clientName}! 👋\n\nLembrete do seu treino amanhã:\n📅 ${selectedDate.toLocaleDateString('pt-BR')}\n⏰ ${apt.time}\n\nTe vejo lá! 💪`;
         const encoded = encodeURIComponent(message);
         window.open(`https://wa.me/${apt.phone}?text=${encoded}`, '_blank');
     };
 
-    const handleBookSlot = (time: string) => {
-        alert(`Agendar horário ${time} - Em breve você poderá selecionar o aluno aqui!`);
+    const handleCreateAppointment = async () => {
+        if (!newAppointment.clientId) {
+            alert('Selecione um aluno');
+            return;
+        }
+
+        setSaving(true);
+
+        const selectedClient = clients.find(c => c.id === newAppointment.clientId);
+
+        if (isDemo) {
+            // Just add to local state for demo
+            const newApt: DisplayAppointment = {
+                id: Date.now().toString(),
+                clientId: newAppointment.clientId,
+                clientName: selectedClient?.name || 'Novo Aluno',
+                clientAvatar: (selectedClient as any)?.avatar || (selectedClient as any)?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(selectedClient?.name || 'N')}&background=3b82f6&color=fff`,
+                time: newAppointment.time,
+                duration: newAppointment.duration,
+                type: newAppointment.type,
+                status: 'pending',
+                phone: selectedClient?.phone,
+            };
+            setAppointments(prev => [...prev, newApt].sort((a, b) => a.time.localeCompare(b.time)));
+        } else {
+            // Create in Supabase
+            const dateStr = selectedDate.toISOString().split('T')[0];
+            const created = await createAppointment({
+                client_id: newAppointment.clientId,
+                coach_id: user.id,
+                date: dateStr,
+                time: newAppointment.time,
+                duration: newAppointment.duration,
+                type: newAppointment.type,
+                status: 'pending',
+            });
+
+            if (created) {
+                const newApt: DisplayAppointment = {
+                    id: created.id,
+                    clientId: newAppointment.clientId,
+                    clientName: selectedClient?.name || 'Novo Aluno',
+                    clientAvatar: (selectedClient as any)?.avatar || (selectedClient as any)?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(selectedClient?.name || 'N')}&background=3b82f6&color=fff`,
+                    time: newAppointment.time,
+                    duration: newAppointment.duration,
+                    type: newAppointment.type,
+                    status: 'pending',
+                    phone: selectedClient?.phone,
+                };
+                setAppointments(prev => [...prev, newApt].sort((a, b) => a.time.localeCompare(b.time)));
+            }
+        }
+
+        setSaving(false);
+        setShowNewModal(false);
+        setNewAppointment({ clientId: '', time: '09:00', duration: '1h', type: 'training' });
     };
 
     return (
@@ -143,7 +275,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({ onBack, onSelectClient }) =
                 </div>
 
                 {/* Week Days */}
-                <div className="flex gap-2 overflow-x-auto no-scrollbar py-2">
+                <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-slate-700">
                     {weekDays.map((day, i) => (
                         <button
                             key={i}
@@ -183,160 +315,323 @@ const CalendarView: React.FC<CalendarViewProps> = ({ onBack, onSelectClient }) =
                     </div>
                 </div>
 
-                {/* Appointments List */}
-                <div className="animate-slide-up stagger-1">
-                    <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-4">Fluxo de Protocolos</h3>
-
-                    <div className="space-y-3">
-                        {appointments.map((apt) => (
-                            <button
-                                key={apt.id}
-                                onClick={() => setShowDetailModal(apt)}
-                                className="w-full glass-card rounded-[28px] p-4 flex items-center gap-4 active:scale-[0.99] transition-all text-left group hover:border-blue-500/30"
-                            >
-                                {/* Time */}
-                                <div className="text-center w-14 border-r border-white/5 pr-4 mr-1">
-                                    <p className="text-lg font-black text-white leading-none mb-1">{apt.time}</p>
-                                    <p className="text-[9px] text-slate-500 font-black uppercase tracking-widest">{apt.duration}</p>
-                                </div>
-
-                                {/* Client Info */}
-                                <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-3">
-                                        <div
-                                            className="size-11 rounded-2xl bg-cover bg-center border-2 border-white/10 group-hover:border-blue-500/30 transition-colors"
-                                            style={{ backgroundImage: `url(${apt.clientAvatar})` }}
-                                        />
-                                        <div>
-                                            <h4 className="font-black text-white text-sm leading-tight mb-0.5">{apt.clientName}</h4>
-                                            <div className="flex items-center gap-1.5">
-                                                <div className={`size-1.5 rounded-full ${getTypeColor(apt.type)}`}></div>
-                                                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{getTypeLabel(apt.type)}</p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Status */}
-                                <div className={`px-2 py-1 rounded-lg text-[8px] font-black uppercase tracking-widest ${apt.status === 'confirmed' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
-                                    apt.status === 'pending' ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' :
-                                        'bg-white/5 text-slate-500 border border-white/5'
-                                    }`}>
-                                    {apt.status === 'confirmed' ? '✓' : apt.status === 'pending' ? '⋯' : '●'}
-                                </div>
-                            </button>
-                        ))}
+                {/* Loading State */}
+                {loading && (
+                    <div className="flex justify-center py-8">
+                        <div className="size-8 border-3 border-blue-500 border-t-transparent rounded-full animate-spin" />
                     </div>
-                </div>
+                )}
+
+                {/* Appointments List */}
+                {!loading && (
+                    <div className="animate-slide-up stagger-1">
+                        <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-4">Fluxo de Protocolos</h3>
+
+                        {appointments.length === 0 ? (
+                            <div className="glass-card rounded-[28px] p-8 text-center">
+                                <span className="material-symbols-outlined text-slate-600 text-4xl mb-3">event_busy</span>
+                                <p className="text-slate-500 text-sm font-medium">Nenhum agendamento nesta data</p>
+                                <button
+                                    onClick={() => setShowNewModal(true)}
+                                    className="mt-4 px-6 py-2 bg-blue-600 rounded-xl text-xs font-bold text-white"
+                                >
+                                    Agendar Horário
+                                </button>
+                            </div>
+                        ) : (
+                            <div className="space-y-3">
+                                <AnimatePresence>
+                                    {appointments.map((apt) => (
+                                        <motion.button
+                                            key={apt.id}
+                                            initial={{ opacity: 0, y: 10 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            exit={{ opacity: 0, x: -100 }}
+                                            onClick={() => setShowDetailModal(apt)}
+                                            className="w-full glass-card rounded-[28px] p-4 flex items-center gap-4 active:scale-[0.99] transition-all text-left group hover:border-blue-500/30"
+                                        >
+                                            {/* Time */}
+                                            <div className="text-center w-14 border-r border-white/5 pr-4 mr-1">
+                                                <p className="text-lg font-black text-white leading-none mb-1">{apt.time}</p>
+                                                <p className="text-[9px] text-slate-500 font-black uppercase tracking-widest">{apt.duration}</p>
+                                            </div>
+
+                                            {/* Client Info */}
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-center gap-3">
+                                                    <div
+                                                        className="size-11 rounded-2xl bg-cover bg-center border-2 border-white/10 group-hover:border-blue-500/30 transition-colors"
+                                                        style={{ backgroundImage: `url(${apt.clientAvatar})` }}
+                                                    />
+                                                    <div>
+                                                        <h4 className="font-black text-white text-sm leading-tight mb-0.5">{apt.clientName}</h4>
+                                                        <div className="flex items-center gap-1.5">
+                                                            <div className={`size-1.5 rounded-full ${getTypeColor(apt.type)}`}></div>
+                                                            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{getTypeLabel(apt.type)}</p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Status */}
+                                            <div className={`px-2 py-1 rounded-lg text-[8px] font-black uppercase tracking-widest ${apt.status === 'confirmed' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
+                                                apt.status === 'pending' ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' :
+                                                    'bg-white/5 text-slate-500 border border-white/5'
+                                                }`}>
+                                                {apt.status === 'confirmed' ? '✓' : apt.status === 'pending' ? '⋯' : '●'}
+                                            </div>
+                                        </motion.button>
+                                    ))}
+                                </AnimatePresence>
+                            </div>
+                        )}
+                    </div>
+                )}
 
                 {/* Available Slots */}
-                <div className="animate-slide-up stagger-2 pb-8">
-                    <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-4">Janelas Disponíveis</h3>
+                {!loading && freeSlots.length > 0 && (
+                    <div className="animate-slide-up stagger-2 pb-8">
+                        <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-4">Janelas Disponíveis</h3>
 
-                    <div className="grid grid-cols-3 gap-2">
-                        {availableSlots.map((time) => (
-                            <button
-                                key={time}
-                                onClick={() => handleBookSlot(time)}
-                                className="py-3 glass-card rounded-xl text-[10px] font-black text-slate-400 uppercase tracking-widest hover:border-blue-500/50 hover:text-blue-400 active:scale-95 transition-all"
-                            >
-                                {time}
-                            </button>
-                        ))}
+                        <div className="grid grid-cols-4 gap-2">
+                            {freeSlots.slice(0, 8).map((time) => (
+                                <button
+                                    key={time}
+                                    onClick={() => {
+                                        setNewAppointment(prev => ({ ...prev, time }));
+                                        setShowNewModal(true);
+                                    }}
+                                    className="py-3 glass-card rounded-xl text-[10px] font-black text-slate-400 uppercase tracking-widest hover:border-blue-500/50 hover:text-blue-400 active:scale-95 transition-all"
+                                >
+                                    {time}
+                                </button>
+                            ))}
+                        </div>
                     </div>
-                </div>
+                )}
             </main>
 
             {/* Detail Modal */}
-            {showDetailModal && (
-                <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-end">
-                    <div className="w-full max-w-md mx-auto bg-slate-900 rounded-t-[40px] p-8 animate-slide-up border-t border-white/10">
-                        <div className="w-12 h-1 bg-white/10 rounded-full mx-auto mb-8"></div>
+            <AnimatePresence>
+                {showDetailModal && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-end"
+                    >
+                        <motion.div
+                            initial={{ y: '100%' }}
+                            animate={{ y: 0 }}
+                            exit={{ y: '100%' }}
+                            className="w-full max-w-md mx-auto bg-slate-900 rounded-t-[40px] p-8 border-t border-white/10"
+                        >
+                            <div className="w-12 h-1 bg-white/10 rounded-full mx-auto mb-8"></div>
 
-                        <div className="flex items-center gap-5 mb-8">
-                            <div
-                                className="size-20 rounded-3xl bg-cover bg-center border-2 border-white/10 shadow-glow"
-                                style={{ backgroundImage: `url(${showDetailModal.clientAvatar})` }}
-                            />
-                            <div>
-                                <h3 className="text-2xl font-black text-white tracking-tight">{showDetailModal.clientName}</h3>
-                                <div className="flex items-center gap-2 mt-1">
-                                    <span className={`px-2 py-0.5 rounded-full text-[9px] font-black text-white uppercase tracking-widest ${getTypeColor(showDetailModal.type)}`}>
-                                        {getTypeLabel(showDetailModal.type)}
-                                    </span>
-                                    <span className="text-slate-500 text-sm font-bold">•</span>
-                                    <span className="text-slate-400 font-black text-sm">{showDetailModal.time}</span>
+                            <div className="flex items-center gap-5 mb-8">
+                                <div
+                                    className="size-20 rounded-3xl bg-cover bg-center border-2 border-white/10 shadow-glow"
+                                    style={{ backgroundImage: `url(${showDetailModal.clientAvatar})` }}
+                                />
+                                <div>
+                                    <h3 className="text-2xl font-black text-white tracking-tight">{showDetailModal.clientName}</h3>
+                                    <div className="flex items-center gap-2 mt-1">
+                                        <span className={`px-2 py-0.5 rounded-full text-[9px] font-black text-white uppercase tracking-widest ${getTypeColor(showDetailModal.type)}`}>
+                                            {getTypeLabel(showDetailModal.type)}
+                                        </span>
+                                        <span className="text-slate-500 text-sm font-bold">•</span>
+                                        <span className="text-slate-400 font-black text-sm">{showDetailModal.time}</span>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
 
-                        <div className="space-y-3">
-                            <button
-                                onClick={() => handleSendReminder(showDetailModal)}
-                                className="w-full h-16 bg-emerald-600 hover:bg-emerald-500 text-white font-black rounded-3xl flex items-center justify-center gap-3 active:scale-[0.98] transition-all uppercase tracking-widest shadow-lg shadow-emerald-900/20"
-                            >
-                                <span className="material-symbols-outlined">send</span>
-                                Lembrete WhatsApp
-                            </button>
-
-                            {showDetailModal.status === 'pending' && (
+                            <div className="space-y-3">
                                 <button
-                                    onClick={() => handleConfirmAppointment(showDetailModal)}
-                                    className="w-full h-16 bg-blue-600 hover:bg-blue-500 text-white font-black rounded-3xl flex items-center justify-center gap-3 active:scale-[0.98] transition-all uppercase tracking-widest shadow-lg shadow-blue-900/20"
+                                    onClick={() => handleSendReminder(showDetailModal)}
+                                    className="w-full h-16 bg-emerald-600 hover:bg-emerald-500 text-white font-black rounded-3xl flex items-center justify-center gap-3 active:scale-[0.98] transition-all uppercase tracking-widest shadow-lg shadow-emerald-900/20"
                                 >
-                                    <span className="material-symbols-outlined">check</span>
-                                    Confirmar Protocolo
+                                    <span className="material-symbols-outlined">send</span>
+                                    Lembrete WhatsApp
                                 </button>
-                            )}
 
-                            <button
-                                onClick={() => handleCancelAppointment(showDetailModal)}
-                                className="w-full h-16 bg-red-500/10 border border-red-500/20 text-red-500 font-black rounded-3xl flex items-center justify-center gap-3 active:scale-[0.98] transition-all uppercase tracking-widest"
-                            >
-                                <span className="material-symbols-outlined">close</span>
-                                Cancelar Agendamento
-                            </button>
+                                {showDetailModal.status === 'pending' && (
+                                    <button
+                                        onClick={() => handleConfirmAppointment(showDetailModal)}
+                                        className="w-full h-16 bg-blue-600 hover:bg-blue-500 text-white font-black rounded-3xl flex items-center justify-center gap-3 active:scale-[0.98] transition-all uppercase tracking-widest shadow-lg shadow-blue-900/20"
+                                    >
+                                        <span className="material-symbols-outlined">check</span>
+                                        Confirmar Protocolo
+                                    </button>
+                                )}
 
-                            <button
-                                onClick={() => setShowDetailModal(null)}
-                                className="w-full h-14 bg-white/5 text-slate-500 font-bold rounded-2xl active:scale-[0.98] transition-all uppercase tracking-widest text-[10px]"
-                            >
-                                Fechar
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
+                                <button
+                                    onClick={() => handleCancelAppointment(showDetailModal)}
+                                    className="w-full h-16 bg-red-500/10 border border-red-500/20 text-red-500 font-black rounded-3xl flex items-center justify-center gap-3 active:scale-[0.98] transition-all uppercase tracking-widest"
+                                >
+                                    <span className="material-symbols-outlined">close</span>
+                                    Cancelar Agendamento
+                                </button>
+
+                                <button
+                                    onClick={() => setShowDetailModal(null)}
+                                    className="w-full h-14 bg-white/5 text-slate-500 font-bold rounded-2xl active:scale-[0.98] transition-all uppercase tracking-widest text-[10px]"
+                                >
+                                    Fechar
+                                </button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             {/* New Appointment Modal */}
-            {showNewModal && (
-                <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-end">
-                    <div className="w-full max-w-md mx-auto bg-slate-900 rounded-t-[40px] p-8 animate-slide-up border-t border-white/10">
-                        <div className="w-12 h-1 bg-white/10 rounded-full mx-auto mb-8"></div>
-
-                        <div className="text-center mb-10">
-                            <h3 className="text-2xl font-black text-white tracking-tight mb-2">Novo Agendamento</h3>
-                            <p className="text-slate-500 text-xs font-bold uppercase tracking-widest">Personalização de Agenda</p>
-                        </div>
-
-                        <div className="glass-card rounded-[32px] p-8 border-dashed flex flex-col items-center justify-center text-center gap-4 mb-8">
-                            <div className="size-16 rounded-full bg-blue-500/10 flex items-center justify-center">
-                                <span className="material-symbols-outlined text-blue-400 text-3xl">construction</span>
-                            </div>
-                            <p className="text-slate-400 text-sm font-medium leading-relaxed">
-                                O módulo de criação rápida está em fase de implantação premium.
-                            </p>
-                        </div>
-
-                        <button
-                            onClick={() => setShowNewModal(false)}
-                            className="w-full h-16 bg-white text-slate-950 font-black rounded-3xl active:scale-[0.98] transition-all uppercase tracking-[0.2em]"
+            <AnimatePresence>
+                {showNewModal && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-end"
+                    >
+                        <motion.div
+                            initial={{ y: '100%' }}
+                            animate={{ y: 0 }}
+                            exit={{ y: '100%' }}
+                            className="w-full max-w-md mx-auto bg-slate-900 rounded-t-[40px] p-8 border-t border-white/10 max-h-[85vh] overflow-y-auto"
                         >
-                            Retornar
-                        </button>
-                    </div>
-                </div>
-            )}
+                            <div className="w-12 h-1 bg-white/10 rounded-full mx-auto mb-8"></div>
+
+                            <div className="text-center mb-8">
+                                <h3 className="text-2xl font-black text-white tracking-tight mb-2">Novo Agendamento</h3>
+                                <p className="text-slate-500 text-xs font-bold uppercase tracking-widest">
+                                    {selectedDate.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}
+                                </p>
+                            </div>
+
+                            <div className="space-y-6 mb-8">
+                                {/* Client Selection */}
+                                <div>
+                                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-3">
+                                        Selecionar Aluno
+                                    </label>
+                                    <div className="grid grid-cols-3 gap-2 max-h-40 overflow-y-auto p-1">
+                                        {(isDemo ? mockClients : clients).map((client: any) => (
+                                            <button
+                                                key={client.id}
+                                                onClick={() => setNewAppointment(prev => ({ ...prev, clientId: client.id }))}
+                                                className={`flex flex-col items-center p-3 rounded-2xl transition-all ${newAppointment.clientId === client.id
+                                                    ? 'bg-blue-600 border-blue-500'
+                                                    : 'glass-card hover:bg-white/10'
+                                                    }`}
+                                            >
+                                                <div
+                                                    className="size-12 rounded-xl bg-cover bg-center border-2 border-white/10 mb-2"
+                                                    style={{ backgroundImage: `url(${client.avatar || client.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(client.name)}`})` }}
+                                                />
+                                                <span className="text-[9px] font-bold text-white truncate w-full text-center">
+                                                    {client.name.split(' ')[0]}
+                                                </span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Time Selection */}
+                                <div>
+                                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-3">
+                                        Horário
+                                    </label>
+                                    <div className="grid grid-cols-4 gap-2">
+                                        {freeSlots.map((time) => (
+                                            <button
+                                                key={time}
+                                                onClick={() => setNewAppointment(prev => ({ ...prev, time }))}
+                                                className={`py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${newAppointment.time === time
+                                                    ? 'bg-blue-600 text-white shadow-glow'
+                                                    : 'glass-card text-slate-400 hover:text-white'
+                                                    }`}
+                                            >
+                                                {time}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Type Selection */}
+                                <div>
+                                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-3">
+                                        Tipo de Sessão
+                                    </label>
+                                    <div className="grid grid-cols-3 gap-2">
+                                        {[
+                                            { value: 'training', label: 'Treino', icon: 'fitness_center', color: 'blue' },
+                                            { value: 'assessment', label: 'Avaliação', icon: 'monitoring', color: 'purple' },
+                                            { value: 'consultation', label: 'Consulta', icon: 'chat', color: 'emerald' },
+                                        ].map((type) => (
+                                            <button
+                                                key={type.value}
+                                                onClick={() => setNewAppointment(prev => ({ ...prev, type: type.value as any }))}
+                                                className={`py-4 rounded-xl flex flex-col items-center gap-2 transition-all ${newAppointment.type === type.value
+                                                    ? `bg-${type.color}-600 text-white shadow-glow`
+                                                    : 'glass-card text-slate-400 hover:text-white'
+                                                    }`}
+                                            >
+                                                <span className="material-symbols-outlined">{type.icon}</span>
+                                                <span className="text-[9px] font-black uppercase tracking-widest">{type.label}</span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Duration */}
+                                <div>
+                                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-3">
+                                        Duração
+                                    </label>
+                                    <div className="grid grid-cols-4 gap-2">
+                                        {['30min', '1h', '1h30', '2h'].map((dur) => (
+                                            <button
+                                                key={dur}
+                                                onClick={() => setNewAppointment(prev => ({ ...prev, duration: dur }))}
+                                                className={`py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${newAppointment.duration === dur
+                                                    ? 'bg-blue-600 text-white shadow-glow'
+                                                    : 'glass-card text-slate-400 hover:text-white'
+                                                    }`}
+                                            >
+                                                {dur}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="space-y-3">
+                                <button
+                                    onClick={handleCreateAppointment}
+                                    disabled={saving || !newAppointment.clientId}
+                                    className="w-full h-16 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-black rounded-3xl flex items-center justify-center gap-3 active:scale-[0.98] transition-all uppercase tracking-widest shadow-lg shadow-blue-900/20"
+                                >
+                                    {saving ? (
+                                        <div className="size-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                    ) : (
+                                        <>
+                                            <span className="material-symbols-outlined">event_available</span>
+                                            Confirmar Agendamento
+                                        </>
+                                    )}
+                                </button>
+
+                                <button
+                                    onClick={() => setShowNewModal(false)}
+                                    className="w-full h-14 bg-white/5 text-slate-500 font-bold rounded-2xl active:scale-[0.98] transition-all uppercase tracking-widest text-[10px]"
+                                >
+                                    Cancelar
+                                </button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     );
 };

@@ -2,11 +2,17 @@
 import React from 'react';
 
 interface SettingsViewProps {
+    user?: any;
     onBack: () => void;
     onLogout: () => void;
 }
 
-const SettingsView: React.FC<SettingsViewProps> = ({ onBack, onLogout }) => {
+const SettingsView: React.FC<SettingsViewProps> = ({ user, onBack, onLogout }) => {
+    // Extract user info from Supabase Auth
+    const coachName = user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email?.split('@')[0] || 'Usuário';
+    const coachEmail = user?.email || 'email@exemplo.com';
+    const coachAvatar = user?.user_metadata?.avatar_url || user?.user_metadata?.picture || `https://ui-avatars.com/api/?name=${encodeURIComponent(coachName)}&background=3b82f6&color=fff`;
+    const isDemo = user?.isDemo || !user?.id;
     // States for Modals
     const [activeModal, setActiveModal] = React.useState<'profile' | 'notifications' | 'security' | 'help' | null>(null);
 
@@ -79,11 +85,13 @@ const SettingsView: React.FC<SettingsViewProps> = ({ onBack, onLogout }) => {
                     <div className="absolute inset-0 bg-gradient-to-r from-blue-600/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
                     <div
                         className="size-16 rounded-[20px] bg-cover bg-center border-2 border-white/10 shadow-xl group-hover:scale-105 transition-transform duration-500"
-                        style={{ backgroundImage: 'url(/coach-rodrigo.png)' }}
+                        style={{ backgroundImage: `url(${coachAvatar})` }}
                     />
                     <div className="flex-1 relative z-10">
-                        <h2 className="text-lg font-black text-white leading-tight">Rodrigo Campanato</h2>
-                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mt-1">Personal Trainer Elite</p>
+                        <h2 className="text-lg font-black text-white leading-tight">{coachName}</h2>
+                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mt-1">
+                            {isDemo ? 'Modo Demonstração' : 'Personal Trainer Elite'}
+                        </p>
                     </div>
                     <button
                         onClick={() => setActiveModal('profile')}

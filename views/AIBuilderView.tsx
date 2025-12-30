@@ -500,7 +500,7 @@ const AIBuilderView: React.FC<AIBuilderViewProps> = ({ user, onBack, onDone }) =
 
   const handleSaveWorkout = async () => {
     if (!user?.id) {
-      alert('Você precisa estar logado para salvar treinos.');
+      setErrorToast('Você precisa estar logado para salvar treinos.');
       return;
     }
 

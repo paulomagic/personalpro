@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { getSafeAvatarUrl } from '../utils/validation';
+import { supabase } from '../services/supabaseClient';
 
 interface SettingsViewProps {
     user?: any;
@@ -19,6 +20,10 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user, onBack, onLogout }) =
     // States for Modals
     const [activeModal, setActiveModal] = React.useState<'profile' | 'notifications' | 'security' | 'help' | null>(null);
 
+    // States for Profile Editing
+    const [profileName, setProfileName] = React.useState(coachName);
+    const [saving, setSaving] = React.useState(false);
+
     // States for Notifications
     const [notifState, setNotifState] = React.useState({
         push: true,
@@ -29,9 +34,11 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user, onBack, onLogout }) =
 
     // States for Toast
     const [toastMessage, setToastMessage] = React.useState<string | null>(null);
+    const [toastType, setToastType] = React.useState<'success' | 'error'>('success');
 
-    const showToast = (msg: string) => {
+    const showToast = (msg: string, type: 'success' | 'error' = 'success') => {
         setToastMessage(msg);
+        setToastType(type);
         setTimeout(() => setToastMessage(null), 3000);
     };
 
@@ -49,20 +56,59 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user, onBack, onLogout }) =
         { icon: 'help', label: 'Ajuda', subtitle: 'FAQ e suporte', action: () => setActiveModal('help') },
     ];
 
-    // Simulate saving settings with a loading effect
-    const handleSave = () => {
-        const currentModal = activeModal;
-        setActiveModal(null);
-        showToast('Alterações salvas com sucesso');
+    // Save profile changes to Supabase Auth
+    const handleSaveProfile = async () => {
+        if (isDemo) {
+            showToast('Modo demo: alterações não são salvas', 'error');
+            setActiveModal(null);
+            return;
+        }
+
+        setSaving(true);
+        try {
+            const { error } = await supabase!.auth.updateUser({
+                data: { full_name: profileName }
+            });
+
+            if (error) throw error;
+
+            showToast('Perfil atualizado com sucesso!');
+            setActiveModal(null);
+        } catch (error: any) {
+            console.error('Error updating profile:', error);
+            showToast('Erro ao atualizar perfil', 'error');
+        } finally {
+            setSaving(false);
+        }
     };
+
+    // Save notification preferences (stored in localStorage for now)
+    const handleSaveNotifications = () => {
+        localStorage.setItem('apex_notifications', JSON.stringify(notifState));
+        showToast('Preferências de notificação salvas!');
+        setActiveModal(null);
+    };
+
+    // Generic save handler based on current modal
+    const handleSave = () => {
+        if (activeModal === 'profile') {
+            handleSaveProfile();
+        } else if (activeModal === 'notifications') {
+            handleSaveNotifications();
+        } else {
+            setActiveModal(null);
+            showToast('Alterações salvas com sucesso');
+        }
+    };
+
 
     return (
         <div className="max-w-md mx-auto min-h-screen bg-slate-950 text-white selection:bg-blue-500/30 pb-12 relative">
             {/* Toast Feedback */}
             {toastMessage && (
                 <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[60] animate-slide-down w-max max-w-[90%]">
-                    <div className="glass-card bg-slate-900/90 px-6 py-3 rounded-full shadow-glow border border-white/10 flex items-center gap-3">
-                        <span className="material-symbols-outlined text-blue-400 text-sm">check_circle</span>
+                    <div className={`glass-card ${toastType === 'error' ? 'bg-red-900/90 border-red-500/20' : 'bg-slate-900/90'} px-6 py-3 rounded-full shadow-glow border border-white/10 flex items-center gap-3`}>
+                        <span className={`material-symbols-outlined ${toastType === 'error' ? 'text-red-400' : 'text-blue-400'} text-sm`}>{toastType === 'error' ? 'error' : 'check_circle'}</span>
                         <span className="text-[10px] font-black uppercase tracking-widest text-white">{toastMessage}</span>
                     </div>
                 </div>
@@ -166,19 +212,32 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user, onBack, onLogout }) =
                                         <span className="material-symbols-outlined text-slate-500">person</span>
                                         <div className="flex-1">
                                             <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Nome</p>
-                                            <input type="text" defaultValue={coachName} className="bg-transparent text-sm font-black text-white w-full outline-none" />
+                                            <input
+                                                type="text"
+                                                value={profileName}
+                                                onChange={(e) => setProfileName(e.target.value)}
+                                                className="bg-transparent text-sm font-black text-white w-full outline-none"
+                                            />
                                         </div>
                                     </div>
                                     <div className="bg-white/5 rounded-2xl p-4 border border-white/5 flex items-center gap-3 focus-within:border-blue-500/50 transition-colors">
                                         <span className="material-symbols-outlined text-slate-500">mail</span>
                                         <div className="flex-1">
                                             <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Email</p>
-                                            <input type="email" defaultValue={coachEmail} className="bg-transparent text-sm font-black text-white w-full outline-none" />
+                                            <input type="email" defaultValue={coachEmail} disabled className="bg-transparent text-sm font-black text-slate-400 w-full outline-none cursor-not-allowed" />
                                         </div>
                                     </div>
                                 </div>
-                                <button onClick={handleSave} className="w-full h-16 bg-blue-600 hover:bg-blue-500 text-white font-black rounded-3xl active:scale-[0.98] transition-all uppercase tracking-widest shadow-glow">
-                                    Salvar Alterações
+                                <button
+                                    onClick={handleSave}
+                                    disabled={saving}
+                                    className="w-full h-16 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-black rounded-3xl active:scale-[0.98] transition-all uppercase tracking-widest shadow-glow flex items-center justify-center gap-2"
+                                >
+                                    {saving ? (
+                                        <div className="size-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                    ) : (
+                                        'Salvar Alterações'
+                                    )}
                                 </button>
                             </>
                         )}

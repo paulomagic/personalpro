@@ -177,7 +177,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({ user, onBack, onSelectClien
 
     const handleCreateAppointment = async () => {
         if (!newAppointment.clientId) {
-            alert('Selecione um aluno');
+            // Visual feedback already shown by disabled button
             return;
         }
 

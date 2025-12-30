@@ -2,6 +2,7 @@
 import { Turnstile } from '@marsidev/react-turnstile';
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../services/supabaseClient';
+import { validateTurnstileToken } from '../services/turnstileService';
 
 interface LoginViewProps {
   onLogin: (user: any) => void;
@@ -70,6 +71,14 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
     setError(null);
 
     try {
+      // Validate CAPTCHA server-side first
+      const captchaValidation = await validateTurnstileToken(captchaToken);
+      if (!captchaValidation.success) {
+        setError(captchaValidation.error || 'Falha na validação de segurança');
+        setLoading(false);
+        return;
+      }
+
       if (!supabase) {
         onLogin({ email, demo: true });
         return;
@@ -124,6 +133,14 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
     setError(null);
 
     try {
+      // Validate CAPTCHA server-side first
+      const captchaValidation = await validateTurnstileToken(captchaToken);
+      if (!captchaValidation.success) {
+        setError(captchaValidation.error || 'Falha na validação de segurança');
+        setLoading(false);
+        return;
+      }
+
       if (!supabase) {
         onLogin({ email, name, demo: true });
         return;

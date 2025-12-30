@@ -213,7 +213,7 @@ ${recentProgress ? `PROGRESSO RECENTE: ${recentProgress}` : ''}
 4. PRIORIZE exercícios que o cliente gosta: ${preferences}
 5. Cada sessão deve durar aprox. ${sessionDuration} minutos
 
-Responda APENAS com JSON válido (sem markdown):
+Responda APENAS com JSON puro (sem markdown, sem comentários, sem vírgulas extras):
 {
   "title": "Protocolo ${goal} - ${clientName}",
   "objective": "Descrição detalhada da estratégia e benefícios esperados",
@@ -284,9 +284,11 @@ Crie exercícios específicos, variados e adequados ao perfil. Seja criativo nos
     cleanText = cleanText
       .replace(/,\s*}/g, '}')  // Remove trailing commas before }
       .replace(/,\s*]/g, ']')  // Remove trailing commas before ]
-      .replace(/'/g, '"')       // Replace single quotes with double
       .replace(/\n/g, ' ')      // Remove newlines inside strings
       .replace(/\t/g, ' ');     // Remove tabs
+
+    // Note: NOT replacing single quotes indiscriminately as it might break text with apostrophes.
+    // relying on the model to output valid double quotes.
 
     try {
       const parsedResult = JSON.parse(cleanText);
@@ -306,33 +308,23 @@ Crie exercícios específicos, variados e adequados ao perfil. Seja criativo nos
 
       return parsedResult;
     } catch (parseError) {
-      console.warn("JSON parse failed, attempting repair...", parseError);
+      console.warn("JSON parse failed, triggering local fallback...", parseError);
 
-      // Last resort: try to extract just the essential structure
-      const titleMatch = cleanText.match(/"title"\s*:\s*"([^"]+)"/);
-      const objectiveMatch = cleanText.match(/"objective"\s*:\s*"([^"]+)"/);
+      // Log parse failure but partial text
+      logAIAction({
+        action_type: 'generate_workout_fail',
+        model_used: model || 'unknown',
+        prompt: prompt.substring(0, 300) + '...',
+        response: cleanText.substring(0, 500),
+        latency_ms: latencyMs,
+        success: false,
+        error_message: 'JSON Parse Error',
+        metadata: { clientName, goal, level, days }
+      });
 
-      if (titleMatch && objectiveMatch) {
-        // Log partial success
-        logAIAction({
-          action_type: 'generate_workout',
-          model_used: model || 'unknown',
-          prompt: prompt.substring(0, 300) + '...',
-          response: cleanText.substring(0, 500),
-          latency_ms: latencyMs,
-          success: true,
-          metadata: { clientName, goal, level, days, parseRepaired: true }
-        });
-
-        // Return a minimal valid structure
-        return {
-          title: titleMatch[1],
-          objective: objectiveMatch[1],
-          splits: [{ name: "Treino A", exercises: [] }],
-          parseError: true
-        };
-      }
-      throw parseError;
+      // KEY FIX: Return null to force AIBuilderView to use the local generator fallback
+      // instead of returning an empty/broken workout.
+      return null;
     }
   } catch (error) {
     console.error("Error generating workout with AI:", error);

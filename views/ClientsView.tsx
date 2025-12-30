@@ -154,6 +154,16 @@ const ClientsView: React.FC<ClientsViewProps> = ({ user, onBack, onSelectClient 
             variants={containerVariants}
             className="max-w-md mx-auto min-h-screen bg-slate-950 text-white selection:bg-blue-500/30 pb-12"
         >
+            {/* Toast */}
+            {toast && (
+                <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[60] animate-slide-down w-max max-w-[90%]">
+                    <div className={`glass-card ${toast.type === 'error' ? 'bg-red-900/90 border-red-500/20' : 'bg-emerald-900/90 border-emerald-500/20'} px-6 py-3 rounded-full shadow-glow border flex items-center gap-3`}>
+                        <span className={`material-symbols-outlined ${toast.type === 'error' ? 'text-red-400' : 'text-emerald-400'} text-sm`}>{toast.type === 'error' ? 'error' : 'check_circle'}</span>
+                        <span className="text-[10px] font-black uppercase tracking-widest text-white">{toast.message}</span>
+                    </div>
+                </div>
+            )}
+
             {/* Header */}
             <motion.header variants={itemVariants} className="px-6 pt-14 pb-6 flex items-center gap-4">
                 <button onClick={onBack} className="size-12 rounded-2xl glass-card flex items-center justify-center active:scale-90 transition-all">
@@ -345,18 +355,18 @@ const ClientsView: React.FC<ClientsViewProps> = ({ user, onBack, onSelectClient 
                                 <button
                                     onClick={async () => {
                                         if (!user?.id || user.id === 'demo-user-id' || user.isDemo) {
-                                            alert('O Modo Demonstração não permite salvar dados no banco. Por favor, faça login com Google ou Email para usar este recurso.');
+                                            showToast('Faça login para usar este recurso', 'error');
                                             return;
                                         }
                                         setLoading(true);
                                         try {
                                             const { seedDatabase } = await import('../services/seedDatabase');
                                             const count = await seedDatabase(user.id);
-                                            alert(`${count} alunos demonstrativos gerados com sucesso!`);
+                                            showToast(`${count} alunos gerados com sucesso!`);
                                             await fetchClients();
                                         } catch (error) {
                                             console.error(error);
-                                            alert('Erro ao gerar dados. Verifique se você está conectado.');
+                                            showToast('Erro ao gerar dados', 'error');
                                         } finally {
                                             setLoading(false);
                                         }

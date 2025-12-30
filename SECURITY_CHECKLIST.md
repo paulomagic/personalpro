@@ -42,6 +42,9 @@ Este arquivo contém o checklist de segurança para desenvolvimento de novas fea
 ## 📋 Comandos de Segurança
 
 ```bash
+# Executar verificação completa de segurança (Audit + Env Var + Files)
+npm run security-check
+
 # Verificar vulnerabilidades em dependências
 npm audit
 

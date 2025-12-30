@@ -264,7 +264,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
 
         <div className="mb-4 flex justify-center">
           <NativeTurnstile
-            siteKey="0x4AAAAAAACJzK90oAcWumh3m"
+            siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY || "1x00000000000000000000AA"}
             onSuccess={(token) => {
               setCaptchaToken(token);
               setError(null);

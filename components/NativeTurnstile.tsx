@@ -138,8 +138,12 @@ export const NativeTurnstile: React.FC<TurnstileProps> = ({
                 // Clear just in case
                 containerRef.current.innerHTML = '';
 
+                // Force primitive string to avoid "got object" error
+                const siteKeyStr = String(siteKey);
+                console.log('[NativeTurnstile] Rendering with siteKey:', siteKeyStr, 'type:', typeof siteKeyStr);
+
                 widgetId = window.turnstile.render(containerRef.current, {
-                    sitekey: siteKey,
+                    sitekey: siteKeyStr,
                     callback: handleSuccess,
                     'error-callback': handleError,
                     'expired-callback': handleExpire,

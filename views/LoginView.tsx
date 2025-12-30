@@ -262,10 +262,9 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
           </div>
         </div>
 
-        {/* Turnstile Anti-Bot - Using native implementation */}
         <div className="mb-4 flex justify-center">
           <NativeTurnstile
-            siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY || "1x00000000000000000000AA"}
+            siteKey="0x4AAAAAAACJzK90oAcWumh3m"
             onSuccess={(token) => {
               setCaptchaToken(token);
               setError(null);

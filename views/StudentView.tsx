@@ -252,37 +252,43 @@ const StudentView: React.FC<StudentViewProps> = ({
                     </div>
 
                     <div className="space-y-4">
-                        {workout.splits.map((split, index) => (
-                            <motion.button
-                                key={split.id}
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: index * 0.1 }}
-                                onClick={() => setSelectedSplit(split)}
-                                className="w-full glass-card p-5 rounded-[24px] text-left border border-white/5 hover:border-blue-500/50 active:scale-[0.98] transition-all group"
-                            >
-                                <div className="flex items-center gap-4">
-                                    <div className="size-16 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/20">
-                                        <span className="text-2xl font-black text-white">{split.name}</span>
-                                    </div>
-                                    <div className="flex-1">
-                                        <h3 className="font-bold text-white text-lg mb-1">
-                                            Treino {split.name}
-                                        </h3>
-                                        <p className="text-sm text-slate-400">{split.description}</p>
-                                        <div className="flex items-center gap-3 mt-2">
-                                            <span className="text-[10px] font-bold text-slate-500 flex items-center gap-1">
-                                                <Dumbbell size={12} /> {split.exercises.length} exercícios
-                                            </span>
-                                            <span className="text-[10px] font-bold text-slate-500 flex items-center gap-1">
-                                                <Layers size={12} /> {split.exercises.reduce((acc, e) => acc + e.sets.length, 0)} séries
-                                            </span>
+                        {workout.splits.map((split, index) => {
+                            // Extract letter from split name (e.g., "Treino A: Força..." -> "A")
+                            const splitLetter = split.name.match(/[A-Z](?=:|$)/)?.[0] || split.name.charAt(0).toUpperCase();
+                            // Use description if available, otherwise parse from name
+                            const splitDescription = split.description || split.name.replace(/^Treino\s*[A-Z][\s:]*/, '').trim() || 'Treino Geral';
+
+                            return (
+                                <motion.button
+                                    key={split.id || index}
+                                    initial={{ opacity: 0, y: 20 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: index * 0.1 }}
+                                    onClick={() => setSelectedSplit(split)}
+                                    className="w-full glass-card p-5 rounded-[24px] text-left border border-white/5 hover:border-blue-500/50 active:scale-[0.98] transition-all group"
+                                >
+                                    <div className="flex items-center gap-4">
+                                        <div className="size-16 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/20 flex-shrink-0">
+                                            <span className="text-2xl font-black text-white">{splitLetter}</span>
                                         </div>
+                                        <div className="flex-1 min-w-0">
+                                            <h3 className="font-bold text-white text-lg mb-1 truncate">
+                                                Treino {splitLetter}: {splitDescription}
+                                            </h3>
+                                            <div className="flex items-center gap-3 mt-2">
+                                                <span className="text-[10px] font-bold text-slate-500 flex items-center gap-1">
+                                                    <Dumbbell size={12} /> {split.exercises?.length || 0} exercícios
+                                                </span>
+                                                <span className="text-[10px] font-bold text-slate-500 flex items-center gap-1">
+                                                    <Layers size={12} /> {split.exercises?.reduce((acc, e) => acc + (e.sets?.length || 0), 0) || 'NaN'} séries
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <ChevronRight size={24} className="text-slate-600 group-hover:text-blue-400 transition-colors flex-shrink-0" />
                                     </div>
-                                    <ChevronRight size={24} className="text-slate-600 group-hover:text-blue-400 transition-colors" />
-                                </div>
-                            </motion.button>
-                        ))}
+                                </motion.button>
+                            );
+                        })}
                     </div>
 
                     {/* Demo Indicator */}

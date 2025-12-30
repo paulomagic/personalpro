@@ -23,7 +23,11 @@ export function isAdmin(user: AppUser | any): boolean {
   // Check user_metadata first (where we store custom roles)
   const role = user?.user_metadata?.role;
   // Allow specific emails as admin fallback
-  const adminEmails = ['paulo@personalpro.com', 'admin@personalpro.com'];
+  const adminEmails = [
+    'digital.ai.pr@gmail.com',  // Paulo Ricardo - Owner
+    'paulo@personalpro.com',
+    'admin@personalpro.com'
+  ];
   return role === 'admin' || adminEmails.includes(user?.email || '');
 }
 

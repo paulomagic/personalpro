@@ -157,7 +157,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user, onBack, onLogout }) =
                         {activeModal === 'profile' && (
                             <>
                                 <div className="text-center mb-8">
-                                    <div className="size-24 mx-auto rounded-[30px] bg-cover bg-center border-4 border-slate-950 shadow-glow mb-4" style={{ backgroundImage: 'url(/coach-rodrigo.png)' }}></div>
+                                    <div className="size-24 mx-auto rounded-[30px] bg-cover bg-center border-4 border-slate-950 shadow-glow mb-4" style={{ backgroundImage: `url(${coachAvatar})` }}></div>
                                     <h3 className="text-2xl font-black text-white">Editar Perfil</h3>
                                     <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mt-2">Atualize suas informações</p>
                                 </div>
@@ -166,14 +166,14 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user, onBack, onLogout }) =
                                         <span className="material-symbols-outlined text-slate-500">person</span>
                                         <div className="flex-1">
                                             <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Nome</p>
-                                            <input type="text" defaultValue="Rodrigo Campanato" className="bg-transparent text-sm font-black text-white w-full outline-none" />
+                                            <input type="text" defaultValue={coachName} className="bg-transparent text-sm font-black text-white w-full outline-none" />
                                         </div>
                                     </div>
                                     <div className="bg-white/5 rounded-2xl p-4 border border-white/5 flex items-center gap-3 focus-within:border-blue-500/50 transition-colors">
                                         <span className="material-symbols-outlined text-slate-500">mail</span>
                                         <div className="flex-1">
                                             <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Email</p>
-                                            <input type="email" defaultValue="rodrigo@personal.com" className="bg-transparent text-sm font-black text-white w-full outline-none" />
+                                            <input type="email" defaultValue={coachEmail} className="bg-transparent text-sm font-black text-white w-full outline-none" />
                                         </div>
                                     </div>
                                 </div>

@@ -1,4 +1,5 @@
 
+import { Turnstile } from '@marsidev/react-turnstile';
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../services/supabaseClient';
 
@@ -26,6 +27,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
 
   // Rate limiting states
   const [loginAttempts, setLoginAttempts] = useState(0);
@@ -56,6 +58,11 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
 
     if (!email || !password) {
       setError('Preencha todos os campos');
+      return;
+    }
+
+    if (!captchaToken) {
+      setError('Por favor, complete a verificação de segurança');
       return;
     }
 
@@ -105,6 +112,11 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
   const handleRegister = async () => {
     if (!email || !password || !name) {
       setError('Preencha todos os campos');
+      return;
+    }
+
+    if (!captchaToken) {
+      setError('Por favor, complete a verificação de segurança');
       return;
     }
 
@@ -231,6 +243,16 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
               </span>
             </button>
           </div>
+        </div>
+
+        {/* Turnstile Anti-Bot */}
+        <div className="mb-4 flex justify-center">
+          <Turnstile
+            siteKey="1x00000000000000000000AA"
+            onSuccess={(token) => setCaptchaToken(token)}
+            onError={() => setError('Erro na verificação de segurança')}
+            options={{ theme: 'dark' }}
+          />
         </div>
 
         <button

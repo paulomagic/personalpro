@@ -110,20 +110,34 @@ export const NativeTurnstile: React.FC<TurnstileProps> = ({
     }, [onExpire]);
 
     useEffect(() => {
-        mountedRef.current = true;
+        let cancelled = false;
         let widgetId: string | null = null;
 
         const initWidget = async () => {
-            await loadTurnstileScript();
-
-            if (!mountedRef.current || !containerRef.current || !window.turnstile) {
+            if (typeof siteKey !== 'string') {
+                console.error('Turnstile siteKey must be a string, got:', typeof siteKey, siteKey);
+                // Try to recover if it's an object (common env var issue)
+                if (typeof siteKey === 'object' && siteKey !== null) {
+                    console.error('Detected object passed as siteKey, checking structure:', JSON.stringify(siteKey));
+                }
                 return;
             }
 
-            // Clear container to prevent duplicate widgets
-            containerRef.current.innerHTML = '';
+            await loadTurnstileScript();
+
+            if (cancelled || !containerRef.current || !window.turnstile) {
+                return;
+            }
+
+            // Double check if widget is already rendered in this container
+            if (containerRef.current.childElementCount > 0) {
+                return;
+            }
 
             try {
+                // Clear just in case
+                containerRef.current.innerHTML = '';
+
                 widgetId = window.turnstile.render(containerRef.current, {
                     sitekey: siteKey,
                     callback: handleSuccess,
@@ -137,14 +151,19 @@ export const NativeTurnstile: React.FC<TurnstileProps> = ({
                 widgetIdRef.current = widgetId;
             } catch (e) {
                 console.error('Failed to render Turnstile:', e);
-                handleError('Failed to load CAPTCHA');
+                // Only report error if it's not the "already rendered" error (which is harmless here)
+                if (e instanceof Error && !e.message.includes('already been rendered')) {
+                    handleError('Failed to load CAPTCHA');
+                }
             }
         };
 
-        initWidget();
+        // Small delay to allow cleanup of previous effect in Strict Mode
+        const timeoutId = setTimeout(initWidget, 50);
 
         return () => {
-            mountedRef.current = false;
+            cancelled = true;
+            clearTimeout(timeoutId);
             if (widgetId && window.turnstile) {
                 try {
                     window.turnstile.remove(widgetId);

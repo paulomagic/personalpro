@@ -142,6 +142,7 @@ export const NativeTurnstile: React.FC<TurnstileProps> = ({
                     'error-callback': handleError,
                     'expired-callback': handleExpire,
                     theme: theme as 'light' | 'dark' | 'auto',
+                    'refresh-expired': 'auto',
                 });
             } catch (error) {
                 console.error('Turnstile render error:', error);

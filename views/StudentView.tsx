@@ -100,11 +100,11 @@ const StudentView: React.FC<StudentViewProps> = ({
 
     // Initialize completions when split is selected
     useEffect(() => {
-        if (selectedSplit) {
+        if (selectedSplit && selectedSplit.exercises) {
             setCompletions(
                 selectedSplit.exercises.map(ex => ({
                     exerciseId: ex.id,
-                    setCompletions: ex.sets.map(() => false)
+                    setCompletions: Array.isArray(ex.sets) ? ex.sets.map(() => false) : []
                 }))
             );
             setActiveExercise(0);
@@ -112,7 +112,7 @@ const StudentView: React.FC<StudentViewProps> = ({
     }, [selectedSplit]);
 
     // Calculate progress
-    const totalSets = selectedSplit?.exercises.reduce((acc, ex) => acc + ex.sets.length, 0) || 0;
+    const totalSets = selectedSplit?.exercises?.reduce((acc, ex) => acc + (Array.isArray(ex.sets) ? ex.sets.length : 0), 0) || 0;
     const completedSets = completions.reduce((acc, comp) =>
         acc + comp.setCompletions.filter(Boolean).length, 0
     );
@@ -422,7 +422,7 @@ const StudentView: React.FC<StudentViewProps> = ({
                                         {exercise.name}
                                     </h3>
                                     <p className="text-[10px] font-black text-slate-500 uppercase tracking-wider">
-                                        {exercise.targetMuscle} • {exercise.sets.length} séries
+                                        {exercise.targetMuscle || 'Geral'} • {Array.isArray(exercise.sets) ? exercise.sets.length : 0} séries
                                     </p>
                                 </div>
                                 <ChevronRight
@@ -449,7 +449,7 @@ const StudentView: React.FC<StudentViewProps> = ({
                                             <div className="text-center">Feito</div>
                                         </div>
 
-                                        {exercise.sets.map((set, setIndex) => {
+                                        {Array.isArray(exercise.sets) && exercise.sets.map((set, setIndex) => {
                                             const isSetComplete = completions[exerciseIndex]?.setCompletions[setIndex] || false;
 
                                             return (
@@ -464,13 +464,13 @@ const StudentView: React.FC<StudentViewProps> = ({
                                                         {setIndex + 1}
                                                     </div>
                                                     <div className={`text-sm font-bold ${isSetComplete ? 'text-emerald-400' : 'text-white'}`}>
-                                                        {set.load}
+                                                        {set.load || '-'}
                                                     </div>
                                                     <div className={`text-sm font-bold ${isSetComplete ? 'text-emerald-400' : 'text-white'}`}>
-                                                        {set.reps}
+                                                        {set.reps || '-'}
                                                     </div>
                                                     <div className="text-sm font-medium text-slate-500">
-                                                        {set.rest}
+                                                        {set.rest || '60s'}
                                                     </div>
                                                     <div className="flex justify-center">
                                                         <button

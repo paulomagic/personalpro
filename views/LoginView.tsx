@@ -1,5 +1,5 @@
 
-import { Turnstile } from '@marsidev/react-turnstile';
+import { NativeTurnstile } from '../components/NativeTurnstile';
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../services/supabaseClient';
 import { validateTurnstileToken } from '../services/turnstileService';
@@ -262,9 +262,9 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
           </div>
         </div>
 
-        {/* Turnstile Anti-Bot */}
+        {/* Turnstile Anti-Bot - Using native implementation */}
         <div className="mb-4 flex justify-center">
-          <Turnstile
+          <NativeTurnstile
             siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY || "1x00000000000000000000AA"}
             onSuccess={(token) => {
               setCaptchaToken(token);
@@ -278,12 +278,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
               setCaptchaToken(null);
               setError('Verificação expirou. Complete novamente.');
             }}
-            options={{
-              theme: 'dark',
-              size: 'normal',
-              retry: 'auto',
-              refreshExpired: 'auto'
-            }}
+            theme="dark"
           />
         </div>
 

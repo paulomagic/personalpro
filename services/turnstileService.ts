@@ -40,11 +40,9 @@ export async function validateTurnstileToken(token: string): Promise<ValidationR
 
         if (!response.ok) {
             console.error('Turnstile validation failed:', result);
-            // FAIL-OPEN: Log error but allow access if configuration is broken
-            // This ensures users aren't blocked by CAPTCHA misconfiguration
             return {
-                success: true,
-                warning: `Validation error ignored: ${result.error || 'Unknown error'}`
+                success: false,
+                error: result.error || 'Falha na validação do CAPTCHA'
             };
         }
 
@@ -55,12 +53,11 @@ export async function validateTurnstileToken(token: string): Promise<ValidationR
         return { success: true };
     } catch (error) {
         console.error('Error calling Turnstile validation:', error);
-        // CRITICAL STRATEGY: In case of ANY error (network, config, timeout), 
-        // we must ALLOW the user to proceed to avoid locking them out.
-        // We log the security event but do not block the UI.
+        // On network error, allow through but log warning
+        // This prevents blocking users if the function is temporarily unavailable
         return {
             success: true,
-            warning: 'Validation service unavailable - fail-open strategy active'
+            warning: 'Validation service unavailable - proceeding with caution'
         };
     }
 }

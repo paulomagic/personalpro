@@ -248,7 +248,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
         {/* Turnstile Anti-Bot */}
         <div className="mb-4 flex justify-center">
           <Turnstile
-            siteKey="1x00000000000000000000AA"
+            siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY || "1x00000000000000000000AA"}
             onSuccess={(token) => setCaptchaToken(token)}
             onError={() => setError('Erro na verificação de segurança')}
             options={{ theme: 'dark' }}

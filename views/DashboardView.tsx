@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Client } from '../types';
+import { Client, isAdmin } from '../types';
 import { motion } from 'framer-motion';
 import {
   ArrowRight,
@@ -97,14 +97,16 @@ const DashboardView: React.FC<DashboardViewProps> = ({ user, onSelectClient, onO
           <h1 className="text-2xl font-black text-white mt-1">Olá, {user?.user_metadata?.name?.split(' ')[0] || 'Coach'}! 👋</h1>
         </div>
         <div className="flex gap-2">
-          {/* Admin Button */}
-          <button
-            onClick={() => onNavigate && onNavigate('admin')}
-            className="size-10 rounded-full bg-amber-500/10 flex items-center justify-center ring-2 ring-amber-500/20 hover:bg-amber-500/20 transition-colors"
-            title="Área Admin"
-          >
-            <Shield size={18} className="text-amber-400" />
-          </button>
+          {/* Admin Button - Only visible for admins */}
+          {isAdmin(user) && (
+            <button
+              onClick={() => onNavigate && onNavigate('admin')}
+              className="size-10 rounded-full bg-amber-500/10 flex items-center justify-center ring-2 ring-amber-500/20 hover:bg-amber-500/20 transition-colors"
+              title="Área Admin"
+            >
+              <Shield size={18} className="text-amber-400" />
+            </button>
+          )}
           <button
             onClick={() => onNavigate && onNavigate('settings')}
             className="size-10 rounded-full bg-slate-800 flex items-center justify-center ring-2 ring-white/10 shadow-glow overflow-hidden"

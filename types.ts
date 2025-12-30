@@ -1,16 +1,30 @@
 
 // ============ USER TYPE ============
+export type UserRole = 'admin' | 'coach' | 'user';
+
 export interface AppUser {
   id: string;
   email?: string;
   user_metadata?: {
     full_name?: string;
+    name?: string;
     avatar_url?: string;
+    role?: UserRole;
   };
   app_metadata?: {
     provider?: string;
   };
   created_at?: string;
+}
+
+// Helper function to check if user is admin
+export function isAdmin(user: AppUser | any): boolean {
+  if (!user) return false;
+  // Check user_metadata first (where we store custom roles)
+  const role = user?.user_metadata?.role;
+  // Allow specific emails as admin fallback
+  const adminEmails = ['paulo@personalpro.com', 'admin@personalpro.com'];
+  return role === 'admin' || adminEmails.includes(user?.email || '');
 }
 
 export enum View {

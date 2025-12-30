@@ -293,6 +293,29 @@ Crie exercícios específicos, variados e adequados ao perfil. Seja criativo nos
     try {
       const parsedResult = JSON.parse(cleanText);
 
+      // VALIDATION: Ensure the result actually has exercises
+      const hasExercises = parsedResult.splits?.some((split: any) =>
+        split.exercises && Array.isArray(split.exercises) && split.exercises.length > 0
+      );
+
+      if (!hasExercises) {
+        console.warn("AI returned valid JSON but with empty exercises. Triggering local fallback.");
+        // Log this specific failure
+        logAIAction({
+          action_type: 'generate_workout',
+          model_used: model || 'unknown',
+          prompt: prompt.substring(0, 300) + '...',
+          response: cleanText.substring(0, 500),
+          latency_ms: latencyMs,
+          tokens_input: tokensInput,
+          tokens_output: tokensOutput,
+          success: false,
+          error_message: 'Empty exercises array',
+          metadata: { clientName, goal, level, days }
+        });
+        return null; // Force local fallback
+      }
+
       // Log success
       logAIAction({
         action_type: 'generate_workout',

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, Suspense, lazy } from 'react';
-import { View, Client, Workout, AppUser } from './types';
+import { View, Client, Workout, AppUser, isAdmin } from './types';
 import { supabase } from './services/supabaseClient';
 import LoginView from './views/LoginView';
 import DashboardView from './views/DashboardView';
@@ -245,29 +245,54 @@ function App() {
             }}
           />
         );
-      // Admin Views
+      // Admin Views - Protected by role check
       case View.ADMIN:
-        return (
-          <AdminView
-            onBack={() => navigateTo(View.DASHBOARD)}
-            onNavigate={(subView) => {
-              switch (subView) {
-                case 'users': navigateTo(View.ADMIN_USERS); break;
-                case 'ai-logs': navigateTo(View.ADMIN_AI_LOGS); break;
-                case 'activity-logs': navigateTo(View.ADMIN_ACTIVITY_LOGS); break;
-                case 'settings': navigateTo(View.ADMIN_SETTINGS); break;
-              }
-            }}
-          />
-        );
       case View.ADMIN_USERS:
-        return <AdminUsersView onBack={() => navigateTo(View.ADMIN)} />;
       case View.ADMIN_AI_LOGS:
-        return <AdminAILogsView onBack={() => navigateTo(View.ADMIN)} />;
       case View.ADMIN_ACTIVITY_LOGS:
-        return <AdminActivityLogsView onBack={() => navigateTo(View.ADMIN)} />;
       case View.ADMIN_SETTINGS:
-        return <AdminSettingsView onBack={() => navigateTo(View.ADMIN)} />;
+        // Security: Verify admin permission before rendering any admin view
+        if (!isAdmin(user)) {
+          console.warn('🔒 Acesso negado: usuário não é admin');
+          // Redirect to dashboard for non-admin users
+          return (
+            <DashboardView
+              user={user}
+              onSelectClient={(client) => navigateTo(View.CLIENT_PROFILE, client)}
+              onOpenAI={() => navigateTo(View.AI_BUILDER)}
+              onNavigate={handleNavigation}
+            />
+          );
+        }
+        // Render the appropriate admin view
+        if (currentView === View.ADMIN) {
+          return (
+            <AdminView
+              onBack={() => navigateTo(View.DASHBOARD)}
+              onNavigate={(subView) => {
+                switch (subView) {
+                  case 'users': navigateTo(View.ADMIN_USERS); break;
+                  case 'ai-logs': navigateTo(View.ADMIN_AI_LOGS); break;
+                  case 'activity-logs': navigateTo(View.ADMIN_ACTIVITY_LOGS); break;
+                  case 'settings': navigateTo(View.ADMIN_SETTINGS); break;
+                }
+              }}
+            />
+          );
+        }
+        if (currentView === View.ADMIN_USERS) {
+          return <AdminUsersView onBack={() => navigateTo(View.ADMIN)} />;
+        }
+        if (currentView === View.ADMIN_AI_LOGS) {
+          return <AdminAILogsView onBack={() => navigateTo(View.ADMIN)} />;
+        }
+        if (currentView === View.ADMIN_ACTIVITY_LOGS) {
+          return <AdminActivityLogsView onBack={() => navigateTo(View.ADMIN)} />;
+        }
+        if (currentView === View.ADMIN_SETTINGS) {
+          return <AdminSettingsView onBack={() => navigateTo(View.ADMIN)} />;
+        }
+        return null;
       default:
         return <LoginView onLogin={handleLoginSuccess} />;
     }

@@ -39,7 +39,38 @@ Este arquivo contém o checklist de segurança para desenvolvimento de novas fea
 
 ---
 
-## 📋 Comandos de Segurança
+## 🤖 Gemini API Protection
+
+A partir de **2025-12-30**, as chamadas para a API do Gemini são feitas através de uma **Edge Function** no Supabase (`gemini-proxy`), protegendo a chave de API do frontend.
+
+### Como funciona:
+1. Frontend chama `/functions/v1/gemini-proxy` (sem expor a API key)
+2. Edge Function usa `GEMINI_API_KEY_PRIMARY` dos **Supabase Secrets**
+3. Resultado é retornado ao frontend
+
+### Deploy da Edge Function:
+```bash
+# Deploy da função
+supabase functions deploy gemini-proxy
+
+# Configurar secrets
+supabase secrets set GEMINI_API_KEY_PRIMARY=sua-chave-aqui
+supabase secrets set GEMINI_API_KEY_FALLBACK=sua-chave-fallback  # opcional
+```
+
+---
+
+## 📝 Histórico de Auditorias
+
+| Data | Vulnerabilidades | Ação |
+|------|------------------|------|
+| 2025-12-30 | 1 (API Key exposta) | ✅ Migrado para Edge Function |
+| 2024-12-28 | 0 | ✅ Nenhuma ação necessária |
+
+---
+
+*Mantenha este arquivo atualizado ao adicionar novas features.*
+
 
 ```bash
 # Executar verificação completa de segurança (Audit + Env Var + Files)

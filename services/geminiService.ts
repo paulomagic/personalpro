@@ -1,96 +1,27 @@
+// Gemini Service - Secure API via Edge Function
+// API calls are proxied through Supabase Edge Function to protect the API key
 
-import { GoogleGenAI } from "@google/genai";
 import { logAIAction } from './loggingService';
 
-// API Keys - read from Vite environment variables
-// Primary: gemini-2.5-flash | Fallback: gemini-2.5-flash-lite
-const API_KEY_PRIMARY = import.meta.env?.VITE_GEMINI_API_KEY || '';
-const API_KEY_FALLBACK = import.meta.env?.VITE_GEMINI_API_KEY_LITE || '';
+// Supabase URL for Edge Function
+const SUPABASE_URL = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SUPABASE_URL) || '';
+const GEMINI_PROXY_URL = `${SUPABASE_URL}/functions/v1/gemini-proxy`;
 
-console.log('🔍 Gemini Config:', {
-  primaryKey: API_KEY_PRIMARY ? '✅ configurada' : '❌ não configurada',
-  fallbackKey: API_KEY_FALLBACK ? '✅ configurada' : '❌ não configurada',
-});
+// Check if we're in development mode
+const isDev = typeof import.meta !== 'undefined' && import.meta.env?.DEV;
 
-// AI Clients
-let aiPrimary: GoogleGenAI | null = null;
-let aiFallback: GoogleGenAI | null = null;
-
-// Models
-const MODEL_PRIMARY = "gemini-2.5-flash";
-const MODEL_FALLBACK = "gemini-2.5-flash-lite";
-
-try {
-  if (API_KEY_PRIMARY && API_KEY_PRIMARY.length > 10) {
-    aiPrimary = new GoogleGenAI({ apiKey: API_KEY_PRIMARY });
-    console.log('✅ Gemini Primary (Flash) initialized');
-  }
-  if (API_KEY_FALLBACK && API_KEY_FALLBACK.length > 10) {
-    aiFallback = new GoogleGenAI({ apiKey: API_KEY_FALLBACK });
-    console.log('✅ Gemini Fallback (Flash-Lite) initialized');
-  }
-  if (!aiPrimary && !aiFallback) {
-    console.log('⚠️ No Gemini API keys found - using local fallback only');
-  }
-} catch (e) {
-  console.warn('Gemini API not initialized - using fallback', e);
+if (isDev) {
+  console.log('🔍 Gemini Service: Using secure Edge Function proxy');
 }
 
-// Helper to try primary then fallback - returns text and model used
-interface GeminiResponse {
-  text: string | null;
-  model: string | null;
-  latencyMs: number;
-  tokensInput: number;
-  tokensOutput: number;
-}
-
-// Estimate tokens (~4 characters per token on average)
-function estimateTokens(text: string): number {
-  return Math.ceil(text.length / 4);
-}
-
-async function callGeminiWithFallback(prompt: string): Promise<GeminiResponse> {
-  const startTime = Date.now();
-  const tokensInput = estimateTokens(prompt);
-
-  // Try primary first
-  if (aiPrimary) {
-    try {
-      console.log('🚀 Trying Gemini Flash (primary)...');
-      const response = await aiPrimary.models.generateContent({
-        model: MODEL_PRIMARY,
-        contents: prompt,
-      });
-      const latencyMs = Date.now() - startTime;
-      const responseText = response.text || '';
-      const tokensOutput = estimateTokens(responseText);
-      console.log(`✅ Gemini Flash succeeded (${latencyMs}ms, ~${tokensInput + tokensOutput} tokens)`);
-      return { text: responseText, model: MODEL_PRIMARY, latencyMs, tokensInput, tokensOutput };
-    } catch (error: any) {
-      console.warn('⚠️ Primary failed, trying fallback...', error?.message?.substring(0, 100));
-    }
-  }
-
-  // Try fallback
-  if (aiFallback) {
-    try {
-      console.log('🔄 Trying Gemini Flash-Lite (fallback)...');
-      const response = await aiFallback.models.generateContent({
-        model: MODEL_FALLBACK,
-        contents: prompt,
-      });
-      const latencyMs = Date.now() - startTime;
-      const responseText = response.text || '';
-      const tokensOutput = estimateTokens(responseText);
-      console.log(`✅ Gemini Flash-Lite succeeded (${latencyMs}ms, ~${tokensInput + tokensOutput} tokens)`);
-      return { text: responseText, model: MODEL_FALLBACK, latencyMs, tokensInput, tokensOutput };
-    } catch (error: any) {
-      console.warn('❌ Fallback also failed:', error?.message?.substring(0, 100));
-    }
-  }
-
-  return { text: null, model: null, latencyMs: Date.now() - startTime, tokensInput, tokensOutput: 0 }; // Both failed
+// Response interface from Edge Function
+interface GeminiProxyResponse {
+  success: boolean;
+  text?: string;
+  model?: string;
+  latencyMs?: number;
+  error?: string;
+  details?: string;
 }
 
 // Error types for user-friendly messages
@@ -102,7 +33,7 @@ export interface AIError {
 }
 
 // Helper to create friendly error messages
-function handleAIError(error: any): AIError {
+export function handleAIError(error: any): AIError {
   const errorMessage = error?.message || error?.toString() || 'Unknown error';
 
   // Rate limit / Quota exceeded (429)
@@ -141,8 +72,60 @@ function handleAIError(error: any): AIError {
   };
 }
 
-// Export for use in components
-export { handleAIError };
+// Estimate tokens (~4 characters per token on average)
+function estimateTokens(text: string): number {
+  return Math.ceil(text.length / 4);
+}
+
+// Call Gemini via Edge Function
+async function callGeminiWithFallback(prompt: string, action?: string): Promise<{
+  text: string | null;
+  model: string | null;
+  latencyMs: number;
+  tokensInput: number;
+  tokensOutput: number;
+}> {
+  const startTime = Date.now();
+  const tokensInput = estimateTokens(prompt);
+
+  if (!SUPABASE_URL) {
+    console.warn('⚠️ Supabase URL not configured - AI unavailable');
+    return { text: null, model: null, latencyMs: Date.now() - startTime, tokensInput, tokensOutput: 0 };
+  }
+
+  try {
+    if (isDev) console.log('🚀 Calling Gemini via Edge Function...');
+
+    const response = await fetch(GEMINI_PROXY_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ prompt, action }),
+    });
+
+    const data: GeminiProxyResponse = await response.json();
+    const latencyMs = data.latencyMs || (Date.now() - startTime);
+
+    if (data.success && data.text) {
+      const tokensOutput = estimateTokens(data.text);
+      if (isDev) console.log(`✅ Gemini succeeded via ${data.model} (${latencyMs}ms)`);
+      return {
+        text: data.text,
+        model: data.model || 'gemini-proxy',
+        latencyMs,
+        tokensInput,
+        tokensOutput
+      };
+    } else {
+      console.warn('❌ Gemini proxy failed:', data.error || 'Unknown error');
+      return { text: null, model: null, latencyMs, tokensInput, tokensOutput: 0 };
+    }
+  } catch (error: any) {
+    console.error('❌ Error calling Gemini proxy:', error?.message);
+    return { text: null, model: null, latencyMs: Date.now() - startTime, tokensInput, tokensOutput: 0 };
+  }
+}
 
 // Enhanced workout generation with rich client data
 interface ClientWorkoutData {
@@ -168,11 +151,6 @@ export async function generateWorkoutWithAI(
   observations: string,
   extendedData?: Partial<ClientWorkoutData>
 ): Promise<any> {
-  if (!aiPrimary && !aiFallback) {
-    console.log('Using fallback workout generator');
-    return null;
-  }
-
   try {
     // Build rich context
     const injuries = extendedData?.injuries || 'Nenhuma';
@@ -245,7 +223,7 @@ Responda APENAS com JSON puro (sem markdown, sem comentários, sem vírgulas ext
 
 Crie exercícios específicos, variados e adequados ao perfil. Seja criativo nos nomes dos treinos.`;
 
-    const { text, model, latencyMs, tokensInput, tokensOutput } = await callGeminiWithFallback(prompt);
+    const { text, model, latencyMs, tokensInput, tokensOutput } = await callGeminiWithFallback(prompt, 'generate_workout');
 
     if (!text) {
       // Log failure
@@ -258,10 +236,10 @@ Crie exercícios específicos, variados e adequados ao perfil. Seja criativo nos
         tokens_input: tokensInput,
         tokens_output: 0,
         success: false,
-        error_message: 'Both APIs failed',
+        error_message: 'API failed',
         metadata: { clientName, goal, level, days }
       });
-      return null; // Both APIs failed, trigger local fallback
+      return null; // API failed, trigger local fallback
     }
 
     // Clean up the response - remove markdown code blocks if present
@@ -286,9 +264,6 @@ Crie exercícios específicos, variados e adequados ao perfil. Seja criativo nos
       .replace(/,\s*]/g, ']')  // Remove trailing commas before ]
       .replace(/\n/g, ' ')      // Remove newlines inside strings
       .replace(/\t/g, ' ');     // Remove tabs
-
-    // Note: NOT replacing single quotes indiscriminately as it might break text with apostrophes.
-    // relying on the model to output valid double quotes.
 
     try {
       const parsedResult = JSON.parse(cleanText);
@@ -335,7 +310,7 @@ Crie exercícios específicos, variados e adequados ao perfil. Seja criativo nos
 
       // Log parse failure but partial text
       logAIAction({
-        action_type: 'generate_workout_fail',
+        action_type: 'generate_workout',
         model_used: model || 'unknown',
         prompt: prompt.substring(0, 300) + '...',
         response: cleanText.substring(0, 500),
@@ -363,43 +338,9 @@ export async function* generateWorkoutWithAIStream(
   days: number,
   observations: string
 ): AsyncGenerator<string, void, unknown> {
-  if (!aiPrimary && !aiFallback) {
-    yield '{"error": "AI not available"}';
-    return;
-  }
-
-  try {
-    const prompt = `Crie um treino detalhado para ${clientName}.
-    Objetivo: ${goal}
-    Nível: ${level}
-    Dias por semana: ${days}
-    Observações: ${observations}
-    
-    Responda APENAS com JSON válido com a estrutura:
-    {
-      "title": "Nome do Protocolo",
-      "objective": "Descrição",
-      "splits": [{ "name": "Treino A", "exercises": [{ "name": "...", "sets": 4, "reps": "10-12", "rest": "60s", "targetMuscle": "..." }] }]
-    }`;
-
-    const ai = aiPrimary || aiFallback;
-    const model = aiPrimary ? MODEL_PRIMARY : MODEL_FALLBACK;
-
-    const response = await ai!.models.generateContentStream({
-      model: model,
-      contents: prompt,
-    });
-
-    for await (const chunk of response) {
-      const text = chunk.text || '';
-      if (text) {
-        yield text;
-      }
-    }
-  } catch (error) {
-    console.error("Streaming error:", error);
-    yield '{"error": "Streaming failed"}';
-  }
+  // Streaming not supported via Edge Function - use regular call
+  yield '{"info": "Streaming not available via Edge Function, using standard call"}';
+  return;
 }
 
 // Analyze client progress over time
@@ -419,15 +360,6 @@ export async function analyzeClientProgress(clientData: {
   concerns: string[];
   recommendations: string[];
 } | null> {
-  if (!aiPrimary && !aiFallback) {
-    return {
-      summary: `${clientData.name} está progredindo. Continue o bom trabalho!`,
-      improvements: ['Consistência nos treinos'],
-      concerns: [],
-      recommendations: ['Manter a rotina atual']
-    };
-  }
-
   try {
     const prompt = `Analise o progresso do cliente ${clientData.name} (objetivo: ${clientData.goal}).
 
@@ -445,9 +377,17 @@ export async function analyzeClientProgress(clientData: {
       "recommendations": ["Recomendações específicas para evoluir"]
     }`;
 
-    const { text, model, latencyMs } = await callGeminiWithFallback(prompt);
+    const { text, model, latencyMs } = await callGeminiWithFallback(prompt, 'analyze_progress');
 
-    if (!text) return null;
+    if (!text) {
+      return {
+        summary: `${clientData.name} está progredindo. Continue o bom trabalho!`,
+        improvements: ['Consistência nos treinos'],
+        concerns: [],
+        recommendations: ['Manter a rotina atual']
+      };
+    }
+
     let cleanText = text.replace(/```json|```/g, '').trim();
 
     // Log success
@@ -463,7 +403,12 @@ export async function analyzeClientProgress(clientData: {
     return JSON.parse(cleanText);
   } catch (error) {
     console.error("Error analyzing progress:", error);
-    return null;
+    return {
+      summary: `${clientData.name} está progredindo. Continue o bom trabalho!`,
+      improvements: ['Consistência nos treinos'],
+      concerns: [],
+      recommendations: ['Manter a rotina atual']
+    };
   }
 }
 
@@ -474,8 +419,6 @@ export async function regenerateExerciseWithAI(
   injuries: string,
   equipment: string = 'Academia completa'
 ): Promise<any> {
-  if (!aiPrimary && !aiFallback) return null;
-
   try {
     const prompt = `Atue como um treinador especialista. Sugira UMA alternativa excelente para substituir o exercício "${currentExercise}" (foco: ${targetMuscle}).
 
@@ -495,7 +438,7 @@ export async function regenerateExerciseWithAI(
       "technique": "Dica rápida de execução"
     }`;
 
-    const { text, model, latencyMs } = await callGeminiWithFallback(prompt);
+    const { text, model, latencyMs } = await callGeminiWithFallback(prompt, 'regenerate_exercise');
 
     if (!text) return null;
     let cleanText = text.replace(/```json|```/g, '').trim();
@@ -523,8 +466,6 @@ export async function refineWorkoutWithAI(
   currentWorkout: any,
   instruction: string
 ): Promise<any> {
-  if (!aiPrimary && !aiFallback) return null;
-
   try {
     const prompt = `Você é um editor de treinos especialista.
     
@@ -539,7 +480,7 @@ export async function refineWorkoutWithAI(
     
     Responda APENAS com o JSON modificado válido (sem markdown).`;
 
-    const { text, model, latencyMs } = await callGeminiWithFallback(prompt);
+    const { text, model, latencyMs } = await callGeminiWithFallback(prompt, 'refine_workout');
 
     if (!text) return null;
 
@@ -566,13 +507,13 @@ export async function getAIInsight(clientData: {
   lastTraining: string;
   daysWithoutTraining?: number;
 }): Promise<string> {
-  if (!aiPrimary && !aiFallback) {
-    // Fallback insights
+  // Fallback insights
+  const getFallbackInsight = () => {
     if (clientData.adherence < 30) {
       return `⚠️ ${clientData.name} está com aderência baixa (${clientData.adherence}%). Considere entrar em contato para motivação.`;
     }
     return `✅ ${clientData.name} está progredindo bem com ${clientData.adherence}% de aderência.`;
-  }
+  };
 
   try {
     const prompt = `Você é um assistente de personal trainer. Analise este aluno e dê um insight breve (máximo 2 frases) em português:
@@ -584,15 +525,12 @@ ${clientData.daysWithoutTraining ? `Dias sem treinar: ${clientData.daysWithoutTr
 
 Seja direto e acionável. Use emojis apropriados.`;
 
-    const { text } = await callGeminiWithFallback(prompt);
+    const { text } = await callGeminiWithFallback(prompt, 'get_insight');
 
-    return text || 'Análise não disponível';
+    return text || getFallbackInsight();
   } catch (error) {
     console.error("Error getting AI insight:", error);
-    if (clientData.adherence < 30) {
-      return `⚠️ ${clientData.name} está com aderência baixa. Considere entrar em contato.`;
-    }
-    return `${clientData.name} está progredindo bem.`;
+    return getFallbackInsight();
   }
 }
 
@@ -607,10 +545,6 @@ export async function generateMessageTemplate(
     billing: `Olá ${clientName}! 👋\n\nEspero que esteja bem! Passando para lembrar da sua mensalidade.\n\nQualquer dúvida, estou à disposição!\n\nAbraços,\nRodrigo`,
     congratulation: `Parabéns ${clientName}! 🎉\n\nVocê está arrasando nos treinos! Continue assim que os resultados vão aparecer.\n\n💪🔥`
   };
-
-  if (!aiPrimary && !aiFallback) {
-    return fallbackMessages[type] || fallbackMessages.reminder;
-  }
 
   try {
     const typeDescriptions: Record<string, string> = {
@@ -631,7 +565,7 @@ A mensagem deve ser:
 
 Responda apenas com a mensagem, sem explicações.`;
 
-    const { text } = await callGeminiWithFallback(prompt);
+    const { text } = await callGeminiWithFallback(prompt, 'generate_message');
 
     return text || fallbackMessages[type];
   } catch (error) {
@@ -640,7 +574,7 @@ Responda apenas com a mensagem, sem explicações.`;
   }
 }
 
-// Check if AI is available
+// Check if AI is available (Edge Function configured)
 export function isAIAvailable(): boolean {
-  return !!aiPrimary || !!aiFallback;
+  return !!SUPABASE_URL;
 }

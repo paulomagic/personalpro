@@ -266,9 +266,24 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
         <div className="mb-4 flex justify-center">
           <Turnstile
             siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY || "1x00000000000000000000AA"}
-            onSuccess={(token) => setCaptchaToken(token)}
-            onError={() => setError('Erro na verificação de segurança')}
-            options={{ theme: 'dark' }}
+            onSuccess={(token) => {
+              setCaptchaToken(token);
+              setError(null);
+            }}
+            onError={(error) => {
+              console.error('Turnstile error:', error);
+              setError('Erro na verificação de segurança. Recarregue a página.');
+            }}
+            onExpire={() => {
+              setCaptchaToken(null);
+              setError('Verificação expirou. Complete novamente.');
+            }}
+            options={{
+              theme: 'dark',
+              size: 'normal',
+              retry: 'auto',
+              refreshExpired: 'auto'
+            }}
           />
         </div>
 

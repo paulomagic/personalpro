@@ -264,8 +264,8 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
 
         <div className="mb-4 flex justify-center">
           <NativeTurnstile
-            // HARDCODED PRODUCTION KEY - v3.0 - FIX FOR "GOT OBJECT" ERROR
-            siteKey="0x4AAAAAAACJzK90oAcWumh3m"
+            // NEW PRODUCTION KEY - v4.0 - Verified Domain Authorization
+            siteKey="0x4AAAAAACJ1iiamdJxc5MAx"
             onSuccess={(token) => {
               setCaptchaToken(token);
               setError(null);

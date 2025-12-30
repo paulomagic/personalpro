@@ -134,7 +134,6 @@ export const NativeTurnstile: React.FC<TurnstileProps> = ({
             try {
                 // Force primitive string
                 const siteKeyStr = String(siteKey);
-                console.log('[Turnstile FIX_V4_EXPLICIT] Render. Key type:', typeof siteKey, 'Val:', siteKeyStr);
 
                 widgetId = window.turnstile.render(containerRef.current, {
                     sitekey: siteKeyStr,

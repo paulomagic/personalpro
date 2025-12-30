@@ -73,7 +73,7 @@ function loadTurnstileScript(): Promise<void> {
         }
 
         const script = document.createElement('script');
-        script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?onload=onTurnstileLoad';
+        script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?onload=onTurnstileLoad&render=explicit';
         script.async = true;
         script.defer = true;
         document.head.appendChild(script);
@@ -134,7 +134,7 @@ export const NativeTurnstile: React.FC<TurnstileProps> = ({
             try {
                 // Force primitive string
                 const siteKeyStr = String(siteKey);
-                console.log('[Turnstile FIX_V3] Render. Key type:', typeof siteKey, 'Val:', siteKeyStr);
+                console.log('[Turnstile FIX_V4_EXPLICIT] Render. Key type:', typeof siteKey, 'Val:', siteKeyStr);
 
                 widgetId = window.turnstile.render(containerRef.current, {
                     sitekey: siteKeyStr,
@@ -157,7 +157,7 @@ export const NativeTurnstile: React.FC<TurnstileProps> = ({
         return cleanup;
     }, [siteKey, theme, handleSuccess, handleError, handleExpire]);
 
-    return <div ref={containerRef} className="cf-turnstile" style={{ minHeight: '65px' }} />;
+    return <div ref={containerRef} className="turnstile-container" style={{ minHeight: '65px' }} />;
 };
 
 export default NativeTurnstile;

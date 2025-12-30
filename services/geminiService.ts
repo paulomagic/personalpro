@@ -578,3 +578,4 @@ Responda apenas com a mensagem, sem explicações.`;
 export function isAIAvailable(): boolean {
   return !!SUPABASE_URL;
 }
+// Security update

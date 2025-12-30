@@ -1,8 +1,5 @@
-
-import { NativeTurnstile } from '../components/NativeTurnstile';
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../services/supabaseClient';
-import { validateTurnstileToken } from '../services/turnstileService';
 
 interface LoginViewProps {
   onLogin: (user: any) => void;
@@ -28,7 +25,6 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
-  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
 
   // Rate limiting states
   const [loginAttempts, setLoginAttempts] = useState(0);
@@ -62,23 +58,10 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
       return;
     }
 
-    if (!captchaToken) {
-      setError('Por favor, complete a verificação de segurança');
-      return;
-    }
-
     setLoading(true);
     setError(null);
 
     try {
-      // Validate CAPTCHA server-side first
-      const captchaValidation = await validateTurnstileToken(captchaToken);
-      if (!captchaValidation.success) {
-        setError(captchaValidation.error || 'Falha na validação de segurança');
-        setLoading(false);
-        return;
-      }
-
       if (!supabase) {
         onLogin({ email, demo: true });
         return;
@@ -124,23 +107,10 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
       return;
     }
 
-    if (!captchaToken) {
-      setError('Por favor, complete a verificação de segurança');
-      return;
-    }
-
     setLoading(true);
     setError(null);
 
     try {
-      // Validate CAPTCHA server-side first
-      const captchaValidation = await validateTurnstileToken(captchaToken);
-      if (!captchaValidation.success) {
-        setError(captchaValidation.error || 'Falha na validação de segurança');
-        setLoading(false);
-        return;
-      }
-
       if (!supabase) {
         onLogin({ email, name, demo: true });
         return;
@@ -262,25 +232,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
           </div>
         </div>
 
-        <div className="mb-4 flex justify-center">
-          <NativeTurnstile
-            // USER VERIFIED KEY - 6 'A's - v6.0
-            siteKey="0x4AAAAAACJ1iiamdJxc5MAx"
-            onSuccess={(token) => {
-              setCaptchaToken(token);
-              setError(null);
-            }}
-            onError={(error) => {
-              console.error('Turnstile error:', error);
-              setError('Erro na verificação de segurança. Recarregue a página.');
-            }}
-            onExpire={() => {
-              setCaptchaToken(null);
-              setError('Verificação expirou. Complete novamente.');
-            }}
-            theme="dark"
-          />
-        </div>
+
 
         <button
           onClick={isRegister ? handleRegister : handleLogin}

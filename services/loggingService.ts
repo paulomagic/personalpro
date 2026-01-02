@@ -194,15 +194,71 @@ export async function getAIMetrics() {
         modelCounts[log.model_used] = (modelCounts[log.model_used] || 0) + 1;
     });
 
-    // By action type
-    const { data: byAction } = await supabase
+    // By action type with success/error breakdown
+    const { data: actionData } = await supabase
         .from('ai_logs')
-        .select('action_type')
+        .select('action_type, success, latency_ms')
         .gte('created_at', weekAgo);
 
     const actionCounts: Record<string, number> = {};
-    byAction?.forEach(log => {
-        actionCounts[log.action_type] = (actionCounts[log.action_type] || 0) + 1;
+    const successByAction: Record<string, { success: number; total: number }> = {};
+    const latencyByAction: Record<string, { total: number; count: number }> = {};
+
+    actionData?.forEach(log => {
+        const action = log.action_type;
+        actionCounts[action] = (actionCounts[action] || 0) + 1;
+
+        // Success rate by action
+        if (!successByAction[action]) {
+            successByAction[action] = { success: 0, total: 0 };
+        }
+        successByAction[action].total++;
+        if (log.success) successByAction[action].success++;
+
+        // Latency by action
+        if (log.latency_ms) {
+            if (!latencyByAction[action]) {
+                latencyByAction[action] = { total: 0, count: 0 };
+            }
+            latencyByAction[action].total += log.latency_ms;
+            latencyByAction[action].count++;
+        }
+    });
+
+    // Calculate success rate per action
+    const successRateByAction: Record<string, number> = {};
+    Object.entries(successByAction).forEach(([action, data]) => {
+        successRateByAction[action] = Math.round((data.success / data.total) * 100);
+    });
+
+    // Calculate average latency per action
+    const avgLatencyByAction: Record<string, number> = {};
+    Object.entries(latencyByAction).forEach(([action, data]) => {
+        avgLatencyByAction[action] = Math.round(data.total / data.count);
+    });
+
+    // Recent errors (last 10)
+    const { data: recentErrors } = await supabase
+        .from('ai_logs')
+        .select('action_type, error_message, created_at, model_used')
+        .eq('success', false)
+        .order('created_at', { ascending: false })
+        .limit(10);
+
+    // Requests per day (last 7 days)
+    const { data: dailyData } = await supabase
+        .from('ai_logs')
+        .select('created_at, success')
+        .gte('created_at', weekAgo);
+
+    const requestsByDay: Record<string, { total: number; success: number }> = {};
+    dailyData?.forEach(log => {
+        const day = log.created_at.split('T')[0];
+        if (!requestsByDay[day]) {
+            requestsByDay[day] = { total: 0, success: 0 };
+        }
+        requestsByDay[day].total++;
+        if (log.success) requestsByDay[day].success++;
     });
 
     // Total tokens used & Breakdown by action
@@ -239,6 +295,18 @@ export async function getAIMetrics() {
         todayTokensOutput += log.tokens_output || 0;
     });
 
+    // Overall average latency
+    const { data: allLatency } = await supabase
+        .from('ai_logs')
+        .select('latency_ms')
+        .not('latency_ms', 'is', null);
+
+    let avgLatency = 0;
+    if (allLatency && allLatency.length > 0) {
+        const totalLatency = allLatency.reduce((sum, log) => sum + (log.latency_ms || 0), 0);
+        avgLatency = Math.round(totalLatency / allLatency.length);
+    }
+
     return {
         totalLogs: totalLogs || 0,
         todayLogs: todayLogs || 0,
@@ -252,7 +320,13 @@ export async function getAIMetrics() {
         todayTokensInput,
         todayTokensOutput,
         todayTokens: todayTokensInput + todayTokensOutput,
-        tokensByAction
+        tokensByAction,
+        // New detailed metrics
+        successRateByAction,
+        avgLatencyByAction,
+        avgLatency,
+        recentErrors: recentErrors || [],
+        requestsByDay
     };
 }
 

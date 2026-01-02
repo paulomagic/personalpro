@@ -12,7 +12,6 @@ import Layout from './components/Layout';
 
 // Lazy load heavy views to reduce initial bundle size
 const AIBuilderView = lazy(() => import('./views/AIBuilderView'));
-const LogoLabView = lazy(() => import('./views/LogoLabView'));
 const MetricsView = lazy(() => import('./views/MetricsView'));
 const FinanceView = lazy(() => import('./views/FinanceView'));
 const WorkoutBuilderView = lazy(() => import('./views/WorkoutBuilderView'));
@@ -170,7 +169,6 @@ function App() {
             user={user}
             onSelectClient={(client) => navigateTo(View.CLIENT_PROFILE, client)}
             onOpenAI={() => navigateTo(View.AI_BUILDER)}
-            onOpenBrandHub={() => navigateTo(View.LOGO_LAB)}
             onNavigate={handleNavigation}
           />
         );
@@ -188,8 +186,6 @@ function App() {
         />;
       case View.TRAINING_EXECUTION:
         return <TrainingExecutionView workout={activeWorkout!} onFinish={() => navigateTo(View.DASHBOARD)} />;
-      case View.LOGO_LAB:
-        return <LogoLabView onBack={() => navigateTo(View.DASHBOARD)} />;
       case View.CLIENTS:
         return <ClientsView user={user} onBack={() => navigateTo(View.DASHBOARD)} onSelectClient={(client) => navigateTo(View.CLIENT_PROFILE, client)} />;
       case View.METRICS:

@@ -22,6 +22,7 @@ const SportTrainingView = lazy(() => import('./views/SportTrainingView'));
 const AdminView = lazy(() => import('./views/AdminView'));
 const AdminUsersView = lazy(() => import('./views/AdminUsersView'));
 const AdminAILogsView = lazy(() => import('./views/AdminAILogsView'));
+const AdminAIDashboardView = lazy(() => import('./views/AdminAIDashboardView'));
 const AdminActivityLogsView = lazy(() => import('./views/AdminActivityLogsView'));
 const AdminSettingsView = lazy(() => import('./views/AdminSettingsView'));
 
@@ -249,6 +250,7 @@ function App() {
       case View.ADMIN:
       case View.ADMIN_USERS:
       case View.ADMIN_AI_LOGS:
+      case View.ADMIN_AI_DASHBOARD:
       case View.ADMIN_ACTIVITY_LOGS:
       case View.ADMIN_SETTINGS:
         // Security: Verify admin permission before rendering any admin view
@@ -272,6 +274,7 @@ function App() {
               onNavigate={(subView) => {
                 switch (subView) {
                   case 'users': navigateTo(View.ADMIN_USERS); break;
+                  case 'ai-dashboard': navigateTo(View.ADMIN_AI_DASHBOARD); break;
                   case 'ai-logs': navigateTo(View.ADMIN_AI_LOGS); break;
                   case 'activity-logs': navigateTo(View.ADMIN_ACTIVITY_LOGS); break;
                   case 'settings': navigateTo(View.ADMIN_SETTINGS); break;
@@ -285,6 +288,9 @@ function App() {
         }
         if (currentView === View.ADMIN_AI_LOGS) {
           return <AdminAILogsView onBack={() => navigateTo(View.ADMIN)} />;
+        }
+        if (currentView === View.ADMIN_AI_DASHBOARD) {
+          return <AdminAIDashboardView onBack={() => navigateTo(View.ADMIN)} />;
         }
         if (currentView === View.ADMIN_ACTIVITY_LOGS) {
           return <AdminActivityLogsView onBack={() => navigateTo(View.ADMIN)} />;

@@ -225,6 +225,20 @@ export async function getAIMetrics() {
         tokensByAction[log.action_type] = (tokensByAction[log.action_type] || 0) + total;
     });
 
+    // Tokens do dia
+    const { data: todayTokenData } = await supabase
+        .from('ai_logs')
+        .select('tokens_input, tokens_output')
+        .gte('created_at', today);
+
+    let todayTokensInput = 0;
+    let todayTokensOutput = 0;
+
+    todayTokenData?.forEach(log => {
+        todayTokensInput += log.tokens_input || 0;
+        todayTokensOutput += log.tokens_output || 0;
+    });
+
     return {
         totalLogs: totalLogs || 0,
         todayLogs: todayLogs || 0,
@@ -235,6 +249,9 @@ export async function getAIMetrics() {
         totalTokensInput,
         totalTokensOutput,
         totalTokens: totalTokensInput + totalTokensOutput,
+        todayTokensInput,
+        todayTokensOutput,
+        todayTokens: todayTokensInput + todayTokensOutput,
         tokensByAction
     };
 }

@@ -17,7 +17,7 @@ import { getAIMetrics, getSystemMetrics } from '../services/loggingService';
 
 interface AdminViewProps {
     onBack: () => void;
-    onNavigate: (view: 'users' | 'ai-logs' | 'activity-logs' | 'settings') => void;
+    onNavigate: (view: 'users' | 'ai-logs' | 'ai-dashboard' | 'activity-logs' | 'settings') => void;
 }
 
 const AdminView: React.FC<AdminViewProps> = ({ onBack, onNavigate }) => {
@@ -69,6 +69,7 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack, onNavigate }) => {
 
     const menuItems = [
         { id: 'users', label: 'Gestão de Usuários', icon: Users, color: 'blue' as const, description: 'Adicionar, editar e gerenciar personal trainers' },
+        { id: 'ai-dashboard', label: 'Dashboard de IA', icon: BarChart2, color: 'purple' as const, description: 'Métricas detalhadas de uso de IA' },
         { id: 'ai-logs', label: 'Logs de IA', icon: Brain, color: 'purple' as const, description: 'Histórico completo de gerações com IA' },
         { id: 'activity-logs', label: 'Logs de Atividade', icon: Activity, color: 'emerald' as const, description: 'Todas as ações realizadas no sistema' },
         { id: 'settings', label: 'Configurações', icon: Settings, color: 'slate' as const, description: 'Preferências e limites do sistema' },

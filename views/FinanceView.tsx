@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AreaChart, Area, XAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { motion } from 'framer-motion';
 import { ArrowLeft, TrendingUp, Download, CheckCircle, AlertCircle, Clock } from 'lucide-react';
+import { getPayments, updatePayment, getClients } from '../services/supabaseClient';
 
 interface FinanceViewProps {
     user: any;
@@ -23,16 +24,57 @@ const FinanceView: React.FC<FinanceViewProps> = ({ user, onBack }) => {
     const [activeTab, setActiveTab] = useState<'overview' | 'pending' | 'history'>('overview');
     const [showPaymentModal, setShowPaymentModal] = useState<Payment | null>(null);
     const [showSuccessToast, setShowSuccessToast] = useState<string | null>(null);
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(true);
+    const [payments, setPayments] = useState<Payment[]>([]);
 
-    // Mock Data for Demo - Initial State
-    const [payments, setPayments] = useState<Payment[]>([
-        { id: '1', clientName: 'Ana Silva', clientAvatar: 'https://images.unsplash.com/photo-1594381898411-846e7d193883?w=200&h=200&fit=crop', amount: 350, dueDate: '25/11', status: 'paid', plan: 'Premium', phone: '11999999999' },
-        { id: '2', clientName: 'Carlos Mendes', clientAvatar: 'https://images.unsplash.com/photo-1567013127542-490d757e51fc?w=200&h=200&fit=crop', amount: 350, dueDate: '20/12', status: 'overdue', plan: 'Premium', phone: '11999999999' },
-        { id: '3', clientName: 'Júlia Costa', clientAvatar: 'https://images.unsplash.com/photo-1518611012118-696072aa579a?w=200&h=200&fit=crop', amount: 350, dueDate: '28/12', status: 'pending', plan: 'Premium', phone: '11999999999' },
-        { id: '4', clientName: 'Pedro Souza', clientAvatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&h=200&fit=crop', amount: 450, dueDate: '15/12', status: 'paid', plan: 'Elite', phone: '11999999999' },
-        { id: '5', clientName: 'Mariana Oliveira', clientAvatar: 'https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=200&h=200&fit=crop', amount: 300, dueDate: '30/12', status: 'pending', plan: 'Standard', phone: '11999999999' },
-    ]);
+    // Fetch payments from Supabase
+    useEffect(() => {
+        const fetchPayments = async () => {
+            if (!user?.id) return;
+            setLoading(true);
+
+            try {
+                const dbPayments = await getPayments(user.id);
+
+                if (dbPayments.length > 0) {
+                    // Map DB payments to our interface
+                    const mapped = dbPayments.map((p: any) => ({
+                        id: p.id,
+                        clientName: p.clients?.name || 'Cliente',
+                        clientAvatar: p.clients?.avatar_url || '',
+                        amount: p.amount,
+                        dueDate: new Date(p.due_date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }),
+                        status: p.status as 'paid' | 'pending' | 'overdue',
+                        plan: p.plan || 'Mensal',
+                        phone: p.clients?.phone || ''
+                    }));
+                    setPayments(mapped);
+                } else {
+                    // Fallback: Generate demo payments from clients
+                    const clients = await getClients(user.id);
+                    if (clients.length > 0) {
+                        const demoPayments = clients.slice(0, 5).map((c: any, i: number) => ({
+                            id: `demo-${i}`,
+                            clientName: c.name,
+                            clientAvatar: c.avatar_url || '',
+                            amount: 350,
+                            dueDate: `${15 + i}/12`,
+                            status: i % 3 === 0 ? 'paid' : i % 3 === 1 ? 'pending' : 'overdue' as any,
+                            plan: 'Premium',
+                            phone: c.phone || ''
+                        }));
+                        setPayments(demoPayments);
+                    }
+                }
+            } catch (error) {
+                console.error('Error fetching payments:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchPayments();
+    }, [user]);
 
     const paidPayments = payments.filter(p => p.status === 'paid');
     const pendingPayments = payments.filter(p => p.status === 'pending' || p.status === 'overdue');
@@ -47,7 +89,7 @@ const FinanceView: React.FC<FinanceViewProps> = ({ user, onBack }) => {
         { month: 'Set', amount: 4900 },
         { month: 'Out', amount: 6100 },
         { month: 'Nov', amount: 5800 },
-        { month: 'Hoje', amount: stats.monthlyRevenue },
+        { month: 'Hoje', amount: stats.monthlyRevenue || 800 },
     ];
 
     const showToast = (message: string) => {
@@ -67,12 +109,26 @@ const FinanceView: React.FC<FinanceViewProps> = ({ user, onBack }) => {
     };
 
     const handleMarkAsPaid = async (payment: Payment) => {
-        // Simulating immediate local update
+        // Update local state immediately
         setPayments(prev => prev.map(p =>
             p.id === payment.id ? { ...p, status: 'paid' as const } : p
         ));
         setShowPaymentModal(null);
-        showToast(`Pagamento de ${payment.clientName} registrado!`);
+
+        // Persist to database if not a demo payment
+        if (!payment.id.startsWith('demo-')) {
+            const result = await updatePayment(payment.id, {
+                status: 'paid',
+                paid_date: new Date().toISOString().split('T')[0]
+            });
+            if (result) {
+                showToast(`Pagamento de ${payment.clientName} salvo!`);
+            } else {
+                showToast(`Pagamento registrado localmente`);
+            }
+        } else {
+            showToast(`Pagamento de ${payment.clientName} registrado!`);
+        }
     };
 
     const handleGenerateReport = () => {

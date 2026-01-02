@@ -34,17 +34,36 @@ const DashboardView: React.FC<DashboardViewProps> = ({ user, onSelectClient, onO
       if (user?.id) {
         setLoadingClients(true);
         try {
-          const { getClients } = await import('../services/supabaseClient');
+          const { getClients, getAppointments, getPayments } = await import('../services/supabaseClient');
+
+          // Fetch clients
           const data = await getClients(user.id);
-          // Map DBClient to Client type structure that ProfileView expects
           const mappedData = data.map((c: any) => ({
             ...c,
             startDate: c.created_at,
-            avatar: c.avatar || c.avatar_url // Handle alias if not already done by supabaseClient (it is, but safe to be sure)
+            avatar: c.avatar || c.avatar_url
           }));
-
-          // Filter for recent or relevant clients (for now just take top 3)
           setClients(mappedData.slice(0, 3));
+
+          // Fetch today's appointments
+          const today = new Date().toISOString().split('T')[0];
+          const todayAppointments = await getAppointments(user.id, today);
+          if (todayAppointments.length > 0) {
+            setAppointments(todayAppointments.map((a: any) => ({
+              id: a.id,
+              time: a.time?.slice(0, 5) || '08:00',
+              clientName: a.clients?.name || 'Cliente'
+            })));
+          }
+
+          // Fetch monthly revenue from paid payments
+          const payments = await getPayments(user.id);
+          const paidTotal = payments
+            .filter((p: any) => p.status === 'paid')
+            .reduce((sum: number, p: any) => sum + (p.amount || 0), 0);
+          if (paidTotal > 0) {
+            setRevenue(paidTotal);
+          }
         } catch (error) {
           console.error("Error loading dashboard data:", error);
         } finally {
@@ -55,13 +74,13 @@ const DashboardView: React.FC<DashboardViewProps> = ({ user, onSelectClient, onO
     loadData();
   }, [user]);
 
-  const appointments = [
+  const [appointments, setAppointments] = useState([
     { id: '1', time: '08:00', clientName: 'Júlia Costa' },
     { id: '2', time: '10:30', clientName: 'Pedro Souza' },
     { id: '3', time: '16:00', clientName: 'Ana Silva' }
-  ];
+  ]);
 
-  const revenue = 12450;
+  const [revenue, setRevenue] = useState(12450);
 
   // Find an at-risk client for the notification
   const atRiskClient = clients.find(c => c.status === 'at-risk' || c.adherence < 60) || clients[0];

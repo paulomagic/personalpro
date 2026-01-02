@@ -405,8 +405,8 @@ const ClientProfileView: React.FC<ClientProfileViewProps> = ({ client: initialCl
                     <button
                       onClick={() => setChartMode('weight')}
                       className={`px-3 py-1 text-[10px] font-black rounded-full uppercase transition-all ${chartMode === 'weight'
-                          ? 'bg-blue-500 text-white'
-                          : 'bg-white/5 text-slate-500 hover:bg-white/10'
+                        ? 'bg-blue-500 text-white'
+                        : 'bg-white/5 text-slate-500 hover:bg-white/10'
                         }`}
                     >
                       Peso
@@ -414,8 +414,8 @@ const ClientProfileView: React.FC<ClientProfileViewProps> = ({ client: initialCl
                     <button
                       onClick={() => setChartMode('fat')}
                       className={`px-3 py-1 text-[10px] font-black rounded-full uppercase transition-all ${chartMode === 'fat'
-                          ? 'bg-amber-500 text-white'
-                          : 'bg-white/5 text-slate-500 hover:bg-white/10'
+                        ? 'bg-amber-500 text-white'
+                        : 'bg-white/5 text-slate-500 hover:bg-white/10'
                         }`}
                     >
                       Gordura
@@ -453,8 +453,8 @@ const ClientProfileView: React.FC<ClientProfileViewProps> = ({ client: initialCl
                                 animate={{ height: `${Math.max(heightPercent, 5)}%` }}
                                 transition={{ delay: i * 0.1 }}
                                 className={`w-full rounded-t-lg cursor-pointer ${chartMode === 'weight'
-                                    ? 'bg-gradient-to-t from-blue-600/20 to-blue-500/80 group-hover:to-blue-400'
-                                    : 'bg-gradient-to-t from-amber-600/20 to-amber-500/80 group-hover:to-amber-400'
+                                  ? 'bg-gradient-to-t from-blue-600/20 to-blue-500/80 group-hover:to-blue-400'
+                                  : 'bg-gradient-to-t from-amber-600/20 to-amber-500/80 group-hover:to-amber-400'
                                   }`}
                               />
                               {/* Tooltip on hover */}
@@ -797,7 +797,35 @@ const ClientProfileView: React.FC<ClientProfileViewProps> = ({ client: initialCl
 
       {/* FAB */}
       <button
-        onClick={() => onStartWorkout({ title: 'Peito e Tríceps', objective: 'Hipertrofia', duration: '45min', exercises: [] })}
+        onClick={() => onStartWorkout({
+          title: 'Treino Rápido',
+          objective: 'Demonstração',
+          duration: '20min',
+          exercises: [
+            {
+              id: 'demo-1',
+              name: 'Supino Reto',
+              category: 'chest',
+              targetMuscle: 'Peitoral',
+              sets: [
+                { reps: 12, rest: 60 },
+                { reps: 10, rest: 60 },
+                { reps: 8, rest: 90 }
+              ]
+            },
+            {
+              id: 'demo-2',
+              name: 'Agachamento Livre',
+              category: 'legs',
+              targetMuscle: 'Quadríceps',
+              sets: [
+                { reps: 15, rest: 90 },
+                { reps: 12, rest: 90 },
+                { reps: 10, rest: 120 }
+              ]
+            }
+          ]
+        })}
         className="fixed bottom-24 right-6 size-14 rounded-full bg-blue-600 text-white shadow-xl shadow-blue-600/30 flex items-center justify-center hover:bg-blue-700 active:scale-95 transition-all z-30"
       >
         <Play size={28} className="ml-1" />

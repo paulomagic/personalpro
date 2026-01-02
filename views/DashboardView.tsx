@@ -12,6 +12,8 @@ import {
   Shield
 } from 'lucide-react';
 import { mockClients } from '../mocks/demoData';
+import { ClientCardSkeleton } from '../components/Skeleton';
+import EmptyState from '../components/EmptyState';
 
 
 interface DashboardViewProps {
@@ -248,8 +250,10 @@ const DashboardView: React.FC<DashboardViewProps> = ({ user, onSelectClient, onO
 
         <div className="space-y-3">
           {loadingClients ? (
-            <div className="py-8 text-center text-slate-600 text-xs animate-pulse uppercase tracking-widest font-black">
-              Sincronizando...
+            <div className="space-y-3">
+              <ClientCardSkeleton />
+              <ClientCardSkeleton />
+              <ClientCardSkeleton />
             </div>
           ) : clients.length > 0 ? (
             clients.map((client) => (
@@ -283,9 +287,14 @@ const DashboardView: React.FC<DashboardViewProps> = ({ user, onSelectClient, onO
               </div>
             ))
           ) : (
-            <div className="py-8 text-center text-slate-600 text-xs">
-              Nenhum aluno ativo no momento.
-            </div>
+            <EmptyState
+              icon="groups"
+              title="Nenhum aluno ainda"
+              description="Adicione seu primeiro aluno para começar a gerenciar treinos"
+              actionLabel="Adicionar Aluno"
+              onAction={() => onNavigate && onNavigate('clients')}
+              variant="minimal"
+            />
           )}
         </div>
       </motion.div>

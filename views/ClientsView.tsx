@@ -4,6 +4,7 @@ import { Search, Plus, Filter, Users, AlertTriangle, Pause, CheckCircle } from '
 import { Client } from '../types';
 import { getClients, createClient, DBClient } from '../services/supabaseClient';
 import AddClientModal from '../components/AddClientModal';
+import { ClientCardSkeleton } from '../components/Skeleton';
 
 interface ClientsViewProps {
     user: any;
@@ -259,8 +260,11 @@ const ClientsView: React.FC<ClientsViewProps> = ({ user, onBack, onSelectClient 
             {/* Clients List */}
             <motion.div variants={itemVariants} className="px-6 space-y-3">
                 {loading ? (
-                    <div className="py-12 text-center text-slate-500 animate-pulse font-bold text-xs uppercase tracking-widest">
-                        Carregando Base de Dados...
+                    <div className="space-y-3">
+                        <ClientCardSkeleton />
+                        <ClientCardSkeleton />
+                        <ClientCardSkeleton />
+                        <ClientCardSkeleton />
                     </div>
                 ) : filteredClients.length > 0 ? (
                     <AnimatePresence>

@@ -3,6 +3,8 @@ import { AreaChart, Area, XAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { motion } from 'framer-motion';
 import { ArrowLeft, TrendingUp, Download, CheckCircle, AlertCircle, Clock } from 'lucide-react';
 import { getPayments, updatePayment, getClients } from '../services/supabaseClient';
+import { PaymentCardSkeleton } from '../components/Skeleton';
+import EmptyState from '../components/EmptyState';
 
 interface FinanceViewProps {
     user: any;
@@ -186,8 +188,11 @@ const FinanceView: React.FC<FinanceViewProps> = ({ user, onBack }) => {
             </motion.header>
 
             {loading ? (
-                <div className="py-24 text-center animate-pulse text-slate-500 font-black text-xs uppercase tracking-[0.3em]">
-                    Sincronizando Fluxo de Caixa...
+                <div className="space-y-4">
+                    <div className="h-48 rounded-[32px] bg-slate-800/50 animate-pulse" />
+                    <PaymentCardSkeleton />
+                    <PaymentCardSkeleton />
+                    <PaymentCardSkeleton />
                 </div>
             ) : (
                 <>
@@ -292,9 +297,12 @@ const FinanceView: React.FC<FinanceViewProps> = ({ user, onBack }) => {
                                 </div>
                             ))
                         ) : (
-                            <div className="py-12 text-center text-slate-600 font-black text-[10px] uppercase tracking-widest">
-                                Nenhuma transação encontrada
-                            </div>
+                            <EmptyState
+                                icon="receipt_long"
+                                title="Nenhuma transação"
+                                description="Cadastre pagamentos dos seus alunos para acompanhar o fluxo de caixa"
+                                variant="minimal"
+                            />
                         )}
                     </motion.div>
                 </>

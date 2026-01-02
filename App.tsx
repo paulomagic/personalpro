@@ -189,7 +189,7 @@ function App() {
       case View.CLIENTS:
         return <ClientsView user={user} onBack={() => navigateTo(View.DASHBOARD)} onSelectClient={(client) => navigateTo(View.CLIENT_PROFILE, client)} />;
       case View.METRICS:
-        return <MetricsView onBack={() => navigateTo(View.DASHBOARD)} />;
+        return <MetricsView user={user} onBack={() => navigateTo(View.DASHBOARD)} />;
       case View.SETTINGS:
         return <SettingsView user={user} onBack={() => navigateTo(View.DASHBOARD)} onLogout={handleLogout} />;
       case View.CALENDAR:

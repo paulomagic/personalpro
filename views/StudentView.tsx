@@ -98,38 +98,49 @@ const StudentView: React.FC<StudentViewProps> = ({
         fetchWorkout();
     }, [clientId, studentName]);
 
+    // Helper to normalize exercises with default sets
+    const normalizeExercises = (exercises: WorkoutExercise[]): WorkoutExercise[] => {
+        return exercises.map(ex => {
+            if (!Array.isArray(ex.sets) || ex.sets.length === 0) {
+                // Create 3 default sets for exercises without sets
+                return {
+                    ...ex,
+                    sets: [
+                        { method: 'simples' as const, reps: '12', load: '-', rest: '60s' },
+                        { method: 'simples' as const, reps: '10', load: '-', rest: '60s' },
+                        { method: 'simples' as const, reps: '8', load: '-', rest: '90s' }
+                    ]
+                };
+            }
+            return ex;
+        });
+    };
+
+    // Track which split has been processed to avoid infinite loops
+    const [processedSplitId, setProcessedSplitId] = useState<string | null>(null);
+
     // Initialize completions when split is selected
-    // Also create default sets for exercises without them
     useEffect(() => {
-        if (selectedSplit && selectedSplit.exercises) {
-            // Ensure each exercise has at least default sets
-            const exercisesWithSets = selectedSplit.exercises.map(ex => {
-                if (!Array.isArray(ex.sets) || ex.sets.length === 0) {
-                    // Create 3 default sets for exercises without sets
-                    return {
-                        ...ex,
-                        sets: [
-                            { method: 'simples' as const, reps: '12', load: '-', rest: '60s' },
-                            { method: 'simples' as const, reps: '10', load: '-', rest: '60s' },
-                            { method: 'simples' as const, reps: '8', load: '-', rest: '90s' }
-                        ]
-                    };
-                }
-                return ex;
-            });
+        if (selectedSplit && selectedSplit.exercises && selectedSplit.id !== processedSplitId) {
+            // Mark as processed to avoid re-running
+            setProcessedSplitId(selectedSplit.id);
 
-            // Update the split with exercises that have sets
-            setSelectedSplit(prev => prev ? { ...prev, exercises: exercisesWithSets } : null);
+            // Normalize exercises with default sets
+            const exercisesWithSets = normalizeExercises(selectedSplit.exercises);
 
+            // Update the split with normalized exercises
+            setSelectedSplit({ ...selectedSplit, exercises: exercisesWithSets });
+
+            // Initialize completions
             setCompletions(
                 exercisesWithSets.map(ex => ({
                     exerciseId: ex.id,
-                    setCompletions: Array.isArray(ex.sets) ? ex.sets.map(() => false) : []
+                    setCompletions: ex.sets.map(() => false)
                 }))
             );
             setActiveExercise(0);
         }
-    }, [selectedSplit?.id]); // Use id to prevent infinite loop
+    }, [selectedSplit, processedSplitId]);
 
     // Calculate progress
     const totalSets = selectedSplit?.exercises?.reduce((acc, ex) => acc + (Array.isArray(ex.sets) ? ex.sets.length : 0), 0) || 0;
@@ -333,7 +344,7 @@ const StudentView: React.FC<StudentViewProps> = ({
                     <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center gap-3">
                             <button
-                                onClick={() => setSelectedSplit(null)}
+                                onClick={() => { setSelectedSplit(null); setProcessedSplitId(null); }}
                                 className="size-10 rounded-full bg-white/10 backdrop-blur-md text-white border border-white/20 flex items-center justify-center active:scale-90 transition-all"
                             >
                                 <ArrowLeft size={20} />
@@ -613,6 +624,7 @@ const StudentView: React.FC<StudentViewProps> = ({
                                 onClick={() => {
                                     setShowCompleteModal(false);
                                     setSelectedSplit(null);
+                                    setProcessedSplitId(null);
                                 }}
                                 className="px-8 py-4 bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-black rounded-2xl shadow-lg shadow-emerald-500/30 active:scale-95 transition-transform"
                             >

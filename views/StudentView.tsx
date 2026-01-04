@@ -99,17 +99,37 @@ const StudentView: React.FC<StudentViewProps> = ({
     }, [clientId, studentName]);
 
     // Initialize completions when split is selected
+    // Also create default sets for exercises without them
     useEffect(() => {
         if (selectedSplit && selectedSplit.exercises) {
+            // Ensure each exercise has at least default sets
+            const exercisesWithSets = selectedSplit.exercises.map(ex => {
+                if (!Array.isArray(ex.sets) || ex.sets.length === 0) {
+                    // Create 3 default sets for exercises without sets
+                    return {
+                        ...ex,
+                        sets: [
+                            { method: 'simples' as const, reps: '12', load: '-', rest: '60s' },
+                            { method: 'simples' as const, reps: '10', load: '-', rest: '60s' },
+                            { method: 'simples' as const, reps: '8', load: '-', rest: '90s' }
+                        ]
+                    };
+                }
+                return ex;
+            });
+
+            // Update the split with exercises that have sets
+            setSelectedSplit(prev => prev ? { ...prev, exercises: exercisesWithSets } : null);
+
             setCompletions(
-                selectedSplit.exercises.map(ex => ({
+                exercisesWithSets.map(ex => ({
                     exerciseId: ex.id,
                     setCompletions: Array.isArray(ex.sets) ? ex.sets.map(() => false) : []
                 }))
             );
             setActiveExercise(0);
         }
-    }, [selectedSplit]);
+    }, [selectedSplit?.id]); // Use id to prevent infinite loop
 
     // Calculate progress
     const totalSets = selectedSplit?.exercises?.reduce((acc, ex) => acc + (Array.isArray(ex.sets) ? ex.sets.length : 0), 0) || 0;
@@ -280,7 +300,7 @@ const StudentView: React.FC<StudentViewProps> = ({
                                                     <Dumbbell size={12} /> {split.exercises?.length || 0} exercícios
                                                 </span>
                                                 <span className="text-[10px] font-bold text-slate-500 flex items-center gap-1">
-                                                    <Layers size={12} /> {split.exercises?.reduce((acc, e) => acc + (e.sets?.length || 0), 0) || 'NaN'} séries
+                                                    <Layers size={12} /> {split.exercises?.reduce((acc, e) => acc + (Array.isArray(e.sets) ? e.sets.length : 0), 0) || 0} séries
                                                 </span>
                                             </div>
                                         </div>

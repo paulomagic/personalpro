@@ -142,7 +142,8 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
   };
 
   const handleDemoLogin = () => {
-    onLogin({ email: 'demo@personalpro.com', name: 'Rodrigo Campanato', demo: true });
+    // Pass null to trigger App.tsx's default demo user creation which includes correct ID and isDemo flag
+    onLogin(null);
   };
 
   const handleGoogleLogin = async () => {

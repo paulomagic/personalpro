@@ -90,7 +90,7 @@ const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({ videoUrl, exerciseN
                                 rel="noopener noreferrer"
                                 className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-500 transition-colors"
                             >
-                                Abrir no YouTube
+                                {isYouTube ? 'Abrir no YouTube' : 'Abrir link original'}
                             </a>
                         </div>
                     )}
@@ -133,7 +133,7 @@ const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({ videoUrl, exerciseN
                         rel="noopener noreferrer"
                         className="text-xs font-bold text-blue-500 hover:text-blue-400 flex items-center gap-1"
                     >
-                        <span>Assistir no YouTube</span>
+                        <span>{isYouTube ? 'Assistir no YouTube' : 'Abrir link original'}</span>
                         <span className="material-symbols-outlined text-sm">open_in_new</span>
                     </a>
                 </div>

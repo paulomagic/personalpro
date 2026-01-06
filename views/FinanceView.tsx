@@ -3,6 +3,7 @@ import { AreaChart, Area, XAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { motion } from 'framer-motion';
 import { ArrowLeft, TrendingUp, Download, CheckCircle, AlertCircle, Clock } from 'lucide-react';
 import { getPayments, updatePayment, getClients } from '../services/supabaseClient';
+import { mockClients } from '../mocks/demoData';
 import { PaymentCardSkeleton } from '../components/Skeleton';
 import EmptyState from '../components/EmptyState';
 
@@ -36,6 +37,23 @@ const FinanceView: React.FC<FinanceViewProps> = ({ user, onBack }) => {
             setLoading(true);
 
             try {
+                // Demo Mode handling
+                if (user.isDemo) {
+                    const demoPayments = mockClients.slice(0, 5).map((c: any, i: number) => ({
+                        id: `demo-${i}`,
+                        clientName: c.name,
+                        clientAvatar: c.avatar || c.avatar_url || '',
+                        amount: 350,
+                        dueDate: new Date(new Date().setDate(15 + i)).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }),
+                        status: i % 3 === 0 ? 'paid' : i % 3 === 1 ? 'pending' : 'overdue' as any,
+                        plan: 'Premium',
+                        phone: c.phone || ''
+                    }));
+                    setPayments(demoPayments);
+                    setLoading(false);
+                    return;
+                }
+
                 const dbPayments = await getPayments(user.id);
 
                 if (dbPayments.length > 0) {

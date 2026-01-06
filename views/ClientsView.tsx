@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Search, Plus, Filter, Users, AlertTriangle, Pause, CheckCircle } from 'lucide-react';
 import { Client } from '../types';
 import { getClients, createClient, DBClient } from '../services/supabaseClient';
+import { mockClients } from '../mocks/demoData';
 import AddClientModal from '../components/AddClientModal';
 import { ClientCardSkeleton } from '../components/Skeleton';
 
@@ -28,8 +29,17 @@ const ClientsView: React.FC<ClientsViewProps> = ({ user, onBack, onSelectClient 
 
     // Fetch clients from Supabase
     const fetchClients = async () => {
-        if (!user?.id) return;
         setLoading(true);
+        if (user?.isDemo || user?.id === 'demo-user-id') {
+            setClients(mockClients);
+            setLoading(false);
+            return;
+        }
+
+        if (!user?.id) {
+            setLoading(false);
+            return;
+        }
         try {
             const data = await getClients(user.id);
             // Map DBClient to Client type
@@ -358,7 +368,13 @@ const ClientsView: React.FC<ClientsViewProps> = ({ user, onBack, onSelectClient 
                             {!searchTerm && clients.length === 0 && (
                                 <button
                                     onClick={async () => {
-                                        if (!user?.id || user.id === 'demo-user-id' || user.isDemo) {
+                                        if (user?.id === 'demo-user-id' || user.isDemo) {
+                                            // Demo user already has mock clients, so this shouldn't be needed/visible, 
+                                            // but if they somehow get here with empty list:
+                                            setClients(mockClients);
+                                            return;
+                                        }
+                                        if (!user?.id) {
                                             showToast('Faça login para usar este recurso', 'error');
                                             return;
                                         }

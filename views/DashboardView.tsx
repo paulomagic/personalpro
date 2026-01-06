@@ -39,13 +39,17 @@ const DashboardView: React.FC<DashboardViewProps> = ({ user, onSelectClient, onO
           const { getClients, getAppointments, getPayments } = await import('../services/supabaseClient');
 
           // Fetch clients
-          const data = await getClients(user.id);
-          const mappedData = data.map((c: any) => ({
-            ...c,
-            startDate: c.created_at,
-            avatar: c.avatar || c.avatar_url
-          }));
-          setClients(mappedData.slice(0, 3));
+          if (user.isDemo) {
+            setClients(mockClients.slice(0, 3));
+          } else {
+            const data = await getClients(user.id);
+            const mappedData = data.map((c: any) => ({
+              ...c,
+              startDate: c.created_at,
+              avatar: c.avatar || c.avatar_url
+            }));
+            setClients(mappedData.slice(0, 3));
+          }
 
           // Fetch today's appointments
           const today = new Date().toISOString().split('T')[0];
@@ -68,11 +72,30 @@ const DashboardView: React.FC<DashboardViewProps> = ({ user, onSelectClient, onO
           }
         } catch (error) {
           console.error("Error loading dashboard data:", error);
+          // Fallback to mock data on error or if empty in demo
+          if (user.isDemo) {
+            setClients(mockClients.slice(0, 3));
+            setAppointmentData(); // Helper or just rely on state default
+          }
         } finally {
           setLoadingClients(false);
         }
+      } else if (user?.isDemo) {
+        // Direct Demo Mode handling without api calls
+        setClients(mockClients.slice(0, 3));
+        setLoadingClients(false);
       }
     };
+
+    // Helper to set appointments (reusing current state default, so actually no-op needed if we just don't overwrite it)
+    const setAppointmentData = () => {
+      setAppointments([
+        { id: '1', time: '08:00', clientName: 'Júlia Costa' },
+        { id: '2', time: '10:30', clientName: 'Pedro Souza' },
+        { id: '3', time: '16:00', clientName: 'Ana Silva' }
+      ]);
+    };
+
     loadData();
   }, [user]);
 

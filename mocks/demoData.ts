@@ -316,7 +316,7 @@ export const mockExercises: WorkoutExercise[] = [
     { id: 'sh6', name: 'Arnold Press', category: 'musculacao', sets: [{ method: 'simples', reps: '10', load: '12kg', rest: '60s' }], targetMuscle: 'Ombro/Trapézio' },
 
     // ============ SUPERIOR: PEITO ============
-    { id: 'ch1', name: 'Supino Reto Barra', category: 'musculacao', sets: [{ method: 'simples', reps: '10', load: '60kg', rest: '90s' }], targetMuscle: 'Peito', videoUrl: 'https://upload.wikimedia.org/wikipedia/commons/transcoded/c/c1/Bench_press_-_exercise_demonstration_video.webm/Bench_press_-_exercise_demonstration_video.webm.480p.vp9.webm' },
+    { id: 'ch1', name: 'Supino Reto Barra', category: 'musculacao', sets: [{ method: 'simples', reps: '10', load: '60kg', rest: '90s' }], targetMuscle: 'Peito', videoUrl: 'https://upload.wikimedia.org/wikipedia/commons/d/df/Bench_press_-_exercise_demonstration_video.webm' },
     { id: 'ch2', name: 'Supino Inclinado Halteres', category: 'musculacao', sets: [{ method: 'simples', reps: '12', load: '24kg', rest: '90s' }], targetMuscle: 'Peito' },
     { id: 'ch3', name: 'Crossover (Polia Alta)', category: 'musculacao', sets: [{ method: 'dropset', reps: '12+10', load: '20kg', rest: '60s' }], targetMuscle: 'Peito' },
     { id: 'ch4', name: 'Peck Deck (Voador)', category: 'musculacao', sets: [{ method: 'biset', reps: '15', load: '40kg', rest: '45s' }], targetMuscle: 'Peito' },

@@ -25,12 +25,20 @@ const isYouTubeUrl = (url: string): boolean => {
     return url.includes('youtube.com') || url.includes('youtu.be');
 };
 
+// Helper to determine video MIME type
+const getVideoType = (url: string): string => {
+    if (url.toLowerCase().endsWith('.webm')) return 'video/webm';
+    if (url.toLowerCase().endsWith('.ogv')) return 'video/ogg';
+    return 'video/mp4'; // Default to mp4
+};
+
 const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({ videoUrl, exerciseName, onClose }) => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(false);
 
     const videoId = getYouTubeVideoId(videoUrl);
     const isYouTube = isYouTubeUrl(videoUrl);
+    const videoType = getVideoType(videoUrl);
 
     const handleIframeLoad = () => {
         setLoading(false);
@@ -116,7 +124,7 @@ const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({ videoUrl, exerciseN
                             onLoadedData={handleIframeLoad}
                             onError={handleIframeError}
                         >
-                            <source src={videoUrl} type="video/mp4" />
+                            <source src={videoUrl} type={videoType} />
                             Seu navegador não suporta vídeo.
                         </video>
                     )}

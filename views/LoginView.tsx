@@ -274,7 +274,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
           <div className="size-8 bg-blue-600 rounded-lg flex items-center justify-center">
             <span className="material-symbols-outlined text-white text-lg">fitness_center</span>
           </div>
-          <span className="font-black text-xl tracking-tight text-white">Apex Ultra</span>
+          <span className="font-black text-xl tracking-tight text-white">Personal PRO</span>
         </div>
       </div>
 

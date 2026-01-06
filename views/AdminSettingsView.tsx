@@ -137,7 +137,7 @@ const AdminSettingsView: React.FC<AdminSettingsViewProps> = ({ onBack }) => {
                     transition={{ delay: 0.3 }}
                     className="text-center text-xs text-slate-600 py-4"
                 >
-                    <p>Apex Ultra v2.0.0</p>
+                    <p>Personal PRO v2.0.0</p>
                     <p className="mt-1">PersonalPro © 2024</p>
                 </motion.div>
             </main>

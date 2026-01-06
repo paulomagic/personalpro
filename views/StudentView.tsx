@@ -4,6 +4,7 @@ import { Check, Clock, Dumbbell, ChevronRight, Play, Pause, RotateCcw, Trophy, F
 import { WorkoutExercise, ExerciseSet, WorkoutSplit } from '../types';
 import { getClientCurrentWorkout } from '../services/supabaseClient';
 import { mockExercises } from '../mocks/demoData';
+import VideoPlayerModal from '../components/VideoPlayerModal';
 
 interface StudentViewProps {
     clientId?: string;          // ID do cliente para buscar treinos reais
@@ -62,6 +63,8 @@ const StudentView: React.FC<StudentViewProps> = ({
     const [isResting, setIsResting] = useState(false);
     const [restTime, setRestTime] = useState(0);
     const [showCompleteModal, setShowCompleteModal] = useState(false);
+    const [showVideoModal, setShowVideoModal] = useState(false);
+    const [activeVideo, setActiveVideo] = useState<{ url: string; name: string } | null>(null);
 
     // Fetch workout data on mount
     useEffect(() => {
@@ -462,6 +465,23 @@ const StudentView: React.FC<StudentViewProps> = ({
                                 />
                             </div>
 
+                            {/* Video Button - Student View */}
+                            {isActive && exercise.videoUrl && (
+                                <div className="px-4 pb-2">
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setActiveVideo({ url: exercise.videoUrl!, name: exercise.name });
+                                            setShowVideoModal(true);
+                                        }}
+                                        className="flex items-center gap-2 px-3 py-1.5 bg-blue-500/10 hover:bg-blue-500/20 rounded-lg text-blue-400 text-[10px] font-black uppercase tracking-widest transition-all active:scale-95"
+                                    >
+                                        <Play size={12} fill="currentColor" />
+                                        Ver Execução
+                                    </button>
+                                </div>
+                            )}
+
                             {/* Sets (Expanded) */}
                             <AnimatePresence>
                                 {isActive && (
@@ -634,6 +654,15 @@ const StudentView: React.FC<StudentViewProps> = ({
                     </motion.div>
                 )}
             </AnimatePresence>
+
+            {/* Video Modal */}
+            {showVideoModal && activeVideo && (
+                <VideoPlayerModal
+                    videoUrl={activeVideo.url}
+                    exerciseName={activeVideo.name}
+                    onClose={() => setShowVideoModal(false)}
+                />
+            )}
         </div>
     );
 };

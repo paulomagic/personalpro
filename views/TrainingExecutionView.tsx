@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Workout, WorkoutExercise, Exercise } from '../types';
+import VideoPlayerModal from '../components/VideoPlayerModal';
 
 interface TrainingExecutionViewProps {
   workout: Workout;
@@ -23,6 +24,7 @@ const TrainingExecutionView: React.FC<TrainingExecutionViewProps> = ({ workout, 
   const [isResting, setIsResting] = useState(false);
   const [restTime, setRestTime] = useState(90);
   const [elapsedTime, setElapsedTime] = useState(0);
+  const [showVideoModal, setShowVideoModal] = useState(false);
 
   const currentExercise = exercises[currentExerciseIndex] as WorkoutExercise;
 
@@ -32,6 +34,7 @@ const TrainingExecutionView: React.FC<TrainingExecutionViewProps> = ({ workout, 
   const targetReps = currentExercise?.sets?.[currentSet - 1]?.reps || 12;
   const targetMuscle = currentExercise?.targetMuscle || currentExercise?.category || 'Músculo';
   const restSeconds = currentExercise?.sets?.[currentSet - 1]?.rest || 90;
+  const videoUrl = currentExercise?.videoUrl || '';
 
   // Timer effect
   useEffect(() => {
@@ -162,6 +165,17 @@ const TrainingExecutionView: React.FC<TrainingExecutionViewProps> = ({ workout, 
                   <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest">{targetMuscle}</p>
                 </div>
               </div>
+
+              {/* Video Button */}
+              {videoUrl && (
+                <button
+                  onClick={() => setShowVideoModal(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/15 rounded-xl text-white text-sm font-medium transition-all active:scale-95"
+                >
+                  <span className="material-symbols-outlined text-lg">play_circle</span>
+                  Ver Execução
+                </button>
+              )}
             </div>
 
             {/* Reps & Load Display */}
@@ -204,6 +218,15 @@ const TrainingExecutionView: React.FC<TrainingExecutionViewProps> = ({ workout, 
           </>
         )}
       </main>
+
+      {/* Video Modal */}
+      {showVideoModal && videoUrl && (
+        <VideoPlayerModal
+          videoUrl={videoUrl}
+          exerciseName={exerciseName}
+          onClose={() => setShowVideoModal(false)}
+        />
+      )}
     </div>
   );
 };

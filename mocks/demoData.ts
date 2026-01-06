@@ -316,7 +316,7 @@ export const mockExercises: WorkoutExercise[] = [
     { id: 'sh6', name: 'Arnold Press', category: 'musculacao', sets: [{ method: 'simples', reps: '10', load: '12kg', rest: '60s' }], targetMuscle: 'Ombro/Trapézio' },
 
     // ============ SUPERIOR: PEITO ============
-    { id: 'ch1', name: 'Supino Reto Barra', category: 'musculacao', sets: [{ method: 'simples', reps: '10', load: '60kg', rest: '90s' }], targetMuscle: 'Peito', videoUrl: 'https://www.youtube.com/watch?v=l7j85sM4BQI' },
+    { id: 'ch1', name: 'Supino Reto Barra', category: 'musculacao', sets: [{ method: 'simples', reps: '10', load: '60kg', rest: '90s' }], targetMuscle: 'Peito', videoUrl: 'https://www.youtube.com/watch?v=gRVjAtPip0Y' },
     { id: 'ch2', name: 'Supino Inclinado Halteres', category: 'musculacao', sets: [{ method: 'simples', reps: '12', load: '24kg', rest: '90s' }], targetMuscle: 'Peito' },
     { id: 'ch3', name: 'Crossover (Polia Alta)', category: 'musculacao', sets: [{ method: 'dropset', reps: '12+10', load: '20kg', rest: '60s' }], targetMuscle: 'Peito' },
     { id: 'ch4', name: 'Peck Deck (Voador)', category: 'musculacao', sets: [{ method: 'biset', reps: '15', load: '40kg', rest: '45s' }], targetMuscle: 'Peito' },
@@ -332,7 +332,7 @@ export const mockExercises: WorkoutExercise[] = [
     { id: 'bk6', name: 'Remada Unilateral Halter', category: 'musculacao', sets: [{ method: 'simples', reps: '12 cada', load: '20kg', rest: '60s' }], targetMuscle: 'Costas' },
 
     // ============ SUPERIOR: BÍCEPS ============
-    { id: 'bi1', name: 'Rosca Direta Barra W', category: 'musculacao', sets: [{ method: 'simples', reps: '12', load: '20kg', rest: '60s' }], targetMuscle: 'Bíceps', videoUrl: 'https://www.youtube.com/watch?v=2yMO5X7p7eo' },
+    { id: 'bi1', name: 'Rosca Direta Barra W', category: 'musculacao', sets: [{ method: 'simples', reps: '12', load: '20kg', rest: '60s' }], targetMuscle: 'Bíceps', videoUrl: 'https://www.youtube.com/watch?v=iM_0rVgO6xI' },
     { id: 'bi2', name: 'Rosca Alternada com Rotação', category: 'musculacao', sets: [{ method: 'simples', reps: '12', load: '12kg', rest: '60s' }], targetMuscle: 'Bíceps' },
     { id: 'bi3', name: 'Rosca Scott Máquina', category: 'musculacao', sets: [{ method: 'dropset', reps: '10+8', load: '30kg', rest: '60s' }], targetMuscle: 'Bíceps' },
     { id: 'bi4', name: 'Rosca Martelo', category: 'musculacao', sets: [{ method: 'simples', reps: '12', load: '14kg', rest: '60s' }], targetMuscle: 'Bíceps' },
@@ -346,7 +346,7 @@ export const mockExercises: WorkoutExercise[] = [
     { id: 'tri5', name: 'Paralela', category: 'musculacao', sets: [{ method: 'restPause', reps: 'Max+Max', load: 'Corporal', rest: '20s' }], targetMuscle: 'Tríceps' },
 
     // ============ INFERIOR: QUADRÍCEPS ============
-    { id: 'quad1', name: 'Agachamento Livre', category: 'musculacao', sets: [{ method: 'simples', reps: '10', load: '80kg', rest: '120s' }], targetMuscle: 'Quadríceps', videoUrl: 'https://www.youtube.com/watch?v=6A21S4h8w10' },
+    { id: 'quad1', name: 'Agachamento Livre', category: 'musculacao', sets: [{ method: 'simples', reps: '10', load: '80kg', rest: '120s' }], targetMuscle: 'Quadríceps', videoUrl: 'https://www.youtube.com/watch?v=ultWZbUMPL8' },
     { id: 'quad2', name: 'Leg Press 45', category: 'musculacao', sets: [{ method: 'simples', reps: '12', load: '200kg', rest: '120s' }], targetMuscle: 'Quadríceps' },
     { id: 'quad3', name: 'Cadeira Extensora', category: 'musculacao', sets: [{ method: 'dropset', reps: '15+10', load: '50kg', rest: '60s' }], targetMuscle: 'Quadríceps' },
     { id: 'quad4', name: 'Agachamento Búlgaro', category: 'musculacao', sets: [{ method: 'simples', reps: '10/cada', load: '10kg', rest: '90s' }], targetMuscle: 'Quadríceps' },

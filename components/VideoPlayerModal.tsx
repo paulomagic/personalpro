@@ -123,10 +123,19 @@ const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({ videoUrl, exerciseN
                 </div>
 
                 {/* Footer tip */}
-                <div className="p-4 bg-slate-900/50 border-t border-white/5">
-                    <p className="text-slate-500 text-xs text-center">
-                        Observe a postura e amplitude do movimento
+                <div className="p-4 bg-slate-900/50 border-t border-white/5 flex justify-between items-center">
+                    <p className="text-slate-500 text-xs">
+                        Observe a postura e amplitude
                     </p>
+                    <a
+                        href={videoUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs font-bold text-blue-500 hover:text-blue-400 flex items-center gap-1"
+                    >
+                        <span>Assistir no YouTube</span>
+                        <span className="material-symbols-outlined text-sm">open_in_new</span>
+                    </a>
                 </div>
             </div>
         </div>

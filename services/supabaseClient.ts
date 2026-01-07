@@ -29,6 +29,8 @@ export interface DBClient {
     weight?: number;
     height?: number;
     observations?: string;
+    injuries?: string;
+    preferences?: string;
     status: 'active' | 'inactive' | 'at-risk';
     adherence: number;
     created_at: string;

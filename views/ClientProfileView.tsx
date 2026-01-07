@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Settings, Play, Pause, AlertTriangle, CheckCircle, Calendar, FileText, TrendingUp, Camera, Dumbbell, Clock, Phone, Mail, Edit, Save, X, PlusCircle, User, Zap, Sparkles } from 'lucide-react';
+import { ArrowLeft, Settings, Play, Pause, AlertTriangle, CheckCircle, Calendar, FileText, TrendingUp, Camera, Dumbbell, Clock, Phone, Mail, Edit, Save, X, PlusCircle, User, Zap, Sparkles, UserPlus } from 'lucide-react';
 import { Client, MissedClass } from '../types';
 import { analyzeClientProgress } from '../services/geminiService';
 import { updateClient } from '../services/supabaseClient';
+import InviteStudentModal from '../components/InviteStudentModal';
 
 interface ClientProfileViewProps {
   client: Client;
+  coachId?: string;
   onBack: () => void;
   onStartWorkout: (workout: any) => void;
   onStartAssessment: () => void;
@@ -15,7 +17,7 @@ interface ClientProfileViewProps {
   onSportTraining?: () => void;
 }
 
-const ClientProfileView: React.FC<ClientProfileViewProps> = ({ client: initialClient, onBack, onStartWorkout, onStartAssessment, onCreateWorkout, onStudentView, onSportTraining }) => {
+const ClientProfileView: React.FC<ClientProfileViewProps> = ({ client: initialClient, coachId, onBack, onStartWorkout, onStartAssessment, onCreateWorkout, onStudentView, onSportTraining }) => {
 
 
   const [client, setClient] = useState<Client>({
@@ -28,6 +30,7 @@ const ClientProfileView: React.FC<ClientProfileViewProps> = ({ client: initialCl
   const [isEditing, setIsEditing] = useState(false);
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [showMissedClassModal, setShowMissedClassModal] = useState(false);
+  const [showInviteModal, setShowInviteModal] = useState(false);
 
   // Fetch full client data on mount
   useEffect(() => {
@@ -220,12 +223,24 @@ const ClientProfileView: React.FC<ClientProfileViewProps> = ({ client: initialCl
           >
             <ArrowLeft size={20} />
           </button>
-          <button
-            onClick={() => setShowStatusModal(true)}
-            className="size-10 rounded-full bg-white/10 backdrop-blur-md text-white border border-white/20 flex items-center justify-center"
-          >
-            <Settings size={20} />
-          </button>
+          <div className="flex items-center gap-2">
+            {/* Invite Student Button */}
+            {coachId && (
+              <button
+                onClick={() => setShowInviteModal(true)}
+                className="size-10 rounded-full bg-emerald-500/20 backdrop-blur-md text-emerald-400 border border-emerald-500/30 flex items-center justify-center hover:bg-emerald-500/30 transition-colors"
+                title="Convidar Aluno"
+              >
+                <UserPlus size={18} />
+              </button>
+            )}
+            <button
+              onClick={() => setShowStatusModal(true)}
+              className="size-10 rounded-full bg-white/10 backdrop-blur-md text-white border border-white/20 flex items-center justify-center"
+            >
+              <Settings size={20} />
+            </button>
+          </div>
         </div>
 
         {/* Profile Info */}
@@ -1058,6 +1073,16 @@ const ClientProfileView: React.FC<ClientProfileViewProps> = ({ client: initialCl
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Invite Student Modal */}
+      <InviteStudentModal
+        isOpen={showInviteModal}
+        onClose={() => setShowInviteModal(false)}
+        coachId={coachId || ''}
+        clientId={client.id}
+        clientName={client.name}
+        clientEmail={client.email}
+      />
     </div>
   );
 };

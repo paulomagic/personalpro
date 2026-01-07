@@ -232,6 +232,7 @@ function App() {
       case View.CLIENT_PROFILE:
         return <ClientProfileView
           client={selectedClient!}
+          coachId={user?.id}
           onBack={() => navigateTo(View.DASHBOARD)}
           onStartWorkout={(workout) => navigateTo(View.TRAINING_EXECUTION, workout)}
           onStartAssessment={() => navigateTo(View.ASSESSMENT)}

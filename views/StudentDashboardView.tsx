@@ -32,7 +32,7 @@ const StudentDashboardView: React.FC<StudentDashboardViewProps> = ({
     const [clientData, setClientData] = useState<Client | null>(null);
     const [coachName, setCoachName] = useState('Seu Personal');
 
-    const studentName = user?.user_metadata?.name || user?.user_metadata?.full_name || 'Atleta';
+    const studentName = user?.user_metadata?.name || user?.user_metadata?.full_name || 'Aluno';
 
     useEffect(() => {
         const loadData = async () => {

@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="pt-BR"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Tela de Treinos</title>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#13ec80",
+                        "background-light": "#f6f8f7",
+                        "background-dark": "#102219",
+                        "surface-dark": "#193326",
+                        "surface-border": "#32674d",
+                        "text-secondary": "#92c9ad",
+                    },
+                    fontFamily: {
+                        "display": ["Lexend", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        /* Hide scrollbar for Chrome, Safari and Opera */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        /* Hide scrollbar for IE, Edge and Firefox */
+        .no-scrollbar {
+            -ms-overflow-style: none;  /* IE and Edge */
+            scrollbar-width: none;  /* Firefox */
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display text-[#11221a] dark:text-white antialiased selection:bg-primary selection:text-background-dark pb-24">
+<!-- Top App Bar -->
+<div class="sticky top-0 z-20 flex items-center bg-background-light dark:bg-background-dark/95 backdrop-blur-md p-4 pb-2 justify-between border-b dark:border-white/5 border-black/5">
+<div class="flex items-center gap-3">
+<div class="flex size-12 shrink-0 items-center justify-center">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10 border-2 border-primary" data-alt="Portrait of a fit athlete smiling" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuChr4LeuxpeRtpuBLoDFqgWlqNd_qx6ClTkQRqpWGcFJvNKy2jzijgU2AzRg-IK1hsdb46LlTZf45_8iR1x7XES4W3--8PCCT-6FRRcrcuKgnnyjN-qkHFaCaWhilFZmWqb2qs95I9Evuuy79Lo1RiJFKetfYlUX36u7da0C-eFD7IQuZ-jk5Rk1NjPxatCamXoRAG1IOAIa_s3NcWWJCvAc-GaXJLR9CTYW04rYnazfqoG5gXHorV3Smy9f4vDjgkkJGH2w3Hg4IV1");'></div>
+</div>
+<div class="flex flex-col">
+<p class="text-xs font-normal text-text-secondary">Bom dia,</p>
+<h2 class="text-lg font-bold leading-tight tracking-[-0.015em]">Alex Atleta!</h2>
+</div>
+</div>
+<div class="flex w-12 items-center justify-end">
+<button class="flex items-center justify-center rounded-full h-10 w-10 bg-surface-dark/50 dark:bg-surface-dark hover:bg-surface-border transition-colors text-white">
+<span class="material-symbols-outlined text-primary" style="font-size: 24px;">notifications</span>
+</button>
+</div>
+</div>
+<!-- Stats Section -->
+<div class="flex flex-wrap gap-3 px-4 py-6">
+<div class="flex min-w-[100px] flex-1 basis-[fit-content] flex-col gap-1 rounded-xl border border-surface-border bg-surface-dark/30 p-4 items-start shadow-sm">
+<div class="flex items-center justify-between w-full mb-1">
+<span class="material-symbols-outlined text-primary" style="font-size: 20px;">fitness_center</span>
+</div>
+<p class="text-white tracking-light text-2xl font-bold leading-tight">3</p>
+<p class="text-text-secondary text-xs font-normal leading-normal">Treinos esta semana</p>
+</div>
+<div class="flex min-w-[100px] flex-1 basis-[fit-content] flex-col gap-1 rounded-xl border border-surface-border bg-surface-dark/30 p-4 items-start shadow-sm">
+<div class="flex items-center justify-between w-full mb-1">
+<span class="material-symbols-outlined text-primary" style="font-size: 20px;">local_fire_department</span>
+</div>
+<p class="text-white tracking-light text-2xl font-bold leading-tight">320</p>
+<p class="text-text-secondary text-xs font-normal leading-normal">Kcal hoje</p>
+</div>
+<div class="flex min-w-[100px] flex-1 basis-[fit-content] flex-col gap-1 rounded-xl border border-surface-border bg-surface-dark/30 p-4 items-start shadow-sm">
+<div class="flex items-center justify-between w-full mb-1">
+<span class="material-symbols-outlined text-primary" style="font-size: 20px;">timer</span>
+</div>
+<p class="text-white tracking-light text-2xl font-bold leading-tight">12</p>
+<p class="text-text-secondary text-xs font-normal leading-normal">Horas totais</p>
+</div>
+</div>
+<!-- Featured Workout -->
+<div class="flex flex-col gap-2">
+<h2 class="text-white tracking-light text-[22px] font-bold leading-tight px-4 text-left">Destaque do Dia</h2>
+<div class="p-4 pt-0 @container">
+<div class="flex flex-col items-stretch justify-start rounded-xl @xl:flex-row @xl:items-start shadow-lg bg-surface-dark border border-white/5 overflow-hidden group cursor-pointer relative">
+<!-- Image Container with Overlay -->
+<div class="w-full relative h-48 sm:h-56 bg-center bg-no-repeat bg-cover" data-alt="High intensity interval training session with motion blur" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuDpPD2EOraCK703suZvJh2uwzwZoJX5pFF2-yLV0RkVrlKjoighLgoLjSoU9i1ugV2kguaD_yaDp2_ty52cRLWLkXrukBUGZEz8HMSV5zc3JhkdLMe-7WcA9p2lf5I4N3GUkDp-zmmwmybmbn1arYfxAD96mmAEzDxOtMxHfxTzekeFbrZ5QmcxAUM0MF1PEcstjgceyIlF_HKXkobnqXuqMRV1QLA5uMJPoMDSuxy6gnSz9i67ZAW7SwHjK6xEJDQ3_qgjGAQfFE-h");'>
+<div class="absolute inset-0 bg-gradient-to-t from-background-dark/90 to-transparent"></div>
+<div class="absolute bottom-3 left-3 flex gap-2">
+<span class="px-2 py-1 rounded bg-black/40 backdrop-blur-sm text-xs text-white font-medium border border-white/10">Intenso</span>
+<span class="px-2 py-1 rounded bg-black/40 backdrop-blur-sm text-xs text-white font-medium border border-white/10">20 min</span>
+</div>
+</div>
+<div class="flex w-full grow flex-col items-stretch justify-center gap-3 p-4">
+<div>
+<p class="text-white text-xl font-bold leading-tight tracking-[-0.015em] mb-1">HIIT Explosivo</p>
+<p class="text-text-secondary text-sm font-normal leading-normal line-clamp-2">Queime calorias rapidamente com este circuito de alta intensidade focado em corpo inteiro.</p>
+</div>
+<div class="flex items-center gap-3 justify-between mt-2">
+<div class="flex -space-x-2">
+<div class="w-7 h-7 rounded-full border-2 border-surface-dark bg-gray-600" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCSS4PiklpLtXmLxWWo9M2iPnJVm8VSu9IEpYGuYRSmkOt6-tofTdjV4OpuMCD7Sh6DRpvMy922Vg6TE-lR4i3DoBwiWdzoNfPZQkbDEAhUoihExO17JzAsgr-YYEULPsSeos9yNIxvY1b43-2h3cllokZE-voz8kgYSFBZ5OlInPDVaZ0BeqzNUQ9aPjTVydk3sU3GqezduzlZHUHASYVnWyIj6F-SWGZPv8Ou0sUa82qguv168JYMQFtm4HqZXfPCrMrFtpp8lH0V'); background-size: cover;"></div>
+<div class="w-7 h-7 rounded-full border-2 border-surface-dark bg-gray-600" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBSr44G2hrCEzVeRBKFCAs2_6v2kW1OaGtGoMIVab05wfoy1ln8dFFEeubS8j7kph_fI4n6J37jDDFfRVfzK_gnoEtNZRIXYtnXcc4tRkJQWBpCW97Q81LIZTgu6VKmCevVzc7KLDFHR8bq9yPz25nFJOLmma_yxp8IblBjIRJlb-QVah6wrDSKngksG67RnZX-pI1KHWyhTlw5l2O1aTbqsu6tgeJYA7qmL3HIjs2a3gr0bZh1LSLY9vGKUw8vJdIWrdjojU4JxE1N'); background-size: cover;"></div>
+<div class="w-7 h-7 rounded-full border-2 border-surface-dark bg-gray-600 flex items-center justify-center text-[10px] bg-surface-border text-white font-bold">+120</div>
+</div>
+<button class="flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-9 px-5 bg-primary hover:bg-primary/90 transition-colors text-background-dark text-sm font-bold leading-normal shadow-[0_0_15px_rgba(19,236,128,0.3)]">
+<span class="truncate">Começar</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Categories -->
+<div class="flex flex-col mt-4">
+<div class="flex items-center justify-between px-4 pb-3">
+<h2 class="text-white tracking-light text-[22px] font-bold leading-tight">Categorias</h2>
+<a class="text-primary text-sm font-medium hover:underline" href="#">Ver todas</a>
+</div>
+<div class="flex overflow-x-auto gap-3 px-4 pb-4 no-scrollbar snap-x">
+<!-- Category Item 1 -->
+<button class="snap-start shrink-0 flex flex-col items-center justify-center gap-2 w-28 h-28 rounded-xl bg-surface-dark border border-surface-border hover:border-primary/50 transition-colors group">
+<div class="p-3 rounded-full bg-surface-border/30 text-primary group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined">directions_run</span>
+</div>
+<span class="text-white text-sm font-medium">Cardio</span>
+</button>
+<!-- Category Item 2 -->
+<button class="snap-start shrink-0 flex flex-col items-center justify-center gap-2 w-28 h-28 rounded-xl bg-surface-dark border border-surface-border hover:border-primary/50 transition-colors group">
+<div class="p-3 rounded-full bg-surface-border/30 text-primary group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined">fitness_center</span>
+</div>
+<span class="text-white text-sm font-medium">Força</span>
+</button>
+<!-- Category Item 3 -->
+<button class="snap-start shrink-0 flex flex-col items-center justify-center gap-2 w-28 h-28 rounded-xl bg-surface-dark border border-surface-border hover:border-primary/50 transition-colors group">
+<div class="p-3 rounded-full bg-surface-border/30 text-primary group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined">self_improvement</span>
+</div>
+<span class="text-white text-sm font-medium">Yoga</span>
+</button>
+<!-- Category Item 4 -->
+<button class="snap-start shrink-0 flex flex-col items-center justify-center gap-2 w-28 h-28 rounded-xl bg-surface-dark border border-surface-border hover:border-primary/50 transition-colors group">
+<div class="p-3 rounded-full bg-surface-border/30 text-primary group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined">accessibility_new</span>
+</div>
+<span class="text-white text-sm font-medium">Flexibilidade</span>
+</button>
+</div>
+</div>
+<!-- Create Custom Workout CTA -->
+<div class="px-4 mt-2">
+<button class="w-full group flex items-center justify-between p-4 rounded-xl border border-dashed border-primary/40 hover:border-primary hover:bg-primary/5 transition-all cursor-pointer">
+<div class="flex items-center gap-4">
+<div class="bg-primary/20 p-2 rounded-lg text-primary">
+<span class="material-symbols-outlined">add</span>
+</div>
+<div class="text-left">
+<p class="text-white font-bold text-base">Criar Treino Personalizado</p>
+<p class="text-text-secondary text-sm">Monte sua rotina ideal hoje</p>
+</div>
+</div>
+<span class="material-symbols-outlined text-primary group-hover:translate-x-1 transition-transform">chevron_right</span>
+</button>
+</div>
+<!-- Recent History -->
+<div class="flex flex-col mt-8">
+<h2 class="text-white tracking-light text-[22px] font-bold leading-tight px-4 pb-3">Histórico Recente</h2>
+<div class="flex flex-col px-4 gap-3">
+<!-- History Item 1 -->
+<div class="flex items-center justify-between p-3 rounded-xl bg-surface-dark border border-transparent hover:border-surface-border transition-colors">
+<div class="flex items-center gap-4">
+<div class="relative w-14 h-14 rounded-lg overflow-hidden bg-gray-800 shrink-0">
+<div class="absolute inset-0 bg-cover bg-center" data-alt="Abstract weights pattern" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuDQFkA4wJRMRIi2bPsOUPLf-dQvIW4CKZNl5oPACR1GFrMIlBK6Ts3aeY-5nJ3L-c_H8W0XYQM3rwWZsbuYxC8C9v8eqoSN53wYRt9p2g3Z7QwAikeIxWbhvnDJx7TIYOndWxTgg6k34FrmZ-Rz_5JM43mkKe_ZouTiqeDLcTk-kpXaatLBozuIqQNcvY1ebSZTB4fWYU0iQihYM2nFxG8da7ui4GDwp9xS6bgX0sPVa0-knggyPKINg_2jHK_YoT2PplGKCYRCP2Ex");'></div>
+</div>
+<div>
+<p class="text-white font-semibold text-base">Treino de Pernas</p>
+<div class="flex items-center gap-2 text-text-secondary text-xs mt-0.5">
+<span>Ontem</span>
+<span class="w-1 h-1 rounded-full bg-text-secondary"></span>
+<span>45 min</span>
+</div>
+</div>
+</div>
+<div class="flex flex-col items-end gap-1">
+<div class="flex items-center gap-1 text-primary">
+<span class="material-symbols-outlined text-sm">local_fire_department</span>
+<span class="text-sm font-bold">320</span>
+</div>
+<span class="text-[10px] text-text-secondary uppercase font-bold tracking-wider">Concluído</span>
+</div>
+</div>
+<!-- History Item 2 -->
+<div class="flex items-center justify-between p-3 rounded-xl bg-surface-dark border border-transparent hover:border-surface-border transition-colors">
+<div class="flex items-center gap-4">
+<div class="relative w-14 h-14 rounded-lg overflow-hidden bg-gray-800 shrink-0">
+<div class="absolute inset-0 bg-cover bg-center" data-alt="Yoga mat texture" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuD-FcuhTxIUMkMbansBgqrma0EQf4y_GG2bi5FqhWa_4Vae7KnD3mim1fea34-bpXHosHr9V8NhFH2vgy0n8yidY4spz2_86yCv0vkckBYKOEBjSDMnrLv0dxCwn_E0Jkuo9oLAcu2MpzM4ffoBpJ1jkmovzaDu6vEO-f3G1w0MTTMbM5d6kfa5ujUNbw6-_b0RcDGEIHRIG6fOWodJNYFRsIi9sLtHyJeDeewoqLaQHaC83rU6dvqlmfjy9p6ktzWj6fAGpeZty3zc");'></div>
+</div>
+<div>
+<p class="text-white font-semibold text-base">Yoga Matinal</p>
+<div class="flex items-center gap-2 text-text-secondary text-xs mt-0.5">
+<span>Terça</span>
+<span class="w-1 h-1 rounded-full bg-text-secondary"></span>
+<span>30 min</span>
+</div>
+</div>
+</div>
+<div class="flex flex-col items-end gap-1">
+<div class="flex items-center gap-1 text-primary">
+<span class="material-symbols-outlined text-sm">local_fire_department</span>
+<span class="text-sm font-bold">150</span>
+</div>
+<span class="text-[10px] text-text-secondary uppercase font-bold tracking-wider">Concluído</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Bottom Navigation Bar (iOS Style) -->
+<div class="fixed bottom-0 left-0 right-0 z-50 bg-background-dark/80 backdrop-blur-lg border-t border-white/5 pb-5 pt-2">
+<div class="flex items-center justify-around px-2">
+<button class="flex flex-col items-center gap-1 p-2 w-16 text-text-secondary hover:text-white transition-colors">
+<span class="material-symbols-outlined text-2xl">home</span>
+<span class="text-[10px] font-medium">Início</span>
+</button>
+<button class="flex flex-col items-center gap-1 p-2 w-16 text-primary">
+<span class="material-symbols-outlined text-2xl fill-1">fitness_center</span>
+<span class="text-[10px] font-medium">Treinos</span>
+</button>
+<button class="flex flex-col items-center gap-1 p-2 w-16 text-text-secondary hover:text-white transition-colors">
+<span class="material-symbols-outlined text-2xl">restaurant</span>
+<span class="text-[10px] font-medium">Nutrição</span>
+</button>
+<button class="flex flex-col items-center gap-1 p-2 w-16 text-text-secondary hover:text-white transition-colors">
+<span class="material-symbols-outlined text-2xl">person</span>
+<span class="text-[10px] font-medium">Perfil</span>
+</button>
+</div>
+</div>
+</body></html>

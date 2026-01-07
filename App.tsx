@@ -1,6 +1,6 @@
 import React, { useState, useEffect, Suspense, lazy } from 'react';
-import { View, Client, Workout, AppUser, isAdmin } from './types';
-import { supabase } from './services/supabaseClient';
+import { View, Client, Workout, AppUser, isAdmin, isStudent } from './types';
+import { supabase, getUserProfile } from './services/supabaseClient';
 import LoginView from './views/LoginView';
 import DashboardView from './views/DashboardView';
 import ClientProfileView from './views/ClientProfileView';
@@ -24,6 +24,7 @@ const AdminAILogsView = lazy(() => import('./views/AdminAILogsView'));
 const AdminAIDashboardView = lazy(() => import('./views/AdminAIDashboardView'));
 const AdminActivityLogsView = lazy(() => import('./views/AdminActivityLogsView'));
 const AdminSettingsView = lazy(() => import('./views/AdminSettingsView'));
+const StudentDashboardView = lazy(() => import('./views/StudentDashboardView'));
 
 // Loading fallback component
 const ViewLoader = () => (
@@ -40,6 +41,7 @@ function App() {
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [activeWorkout, setActiveWorkout] = useState<Workout | null>(null);
   const [user, setUser] = useState<any>(null);
+  const [userProfile, setUserProfile] = useState<any>(null);
   const [loading, setLoading] = useState(false);
 
   // Auth state listener - handle session expiration and logout from other tabs
@@ -148,9 +150,28 @@ function App() {
     setCurrentView(View.LOGIN);
   };
 
-  const handleLoginSuccess = (loggedUser: any) => {
+  const handleLoginSuccess = async (loggedUser: any) => {
     if (loggedUser) {
       setUser(loggedUser);
+
+      // Load user profile to check role
+      try {
+        const profile = await getUserProfile(loggedUser.id);
+        if (profile) {
+          setUserProfile(profile);
+
+          // Redirect based on role
+          if (profile.role === 'student') {
+            navigateTo(View.STUDENT);
+            return;
+          }
+        }
+      } catch (error) {
+        console.error('Error loading user profile:', error);
+      }
+
+      // Default: go to coach dashboard
+      navigateTo(View.DASHBOARD);
     } else {
       // Fallback or explicit demo (should trigger restricted mode)
       const demoUser = {
@@ -163,8 +184,8 @@ function App() {
         isDemo: true
       };
       setUser(demoUser);
+      navigateTo(View.DASHBOARD);
     }
-    navigateTo(View.DASHBOARD);
   };
 
   const handleDemoLogin = () => {
@@ -256,6 +277,18 @@ function App() {
           />
         );
       case View.STUDENT:
+        // If user is actually a student (logged in student), show StudentDashboardView
+        if (userProfile?.role === 'student') {
+          return (
+            <StudentDashboardView
+              user={user}
+              onStartWorkout={(workout) => navigateTo(View.TRAINING_EXECUTION, workout)}
+              onNavigate={handleNavigation}
+              onLogout={handleLogout}
+            />
+          );
+        }
+        // Otherwise, this is a coach previewing student view for a client
         return (
           <StudentView
             clientId={selectedClient?.id}

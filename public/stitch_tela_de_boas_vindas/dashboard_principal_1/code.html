@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html class="dark" lang="pt-BR"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Desafios e Metas - Fitness App</title>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#13ec80",
+                        "background-light": "#f6f8f7",
+                        "background-dark": "#102219",
+                        "card-dark": "#162b21",
+                    },
+                    fontFamily: {
+                        "display": ["Lexend", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem", 
+                        "xl": "0.75rem",
+                        "2xl": "1rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>.no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .material-symbols-outlined.filled {
+            font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+<style>
+        body {
+          min-height: max(884px, 100dvh);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display text-gray-900 dark:text-white antialiased overflow-x-hidden">
+<div class="relative flex min-h-screen flex-col pb-24">
+<header class="sticky top-0 z-20 bg-background-light/95 dark:bg-background-dark/95 backdrop-blur-md px-4 py-3 border-b border-gray-200 dark:border-white/5">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-3">
+<div class="relative group cursor-pointer">
+<div class="bg-center bg-no-repeat bg-cover rounded-full size-10 ring-2 ring-primary ring-offset-2 ring-offset-background-dark" data-alt="User profile picture" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuDXTwtqYEZL5sOke6ZuXreOex9S7U81fqYvgSeTZGrb2k09zgEc77pJWDC9uv5uR9iEqJzMeBmkDPyq-uc44O1q4S7aZCs6cAKmk6WsTVeywdrYXu7PXL2kOXaAxGyb7rB_XA6szyVPFDJrgXxix1hAKE0Tp0XL8rZWAMjFx-i-3q7e87J9Q590EE89plHDUxfmLMPSBU7Y97Wm849d70w4as35eTC8ujVQdj1cr1GpTPzfMLzV3st11g__DTdDmQCmE7ABXlAFOjC6");'>
+</div>
+<div class="absolute bottom-0 right-0 size-3 bg-primary rounded-full border-2 border-background-dark"></div>
+</div>
+<div>
+<p class="text-xs text-gray-500 dark:text-gray-400 font-medium leading-none mb-1">Área do Atleta</p>
+<h2 class="text-lg font-bold leading-none tracking-tight">Desafios &amp; Metas</h2>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<div class="flex items-center gap-1 bg-yellow-500/10 px-2 py-1 rounded-full border border-yellow-500/20">
+<span class="material-symbols-outlined text-yellow-500 text-sm filled">stars</span>
+<span class="text-xs font-bold text-yellow-600 dark:text-yellow-400">2.4k</span>
+</div>
+<button class="flex items-center justify-center size-10 rounded-full bg-gray-100 dark:bg-white/10 hover:bg-gray-200 dark:hover:bg-white/20 transition-colors">
+<span class="material-symbols-outlined text-gray-600 dark:text-white">emoji_events</span>
+</button>
+</div>
+</div>
+</header>
+<main class="flex-1 flex flex-col gap-6 pt-4">
+<section class="px-4">
+<div class="bg-gradient-to-br from-[#162b21] to-[#0f1f18] dark:from-card-dark dark:to-background-dark rounded-2xl p-6 shadow-lg border border-primary/20 relative overflow-hidden">
+<div class="absolute top-0 right-0 p-4 opacity-10">
+<span class="material-symbols-outlined text-9xl text-white">trophy</span>
+</div>
+<div class="relative z-10">
+<div class="flex justify-between items-end mb-2">
+<div>
+<h3 class="text-sm font-medium text-primary uppercase tracking-wide mb-1">Seu Nível Atual</h3>
+<h1 class="text-4xl font-bold text-white tracking-tighter">Nível 15</h1>
+<p class="text-gray-400 text-sm mt-1">Título: <span class="text-white font-semibold">Guerreiro Urbano</span></p>
+</div>
+<div class="size-16 rounded-full border-4 border-primary/30 flex items-center justify-center bg-white/5 backdrop-blur-sm">
+<span class="text-xl font-bold text-primary">75%</span>
+</div>
+</div>
+<div class="w-full bg-white/10 h-3 rounded-full mt-4 mb-2 overflow-hidden backdrop-blur-sm">
+<div class="bg-gradient-to-r from-primary/80 to-primary h-full rounded-full shadow-[0_0_10px_rgba(19,236,128,0.5)]" style="width: 75%"></div>
+</div>
+<div class="flex justify-between text-xs text-gray-400 font-medium">
+<span>15.000 XP</span>
+<span>Próx: 20.000 XP</span>
+</div>
+</div>
+</div>
+</section>
+<section class="w-full">
+<div class="flex justify-between items-center px-4 mb-3">
+<h2 class="text-lg font-bold dark:text-white tracking-tight flex items-center gap-2">
+<span class="material-symbols-outlined text-primary filled">local_fire_department</span>
+                        Desafios Ativos
+                    </h2>
+<a class="text-sm text-primary font-medium hover:underline" href="#">Explorar</a>
+</div>
+<div class="flex overflow-x-auto no-scrollbar gap-4 px-4 pb-2">
+<div class="flex-shrink-0 w-72 bg-white dark:bg-card-dark p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-white/5 relative overflow-hidden group">
+<div class="absolute inset-0 bg-gradient-to-r from-black/60 to-transparent z-10 rounded-2xl"></div>
+<img alt="Background water" class="absolute inset-0 w-full h-full object-cover rounded-2xl transition-transform group-hover:scale-105" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDdBHEq2rWZWwZdR_NkZmUs3woHHI8_lJyv7po6ny9-YZbuEsEmeO3oghVCTEUVTPk6zRUYVXgTe_Fl4M_r1Zl5gYFDimzmTNu1Hi6ZZvlrDeT4isvdGvjis4WnWTZRBgmfUjhf9g_AmsHvR8vbN-7hqvwf65wZA7jOLQI76gGxeUwjfMZIP9boM_QGcnrnvwFnlUpjJ-wGsIU1SBvYtJOHzRcyxBiU3lva5TNu8epkdYVXgo6tu6FpQHpugO7Wjs4xhNqVDXe2aK6D"/>
+<div class="relative z-20 h-full flex flex-col justify-between min-h-[140px]">
+<div class="flex justify-between items-start">
+<span class="bg-blue-500/90 text-white text-[10px] font-bold px-2 py-1 rounded-md backdrop-blur-md">HIDRATAÇÃO</span>
+<span class="material-symbols-outlined text-white/80">timer</span>
+</div>
+<div>
+<h3 class="text-white font-bold text-lg mb-1 shadow-black drop-shadow-md">Maratona de Água 7 Dias</h3>
+<p class="text-white/80 text-xs mb-3">Beba 2.5L de água todos os dias.</p>
+<div class="flex items-center gap-3">
+<div class="flex-1 bg-white/20 h-2 rounded-full overflow-hidden backdrop-blur-sm">
+<div class="bg-blue-400 h-full rounded-full" style="width: 70%"></div>
+</div>
+<span class="text-white text-xs font-bold">Dia 5/7</span>
+</div>
+</div>
+</div>
+</div>
+<div class="flex-shrink-0 w-72 bg-white dark:bg-card-dark p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-white/5 relative overflow-hidden group">
+<div class="absolute inset-0 bg-gradient-to-r from-black/60 to-transparent z-10 rounded-2xl"></div>
+<img alt="Background food" class="absolute inset-0 w-full h-full object-cover rounded-2xl transition-transform group-hover:scale-105" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDshBIFqrxBfrYsa84gVtDAR3GIhCj9NL5SR6vd7NdGoFDsCi6gbUt6XLAxLydhlUV7be7GsRjyq98_pSBkzpim6Gya0gMFyYl908TmnTFZFlRlt94BwKjSSehc0WPEnqzTRiAFcfsKm2S0cApCqT1nari1UQdhuz-eQC6EMU7hRF2HUbqR20bzeFF8WtnJqw0PBv0U7qLYdSGqGYrsbCLk4bAysFdPgPHxjy8Co0G0JQeqRsKUNXXM5qXfoaV1kLoGx0CUIlw76vXV"/>
+<div class="relative z-20 h-full flex flex-col justify-between min-h-[140px]">
+<div class="flex justify-between items-start">
+<span class="bg-primary/90 text-background-dark text-[10px] font-bold px-2 py-1 rounded-md backdrop-blur-md">NUTRIÇÃO</span>
+<span class="material-symbols-outlined text-white/80">timer</span>
+</div>
+<div>
+<h3 class="text-white font-bold text-lg mb-1 shadow-black drop-shadow-md">Desafio Proteína Pura</h3>
+<p class="text-white/80 text-xs mb-3">Consuma 140g de proteína diária.</p>
+<div class="flex items-center gap-3">
+<div class="flex-1 bg-white/20 h-2 rounded-full overflow-hidden backdrop-blur-sm">
+<div class="bg-primary h-full rounded-full" style="width: 30%"></div>
+</div>
+<span class="text-white text-xs font-bold">Dia 9/30</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<section class="px-4">
+<div class="flex justify-between items-center mb-3">
+<h2 class="text-lg font-bold dark:text-white tracking-tight">Metas da Semana</h2>
+<button class="size-8 rounded-full bg-primary/10 flex items-center justify-center text-primary hover:bg-primary/20 transition-colors">
+<span class="material-symbols-outlined text-lg">add</span>
+</button>
+</div>
+<div class="grid gap-3">
+<div class="bg-white dark:bg-card-dark p-4 rounded-xl border border-gray-100 dark:border-white/5 flex items-center gap-4">
+<div class="relative size-12 flex-shrink-0">
+<svg class="size-full -rotate-90" viewBox="0 0 36 36">
+<path class="text-gray-100 dark:text-gray-700" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-width="3"></path>
+<path class="text-primary" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-dasharray="80, 100" stroke-linecap="round" stroke-width="3"></path>
+</svg>
+<div class="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-primary">80%</div>
+</div>
+<div class="flex-1">
+<h4 class="font-semibold text-sm dark:text-white">Correr 15km</h4>
+<p class="text-xs text-gray-500 dark:text-gray-400">12km completados</p>
+</div>
+<button class="text-gray-400 hover:text-primary transition-colors">
+<span class="material-symbols-outlined">chevron_right</span>
+</button>
+</div>
+<div class="bg-white dark:bg-card-dark p-4 rounded-xl border border-gray-100 dark:border-white/5 flex items-center gap-4">
+<div class="relative size-12 flex-shrink-0">
+<svg class="size-full -rotate-90" viewBox="0 0 36 36">
+<path class="text-gray-100 dark:text-gray-700" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-width="3"></path>
+<path class="text-purple-500" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-dasharray="45, 100" stroke-linecap="round" stroke-width="3"></path>
+</svg>
+<div class="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-purple-500">45%</div>
+</div>
+<div class="flex-1">
+<h4 class="font-semibold text-sm dark:text-white">Dormir 8h/dia</h4>
+<p class="text-xs text-gray-500 dark:text-gray-400">Média atual: 6h 30m</p>
+</div>
+<button class="text-gray-400 hover:text-primary transition-colors">
+<span class="material-symbols-outlined">chevron_right</span>
+</button>
+</div>
+</div>
+</section>
+<section class="px-4 pb-6">
+<h2 class="text-lg font-bold mb-3 dark:text-white tracking-tight">Galeria de Conquistas</h2>
+<div class="grid grid-cols-4 gap-2">
+<div class="flex flex-col items-center gap-2">
+<div class="size-16 rounded-full bg-gradient-to-br from-yellow-100 to-yellow-200 dark:from-yellow-900/40 dark:to-yellow-600/20 border border-yellow-500/30 flex items-center justify-center shadow-sm">
+<span class="material-symbols-outlined text-2xl text-yellow-600 dark:text-yellow-400 filled">military_tech</span>
+</div>
+<span class="text-[10px] font-medium text-center leading-tight dark:text-gray-300">Primeiros<br/>5K</span>
+</div>
+<div class="flex flex-col items-center gap-2">
+<div class="size-16 rounded-full bg-gradient-to-br from-blue-100 to-blue-200 dark:from-blue-900/40 dark:to-blue-600/20 border border-blue-500/30 flex items-center justify-center shadow-sm">
+<span class="material-symbols-outlined text-2xl text-blue-600 dark:text-blue-400 filled">water_drop</span>
+</div>
+<span class="text-[10px] font-medium text-center leading-tight dark:text-gray-300">Rei da<br/>Hidratação</span>
+</div>
+<div class="flex flex-col items-center gap-2">
+<div class="size-16 rounded-full bg-gradient-to-br from-purple-100 to-purple-200 dark:from-purple-900/40 dark:to-purple-600/20 border border-purple-500/30 flex items-center justify-center shadow-sm">
+<span class="material-symbols-outlined text-2xl text-purple-600 dark:text-purple-400 filled">bedtime</span>
+</div>
+<span class="text-[10px] font-medium text-center leading-tight dark:text-gray-300">Mestre do<br/>Sono</span>
+</div>
+<div class="flex flex-col items-center gap-2 opacity-50 grayscale">
+<div class="size-16 rounded-full bg-gray-100 dark:bg-white/5 border border-gray-300 dark:border-white/10 flex items-center justify-center border-dashed">
+<span class="material-symbols-outlined text-2xl text-gray-400">lock</span>
+</div>
+<span class="text-[10px] font-medium text-center leading-tight dark:text-gray-500">Maratona<br/>42K</span>
+</div>
+</div>
+</section>
+</main>
+<nav class="fixed bottom-0 w-full bg-white/95 dark:bg-[#0f1f18]/95 backdrop-blur-lg border-t border-gray-200 dark:border-white/5 pb-6 pt-3 px-6 z-50">
+<div class="flex justify-between items-center">
+<button class="flex flex-col items-center gap-1 text-gray-400 hover:text-gray-200 dark:hover:text-white transition-colors">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="text-[10px] font-medium">Início</span>
+</button>
+<button class="flex flex-col items-center gap-1 text-primary">
+<span class="material-symbols-outlined filled">emoji_events</span>
+<span class="text-[10px] font-medium">Desafios</span>
+</button>
+<div class="relative -top-6">
+<button class="size-14 rounded-full bg-primary flex items-center justify-center shadow-[0_0_20px_rgba(19,236,128,0.4)] hover:scale-105 transition-transform">
+<span class="material-symbols-outlined text-background-dark text-3xl">qr_code_scanner</span>
+</button>
+</div>
+<button class="flex flex-col items-center gap-1 text-gray-400 hover:text-gray-200 dark:hover:text-white transition-colors">
+<span class="material-symbols-outlined">nutrition</span>
+<span class="text-[10px] font-medium">Nutrição</span>
+</button>
+<button class="flex flex-col items-center gap-1 text-gray-400 hover:text-gray-200 dark:hover:text-white transition-colors">
+<span class="material-symbols-outlined">person</span>
+<span class="text-[10px] font-medium">Perfil</span>
+</button>
+</div>
+</nav>
+</div>
+
+</body></html>

@@ -1,6 +1,29 @@
 
 // ============ USER TYPE ============
-export type UserRole = 'admin' | 'coach' | 'user';
+export type UserRole = 'admin' | 'coach' | 'student';
+
+export interface UserProfile {
+  id: string;
+  role: UserRole;
+  coach_id?: string;
+  client_id?: string;
+  full_name?: string;
+  avatar_url?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface Invitation {
+  id: string;
+  coach_id: string;
+  email: string;
+  client_id?: string;
+  token: string;
+  status: 'pending' | 'accepted' | 'expired' | 'cancelled';
+  expires_at: string;
+  accepted_at?: string;
+  created_at: string;
+}
 
 export interface AppUser {
   id: string;
@@ -15,13 +38,15 @@ export interface AppUser {
     provider?: string;
   };
   created_at?: string;
+  // Extended profile info
+  profile?: UserProfile;
 }
 
 // Helper function to check if user is admin
 export function isAdmin(user: AppUser | any): boolean {
   if (!user) return false;
   // Check user_metadata first (where we store custom roles)
-  const role = user?.user_metadata?.role;
+  const role = user?.user_metadata?.role || user?.profile?.role;
   // Allow specific emails as admin fallback
   const adminEmails = [
     'digital.ai.pr@gmail.com',  // Paulo Ricardo - Owner
@@ -29,6 +54,21 @@ export function isAdmin(user: AppUser | any): boolean {
     'admin@personalpro.com'
   ];
   return role === 'admin' || adminEmails.includes(user?.email || '');
+}
+
+// Helper function to check if user is a student (client)
+export function isStudent(user: AppUser | any): boolean {
+  if (!user) return false;
+  const role = user?.user_metadata?.role || user?.profile?.role;
+  return role === 'student';
+}
+
+// Helper function to check if user is a coach (personal trainer)
+export function isCoach(user: AppUser | any): boolean {
+  if (!user) return false;
+  const role = user?.user_metadata?.role || user?.profile?.role;
+  // Default role is coach if not specified
+  return role === 'coach' || (!role && !isAdmin(user) && !isStudent(user));
 }
 
 export enum View {

@@ -597,3 +597,227 @@ export async function getAssessmentsWithPhotos(clientId: string): Promise<any[]>
     return data || [];
 }
 
+// ============ USER PROFILES & INVITATIONS ============
+
+export interface DBUserProfile {
+    id: string;
+    role: 'admin' | 'coach' | 'student';
+    coach_id?: string;
+    client_id?: string;
+    full_name?: string;
+    avatar_url?: string;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface DBInvitation {
+    id: string;
+    coach_id: string;
+    email: string;
+    client_id?: string;
+    token: string;
+    status: 'pending' | 'accepted' | 'expired' | 'cancelled';
+    expires_at: string;
+    accepted_at?: string;
+    created_at: string;
+}
+
+// Get user profile by ID
+export async function getUserProfile(userId: string): Promise<DBUserProfile | null> {
+    if (!supabase) return null;
+
+    const { data, error } = await supabase
+        .from('user_profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+
+    if (error) {
+        // Profile might not exist yet - this is expected for new users
+        if (error.code !== 'PGRST116') {
+            console.error('Error fetching user profile:', error);
+        }
+        return null;
+    }
+
+    return data;
+}
+
+// Create or update user profile
+export async function upsertUserProfile(profile: Partial<DBUserProfile> & { id: string }): Promise<DBUserProfile | null> {
+    if (!supabase) return null;
+
+    const { data, error } = await supabase
+        .from('user_profiles')
+        .upsert({
+            ...profile,
+            updated_at: new Date().toISOString()
+        })
+        .select()
+        .single();
+
+    if (error) {
+        console.error('Error upserting user profile:', error);
+        return null;
+    }
+
+    return data;
+}
+
+// Generate secure random token for invitations
+function generateInvitationToken(): string {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    let token = '';
+    for (let i = 0; i < 32; i++) {
+        token += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return token;
+}
+
+// Create invitation for a student
+export async function createInvitation(
+    coachId: string,
+    email: string,
+    clientId?: string
+): Promise<DBInvitation | null> {
+    if (!supabase) return null;
+
+    const token = generateInvitationToken();
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 7); // Expires in 7 days
+
+    const { data, error } = await supabase
+        .from('invitations')
+        .insert({
+            coach_id: coachId,
+            email: email.toLowerCase().trim(),
+            client_id: clientId,
+            token,
+            status: 'pending',
+            expires_at: expiresAt.toISOString()
+        })
+        .select()
+        .single();
+
+    if (error) {
+        console.error('Error creating invitation:', error);
+        return null;
+    }
+
+    return data;
+}
+
+// Get invitation by token
+export async function getInvitationByToken(token: string): Promise<DBInvitation | null> {
+    if (!supabase) return null;
+
+    const { data, error } = await supabase
+        .from('invitations')
+        .select('*')
+        .eq('token', token)
+        .eq('status', 'pending')
+        .gt('expires_at', new Date().toISOString())
+        .single();
+
+    if (error) {
+        if (error.code !== 'PGRST116') {
+            console.error('Error fetching invitation:', error);
+        }
+        return null;
+    }
+
+    return data;
+}
+
+// Accept invitation and convert user to student
+export async function acceptInvitation(token: string, userId: string): Promise<{ success: boolean; error?: string }> {
+    if (!supabase) return { success: false, error: 'Supabase not configured' };
+
+    // Get invitation
+    const invitation = await getInvitationByToken(token);
+    if (!invitation) {
+        return { success: false, error: 'Convite inválido ou expirado' };
+    }
+
+    // Update invitation status
+    const { error: invError } = await supabase
+        .from('invitations')
+        .update({
+            status: 'accepted',
+            accepted_at: new Date().toISOString()
+        })
+        .eq('id', invitation.id);
+
+    if (invError) {
+        console.error('Error accepting invitation:', invError);
+        return { success: false, error: 'Erro ao aceitar convite' };
+    }
+
+    // Create/update user profile as student
+    const profile = await upsertUserProfile({
+        id: userId,
+        role: 'student',
+        coach_id: invitation.coach_id,
+        client_id: invitation.client_id
+    });
+
+    if (!profile) {
+        return { success: false, error: 'Erro ao criar perfil' };
+    }
+
+    return { success: true };
+}
+
+// Get all invitations sent by a coach
+export async function getCoachInvitations(coachId: string): Promise<DBInvitation[]> {
+    if (!supabase) return [];
+
+    const { data, error } = await supabase
+        .from('invitations')
+        .select('*')
+        .eq('coach_id', coachId)
+        .order('created_at', { ascending: false });
+
+    if (error) {
+        console.error('Error fetching coach invitations:', error);
+        return [];
+    }
+
+    return data || [];
+}
+
+// Cancel an invitation
+export async function cancelInvitation(invitationId: string, coachId: string): Promise<boolean> {
+    if (!supabase) return false;
+
+    const { error } = await supabase
+        .from('invitations')
+        .update({ status: 'cancelled' })
+        .eq('id', invitationId)
+        .eq('coach_id', coachId); // Security: only coach can cancel their own invites
+
+    if (error) {
+        console.error('Error cancelling invitation:', error);
+        return false;
+    }
+
+    return true;
+}
+
+// Get students for a coach (users with student role linked to this coach)
+export async function getCoachStudents(coachId: string): Promise<DBUserProfile[]> {
+    if (!supabase) return [];
+
+    const { data, error } = await supabase
+        .from('user_profiles')
+        .select('*')
+        .eq('coach_id', coachId)
+        .eq('role', 'student');
+
+    if (error) {
+        console.error('Error fetching coach students:', error);
+        return [];
+    }
+
+    return data || [];
+}

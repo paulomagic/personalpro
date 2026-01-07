@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="pt-BR"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Tela de Boas-Vindas Fitness</title>
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Theme Config -->
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#13ec80",
+                        "background-light": "#f6f8f7",
+                        "background-dark": "#102219",
+                        "text-secondary": "#92c9ad",
+                    },
+                    fontFamily: {
+                        "display": ["Lexend", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "2xl": "1rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        /* Custom scrollbar hiding for the carousel */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display text-gray-900 dark:text-white antialiased overflow-hidden">
+<div class="relative flex h-full min-h-screen w-full flex-col justify-between overflow-hidden">
+<!-- Header Image / Hero Section -->
+<div class="flex-1 relative w-full flex flex-col">
+<!-- Decorative gradient overlay -->
+<div class="absolute inset-0 bg-gradient-to-b from-transparent via-background-dark/20 to-background-dark z-10 pointer-events-none"></div>
+<div class="w-full h-[55vh] bg-center bg-no-repeat bg-cover flex flex-col justify-end relative" data-alt="Athletic person tying shoelaces in a modern dark gym setting with neon green accents" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuBuoEB8z6xQNsTYkXSDexm_HyksCWSBU3zAs-cNILKLrr1h47YnFSyF1Dpnrji_qIbMQrxG9ynbmlTLNfxI4JRLYPuXxkBsxT6hn87pfjNQHE3HVc70nvM2mD76optdjJRZtKgh3Q9FBNFi5DKH9V4Amot3Uigg-KaMTMzadYsvqtTEeoC1i_ciXRSe68YNUxdP7ruylFsxql3mqc9khugleeRTUSewDcMywD-YhvLNNrjSHIgOTfIJgvrxO6VF9MXad4YOmNBz5QEB");'>
+<!-- Floating Badge -->
+<div class="absolute top-14 right-6 z-20">
+<div class="bg-background-dark/80 backdrop-blur-md border border-white/10 rounded-full px-4 py-2 flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-sm">local_fire_department</span>
+<span class="text-white text-xs font-medium tracking-wide">500 Kcal Burned</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Content Section -->
+<div class="relative z-20 flex flex-col px-6 pb-8 pt-4 -mt-16 bg-gradient-to-t from-background-dark via-background-dark to-transparent">
+<!-- Carousel Text Content -->
+<div class="flex flex-col gap-2 mb-6">
+<div class="flex overflow-x-auto snap-x snap-mandatory no-scrollbar gap-4 pb-4">
+<!-- Slide 1 -->
+<div class="min-w-full snap-center flex flex-col gap-3 items-center text-center">
+<h1 class="text-3xl md:text-4xl font-extrabold leading-tight tracking-tight text-white">
+                            Treine com <br/> <span class="text-primary">Inteligência</span>
+</h1>
+<p class="text-text-secondary text-base font-light leading-relaxed max-w-[80%]">
+                            Acompanhe seus treinos diários e veja seu progresso em tempo real.
+                        </p>
+</div>
+<!-- Slide 2 -->
+<!-- Usually handled by JS, but for static visual we show one active state. 
+                         If this was interactive, other slides would be here. -->
+</div>
+<!-- Page Indicators -->
+<div class="flex w-full flex-row items-center justify-center gap-2 py-4">
+<div class="h-1.5 w-6 rounded-full bg-primary transition-all duration-300"></div>
+<div class="h-1.5 w-1.5 rounded-full bg-white/20 transition-all duration-300"></div>
+<div class="h-1.5 w-1.5 rounded-full bg-white/20 transition-all duration-300"></div>
+</div>
+</div>
+<!-- Action Buttons -->
+<div class="flex flex-col gap-3 w-full max-w-md mx-auto">
+<!-- Primary Button -->
+<button class="group relative flex w-full cursor-pointer items-center justify-center overflow-hidden rounded-xl h-14 bg-primary text-background-dark shadow-[0_0_20px_rgba(19,236,128,0.3)] transition-transform active:scale-[0.98]">
+<span class="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out"></span>
+<span class="relative text-base font-bold leading-normal tracking-wide uppercase">Começar Jornada</span>
+<span class="material-symbols-outlined relative ml-2 text-xl">arrow_forward</span>
+</button>
+<!-- Secondary Button -->
+<button class="flex w-full cursor-pointer items-center justify-center rounded-xl h-12 bg-transparent text-white/70 hover:text-white hover:bg-white/5 transition-colors text-sm font-medium leading-normal tracking-wide">
+<span>Já tenho uma conta</span>
+</button>
+</div>
+<!-- Footer Note -->
+<p class="mt-6 text-center text-xs text-white/30 font-light">
+                Ao continuar, você concorda com nossos Termos de Serviço e Política de Privacidade.
+            </p>
+</div>
+</div>
+</body></html>

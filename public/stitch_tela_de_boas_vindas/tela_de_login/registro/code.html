@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html class="dark" lang="pt-BR"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Login App Fitness</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#13ec80",
+                        "background-light": "#f6f8f7",
+                        "background-dark": "#102219",
+                    },
+                    fontFamily: {
+                        "display": ["Lexend", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            min-height: max(884px, 100dvh);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display antialiased text-slate-900 dark:text-white">
+<div class="relative flex h-full min-h-screen w-full flex-col overflow-x-hidden max-w-md mx-auto shadow-2xl bg-background-light dark:bg-background-dark">
+<div class="flex items-center p-4 pb-2 justify-between">
+<div class="w-8"></div> 
+<h2 class="text-slate-900 dark:text-white text-lg font-bold leading-tight tracking-tight flex-1 text-center">FitTrack</h2>
+<div class="w-8"></div>
+</div>
+<div class="px-6 py-4 flex flex-col items-center">
+<div class="w-full aspect-[16/9] rounded-xl overflow-hidden relative shadow-lg">
+<div class="absolute inset-0 bg-gradient-to-t from-background-dark/80 to-transparent z-10"></div>
+<div class="w-full h-full bg-center bg-no-repeat bg-cover" data-alt="Athletic person tying shoe laces before running dark mood" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuA4IXPjN8Ve3OXTCRpYkqcI7VbJSmVMtbG8UL3jLnBQCQTnfJuYhGmg0b7KjETVs3mH19hxpv8EZMPXfmwzvFkC_B7mPwUNQ8AZ_wo9AmAQIJb6cK500Noe7nBARjex4MzAo0c3Iy1yGM2T82ZT4I_LbhpRFQQb4NL_Unpq3tss7LBLGIs_yMVaBSXRMK817i1eQZjYT3XbCXjAYiF68lepUJE6ZDACeKLcNdxswuHiMirFpbGTS1_X4yOakilkB75O8rE9v9gLauCK");'>
+</div>
+<div class="absolute bottom-4 left-4 right-4 z-20">
+<h1 class="text-white text-2xl font-bold leading-tight tracking-tight drop-shadow-md">Alimente sua Ambição</h1>
+<p class="text-gray-200 text-sm mt-1 font-light opacity-90">Acompanhe treinos, coma melhor, fique mais forte.</p>
+</div>
+</div>
+</div>
+<div class="px-6 py-2">
+<div class="flex h-12 w-full items-center justify-center rounded-xl bg-slate-200 dark:bg-[#193326] p-1">
+<label class="flex cursor-pointer h-full grow items-center justify-center overflow-hidden rounded-lg px-2 has-[:checked]:bg-white dark:has-[:checked]:bg-[#234836] has-[:checked]:shadow-sm transition-all duration-200 text-slate-500 dark:text-[#92c9ad] has-[:checked]:text-slate-900 dark:has-[:checked]:text-white text-sm font-semibold leading-normal">
+<span class="truncate">Entrar</span>
+<input checked="" class="invisible w-0 absolute" name="auth-tab" type="radio" value="Login"/>
+</label>
+<label class="flex cursor-pointer h-full grow items-center justify-center overflow-hidden rounded-lg px-2 has-[:checked]:bg-white dark:has-[:checked]:bg-[#234836] has-[:checked]:shadow-sm transition-all duration-200 text-slate-500 dark:text-[#92c9ad] has-[:checked]:text-slate-900 dark:has-[:checked]:text-white text-sm font-semibold leading-normal">
+<span class="truncate">Cadastrar</span>
+<input class="invisible w-0 absolute" name="auth-tab" type="radio" value="Sign Up"/>
+</label>
+</div>
+</div>
+<div class="px-6 py-4 flex flex-col gap-5">
+<label class="flex flex-col w-full group">
+<span class="text-slate-600 dark:text-gray-300 text-sm font-medium leading-normal pb-2 ml-1">E-mail</span>
+<div class="relative flex items-center">
+<span class="material-symbols-outlined absolute left-4 text-slate-400 dark:text-[#5c8570]">mail</span>
+<input class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-slate-900 dark:text-white focus:outline-0 focus:ring-2 focus:ring-primary/50 border border-slate-200 dark:border-[#32674d] bg-white dark:bg-[#193326] focus:border-primary h-14 placeholder:text-slate-400 dark:placeholder:text-[#5c8570] pl-12 pr-4 text-base font-normal leading-normal transition-colors" placeholder="usuario@exemplo.com" type="email" value=""/>
+</div>
+</label>
+<label class="flex flex-col w-full group">
+<div class="flex justify-between items-center pb-2 ml-1">
+<span class="text-slate-600 dark:text-gray-300 text-sm font-medium leading-normal">Senha</span>
+</div>
+<div class="relative flex items-center">
+<span class="material-symbols-outlined absolute left-4 text-slate-400 dark:text-[#5c8570]">lock</span>
+<input class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-slate-900 dark:text-white focus:outline-0 focus:ring-2 focus:ring-primary/50 border border-slate-200 dark:border-[#32674d] bg-white dark:bg-[#193326] focus:border-primary h-14 placeholder:text-slate-400 dark:placeholder:text-[#5c8570] pl-12 pr-12 text-base font-normal leading-normal transition-colors" placeholder="••••••••" type="password" value=""/>
+<button class="absolute right-4 text-slate-400 dark:text-[#5c8570] hover:text-primary dark:hover:text-primary transition-colors" type="button">
+<span class="material-symbols-outlined">visibility</span>
+</button>
+</div>
+<a class="text-right text-xs font-medium text-primary hover:text-green-400 mt-2" href="#">Esqueceu a senha?</a>
+</label>
+</div>
+<div class="px-6 pb-6 pt-2 flex flex-col gap-4">
+<button class="w-full bg-primary hover:bg-[#0fdc75] text-[#102219] font-bold text-lg h-14 rounded-xl shadow-[0_0_15px_rgba(19,236,128,0.3)] transition-all active:scale-[0.98] flex items-center justify-center gap-2">
+<span>VAMOS LÁ</span>
+<span class="material-symbols-outlined text-xl font-bold">arrow_forward</span>
+</button>
+<div class="relative flex py-2 items-center">
+<div class="flex-grow border-t border-slate-200 dark:border-slate-700"></div>
+<span class="flex-shrink mx-4 text-slate-400 text-sm">ou continue com</span>
+<div class="flex-grow border-t border-slate-200 dark:border-slate-700"></div>
+</div>
+<div class="grid grid-cols-2 gap-3">
+<button class="flex items-center justify-center gap-2 h-12 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#193326] hover:bg-slate-50 dark:hover:bg-[#234836] transition-colors">
+<img alt="Google Logo" class="w-5 h-5" data-alt="Google G logo icon" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBozPTorg1IV0JPA3M8Bk8fJtNA-wmayVL5ocMr_DDm2hv-e0ePQ5NABXIvIR19my6Jgs9cQU8aHPZ6j5qjp-3ocfDqutEX8picNbf94UITE-RUOrtscthrcHxFIzgIMPmIdJfYdxAGrLhc7uVJj6n-1LrSbdUYylwFyv2X_g6zkWXE0A6XiWm1gEldu1-jDwIHarV2Q80syG0vyrGKoibG5OhF_flMr7GmUUlmj9k3uFQvhGhnD7_EDp-r9ojZ70MmpdrUkbzGlM3V"/>
+<span class="text-sm font-medium text-slate-700 dark:text-white">Google</span>
+</button>
+<button class="flex items-center justify-center gap-2 h-12 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#193326] hover:bg-slate-50 dark:hover:bg-[#234836] transition-colors">
+<img alt="Apple Logo" class="w-5 h-5 dark:invert" data-alt="Apple fruit logo icon" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAmuYb1dBtRRhEnPUzoNEe6FpbnyHb98fTRI9LtgeOCUt62K1EVVIvusYR-CPBkgAwXefUesnLWkjTfqGvPBB_3e9xGopnRYgpz-jCNOykw8Ck3WltHOvWQyMSHTyBn0rkWMLFpQAbDigcrEb7l3lBk_0RAyXv0Bkl31d_AVH4qV9Ff-uTUI2O37dA9Z1eS0l-kseEpOIG52Wmw3cna2ekJ8E9NWCHd1QGyWLKcqClk9xpMajRGpH-AMnuwOdckDjVo1yIjOTb4OT45"/>
+<span class="text-sm font-medium text-slate-700 dark:text-white">Apple</span>
+</button>
+</div>
+</div>
+<div class="mt-auto pb-8 text-center px-6">
+<p class="text-slate-500 dark:text-[#5c8570] text-xs">
+            Ao continuar, você concorda com nossos
+            <a class="text-slate-700 dark:text-gray-300 underline underline-offset-2" href="#">Termos de Serviço</a>
+            e
+            <a class="text-slate-700 dark:text-gray-300 underline underline-offset-2" href="#">Política de Privacidade</a>.
+        </p>
+</div>
+</div>
+
+</body></html>

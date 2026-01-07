@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="pt-BR"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Tela de Perfil do Usuário</title>
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;700&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Theme Configuration -->
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#13ec80",
+                        "background-light": "#f6f8f7",
+                        "background-dark": "#102219",
+                        "surface-dark": "#162f23", // Slightly lighter than background for cards
+                    },
+                    fontFamily: {
+                        "display": ["Lexend", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        /* Custom scrollbar hiding for clean UI */
+        .scrollbar-hide::-webkit-scrollbar {
+            display: none;
+        }
+        .scrollbar-hide {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display text-gray-900 dark:text-white antialiased selection:bg-primary selection:text-background-dark">
+<div class="relative flex min-h-screen w-full flex-col overflow-x-hidden max-w-md mx-auto shadow-2xl bg-background-light dark:bg-background-dark">
+<!-- TopAppBar -->
+<div class="flex items-center px-4 py-4 justify-between sticky top-0 z-50 bg-background-light/90 dark:bg-background-dark/90 backdrop-blur-md">
+<button class="text-gray-900 dark:text-white flex size-10 shrink-0 items-center justify-center rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors">
+<span class="material-symbols-outlined text-[24px]">arrow_back</span>
+</button>
+<h2 class="text-gray-900 dark:text-white text-lg font-bold leading-tight tracking-[-0.015em] flex-1 text-center">Meu Perfil</h2>
+<button class="flex w-10 h-10 items-center justify-center rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors">
+<span class="text-primary text-sm font-bold leading-normal tracking-[0.015em] shrink-0">Editar</span>
+</button>
+</div>
+<!-- Scrollable Content -->
+<div class="flex-1 flex flex-col pb-8">
+<!-- ProfileHeader -->
+<div class="flex p-4 flex-col gap-6 items-center">
+<div class="flex flex-col items-center gap-4 relative group cursor-pointer">
+<!-- Avatar with Glow -->
+<div class="relative">
+<div class="absolute inset-0 bg-primary rounded-full blur-md opacity-20 group-hover:opacity-40 transition-opacity"></div>
+<div class="relative bg-center bg-no-repeat bg-cover rounded-full h-28 w-28 border-2 border-primary" data-alt="Woman in fitness gear smiling confidently outdoors" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuDD8wVPSri-pTLdMOzvZhFJkTCoMWJqwvv6IH0JdhN8E6AWZ1xo670BYlJt0HS8D0KstimXtIrC7CGOKO2B4gai-6NaZN7ln2mHZPfG-CrONHt-3F-kMYOnKUPb5klucdfYrMr0Rcs3FU_iWckpiDTPsoy23UzxF8L0rUBEExIFkCvwf1A6cUk7ktTcakjSMHkKQAeIbwG-55iukZ-DlDUg7_VHmn7ESqWbVGer_1ba5AMFxNkhsJKM8tnq-VbLl7PMUGoPgBa3xvkz");'>
+</div>
+<div class="absolute bottom-0 right-0 bg-surface-dark border border-[#32674d] rounded-full p-1.5 flex items-center justify-center shadow-lg">
+<span class="material-symbols-outlined text-primary text-[16px]">photo_camera</span>
+</div>
+</div>
+<div class="flex flex-col items-center justify-center gap-1">
+<p class="text-gray-900 dark:text-white text-2xl font-bold leading-tight tracking-tight text-center">Ana Silva</p>
+<p class="text-gray-500 dark:text-[#92c9ad] text-sm font-medium text-center">Membro desde 2021</p>
+</div>
+</div>
+</div>
+<!-- ProfileStats -->
+<div class="px-4">
+<h3 class="text-gray-900 dark:text-white text-lg font-bold leading-tight tracking-[-0.015em] pb-3 pt-2">Biometria</h3>
+<div class="flex flex-wrap gap-3">
+<div class="flex flex-1 min-w-[100px] flex-col gap-1 rounded-xl bg-white dark:bg-surface-dark border border-gray-200 dark:border-[#32674d] p-4 items-center text-center shadow-sm">
+<p class="text-gray-900 dark:text-white text-2xl font-bold leading-tight">65 <span class="text-sm font-normal text-gray-500 dark:text-[#92c9ad]">kg</span></p>
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-primary text-[16px]">monitor_weight</span>
+<p class="text-gray-500 dark:text-[#92c9ad] text-xs font-medium uppercase tracking-wide">Peso</p>
+</div>
+</div>
+<div class="flex flex-1 min-w-[100px] flex-col gap-1 rounded-xl bg-white dark:bg-surface-dark border border-gray-200 dark:border-[#32674d] p-4 items-center text-center shadow-sm">
+<p class="text-gray-900 dark:text-white text-2xl font-bold leading-tight">168 <span class="text-sm font-normal text-gray-500 dark:text-[#92c9ad]">cm</span></p>
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-primary text-[16px]">height</span>
+<p class="text-gray-500 dark:text-[#92c9ad] text-xs font-medium uppercase tracking-wide">Altura</p>
+</div>
+</div>
+<div class="flex flex-1 min-w-[100px] flex-col gap-1 rounded-xl bg-white dark:bg-surface-dark border border-gray-200 dark:border-[#32674d] p-4 items-center text-center shadow-sm">
+<p class="text-gray-900 dark:text-white text-2xl font-bold leading-tight">23.0</p>
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-primary text-[16px]">calculate</span>
+<p class="text-gray-500 dark:text-[#92c9ad] text-xs font-medium uppercase tracking-wide">IMC</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Goals Section -->
+<div class="px-4 mt-6">
+<div class="flex justify-between items-end mb-3">
+<h3 class="text-gray-900 dark:text-white text-lg font-bold leading-tight tracking-[-0.015em]">Metas Atuais</h3>
+<button class="text-primary text-sm font-medium">Ver tudo</button>
+</div>
+<div class="flex flex-col gap-3">
+<!-- Goal Card 1 -->
+<div class="bg-white dark:bg-surface-dark rounded-xl p-4 border border-gray-200 dark:border-[#32674d]/50 shadow-sm">
+<div class="flex justify-between items-center mb-2">
+<div class="flex items-center gap-3">
+<div class="bg-primary/20 p-2 rounded-full text-primary">
+<span class="material-symbols-outlined">fitness_center</span>
+</div>
+<div>
+<p class="font-bold text-gray-900 dark:text-white text-sm">Hipertrofia</p>
+<p class="text-xs text-gray-500 dark:text-[#92c9ad]">Foco Muscular</p>
+</div>
+</div>
+<span class="text-xs font-bold bg-primary/20 text-primary px-2 py-1 rounded-full">Ativo</span>
+</div>
+</div>
+<!-- Goal Card 2 with Progress -->
+<div class="bg-white dark:bg-surface-dark rounded-xl p-4 border border-gray-200 dark:border-[#32674d]/50 shadow-sm">
+<div class="flex justify-between items-start mb-3">
+<div class="flex items-center gap-3">
+<div class="bg-orange-500/20 p-2 rounded-full text-orange-500">
+<span class="material-symbols-outlined">directions_run</span>
+</div>
+<div>
+<p class="font-bold text-gray-900 dark:text-white text-sm">Meta Semanal</p>
+<p class="text-xs text-gray-500 dark:text-[#92c9ad]">3 de 4 treinos concluídos</p>
+</div>
+</div>
+<span class="text-primary font-bold text-sm">75%</span>
+</div>
+<div class="w-full bg-gray-200 dark:bg-black/40 rounded-full h-2">
+<div class="bg-primary h-2 rounded-full" style="width: 75%"></div>
+</div>
+</div>
+</div>
+</div>
+<!-- Settings List Section -->
+<div class="px-4 mt-8">
+<h3 class="text-gray-900 dark:text-white text-lg font-bold leading-tight tracking-[-0.015em] pb-3">Conta &amp; Preferências</h3>
+<div class="bg-white dark:bg-surface-dark rounded-xl border border-gray-200 dark:border-[#32674d]/30 overflow-hidden shadow-sm">
+<!-- Item 1 -->
+<button class="w-full flex items-center justify-between p-4 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors border-b border-gray-100 dark:border-[#32674d]/30">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-gray-400 dark:text-[#92c9ad]">person</span>
+<span class="text-gray-900 dark:text-white font-medium text-sm">Dados Pessoais</span>
+</div>
+<span class="material-symbols-outlined text-gray-400 text-xl">chevron_right</span>
+</button>
+<!-- Item 2 -->
+<button class="w-full flex items-center justify-between p-4 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors border-b border-gray-100 dark:border-[#32674d]/30">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-gray-400 dark:text-[#92c9ad]">notifications</span>
+<span class="text-gray-900 dark:text-white font-medium text-sm">Notificações</span>
+</div>
+<div class="bg-primary px-2 py-0.5 rounded text-[10px] font-bold text-black uppercase">On</div>
+</button>
+<!-- Item 3 -->
+<button class="w-full flex items-center justify-between p-4 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors border-b border-gray-100 dark:border-[#32674d]/30">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-gray-400 dark:text-[#92c9ad]">straighten</span>
+<span class="text-gray-900 dark:text-white font-medium text-sm">Unidades</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-xs text-gray-500 dark:text-[#92c9ad]">Métrico (kg, cm)</span>
+<span class="material-symbols-outlined text-gray-400 text-xl">chevron_right</span>
+</div>
+</button>
+<!-- Item 4 -->
+<button class="w-full flex items-center justify-between p-4 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-gray-400 dark:text-[#92c9ad]">verified</span>
+<span class="text-gray-900 dark:text-white font-medium text-sm">Assinatura</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-xs font-bold text-primary bg-primary/10 px-2 py-1 rounded">PRO</span>
+<span class="material-symbols-outlined text-gray-400 text-xl">chevron_right</span>
+</div>
+</button>
+</div>
+<div class="bg-white dark:bg-surface-dark rounded-xl border border-gray-200 dark:border-[#32674d]/30 overflow-hidden shadow-sm mt-4">
+<!-- Item 5 -->
+<button class="w-full flex items-center justify-between p-4 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-gray-400 dark:text-[#92c9ad]">help</span>
+<span class="text-gray-900 dark:text-white font-medium text-sm">Suporte &amp; Ajuda</span>
+</div>
+<span class="material-symbols-outlined text-gray-400 text-xl">open_in_new</span>
+</button>
+</div>
+</div>
+<!-- Danger Zone -->
+<div class="px-4 mt-8 mb-4">
+<button class="w-full py-3 rounded-lg border border-red-200 dark:border-red-900/50 text-red-500 dark:text-red-400 text-sm font-medium hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-[18px]">logout</span>
+                    Sair da conta
+                </button>
+<p class="text-center text-[10px] text-gray-400 dark:text-gray-600 mt-4">Versão 2.4.0 (Build 302)</p>
+</div>
+</div>
+</div>
+</body></html>

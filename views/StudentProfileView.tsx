@@ -153,13 +153,13 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({
                 </div>
 
                 {/* Avatar */}
-                <div className="absolute -bottom-12 left-1/2 -translate-x-1/2 z-10">
-                    <div className="size-24 rounded-3xl bg-slate-800 border-4 border-slate-950 flex items-center justify-center overflow-hidden shadow-xl">
+                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10">
+                    <div className="size-28 rounded-3xl bg-slate-800 border-4 border-slate-950 flex items-center justify-center overflow-hidden shadow-2xl">
                         {user?.user_metadata?.avatar_url ? (
                             <img src={user.user_metadata.avatar_url} alt="Profile" className="w-full h-full object-cover" />
                         ) : (
                             <div className="size-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
-                                <span className="text-3xl font-black text-white">
+                                <span className="text-4xl font-black text-white">
                                     {studentName.charAt(0).toUpperCase()}
                                 </span>
                             </div>
@@ -169,7 +169,7 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({
             </motion.div>
 
             {/* Profile Info */}
-            <motion.div variants={itemVariants} className="pt-16 px-6 text-center mb-6">
+            <motion.div variants={itemVariants} className="pt-6 px-6 text-center mb-6">
                 <h1 className="text-2xl font-black text-white">{studentName}</h1>
                 <p className="text-sm text-slate-500 mt-1">{clientData?.goal || 'Definir objetivo'}</p>
 

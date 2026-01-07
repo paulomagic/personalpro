@@ -18,7 +18,10 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user, onBack, onLogout }) =
     const coachAvatar = getSafeAvatarUrl(rawAvatarUrl, coachName);
     const isDemo = user?.isDemo || !user?.id;
     // States for Modals
-    const [activeModal, setActiveModal] = React.useState<'profile' | 'notifications' | 'security' | 'help' | null>(null);
+    const [activeModal, setActiveModal] = React.useState<'profile' | 'notifications' | 'security' | 'help' | 'appearance' | null>(null);
+
+    // Theme state
+    const [selectedTheme, setSelectedTheme] = React.useState<'dark' | 'light' | 'system'>('dark');
 
     // States for Profile Editing
     const [profileName, setProfileName] = React.useState(coachName);
@@ -50,7 +53,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user, onBack, onLogout }) =
     const menuItems = [
         { icon: 'person', label: 'Meus Dados', subtitle: 'Nome, email, foto', action: () => setActiveModal('profile') },
         { icon: 'notifications', label: 'Notificações', subtitle: 'Push e email', action: () => setActiveModal('notifications') },
-        { icon: 'palette', label: 'Aparência', subtitle: 'Tema e cores', action: () => showToast('Tema Escuro Definido por Padrão') },
+        { icon: 'palette', label: 'Aparência', subtitle: 'Tema e cores', action: () => setActiveModal('appearance') },
         { icon: 'security', label: 'Segurança', subtitle: 'Senha e 2FA', action: () => setActiveModal('security') },
         { icon: 'credit_card', label: 'Assinatura', subtitle: 'Plano Premium', action: () => showToast('Você possui o plano Apex Elite') },
         { icon: 'help', label: 'Ajuda', subtitle: 'FAQ e suporte', action: () => setActiveModal('help') },
@@ -343,6 +346,61 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user, onBack, onLogout }) =
                                 </div>
                                 <button onClick={() => showToast('Mensagem enviada ao suporte!')} className="w-full h-16 bg-purple-600 hover:bg-purple-500 text-white font-black rounded-3xl active:scale-[0.98] transition-all uppercase tracking-widest shadow-[0_0_20px_rgba(147,51,234,0.3)]">
                                     Falar com Suporte Humano
+                                </button>
+                            </>
+                        )}
+
+                        {/* ---------- APPEARANCE MODAL ---------- */}
+                        {activeModal === 'appearance' && (
+                            <>
+                                <div className="text-center mb-8">
+                                    <div className="size-16 mx-auto rounded-2xl bg-pink-500/10 flex items-center justify-center mb-4">
+                                        <span className="material-symbols-outlined text-3xl text-pink-400">palette</span>
+                                    </div>
+                                    <h3 className="text-2xl font-black text-white">Aparência</h3>
+                                    <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mt-2">Personalize seu app</p>
+                                </div>
+                                <div className="space-y-3 mb-8">
+                                    {[
+                                        { key: 'dark', label: 'Modo Escuro', icon: 'dark_mode', enabled: true },
+                                        { key: 'light', label: 'Modo Claro', icon: 'light_mode', enabled: false },
+                                        { key: 'system', label: 'Automático', icon: 'brightness_auto', enabled: false }
+                                    ].map((theme) => (
+                                        <div
+                                            key={theme.key}
+                                            onClick={() => theme.enabled && setSelectedTheme(theme.key as any)}
+                                            className={`bg-white/5 rounded-2xl p-4 border flex items-center justify-between transition-all cursor-pointer
+                                                ${selectedTheme === theme.key
+                                                    ? 'border-blue-500/50 bg-blue-500/10'
+                                                    : 'border-white/5 hover:bg-white/10'}
+                                                ${!theme.enabled && 'opacity-50 cursor-not-allowed'}
+                                            `}
+                                        >
+                                            <div className="flex items-center gap-4">
+                                                <div className={`size-10 rounded-xl flex items-center justify-center transition-colors ${selectedTheme === theme.key ? 'bg-blue-500 text-white shadow-glow' : 'bg-slate-800 text-slate-500'}`}>
+                                                    <span className="material-symbols-outlined text-sm">{theme.icon}</span>
+                                                </div>
+                                                <div>
+                                                    <p className="text-sm font-black text-white">{theme.label}</p>
+                                                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                                                        {theme.enabled ? (selectedTheme === theme.key ? 'Selecionado' : 'Disponível') : 'Em breve'}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <div className={`size-6 rounded-full border-2 flex items-center justify-center transition-all ${selectedTheme === theme.key ? 'border-blue-500 bg-blue-500' : 'border-slate-600'}`}>
+                                                {selectedTheme === theme.key && <span className="material-symbols-outlined text-white text-sm">check</span>}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                                <button
+                                    onClick={() => {
+                                        showToast('Tema aplicado com sucesso!');
+                                        setActiveModal(null);
+                                    }}
+                                    className="w-full h-16 bg-blue-600 hover:bg-blue-500 text-white font-black rounded-3xl active:scale-[0.98] transition-all uppercase tracking-widest shadow-glow"
+                                >
+                                    Aplicar Tema
                                 </button>
                             </>
                         )}

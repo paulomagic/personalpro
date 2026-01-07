@@ -187,8 +187,8 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user, onBack, onLogout }) =
 
             {/* Universal Modal Overlay */}
             {activeModal && (
-                <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/80 backdrop-blur-md animate-fade-in p-4">
-                    <div className="w-full max-w-md bg-slate-900 border border-white/10 rounded-[40px] p-8 animate-slide-up shadow-2xl relative max-h-[85vh] overflow-y-auto custom-scrollbar">
+                <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/80 backdrop-blur-md animate-fade-in p-4 pb-24">
+                    <div className="w-full max-w-md bg-slate-900 border border-white/10 rounded-[40px] p-8 pb-10 animate-slide-up shadow-2xl relative max-h-[80vh] overflow-y-auto custom-scrollbar">
                         <div className="w-12 h-1.5 bg-white/10 rounded-full mx-auto mb-8"></div>
 
                         {/* Close Button defined by logic or just clicking outside/saving */}

@@ -109,7 +109,15 @@ function App() {
   const handleNavigation = (nav: string) => {
     switch (nav) {
       case 'home':
-        navigateTo(View.DASHBOARD);
+        // If user is a student, go to student dashboard
+        if (userProfile?.role === 'student') {
+          navigateTo(View.STUDENT);
+        } else {
+          navigateTo(View.DASHBOARD);
+        }
+        break;
+      case 'student_home':
+        navigateTo(View.STUDENT);
         break;
       case 'clients':
         navigateTo(View.CLIENTS);
@@ -245,13 +253,13 @@ function App() {
       case View.CLIENTS:
         return <ClientsView user={user} onBack={() => navigateTo(View.DASHBOARD)} onSelectClient={(client) => navigateTo(View.CLIENT_PROFILE, client)} />;
       case View.METRICS:
-        return <MetricsView user={user} onBack={() => navigateTo(View.DASHBOARD)} />;
+        return <MetricsView user={user} onBack={() => navigateTo(userProfile?.role === 'student' ? View.STUDENT : View.DASHBOARD)} />;
       case View.SETTINGS:
-        return <SettingsView user={user} onBack={() => navigateTo(View.DASHBOARD)} onLogout={handleLogout} />;
+        return <SettingsView user={user} onBack={() => navigateTo(userProfile?.role === 'student' ? View.STUDENT : View.DASHBOARD)} onLogout={handleLogout} />;
       case View.CALENDAR:
-        return <CalendarView user={user} onBack={() => navigateTo(View.DASHBOARD)} />;
+        return <CalendarView user={user} onBack={() => navigateTo(userProfile?.role === 'student' ? View.STUDENT : View.DASHBOARD)} />;
       case View.FINANCE:
-        return <FinanceView user={user} onBack={() => navigateTo(View.DASHBOARD)} />;
+        return <FinanceView user={user} onBack={() => navigateTo(userProfile?.role === 'student' ? View.STUDENT : View.DASHBOARD)} />;
       case View.WORKOUT_BUILDER:
         return (
           <WorkoutBuilderView

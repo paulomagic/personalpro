@@ -218,21 +218,24 @@ const StudentDashboardView: React.FC<StudentDashboardViewProps> = ({
                 </h3>
 
                 <button
-                    onClick={() => onNavigate('student_workouts')}
-                    className="w-full card-dark p-4 flex items-center gap-4 active:scale-[0.99] transition-all group"
+                    onClick={() => currentWorkout ? onStartWorkout(currentWorkout) : null}
+                    className={`w-full card-dark p-4 flex items-center gap-4 active:scale-[0.99] transition-all group ${!currentWorkout ? 'opacity-50' : ''}`}
+                    disabled={!currentWorkout}
                 >
                     <div className="size-12 rounded-xl bg-purple-500/20 flex items-center justify-center group-hover:scale-110 transition-transform">
                         <Dumbbell size={24} className="text-purple-400" />
                     </div>
                     <div className="flex-1 text-left">
                         <p className="font-bold text-white">Meus Treinos</p>
-                        <p className="text-xs text-slate-500">Ver todos os treinos disponíveis</p>
+                        <p className="text-xs text-slate-500">
+                            {currentWorkout ? currentWorkout.title : 'Nenhum treino disponível'}
+                        </p>
                     </div>
                     <ChevronRight size={20} className="text-slate-600 group-hover:text-white transition-colors" />
                 </button>
 
                 <button
-                    onClick={() => onNavigate('student_calendar')}
+                    onClick={() => onNavigate('calendar')}
                     className="w-full card-dark p-4 flex items-center gap-4 active:scale-[0.99] transition-all group"
                 >
                     <div className="size-12 rounded-xl bg-blue-500/20 flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -246,7 +249,7 @@ const StudentDashboardView: React.FC<StudentDashboardViewProps> = ({
                 </button>
 
                 <button
-                    onClick={() => onNavigate('student_profile')}
+                    onClick={() => onNavigate('settings')}
                     className="w-full card-dark p-4 flex items-center gap-4 active:scale-[0.99] transition-all group"
                 >
                     <div className="size-12 rounded-xl bg-emerald-500/20 flex items-center justify-center group-hover:scale-110 transition-transform">

@@ -184,6 +184,22 @@ const StudentDashboardView: React.FC<StudentDashboardViewProps> = ({
                 </motion.div>
             )}
 
+            {/* No Workout State - shown when no workout available */}
+            {!currentWorkout && (
+                <motion.div
+                    variants={itemVariants}
+                    className="card-dark p-6 text-center mb-6 border border-slate-800"
+                >
+                    <div className="size-14 rounded-full bg-slate-800 flex items-center justify-center mx-auto mb-4">
+                        <Dumbbell size={28} className="text-slate-600" />
+                    </div>
+                    <h3 className="text-base font-bold text-white mb-1">Nenhum treino disponível</h3>
+                    <p className="text-xs text-slate-500">
+                        Seu personal ainda não criou um treino para você.
+                    </p>
+                </motion.div>
+            )}
+
             {/* Quick Stats */}
             <motion.div variants={itemVariants} className="grid grid-cols-2 gap-3 mb-6">
                 <div className="card-dark p-4">
@@ -262,22 +278,6 @@ const StudentDashboardView: React.FC<StudentDashboardViewProps> = ({
                     <ChevronRight size={20} className="text-slate-600 group-hover:text-white transition-colors" />
                 </button>
             </motion.div>
-
-            {/* No Workout State */}
-            {!currentWorkout && (
-                <motion.div
-                    variants={itemVariants}
-                    className="card-dark p-8 text-center mb-6"
-                >
-                    <div className="size-16 rounded-full bg-slate-800 flex items-center justify-center mx-auto mb-4">
-                        <Dumbbell size={32} className="text-slate-600" />
-                    </div>
-                    <h3 className="text-lg font-bold text-white mb-2">Nenhum treino disponível</h3>
-                    <p className="text-sm text-slate-500">
-                        Seu personal ainda não criou um treino para você. Entre em contato!
-                    </p>
-                </motion.div>
-            )}
         </motion.div>
     );
 };

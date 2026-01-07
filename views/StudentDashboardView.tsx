@@ -265,7 +265,7 @@ const StudentDashboardView: React.FC<StudentDashboardViewProps> = ({
                 </button>
 
                 <button
-                    onClick={() => onNavigate('settings')}
+                    onClick={() => onNavigate('student_profile')}
                     className="w-full card-dark p-4 flex items-center gap-4 active:scale-[0.99] transition-all group"
                 >
                     <div className="size-12 rounded-xl bg-emerald-500/20 flex items-center justify-center group-hover:scale-110 transition-transform">

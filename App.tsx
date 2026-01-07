@@ -25,6 +25,7 @@ const AdminAIDashboardView = lazy(() => import('./views/AdminAIDashboardView'));
 const AdminActivityLogsView = lazy(() => import('./views/AdminActivityLogsView'));
 const AdminSettingsView = lazy(() => import('./views/AdminSettingsView'));
 const StudentDashboardView = lazy(() => import('./views/StudentDashboardView'));
+const StudentProfileView = lazy(() => import('./views/StudentProfileView'));
 
 // Loading fallback component
 const ViewLoader = () => (
@@ -142,6 +143,9 @@ function App() {
         break;
       case 'sport_training':
         navigateTo(View.SPORT_TRAINING);
+        break;
+      case 'student_profile':
+        navigateTo(View.STUDENT_PROFILE);
         break;
       case 'admin':
         navigateTo(View.ADMIN);
@@ -305,6 +309,14 @@ function App() {
             coachName={user?.user_metadata?.name || 'Personal'}
             onCompleteWorkout={() => navigateTo(View.DASHBOARD)}
             onBack={() => selectedClient ? navigateTo(View.CLIENT_PROFILE, selectedClient) : navigateTo(View.DASHBOARD)}
+          />
+        );
+      case View.STUDENT_PROFILE:
+        return (
+          <StudentProfileView
+            user={user}
+            onBack={() => navigateTo(View.STUDENT)}
+            onSettings={() => navigateTo(View.SETTINGS)}
           />
         );
       case View.SPORT_TRAINING:

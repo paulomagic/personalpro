@@ -130,25 +130,25 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({
             {/* Header with Avatar */}
             <motion.div
                 variants={itemVariants}
-                className="relative h-48 bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-900 overflow-hidden"
+                className="relative h-64 bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-900 overflow-hidden"
             >
                 {/* Decorative elements */}
                 <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -mr-32 -mt-32" />
                 <div className="absolute bottom-0 left-0 w-48 h-48 bg-blue-400/20 rounded-full blur-2xl -ml-24 -mb-24" />
 
-                {/* Top bar */}
-                <div className="absolute top-12 left-0 right-0 px-6 flex justify-between items-center z-10">
+                {/* Top bar - with safe area padding */}
+                <div className="absolute top-0 left-0 right-0 pt-14 px-6 flex justify-between items-center z-10">
                     <button
                         onClick={onBack}
-                        className="size-10 rounded-full bg-white/10 backdrop-blur-md text-white border border-white/20 flex items-center justify-center"
+                        className="size-12 rounded-full bg-white/20 backdrop-blur-md text-white border border-white/30 flex items-center justify-center hover:bg-white/30 transition-colors"
                     >
-                        <ArrowLeft size={20} />
+                        <ArrowLeft size={22} />
                     </button>
                     <button
                         onClick={onSettings}
-                        className="size-10 rounded-full bg-white/10 backdrop-blur-md text-white border border-white/20 flex items-center justify-center"
+                        className="size-12 rounded-full bg-white/20 backdrop-blur-md text-white border border-white/30 flex items-center justify-center hover:bg-white/30 transition-colors"
                     >
-                        <Settings size={20} />
+                        <Settings size={22} />
                     </button>
                 </div>
 
@@ -192,8 +192,8 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({
                             key={tab.key}
                             onClick={() => setActiveTab(tab.key as any)}
                             className={`flex-1 py-3 px-4 rounded-xl flex items-center justify-center gap-2 transition-all ${activeTab === tab.key
-                                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30'
-                                    : 'text-slate-500 hover:text-white'
+                                ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30'
+                                : 'text-slate-500 hover:text-white'
                                 }`}
                         >
                             <tab.icon size={16} />
@@ -387,8 +387,8 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({
                                         className="card-dark p-4 flex items-center gap-4"
                                     >
                                         <div className={`size-10 rounded-xl flex items-center justify-center ${activity.type === 'workout'
-                                                ? activity.completed ? 'bg-emerald-500/20' : 'bg-red-500/20'
-                                                : 'bg-slate-700'
+                                            ? activity.completed ? 'bg-emerald-500/20' : 'bg-red-500/20'
+                                            : 'bg-slate-700'
                                             }`}>
                                             {activity.type === 'workout' ? (
                                                 activity.completed ? (

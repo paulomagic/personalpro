@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../services/supabaseClient';
+import { supabase, getInvitationByToken, acceptInvitation } from '../services/supabaseClient';
+import { DBInvitation } from '../services/supabaseClient';
 
 interface LoginViewProps {
   onLogin: (user: any) => void;
@@ -29,6 +30,34 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
   // Rate limiting states
   const [loginAttempts, setLoginAttempts] = useState(0);
   const [lockUntil, setLockUntil] = useState<number | null>(null);
+
+  // Invitation states
+  const [inviteToken, setInviteToken] = useState<string | null>(null);
+  const [invitation, setInvitation] = useState<DBInvitation | null>(null);
+  const [isInviteMode, setIsInviteMode] = useState(false);
+
+  // Check for invite token in URL on mount
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const token = urlParams.get('invite');
+
+    if (token) {
+      setInviteToken(token);
+      setIsInviteMode(true);
+      setShowRegister(true); // Go straight to register for invited users
+
+      // Load invitation details
+      getInvitationByToken(token).then(inv => {
+        if (inv) {
+          setInvitation(inv);
+          setEmail(inv.email); // Pre-fill email from invitation
+        } else {
+          setError('Convite inválido ou expirado');
+          setIsInviteMode(false);
+        }
+      });
+    }
+  }, []);
 
   const slides = [
     {
@@ -116,10 +145,18 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
         return;
       }
 
+      // If in invite mode, set role as student in user metadata
+      const signUpOptions: any = {
+        data: {
+          name,
+          role: isInviteMode ? 'student' : 'coach'
+        }
+      };
+
       const { data, error: authError } = await supabase.auth.signUp({
         email,
         password,
-        options: { data: { name } }
+        options: signUpOptions
       });
 
       if (authError) {
@@ -132,6 +169,18 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
           setError('Verifique seu email para confirmar o cadastro');
           return;
         }
+
+        // If in invite mode, accept the invitation
+        if (isInviteMode && inviteToken) {
+          const result = await acceptInvitation(inviteToken, data.user.id);
+          if (!result.success) {
+            console.error('Error accepting invitation:', result.error);
+            // Continue anyway - user is created, just not linked yet
+          }
+          // Clear URL params
+          window.history.replaceState({}, document.title, window.location.pathname);
+        }
+
         onLogin(data.user);
       }
     } catch (err: any) {
@@ -196,17 +245,31 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
           <span className="material-symbols-outlined">arrow_back</span>
         </button>
 
-        <div className="pt-12 pb-8 flex justify-center">
-          <div className="size-12 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-600/20">
-            <span className="material-symbols-outlined text-white text-2xl">fitness_center</span>
+        <div className="pt-12 pb-8 flex flex-col items-center">
+          <div className={`size-12 rounded-xl flex items-center justify-center shadow-lg ${isInviteMode
+              ? 'bg-emerald-600 shadow-emerald-600/20'
+              : 'bg-blue-600 shadow-blue-600/20'
+            }`}>
+            <span className="material-symbols-outlined text-white text-2xl">
+              {isInviteMode ? 'person_add' : 'fitness_center'}
+            </span>
           </div>
+          {isInviteMode && (
+            <span className="mt-3 px-3 py-1 bg-emerald-500/20 text-emerald-400 text-xs font-bold rounded-full uppercase tracking-widest">
+              Convite de Personal
+            </span>
+          )}
         </div>
 
         <h1 className="text-3xl font-black text-white text-center mb-2 tracking-tight">
-          {isRegister ? 'Criar Conta' : 'Bem-vindo'}
+          {isInviteMode ? '🎉 Você foi Convidado!' : isRegister ? 'Criar Conta' : 'Bem-vindo'}
         </h1>
         <p className="text-slate-400 text-center mb-8 font-medium">
-          {isRegister ? 'Inicie sua jornada ultra-premium' : 'Acesse sua conta para continuar'}
+          {isInviteMode
+            ? 'Crie sua conta para acessar seus treinos'
+            : isRegister
+              ? 'Inicie sua jornada ultra-premium'
+              : 'Acesse sua conta para continuar'}
         </p>
 
         {error && (

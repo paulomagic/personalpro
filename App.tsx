@@ -60,6 +60,40 @@ function App() {
     return () => subscription.unsubscribe();
   }, []);
 
+  // Force Service Worker update on new version
+  useEffect(() => {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.ready.then((registration) => {
+        // Check for updates immediately
+        registration.update();
+
+        // Listen for new SW waiting
+        registration.addEventListener('updatefound', () => {
+          const newWorker = registration.installing;
+          if (newWorker) {
+            newWorker.addEventListener('statechange', () => {
+              if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                // New version available - force skip waiting
+                newWorker.postMessage('skipWaiting');
+                // Reload to get new version
+                window.location.reload();
+              }
+            });
+          }
+        });
+      });
+
+      // Also handle when SW takes control
+      let refreshing = false;
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (!refreshing) {
+          refreshing = true;
+          window.location.reload();
+        }
+      });
+    }
+  }, []);
+
   const navigateTo = (view: View, data?: any) => {
     if (view === View.CLIENT_PROFILE && data) {
       setSelectedClient(data);

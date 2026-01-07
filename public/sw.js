@@ -1,6 +1,9 @@
-const CACHE_NAME = 'personalpro-v6';
-const STATIC_CACHE = 'personalpro-static-v6';
-const DYNAMIC_CACHE = 'personalpro-dynamic-v6';
+const CACHE_NAME = 'personalpro-v7';
+const STATIC_CACHE = 'personalpro-static-v7';
+const DYNAMIC_CACHE = 'personalpro-dynamic-v7';
+
+// Bypass cache em desenvolvimento (localhost)
+const IS_DEV = self.location.hostname === 'localhost' || self.location.hostname === '127.0.0.1';
 
 // Assets estáticos para cachear imediatamente
 const STATIC_ASSETS = [
@@ -22,8 +25,6 @@ const API_PATTERNS = [
 ];
 
 const STATIC_PATTERNS = [
-    '.js',
-    '.css',
     '.woff2',
     '.woff',
     '.ttf',
@@ -33,6 +34,14 @@ const STATIC_PATTERNS = [
     '.svg',
     '.webp',
     '.ico'
+];
+
+// Não cachear durante desenvolvimento
+const DEV_BYPASS_PATTERNS = [
+    '.js',
+    '.css',
+    '.tsx',
+    '.ts'
 ];
 
 // Install event - cache recursos estáticos
@@ -70,9 +79,14 @@ function isApiRequest(url) {
     return API_PATTERNS.some(pattern => url.includes(pattern));
 }
 
-// Verifica se é um asset estático
+// Verifica se é um asset estático (somente imagens e fontes)
 function isStaticAsset(url) {
     return STATIC_PATTERNS.some(pattern => url.endsWith(pattern));
+}
+
+// Verifica se deve fazer bypass do cache (em dev)
+function isDevAsset(url) {
+    return DEV_BYPASS_PATTERNS.some(pattern => url.endsWith(pattern));
 }
 
 // Estratégia: Network First (para APIs)
@@ -145,6 +159,11 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
         (async () => {
             try {
+                // Em desenvolvimento: bypass total para JS/CSS (HMR)
+                if (IS_DEV && isDevAsset(url)) {
+                    return await fetch(request);
+                }
+
                 // APIs: Network First
                 if (isApiRequest(url)) {
                     return await networkFirst(request);

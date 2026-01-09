@@ -845,11 +845,15 @@ export interface DBRescheduleRequest {
 export async function getStudentAppointments(clientId: string): Promise<Appointment[]> {
     if (!supabase) return [];
 
+    // Get today at midnight local time for filtering
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
     const { data, error } = await supabase
         .from('appointments')
         .select('*')
         .eq('client_id', clientId)
-        .gte('date', new Date().toISOString())
+        .gte('date', today.toISOString())
         .order('date', { ascending: true });
 
     if (error) {

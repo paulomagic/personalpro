@@ -36,14 +36,16 @@ const ClientFinanceSection: React.FC<ClientFinanceSectionProps> = ({ client, onU
 
     const handleSave = async () => {
         setSaving(true);
+        console.log('[FinanceSection] Saving:', { clientId: client.id, formData });
         try {
             const result = await updateClient(client.id, formData);
+            console.log('[FinanceSection] Save result:', result);
             if (result && onUpdate) {
                 onUpdate(formData);
             }
             setIsEditing(false);
         } catch (error) {
-            console.error('Error saving finance data:', error);
+            console.error('[FinanceSection] Error saving finance data:', error);
         } finally {
             setSaving(false);
         }
@@ -118,8 +120,8 @@ const ClientFinanceSection: React.FC<ClientFinanceSectionProps> = ({ client, onU
                             <button
                                 onClick={() => setFormData(prev => ({ ...prev, payment_type: 'monthly' }))}
                                 className={`flex-1 py-3 rounded-xl flex items-center justify-center gap-2 text-sm font-bold transition-all ${formData.payment_type === 'monthly'
-                                        ? 'bg-emerald-500 text-white'
-                                        : 'bg-slate-700 text-slate-400'
+                                    ? 'bg-emerald-500 text-white'
+                                    : 'bg-slate-700 text-slate-400'
                                     }`}
                             >
                                 <Calendar size={16} />
@@ -128,8 +130,8 @@ const ClientFinanceSection: React.FC<ClientFinanceSectionProps> = ({ client, onU
                             <button
                                 onClick={() => setFormData(prev => ({ ...prev, payment_type: 'per_session' }))}
                                 className={`flex-1 py-3 rounded-xl flex items-center justify-center gap-2 text-sm font-bold transition-all ${formData.payment_type === 'per_session'
-                                        ? 'bg-blue-500 text-white'
-                                        : 'bg-slate-700 text-slate-400'
+                                    ? 'bg-blue-500 text-white'
+                                    : 'bg-slate-700 text-slate-400'
                                     }`}
                             >
                                 <Repeat size={16} />
@@ -171,8 +173,8 @@ const ClientFinanceSection: React.FC<ClientFinanceSectionProps> = ({ client, onU
                                         key={day}
                                         onClick={() => setFormData(prev => ({ ...prev, payment_day: day }))}
                                         className={`py-2 rounded-lg text-sm font-bold transition-all ${formData.payment_day === day
-                                                ? 'bg-emerald-500 text-white'
-                                                : 'bg-slate-700 text-slate-400 hover:bg-slate-600'
+                                            ? 'bg-emerald-500 text-white'
+                                            : 'bg-slate-700 text-slate-400 hover:bg-slate-600'
                                             }`}
                                     >
                                         {day}

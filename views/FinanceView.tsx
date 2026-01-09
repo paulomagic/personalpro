@@ -6,6 +6,7 @@ import { getPayments, updatePayment, getClients } from '../services/supabaseClie
 import { mockClients } from '../mocks/demoData';
 import { PaymentCardSkeleton } from '../components/Skeleton';
 import EmptyState from '../components/EmptyState';
+import PaymentStatusModal from '../components/PaymentStatusModal';
 
 interface FinanceViewProps {
     user: any;
@@ -21,11 +22,13 @@ interface Payment {
     status: 'paid' | 'pending' | 'overdue';
     plan: string;
     phone?: string;
+    paymentMethod?: string;
 }
 
 const FinanceView: React.FC<FinanceViewProps> = ({ user, onBack }) => {
     const [activeTab, setActiveTab] = useState<'overview' | 'pending' | 'history'>('overview');
     const [showPaymentModal, setShowPaymentModal] = useState<Payment | null>(null);
+    const [showStatusModal, setShowStatusModal] = useState<Payment | null>(null);
     const [showSuccessToast, setShowSuccessToast] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
     const [payments, setPayments] = useState<Payment[]>([]);
@@ -148,6 +151,32 @@ const FinanceView: React.FC<FinanceViewProps> = ({ user, onBack }) => {
             }
         } else {
             showToast(`Pagamento de ${payment.clientName} registrado!`);
+        }
+    };
+
+    const handleUpdateStatus = async (id: string, status: 'paid' | 'pending' | 'overdue', method?: string) => {
+        const payment = payments.find(p => p.id === id);
+        if (!payment) return;
+
+        // Update local state immediately
+        setPayments(prev => prev.map(p =>
+            p.id === id ? { ...p, status, paymentMethod: method } : p
+        ));
+        setShowStatusModal(null);
+
+        // Persist to database if not a demo payment
+        if (!id.startsWith('demo-')) {
+            const updateData: any = { status };
+            if (status === 'paid') {
+                updateData.paid_date = new Date().toISOString().split('T')[0];
+                if (method) updateData.payment_method = method;
+            }
+            const result = await updatePayment(id, updateData);
+            if (result) {
+                showToast(`Status de ${payment.clientName} atualizado!`);
+            }
+        } else {
+            showToast(`Status atualizado!`);
         }
     };
 
@@ -306,11 +335,17 @@ const FinanceView: React.FC<FinanceViewProps> = ({ user, onBack }) => {
 
                                     <div className="text-right">
                                         <p className="font-black text-white text-sm">R$ {payment.amount}</p>
-                                        <p className={`text-[8px] font-black uppercase tracking-widest ${payment.status === 'paid' ? 'text-emerald-400' :
-                                            payment.status === 'overdue' ? 'text-red-400' : 'text-amber-400'
-                                            }`}>
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                setShowStatusModal(payment);
+                                            }}
+                                            className={`text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full hover:opacity-80 transition-opacity ${payment.status === 'paid' ? 'text-emerald-400 bg-emerald-500/10' :
+                                                    payment.status === 'overdue' ? 'text-red-400 bg-red-500/10' : 'text-amber-400 bg-amber-500/10'
+                                                }`}
+                                        >
                                             {payment.status === 'paid' ? 'Pago' : payment.status === 'overdue' ? 'Atrasado' : 'Pendente'}
-                                        </p>
+                                        </button>
                                     </div>
                                 </div>
                             ))
@@ -370,6 +405,15 @@ const FinanceView: React.FC<FinanceViewProps> = ({ user, onBack }) => {
                         </div>
                     </div>
                 </div>
+            )}
+
+            {/* Payment Status Edit Modal */}
+            {showStatusModal && (
+                <PaymentStatusModal
+                    payment={showStatusModal}
+                    onClose={() => setShowStatusModal(null)}
+                    onUpdateStatus={handleUpdateStatus}
+                />
             )}
         </motion.div>
     );

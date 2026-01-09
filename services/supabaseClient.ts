@@ -35,6 +35,11 @@ export interface DBClient {
     adherence: number;
     created_at: string;
     coach_id: string;
+    // Financial fields
+    monthly_fee?: number;
+    payment_day?: number;
+    payment_type?: 'monthly' | 'per_session';
+    session_price?: number;
 }
 
 // Helper function to map DB snake_case to frontend camelCase
@@ -81,6 +86,8 @@ export interface Payment {
     paid_date?: string;
     status: 'paid' | 'pending' | 'overdue';
     plan: string;
+    payment_method?: 'pix' | 'cash' | 'card' | 'transfer';
+    type?: 'monthly' | 'session';
     created_at: string;
 }
 

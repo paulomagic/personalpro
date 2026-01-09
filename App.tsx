@@ -1,6 +1,6 @@
 import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { View, Client, Workout, AppUser, isAdmin, isStudent } from './types';
-import { supabase, getUserProfile } from './services/supabaseClient';
+import { supabase, getUserProfile, countPendingRescheduleRequests } from './services/supabaseClient';
 import LoginView from './views/LoginView';
 import DashboardView from './views/DashboardView';
 import ClientProfileView from './views/ClientProfileView';
@@ -45,6 +45,7 @@ function App() {
   const [user, setUser] = useState<any>(null);
   const [userProfile, setUserProfile] = useState<any>(null);
   const [loading, setLoading] = useState(false);
+  const [pendingRequests, setPendingRequests] = useState(0);  // Reschedule requests count
 
   // Auth state listener - handle session expiration and logout from other tabs
   useEffect(() => {
@@ -97,6 +98,23 @@ function App() {
       });
     }
   }, []);
+
+  // Fetch pending reschedule requests count for coaches
+  useEffect(() => {
+    const fetchPendingRequests = async () => {
+      if (user && userProfile?.role === 'coach') {
+        const count = await countPendingRescheduleRequests(user.id);
+        setPendingRequests(count);
+      } else {
+        setPendingRequests(0);
+      }
+    };
+
+    fetchPendingRequests();
+    // Refresh count every 30 seconds while app is open
+    const interval = setInterval(fetchPendingRequests, 30000);
+    return () => clearInterval(interval);
+  }, [user, userProfile]);
 
   const navigateTo = (view: View, data?: any) => {
     if (view === View.CLIENT_PROFILE && data) {
@@ -430,7 +448,7 @@ function App() {
 
   return (
     <div className="max-w-md mx-auto bg-slate-950 shadow-2xl min-h-screen overflow-hidden">
-      <Layout activeTab={getActiveTab()} onNavigate={handleNavigation} isStudent={userProfile?.role === 'student'}>
+      <Layout activeTab={getActiveTab()} onNavigate={handleNavigation} isStudent={userProfile?.role === 'student'} pendingRequests={pendingRequests}>
         <Suspense fallback={<ViewLoader />}>
           {renderContent()}
         </Suspense>

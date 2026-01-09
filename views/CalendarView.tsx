@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getAppointments, createAppointment, updateAppointment, getClients, DBClient, Appointment as DBAppointment } from '../services/supabaseClient';
 import { mockClients } from '../mocks/demoData';
+import PendingRequestsPanel from '../components/PendingRequestsPanel';
 
 interface CalendarViewProps {
     user?: any;
@@ -297,6 +298,11 @@ const CalendarView: React.FC<CalendarViewProps> = ({ user, onBack, onSelectClien
             </header>
 
             <main className="px-6 space-y-6">
+                {/* Pending Reschedule Requests - Only for coaches with real data */}
+                {!isDemo && user?.id && (
+                    <PendingRequestsPanel coachId={user.id} />
+                )}
+
                 {/* Stats Row */}
                 <div className="grid grid-cols-2 gap-3 animate-slide-up">
                     <div className="glass-card rounded-[24px] p-4 border-l-4 border-blue-500">

@@ -12,9 +12,10 @@ interface LayoutProps {
     activeTab: string;
     onNavigate: (tab: string) => void;
     isStudent?: boolean;  // Hide coach-only features
+    pendingRequests?: number;  // Number of pending reschedule requests
 }
 
-const Layout: React.FC<LayoutProps> = ({ children, activeTab, onNavigate, isStudent = false }) => {
+const Layout: React.FC<LayoutProps> = ({ children, activeTab, onNavigate, isStudent = false, pendingRequests = 0 }) => {
     return (
         <div className="relative min-h-screen bg-slate-950 text-white font-sans selection:bg-blue-500/30">
             <div className="pb-24 min-h-screen">
@@ -36,6 +37,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, onNavigate, isStud
                         label="Agenda"
                         isActive={activeTab === 'calendar'}
                         onClick={() => onNavigate('calendar')}
+                        badge={!isStudent ? pendingRequests : 0}  // Only show badge for coaches
                     />
 
                     {/* Alunos - only for coaches/personal, not students */}
@@ -60,12 +62,20 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, onNavigate, isStud
     );
 };
 
-const NavButton = ({ icon: Icon, label, isActive, onClick }: any) => (
+const NavButton = ({ icon: Icon, label, isActive, onClick, badge = 0 }: any) => (
     <button
         onClick={onClick}
-        className={`flex flex-col items-center gap-1 w-14 transition-colors ${isActive ? 'text-blue-500' : 'text-slate-500 hover:text-slate-300'}`}
+        className={`relative flex flex-col items-center gap-1 w-14 transition-colors ${isActive ? 'text-blue-500' : 'text-slate-500 hover:text-slate-300'}`}
     >
-        <Icon size={24} strokeWidth={isActive ? 2.5 : 2} className={isActive ? "scale-110 transition-transform shadow-glow-sm" : ""} />
+        <div className="relative">
+            <Icon size={24} strokeWidth={isActive ? 2.5 : 2} className={isActive ? "scale-110 transition-transform shadow-glow-sm" : ""} />
+            {/* Notification Badge */}
+            {badge > 0 && (
+                <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-red-500 rounded-full text-[10px] font-bold text-white flex items-center justify-center shadow-lg animate-pulse">
+                    {badge > 9 ? '9+' : badge}
+                </span>
+            )}
+        </div>
         <span className="text-[10px] font-bold tracking-wide">{label}</span>
     </button>
 );

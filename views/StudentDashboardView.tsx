@@ -242,7 +242,7 @@ const StudentDashboardView: React.FC<StudentDashboardViewProps> = ({
                 </h3>
 
                 <button
-                    onClick={() => currentWorkout ? onStartWorkout(currentWorkout) : null}
+                    onClick={() => currentWorkout ? onNavigate('student_workouts') : null}
                     className={`w-full card-dark p-4 flex items-center gap-4 active:scale-[0.99] transition-all group ${!currentWorkout ? 'opacity-50' : ''}`}
                     disabled={!currentWorkout}
                 >

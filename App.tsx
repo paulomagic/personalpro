@@ -141,6 +141,10 @@ function App() {
       case 'student':
         navigateTo(View.STUDENT);
         break;
+      case 'student_workouts':
+        // Navega para StudentView que mostra lista de treinos
+        navigateTo(View.STUDENT);
+        break;
       case 'sport_training':
         navigateTo(View.SPORT_TRAINING);
         break;

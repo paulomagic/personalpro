@@ -71,12 +71,16 @@ const StudentCalendarView: React.FC<StudentCalendarViewProps> = ({ user, onBack 
     };
 
     const formatDate = (dateStr: string) => {
-        const date = new Date(dateStr);
+        // Parse date without timezone conversion - use the date as stored
+        // dateStr format: "2026-01-09T17:00:00" or "2026-01-09"
+        const datePart = dateStr.split('T')[0]; // "2026-01-09"
+        const [year, month, day] = datePart.split('-').map(Number);
+        const date = new Date(year, month - 1, day); // Local date without TZ conversion
+
         return {
-            day: date.getDate(),
+            day: day,
             weekday: date.toLocaleDateString('pt-BR', { weekday: 'short' }),
             month: date.toLocaleDateString('pt-BR', { month: 'short' }),
-            time: date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
             full: date.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })
         };
     };
@@ -95,11 +99,11 @@ const StudentCalendarView: React.FC<StudentCalendarViewProps> = ({ user, onBack 
         loadData();
     };
 
-    // Group appointments by date
+    // Group appointments by date - use date string directly to avoid timezone issues
     const groupedAppointments = appointments.reduce((acc, apt) => {
-        const dateKey = new Date(apt.date).toDateString();
-        if (!acc[dateKey]) acc[dateKey] = [];
-        acc[dateKey].push(apt);
+        const datePart = apt.date.split('T')[0]; // "2026-01-09" 
+        if (!acc[datePart]) acc[datePart] = [];
+        acc[datePart].push(apt);
         return acc;
     }, {} as Record<string, Appointment[]>);
 
@@ -212,7 +216,7 @@ const StudentCalendarView: React.FC<StudentCalendarViewProps> = ({ user, onBack 
                                                         </p>
                                                         <div className="flex items-center gap-2 text-xs text-slate-400">
                                                             <Clock size={12} />
-                                                            <span>{formatDate(apt.date).time}</span>
+                                                            <span>{apt.time || '00:00'}</span>
                                                             <span>•</span>
                                                             <span>{apt.duration || 60} min</span>
                                                         </div>

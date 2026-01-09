@@ -5,6 +5,7 @@ import { Client, MissedClass } from '../types';
 import { analyzeClientProgress } from '../services/geminiService';
 import { updateClient } from '../services/supabaseClient';
 import InviteStudentModal from '../components/InviteStudentModal';
+import ClientFinanceSection from '../components/ClientFinanceSection';
 
 interface ClientProfileViewProps {
   client: Client;
@@ -711,6 +712,19 @@ const ClientProfileView: React.FC<ClientProfileViewProps> = ({ client: initialCl
                   </div>
                 )}
               </div>
+
+              {/* Finance Section */}
+              <ClientFinanceSection
+                client={{
+                  id: client.id,
+                  name: client.name,
+                  monthly_fee: (client as any).monthly_fee,
+                  payment_day: (client as any).payment_day,
+                  payment_type: (client as any).payment_type,
+                  session_price: (client as any).session_price,
+                }}
+                onUpdate={(updates) => setClient(prev => ({ ...prev, ...updates }))}
+              />
 
               {/* Notes Section */}
               <div className="glass-card rounded-2xl p-4 space-y-4">

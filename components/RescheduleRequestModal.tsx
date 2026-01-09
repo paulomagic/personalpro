@@ -57,12 +57,16 @@ const RescheduleRequestModal: React.FC<RescheduleRequestModalProps> = ({
             // Format: "2026-01-09T18:00:00"
             const requestedDateStr = `${selectedDate}T${selectedTime}:00`;
 
+            // Combine appointment date with appointment.time for original date
+            const originalDatePart = appointment.date.split('T')[0]; // "2026-01-09"
+            const originalDateStr = `${originalDatePart}T${appointment.time || '00:00'}:00`;
+
             const result = await createRescheduleRequest({
                 appointmentId: appointment.id,
                 clientId: clientId,
                 coachId: appointment.coach_id,
-                originalDate: appointment.date,
-                requestedDate: requestedDateStr,  // Use string directly, not toISOString()
+                originalDate: originalDateStr,  // Now includes the correct time
+                requestedDate: requestedDateStr,
                 reason: reason || undefined
             });
 

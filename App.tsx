@@ -143,7 +143,7 @@ function App() {
         break;
       case 'student_workouts':
         // Navega para StudentView que mostra lista de treinos
-        navigateTo(View.STUDENT);
+        navigateTo(View.STUDENT_WORKOUTS);
         break;
       case 'sport_training':
         navigateTo(View.SPORT_TRAINING);
@@ -321,6 +321,17 @@ function App() {
             user={user}
             onBack={() => navigateTo(View.STUDENT)}
             onSettings={() => navigateTo(View.SETTINGS)}
+          />
+        );
+      case View.STUDENT_WORKOUTS:
+        // Student viewing their workout list
+        return (
+          <StudentView
+            clientId={userProfile?.client_id || undefined}
+            studentName={user?.user_metadata?.name || user?.user_metadata?.full_name || 'Aluno'}
+            coachName="Seu Personal"
+            onCompleteWorkout={() => navigateTo(View.STUDENT)}
+            onBack={() => navigateTo(View.STUDENT)}
           />
         );
       case View.SPORT_TRAINING:

@@ -178,7 +178,7 @@ const StudentDashboardView: React.FC<StudentDashboardViewProps> = ({
                         </div>
 
                         <button
-                            onClick={() => onStartWorkout(currentWorkout)}
+                            onClick={() => onNavigate('student_workouts')}
                             className="w-full py-4 rounded-xl bg-white/20 hover:bg-white/30 backdrop-blur-sm border border-white/10 text-white font-bold flex items-center justify-center gap-2 transition-colors"
                         >
                             <Play size={20} fill="currentColor" />

@@ -58,7 +58,12 @@ const ClientsView: React.FC<ClientsViewProps> = ({ user, onBack, onSelectClient 
                 observations: dbClient.observations,
                 missedClasses: [],
                 assessments: [],
-                paymentStatus: 'paid' // Default
+                paymentStatus: 'paid', // Default
+                // Financial fields
+                monthly_fee: dbClient.monthly_fee,
+                payment_day: dbClient.payment_day,
+                payment_type: dbClient.payment_type,
+                session_price: dbClient.session_price,
             }));
             setClients(mappedClients);
         } catch (error) {

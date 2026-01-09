@@ -54,12 +54,16 @@ const RescheduleRequestModal: React.FC<RescheduleRequestModalProps> = ({
 
         try {
             // Create ISO string directly without Date conversion to avoid timezone issues
-            // Format: "2026-01-09T18:00:00"
+            // selectedTime format: "18:00", need to add seconds
             const requestedDateStr = `${selectedDate}T${selectedTime}:00`;
 
             // Combine appointment date with appointment.time for original date
             const originalDatePart = appointment.date.split('T')[0]; // "2026-01-09"
-            const originalDateStr = `${originalDatePart}T${appointment.time || '00:00'}:00`;
+            // appointment.time might be "17:00" or "17:00:00", normalize it
+            const timeValue = appointment.time?.includes(':')
+                ? (appointment.time.length === 5 ? `${appointment.time}:00` : appointment.time.slice(0, 8))
+                : '00:00:00';
+            const originalDateStr = `${originalDatePart}T${timeValue}`;
 
             const result = await createRescheduleRequest({
                 appointmentId: appointment.id,

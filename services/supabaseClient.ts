@@ -61,6 +61,11 @@ export function mapDBClientToClient(dbClient: DBClient & { avatar?: string }): a
         assessments: [],
         totalClasses: 0,
         completedClasses: 0,
+        // Financial fields
+        monthly_fee: dbClient.monthly_fee,
+        payment_day: dbClient.payment_day,
+        payment_type: dbClient.payment_type,
+        session_price: dbClient.session_price,
     };
 }
 

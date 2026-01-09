@@ -261,6 +261,12 @@ export interface Client {
   coachId?: string;
   coachName?: string;
   coachLogo?: string;
+
+  // Financial fields
+  monthly_fee?: number;
+  payment_day?: number;
+  payment_type?: 'monthly' | 'per_session';
+  session_price?: number;
 }
 
 // ============ WORKOUT TEMPLATE ============

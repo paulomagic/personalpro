@@ -9,6 +9,7 @@ import ClientsView from './views/ClientsView';
 import SettingsView from './views/SettingsView';
 import CalendarView from './views/CalendarView';
 import Layout from './components/Layout';
+import UpdateBanner from './components/UpdateBanner';
 
 // Lazy load heavy views to reduce initial bundle size
 const AIBuilderView = lazy(() => import('./views/AIBuilderView'));
@@ -46,6 +47,8 @@ function App() {
   const [userProfile, setUserProfile] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [pendingRequests, setPendingRequests] = useState(0);  // Reschedule requests count
+  const [updateAvailable, setUpdateAvailable] = useState(false);
+  const [waitingWorker, setWaitingWorker] = useState<ServiceWorker | null>(null);
 
   // Auth state listener - handle session expiration and logout from other tabs
   useEffect(() => {
@@ -65,7 +68,7 @@ function App() {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Force Service Worker update on new version
+  // Service Worker update detection - show banner instead of auto-reload
   useEffect(() => {
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.ready.then((registration) => {
@@ -78,17 +81,22 @@ function App() {
           if (newWorker) {
             newWorker.addEventListener('statechange', () => {
               if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                // New version available - force skip waiting
-                newWorker.postMessage('skipWaiting');
-                // Reload to get new version
-                window.location.reload();
+                // New version available - show banner instead of auto-reload
+                setWaitingWorker(newWorker);
+                setUpdateAvailable(true);
               }
             });
           }
         });
+
+        // Check if there's already a waiting worker
+        if (registration.waiting) {
+          setWaitingWorker(registration.waiting);
+          setUpdateAvailable(true);
+        }
       });
 
-      // Also handle when SW takes control
+      // Handle when SW takes control (after user clicks update)
       let refreshing = false;
       navigator.serviceWorker.addEventListener('controllerchange', () => {
         if (!refreshing) {
@@ -115,6 +123,13 @@ function App() {
     const interval = setInterval(fetchPendingRequests, 30000);
     return () => clearInterval(interval);
   }, [user, userProfile]);
+
+  // Handle PWA update when user clicks the banner
+  const handleUpdate = () => {
+    if (waitingWorker) {
+      waitingWorker.postMessage('skipWaiting');
+    }
+  };
 
   const navigateTo = (view: View, data?: any) => {
     if (view === View.CLIENT_PROFILE && data) {
@@ -439,6 +454,12 @@ function App() {
   if (currentView === View.STUDENT) {
     return (
       <div className="max-w-md mx-auto bg-slate-950 shadow-2xl min-h-screen overflow-hidden">
+        {updateAvailable && (
+          <UpdateBanner
+            onUpdate={handleUpdate}
+            onDismiss={() => setUpdateAvailable(false)}
+          />
+        )}
         <Suspense fallback={<ViewLoader />}>
           {renderContent()}
         </Suspense>
@@ -448,6 +469,12 @@ function App() {
 
   return (
     <div className="max-w-md mx-auto bg-slate-950 shadow-2xl min-h-screen overflow-hidden">
+      {updateAvailable && (
+        <UpdateBanner
+          onUpdate={handleUpdate}
+          onDismiss={() => setUpdateAvailable(false)}
+        />
+      )}
       <Layout activeTab={getActiveTab()} onNavigate={handleNavigation} isStudent={userProfile?.role === 'student'} pendingRequests={pendingRequests}>
         <Suspense fallback={<ViewLoader />}>
           {renderContent()}

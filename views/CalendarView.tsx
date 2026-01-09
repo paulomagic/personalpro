@@ -430,8 +430,16 @@ const CalendarView: React.FC<CalendarViewProps> = ({ user, onBack, onSelectClien
                             initial={{ y: '100%' }}
                             animate={{ y: 0 }}
                             exit={{ y: '100%' }}
-                            className="w-full max-w-md mx-auto bg-slate-900 rounded-t-[40px] p-8 border-t border-white/10"
+                            className="relative w-full max-w-md mx-auto bg-slate-900 rounded-t-[40px] p-8 border-t border-white/10"
                         >
+                            {/* Close button */}
+                            <button
+                                onClick={() => setShowDetailModal(null)}
+                                className="absolute top-6 right-6 size-10 rounded-full bg-white/10 flex items-center justify-center text-white hover:bg-white/20 transition-colors"
+                            >
+                                <span className="material-symbols-outlined">close</span>
+                            </button>
+
                             <div className="w-12 h-1 bg-white/10 rounded-full mx-auto mb-8"></div>
 
                             <div className="flex items-center gap-5 mb-8">

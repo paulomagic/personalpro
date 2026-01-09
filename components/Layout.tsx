@@ -11,9 +11,10 @@ interface LayoutProps {
     children: React.ReactNode;
     activeTab: string;
     onNavigate: (tab: string) => void;
+    isStudent?: boolean;  // Hide coach-only features
 }
 
-const Layout: React.FC<LayoutProps> = ({ children, activeTab, onNavigate }) => {
+const Layout: React.FC<LayoutProps> = ({ children, activeTab, onNavigate, isStudent = false }) => {
     return (
         <div className="relative min-h-screen bg-slate-950 text-white font-sans selection:bg-blue-500/30">
             <div className="pb-24 min-h-screen">
@@ -37,19 +38,21 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, onNavigate }) => {
                         onClick={() => onNavigate('calendar')}
                     />
 
-
-                    <NavButton
-                        icon={Users}
-                        label="Alunos"
-                        isActive={activeTab === 'clients'}
-                        onClick={() => onNavigate('clients')}
-                    />
+                    {/* Alunos - only for coaches/personal, not students */}
+                    {!isStudent && (
+                        <NavButton
+                            icon={Users}
+                            label="Alunos"
+                            isActive={activeTab === 'clients'}
+                            onClick={() => onNavigate('clients')}
+                        />
+                    )}
 
                     <NavButton
                         icon={User}
                         label="Perfil"
                         isActive={activeTab === 'settings'}
-                        onClick={() => onNavigate('settings')}
+                        onClick={() => onNavigate(isStudent ? 'student_profile' : 'settings')}
                     />
                 </div>
             </div>

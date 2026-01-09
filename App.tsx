@@ -253,7 +253,7 @@ function App() {
           onSportTraining={() => navigateTo(View.SPORT_TRAINING)}
         />;
       case View.TRAINING_EXECUTION:
-        return <TrainingExecutionView workout={activeWorkout!} onFinish={() => navigateTo(View.DASHBOARD)} />;
+        return <TrainingExecutionView workout={activeWorkout!} onFinish={() => navigateTo(userProfile?.role === 'student' ? View.STUDENT : View.DASHBOARD)} />;
       case View.CLIENTS:
         return <ClientsView user={user} onBack={() => navigateTo(View.DASHBOARD)} onSelectClient={(client) => navigateTo(View.CLIENT_PROFILE, client)} />;
       case View.METRICS:

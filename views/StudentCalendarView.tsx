@@ -216,7 +216,7 @@ const StudentCalendarView: React.FC<StudentCalendarViewProps> = ({ user, onBack 
                                                         </p>
                                                         <div className="flex items-center gap-2 text-xs text-slate-400">
                                                             <Clock size={12} />
-                                                            <span>{apt.time || '00:00'}</span>
+                                                            <span>{(apt.time || '00:00').slice(0, 5)}</span>
                                                             <span>•</span>
                                                             <span>{apt.duration || 60} min</span>
                                                         </div>

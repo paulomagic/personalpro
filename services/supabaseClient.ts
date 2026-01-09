@@ -976,11 +976,19 @@ export async function respondToRescheduleRequest(
         return false;
     }
 
-    // If approved, update the appointment date
+    // If approved, update the appointment date and time
     if (approved) {
+        // Extract date and time from requested_date
+        // Format: "2026-01-09T18:00:00"
+        const [datePart, timePart] = request.requested_date.split('T');
+        const newTime = timePart ? timePart.slice(0, 5) : '00:00'; // Get HH:MM
+
         const { error: appointmentError } = await supabase
             .from('appointments')
-            .update({ date: request.requested_date })
+            .update({
+                date: request.requested_date,  // Full timestamp
+                time: newTime  // Just HH:MM format
+            })
             .eq('id', request.appointment_id);
 
         if (appointmentError) {

@@ -79,7 +79,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({ user, onBack, onSelectClien
                         clientId: apt.client_id,
                         clientName: apt.clients?.name || 'Cliente',
                         clientAvatar: apt.clients?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(apt.clients?.name || 'C')}&background=3b82f6&color=fff`,
-                        time: apt.time,
+                        time: (apt.time || '').slice(0, 5) || '00:00',
                         duration: apt.duration,
                         type: apt.type,
                         status: apt.status,
@@ -358,7 +358,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({ user, onBack, onSelectClien
                                         >
                                             {/* Time */}
                                             <div className="text-center w-14 border-r border-white/5 pr-4 mr-1">
-                                                <p className="text-lg font-black text-white leading-none mb-1">{apt.time}</p>
+                                                <p className="text-lg font-black text-white leading-none mb-1">{(apt.time || '').slice(0, 5)}</p>
                                                 <p className="text-[9px] text-slate-500 font-black uppercase tracking-widest">{apt.duration}</p>
                                             </div>
 

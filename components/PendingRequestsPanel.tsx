@@ -57,14 +57,18 @@ const PendingRequestsPanel: React.FC<PendingRequestsPanelProps> = ({ coachId, on
     };
 
     const formatDate = (dateStr: string) => {
-        const date = new Date(dateStr);
-        return date.toLocaleDateString('pt-BR', {
-            weekday: 'short',
-            day: 'numeric',
-            month: 'short',
-            hour: '2-digit',
-            minute: '2-digit'
-        });
+        // Parse ISO date string without timezone conversion
+        // Format: "2026-01-09T18:00:00.000Z" or "2026-01-09T18:00:00"
+        const [datePart, timePart] = dateStr.split('T');
+        const [year, month, day] = datePart.split('-').map(Number);
+        const time = timePart ? timePart.slice(0, 5) : '00:00'; // Get HH:MM
+
+        // Create date for formatting weekday/month only
+        const date = new Date(year, month - 1, day);
+        const weekday = date.toLocaleDateString('pt-BR', { weekday: 'short' });
+        const monthName = date.toLocaleDateString('pt-BR', { month: 'short' });
+
+        return `${weekday}, ${day} de ${monthName}, ${time}`;
     };
 
     if (loading) {

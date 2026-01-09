@@ -30,14 +30,17 @@ const RescheduleRequestModal: React.FC<RescheduleRequestModalProps> = ({
     ];
 
     const formatOriginalDate = () => {
-        const date = new Date(appointment.date);
-        return date.toLocaleDateString('pt-BR', {
+        // Parse date without timezone conversion
+        const datePart = appointment.date.split('T')[0];
+        const [year, month, day] = datePart.split('-').map(Number);
+        const date = new Date(year, month - 1, day);
+        const dayFormatted = date.toLocaleDateString('pt-BR', {
             weekday: 'long',
             day: 'numeric',
-            month: 'long',
-            hour: '2-digit',
-            minute: '2-digit'
+            month: 'long'
         });
+        // Use appointment.time field directly for correct time
+        return `${dayFormatted} às ${appointment.time || '00:00'}`;
     };
 
     const handleSubmit = async () => {
@@ -50,14 +53,16 @@ const RescheduleRequestModal: React.FC<RescheduleRequestModalProps> = ({
         setError('');
 
         try {
-            const requestedDate = new Date(`${selectedDate}T${selectedTime}:00`);
+            // Create ISO string directly without Date conversion to avoid timezone issues
+            // Format: "2026-01-09T18:00:00"
+            const requestedDateStr = `${selectedDate}T${selectedTime}:00`;
 
             const result = await createRescheduleRequest({
                 appointmentId: appointment.id,
                 clientId: clientId,
                 coachId: appointment.coach_id,
                 originalDate: appointment.date,
-                requestedDate: requestedDate.toISOString(),
+                requestedDate: requestedDateStr,  // Use string directly, not toISOString()
                 reason: reason || undefined
             });
 
@@ -151,8 +156,8 @@ const RescheduleRequestModal: React.FC<RescheduleRequestModalProps> = ({
                                         key={time}
                                         onClick={() => setSelectedTime(time)}
                                         className={`py-2 px-3 rounded-xl text-sm font-bold transition-all ${selectedTime === time
-                                                ? 'bg-blue-500 text-white'
-                                                : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                                            ? 'bg-blue-500 text-white'
+                                            : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
                                             }`}
                                     >
                                         {time}
@@ -187,8 +192,8 @@ const RescheduleRequestModal: React.FC<RescheduleRequestModalProps> = ({
                         onClick={handleSubmit}
                         disabled={loading || !selectedDate || !selectedTime}
                         className={`w-full mt-6 py-4 rounded-2xl font-bold text-lg flex items-center justify-center gap-2 transition-all ${loading || !selectedDate || !selectedTime
-                                ? 'bg-slate-700 text-slate-500 cursor-not-allowed'
-                                : 'bg-gradient-to-r from-blue-500 to-indigo-500 text-white shadow-lg shadow-blue-500/30 active:scale-[0.98]'
+                            ? 'bg-slate-700 text-slate-500 cursor-not-allowed'
+                            : 'bg-gradient-to-r from-blue-500 to-indigo-500 text-white shadow-lg shadow-blue-500/30 active:scale-[0.98]'
                             }`}
                     >
                         <Send size={20} />

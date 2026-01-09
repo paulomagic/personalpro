@@ -39,20 +39,28 @@ const StudentDashboardView: React.FC<StudentDashboardViewProps> = ({
             setLoading(true);
             try {
                 // Get user profile to find linked client
+                console.log('[StudentDashboard] Loading data for user:', user.id);
                 const profile = await getUserProfile(user.id);
+                console.log('[StudentDashboard] User profile:', profile);
 
                 if (profile?.client_id) {
+                    console.log('[StudentDashboard] Found client_id:', profile.client_id);
+
                     // Get client data
                     const client = await getClient(profile.client_id);
+                    console.log('[StudentDashboard] Client data:', client);
                     if (client) {
                         setClientData(client as any);
                     }
 
                     // Get current workout
                     const workout = await getClientCurrentWorkout(profile.client_id);
+                    console.log('[StudentDashboard] Workout:', workout);
                     if (workout) {
                         setCurrentWorkout(workout);
                     }
+                } else {
+                    console.log('[StudentDashboard] No client_id in profile!');
                 }
 
                 // TODO: Get coach name from profile.coach_id

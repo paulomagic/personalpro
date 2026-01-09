@@ -823,3 +823,167 @@ export async function getCoachStudents(coachId: string): Promise<DBUserProfile[]
 
     return data || [];
 }
+
+// ============ RESCHEDULE REQUESTS ============
+
+// Type for reschedule request
+export interface DBRescheduleRequest {
+    id: string;
+    appointment_id: string;
+    client_id: string;
+    coach_id: string;
+    original_date: string;
+    requested_date: string;
+    reason?: string;
+    status: 'pending' | 'approved' | 'rejected';
+    response_note?: string;
+    created_at: string;
+    responded_at?: string;
+}
+
+// Get student's appointments (for students to view their schedule)
+export async function getStudentAppointments(clientId: string): Promise<Appointment[]> {
+    if (!supabase) return [];
+
+    const { data, error } = await supabase
+        .from('appointments')
+        .select('*')
+        .eq('client_id', clientId)
+        .gte('date', new Date().toISOString())
+        .order('date', { ascending: true });
+
+    if (error) {
+        console.error('Error fetching student appointments:', error);
+        return [];
+    }
+
+    return data || [];
+}
+
+// Create a reschedule request (by student)
+export async function createRescheduleRequest(data: {
+    appointmentId: string;
+    clientId: string;
+    coachId: string;
+    originalDate: string;
+    requestedDate: string;
+    reason?: string;
+}): Promise<DBRescheduleRequest | null> {
+    if (!supabase) return null;
+
+    const { data: result, error } = await supabase
+        .from('reschedule_requests')
+        .insert({
+            appointment_id: data.appointmentId,
+            client_id: data.clientId,
+            coach_id: data.coachId,
+            original_date: data.originalDate,
+            requested_date: data.requestedDate,
+            reason: data.reason,
+            status: 'pending'
+        })
+        .select()
+        .single();
+
+    if (error) {
+        console.error('Error creating reschedule request:', error);
+        return null;
+    }
+
+    return result;
+}
+
+// Get pending reschedule requests for a coach
+export async function getPendingRescheduleRequests(coachId: string): Promise<(DBRescheduleRequest & { client_name?: string })[]> {
+    if (!supabase) return [];
+
+    const { data, error } = await supabase
+        .from('reschedule_requests')
+        .select(`
+            *,
+            clients!inner(name)
+        `)
+        .eq('coach_id', coachId)
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false });
+
+    if (error) {
+        console.error('Error fetching pending requests:', error);
+        return [];
+    }
+
+    // Map client name to result
+    return (data || []).map(req => ({
+        ...req,
+        client_name: req.clients?.name
+    }));
+}
+
+// Count pending reschedule requests for a coach
+export async function countPendingRescheduleRequests(coachId: string): Promise<number> {
+    if (!supabase) return 0;
+
+    const { count, error } = await supabase
+        .from('reschedule_requests')
+        .select('*', { count: 'exact', head: true })
+        .eq('coach_id', coachId)
+        .eq('status', 'pending');
+
+    if (error) {
+        console.error('Error counting pending requests:', error);
+        return 0;
+    }
+
+    return count || 0;
+}
+
+// Respond to a reschedule request (approve/reject)
+export async function respondToRescheduleRequest(
+    requestId: string,
+    approved: boolean,
+    responseNote?: string
+): Promise<boolean> {
+    if (!supabase) return false;
+
+    // Get the request first
+    const { data: request, error: fetchError } = await supabase
+        .from('reschedule_requests')
+        .select('*')
+        .eq('id', requestId)
+        .single();
+
+    if (fetchError || !request) {
+        console.error('Error fetching request:', fetchError);
+        return false;
+    }
+
+    // Update request status
+    const { error: updateError } = await supabase
+        .from('reschedule_requests')
+        .update({
+            status: approved ? 'approved' : 'rejected',
+            response_note: responseNote,
+            responded_at: new Date().toISOString()
+        })
+        .eq('id', requestId);
+
+    if (updateError) {
+        console.error('Error updating request:', updateError);
+        return false;
+    }
+
+    // If approved, update the appointment date
+    if (approved) {
+        const { error: appointmentError } = await supabase
+            .from('appointments')
+            .update({ date: request.requested_date })
+            .eq('id', request.appointment_id);
+
+        if (appointmentError) {
+            console.error('Error updating appointment:', appointmentError);
+            return false;
+        }
+    }
+
+    return true;
+}

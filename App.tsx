@@ -26,6 +26,7 @@ const AdminActivityLogsView = lazy(() => import('./views/AdminActivityLogsView')
 const AdminSettingsView = lazy(() => import('./views/AdminSettingsView'));
 const StudentDashboardView = lazy(() => import('./views/StudentDashboardView'));
 const StudentProfileView = lazy(() => import('./views/StudentProfileView'));
+const StudentCalendarView = lazy(() => import('./views/StudentCalendarView'));
 
 // Loading fallback component
 const ViewLoader = () => (
@@ -265,7 +266,12 @@ function App() {
       case View.SETTINGS:
         return <SettingsView user={user} onBack={() => navigateTo(userProfile?.role === 'student' ? View.STUDENT : View.DASHBOARD)} onLogout={handleLogout} />;
       case View.CALENDAR:
-        return <CalendarView user={user} onBack={() => navigateTo(userProfile?.role === 'student' ? View.STUDENT : View.DASHBOARD)} />;
+        // Students see their own appointments with reschedule option
+        if (userProfile?.role === 'student') {
+          return <StudentCalendarView user={user} onBack={() => navigateTo(View.STUDENT)} />;
+        }
+        // Coaches see full calendar management
+        return <CalendarView user={user} onBack={() => navigateTo(View.DASHBOARD)} />;
       case View.FINANCE:
         return <FinanceView user={user} onBack={() => navigateTo(userProfile?.role === 'student' ? View.STUDENT : View.DASHBOARD)} />;
       case View.WORKOUT_BUILDER:

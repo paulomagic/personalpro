@@ -15,6 +15,7 @@ interface FinanceViewProps {
 
 interface Payment {
     id: string;
+    clientId: string;
     clientName: string;
     clientAvatar: string;
     amount: number;
@@ -63,6 +64,7 @@ const FinanceView: React.FC<FinanceViewProps> = ({ user, onBack }) => {
                     // Map DB payments to our interface
                     const mapped = dbPayments.map((p: any) => ({
                         id: p.id,
+                        clientId: p.client_id,
                         clientName: p.clients?.name || 'Cliente',
                         clientAvatar: p.clients?.avatar_url || '',
                         amount: p.amount,
@@ -78,6 +80,7 @@ const FinanceView: React.FC<FinanceViewProps> = ({ user, onBack }) => {
                     if (clients.length > 0) {
                         const demoPayments = clients.slice(0, 5).map((c: any, i: number) => ({
                             id: `demo-${i}`,
+                            clientId: c.id,
                             clientName: c.name,
                             clientAvatar: c.avatar_url || '',
                             amount: 350,
@@ -341,7 +344,7 @@ const FinanceView: React.FC<FinanceViewProps> = ({ user, onBack }) => {
                                                 setShowStatusModal(payment);
                                             }}
                                             className={`text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full hover:opacity-80 transition-opacity ${payment.status === 'paid' ? 'text-emerald-400 bg-emerald-500/10' :
-                                                    payment.status === 'overdue' ? 'text-red-400 bg-red-500/10' : 'text-amber-400 bg-amber-500/10'
+                                                payment.status === 'overdue' ? 'text-red-400 bg-red-500/10' : 'text-amber-400 bg-amber-500/10'
                                                 }`}
                                         >
                                             {payment.status === 'paid' ? 'Pago' : payment.status === 'overdue' ? 'Atrasado' : 'Pendente'}

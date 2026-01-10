@@ -718,11 +718,13 @@ const ClientProfileView: React.FC<ClientProfileViewProps> = ({ client: initialCl
                 client={{
                   id: client.id,
                   name: client.name,
+                  coach_id: coachId,
                   monthly_fee: (client as any).monthly_fee,
                   payment_day: (client as any).payment_day,
                   payment_type: (client as any).payment_type,
                   session_price: (client as any).session_price,
                 }}
+                coachId={coachId}
                 onUpdate={(updates) => setClient(prev => ({ ...prev, ...updates }))}
               />
 

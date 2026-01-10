@@ -1,23 +1,29 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { DollarSign, Calendar, CreditCard, Edit, Save, X, Repeat } from 'lucide-react';
-import { updateClient, DBClient } from '../services/supabaseClient';
+import { motion, AnimatePresence } from 'framer-motion';
+import { DollarSign, Calendar, Edit, Save, X, Repeat, Plus, Clock, CheckCircle, AlertTriangle, ChevronDown, ChevronUp } from 'lucide-react';
+import { updateClient, DBClient, createPayment, getPaymentsByClient, Payment } from '../services/supabaseClient';
 
 interface ClientFinanceSectionProps {
     client: {
         id: string;
         name: string;
+        coach_id?: string;
         monthly_fee?: number;
         payment_day?: number;
         payment_type?: 'monthly' | 'per_session';
         session_price?: number;
     };
+    coachId?: string;
     onUpdate?: (updates: Partial<DBClient>) => void;
 }
 
-const ClientFinanceSection: React.FC<ClientFinanceSectionProps> = ({ client, onUpdate }) => {
+const ClientFinanceSection: React.FC<ClientFinanceSectionProps> = ({ client, coachId, onUpdate }) => {
     const [isEditing, setIsEditing] = useState(false);
     const [saving, setSaving] = useState(false);
+    const [showHistory, setShowHistory] = useState(false);
+    const [payments, setPayments] = useState<Payment[]>([]);
+    const [loadingPayments, setLoadingPayments] = useState(false);
+    const [registeringSession, setRegisteringSession] = useState(false);
     const [formData, setFormData] = useState({
         monthly_fee: client.monthly_fee || 350,
         payment_day: client.payment_day || 10,
@@ -57,6 +63,62 @@ const ClientFinanceSection: React.FC<ClientFinanceSectionProps> = ({ client, onU
             session_price: client.session_price || 80,
         });
         setIsEditing(false);
+    };
+
+    const fetchPayments = async () => {
+        setLoadingPayments(true);
+        const data = await getPaymentsByClient(client.id);
+        setPayments(data);
+        setLoadingPayments(false);
+    };
+
+    const handleToggleHistory = () => {
+        if (!showHistory && payments.length === 0) {
+            fetchPayments();
+        }
+        setShowHistory(!showHistory);
+    };
+
+    const handleRegisterSession = async () => {
+        if (!coachId && !client.coach_id) return;
+        setRegisteringSession(true);
+        try {
+            const today = new Date().toISOString().split('T')[0];
+            const payment = await createPayment({
+                client_id: client.id,
+                coach_id: coachId || client.coach_id || '',
+                amount: formData.session_price,
+                due_date: today,
+                paid_date: today,
+                status: 'paid',
+                plan: 'Diária',
+                payment_method: 'pix',
+                type: 'session'
+            });
+            if (payment) {
+                setPayments(prev => [payment, ...prev]);
+            }
+        } catch (error) {
+            console.error('Error registering session:', error);
+        } finally {
+            setRegisteringSession(false);
+        }
+    };
+
+    const formatDate = (dateStr: string) => {
+        const date = new Date(dateStr + 'T00:00:00');
+        return date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
+    };
+
+    const getStatusConfig = (status: string) => {
+        switch (status) {
+            case 'paid':
+                return { icon: CheckCircle, color: 'text-emerald-400', bg: 'bg-emerald-500/10', label: 'Pago' };
+            case 'overdue':
+                return { icon: AlertTriangle, color: 'text-red-400', bg: 'bg-red-500/10', label: 'Atrasado' };
+            default:
+                return { icon: Clock, color: 'text-amber-400', bg: 'bg-amber-500/10', label: 'Pendente' };
+        }
     };
 
     return (
@@ -194,27 +256,102 @@ const ClientFinanceSection: React.FC<ClientFinanceSectionProps> = ({ client, onU
                     )}
                 </div>
             ) : (
-                <div className="grid grid-cols-2 gap-3">
-                    {/* Value Display */}
-                    <div className="bg-slate-900/50 rounded-xl p-3">
-                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">
-                            {formData.payment_type === 'monthly' ? 'Mensalidade' : 'Por Sessão'}
-                        </p>
-                        <p className="text-xl font-black text-emerald-400">
-                            R$ {formData.payment_type === 'monthly' ? formData.monthly_fee : formData.session_price}
-                        </p>
+                <>
+                    <div className="grid grid-cols-2 gap-3">
+                        {/* Value Display */}
+                        <div className="bg-slate-900/50 rounded-xl p-3">
+                            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">
+                                {formData.payment_type === 'monthly' ? 'Mensalidade' : 'Por Sessão'}
+                            </p>
+                            <p className="text-xl font-black text-emerald-400">
+                                R$ {formData.payment_type === 'monthly' ? formData.monthly_fee : formData.session_price}
+                            </p>
+                        </div>
+
+                        {/* Payment Day / Type Display */}
+                        <div className="bg-slate-900/50 rounded-xl p-3">
+                            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">
+                                {formData.payment_type === 'monthly' ? 'Vencimento' : 'Tipo'}
+                            </p>
+                            <p className="text-xl font-black text-white">
+                                {formData.payment_type === 'monthly' ? `Dia ${formData.payment_day}` : 'Diária'}
+                            </p>
+                        </div>
                     </div>
 
-                    {/* Payment Day / Type Display */}
-                    <div className="bg-slate-900/50 rounded-xl p-3">
-                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">
-                            {formData.payment_type === 'monthly' ? 'Vencimento' : 'Tipo'}
-                        </p>
-                        <p className="text-xl font-black text-white">
-                            {formData.payment_type === 'monthly' ? `Dia ${formData.payment_day}` : 'Diária'}
-                        </p>
-                    </div>
-                </div>
+                    {/* Register Session Button (only for per_session) */}
+                    {formData.payment_type === 'per_session' && (
+                        <button
+                            onClick={handleRegisterSession}
+                            disabled={registeringSession}
+                            className="w-full mt-3 py-3 bg-blue-500 hover:bg-blue-600 text-white font-bold text-sm rounded-xl flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
+                        >
+                            {registeringSession ? (
+                                <div className="size-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                            ) : (
+                                <>
+                                    <Plus size={16} />
+                                    Registrar Sessão (R$ {formData.session_price})
+                                </>
+                            )}
+                        </button>
+                    )}
+
+                    {/* Payment History Toggle */}
+                    <button
+                        onClick={handleToggleHistory}
+                        className="w-full mt-3 py-2 text-slate-400 hover:text-white text-xs font-bold flex items-center justify-center gap-1 transition-colors"
+                    >
+                        {showHistory ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                        Histórico de Pagamentos
+                    </button>
+
+                    {/* Payment History */}
+                    <AnimatePresence>
+                        {showHistory && (
+                            <motion.div
+                                initial={{ height: 0, opacity: 0 }}
+                                animate={{ height: 'auto', opacity: 1 }}
+                                exit={{ height: 0, opacity: 0 }}
+                                className="overflow-hidden"
+                            >
+                                <div className="mt-2 space-y-2 max-h-48 overflow-y-auto">
+                                    {loadingPayments ? (
+                                        <div className="py-4 text-center">
+                                            <div className="size-5 border-2 border-slate-500 border-t-transparent rounded-full animate-spin mx-auto" />
+                                        </div>
+                                    ) : payments.length > 0 ? (
+                                        payments.map((payment) => {
+                                            const config = getStatusConfig(payment.status);
+                                            const StatusIcon = config.icon;
+                                            return (
+                                                <div
+                                                    key={payment.id}
+                                                    className={`flex items-center justify-between p-2 rounded-lg ${config.bg}`}
+                                                >
+                                                    <div className="flex items-center gap-2">
+                                                        <StatusIcon size={14} className={config.color} />
+                                                        <div>
+                                                            <p className="text-xs font-bold text-white">R$ {payment.amount}</p>
+                                                            <p className="text-[10px] text-slate-500">{formatDate(payment.due_date)}</p>
+                                                        </div>
+                                                    </div>
+                                                    <span className={`text-[8px] font-bold uppercase ${config.color}`}>
+                                                        {config.label}
+                                                    </span>
+                                                </div>
+                                            );
+                                        })
+                                    ) : (
+                                        <p className="text-xs text-slate-500 text-center py-4">
+                                            Nenhum pagamento registrado
+                                        </p>
+                                    )}
+                                </div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+                </>
             )}
         </motion.div>
     );

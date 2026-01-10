@@ -309,6 +309,24 @@ export async function createPayment(payment: Omit<Payment, 'id' | 'created_at'>)
     return data;
 }
 
+// Get payments by client ID for history
+export async function getPaymentsByClient(clientId: string): Promise<Payment[]> {
+    if (!supabase) return [];
+
+    const { data, error } = await supabase
+        .from('payments')
+        .select('*')
+        .eq('client_id', clientId)
+        .order('due_date', { ascending: false });
+
+    if (error) {
+        console.error('Error fetching payments by client:', error);
+        return [];
+    }
+
+    return data || [];
+}
+
 export async function updatePayment(id: string, updates: Partial<Payment>): Promise<Payment | null> {
     if (!supabase) return null;
 

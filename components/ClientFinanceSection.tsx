@@ -36,16 +36,14 @@ const ClientFinanceSection: React.FC<ClientFinanceSectionProps> = ({ client, onU
 
     const handleSave = async () => {
         setSaving(true);
-        console.log('[FinanceSection] Saving:', { clientId: client.id, formData });
         try {
             const result = await updateClient(client.id, formData);
-            console.log('[FinanceSection] Save result:', result);
             if (result && onUpdate) {
                 onUpdate(formData);
             }
             setIsEditing(false);
         } catch (error) {
-            console.error('[FinanceSection] Error saving finance data:', error);
+            console.error('Error saving finance data:', error);
         } finally {
             setSaving(false);
         }

@@ -163,8 +163,6 @@ export async function createClient(client: Omit<DBClient, 'id' | 'created_at'>):
 export async function updateClient(clientId: string, updates: Partial<DBClient>): Promise<DBClient | null> {
     if (!supabase) return null;
 
-    console.log('[updateClient] Updating client:', clientId, 'with:', updates);
-
     const { data, error } = await supabase
         .from('clients')
         .update(updates)
@@ -177,7 +175,6 @@ export async function updateClient(clientId: string, updates: Partial<DBClient>)
         return null;
     }
 
-    console.log('[updateClient] Success:', data);
     return data;
 }
 

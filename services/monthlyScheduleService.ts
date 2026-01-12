@@ -384,6 +384,29 @@ export async function getMonthlyBatches(
 }
 
 /**
+ * Get all monthly batches for a coach in a specific month
+ */
+export async function getAllBatchesForCoach(
+    coachId: string,
+    year: number,
+    month: number
+): Promise<MonthlyScheduleBatch[]> {
+    const { data, error } = await supabase
+        .from('monthly_schedule_batches')
+        .select('*')
+        .eq('coach_id', coachId)
+        .eq('year', year)
+        .eq('month', month);
+
+    if (error) {
+        console.error('Error fetching coach batches:', error);
+        return [];
+    }
+
+    return data || [];
+}
+
+/**
  * Get active templates for a client
  */
 export async function getTemplatesForClient(

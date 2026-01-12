@@ -5,7 +5,8 @@ import { getAppointments, createAppointment, updateAppointment, getClients, DBCl
 import { mockClients } from '../mocks/demoData';
 import PendingRequestsPanel from '../components/PendingRequestsPanel';
 import MonthlyScheduleModal from '../components/MonthlyScheduleModal';
-import { getMonthlyBatches } from '../services/monthlyScheduleService';
+import { getAllBatchesForCoach } from '../services/monthlyScheduleService';
+
 
 interface CalendarViewProps {
     user?: any;
@@ -98,7 +99,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({ user, onBack, onSelectClien
                 // Fetch monthly batches count for current month
                 const month = selectedDate.getMonth() + 1;
                 const year = selectedDate.getFullYear();
-                const batches = await getMonthlyBatches('', year, month);
+                const batches = await getAllBatchesForCoach(user.id, year, month);
                 setMonthlyBatchesCount(batches.reduce((sum, b) => sum + b.total_sessions, 0));
             } catch (error) {
                 console.error('Error fetching calendar data:', error);

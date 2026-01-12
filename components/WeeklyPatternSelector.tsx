@@ -1,0 +1,274 @@
+import React, { useState } from 'react';
+import { motion } from 'framer-motion';
+
+interface WeeklyPatternSelectorProps {
+    clientId: string;
+    clientName: string;
+    onBack: () => void;
+    onNext: (config: {
+        weekDays: number[];
+        times: Record<number, string>;
+        sessionType: 'training' | 'assessment' | 'consultation';
+        duration: string;
+    }) => void;
+}
+
+const WEEKDAYS = [
+    { id: 1, label: 'SEG', name: 'Segunda-feira' },
+    { id: 2, label: 'TER', name: 'Terça-feira' },
+    { id: 3, label: 'QUA', name: 'Quarta-feira' },
+    { id: 4, label: 'QUI', name: 'Quinta-feira' },
+    { id: 5, label: 'SEX', name: 'Sexta-feira' },
+    { id: 6, label: 'SÁB', name: 'Sábado' },
+    { id: 7, label: 'DOM', name: 'Domingo' }
+];
+
+const WeeklyPatternSelector: React.FC<WeeklyPatternSelectorProps> = ({
+    clientId,
+    clientName,
+    onBack,
+    onNext
+}) => {
+    const [selectedDays, setSelectedDays] = useState<number[]>([]);
+    const [times, setTimes] = useState<Record<number, string>>({});
+    const [sessionType, setSessionType] = useState<'training' | 'assessment' | 'consultation'>('training');
+    const [duration, setDuration] = useState('1h');
+    const [useSameTime, setUseSameTime] = useState(true);
+
+    const toggleDay = (dayId: number) => {
+        if (selectedDays.includes(dayId)) {
+            setSelectedDays(selectedDays.filter(d => d !== dayId));
+            const newTimes = { ...times };
+            delete newTimes[dayId];
+            setTimes(newTimes);
+        } else {
+            setSelectedDays([...selectedDays, dayId].sort());
+            // Set default time if using same time
+            if (useSameTime && Object.keys(times).length > 0) {
+                const firstTime = Object.values(times)[0];
+                setTimes({ ...times, [dayId]: firstTime });
+            } else if (!times[dayId]) {
+                setTimes({ ...times, [dayId]: '14:00' });
+            }
+        }
+    };
+
+    const updateTime = (dayId: number, time: string) => {
+        if (useSameTime) {
+            // Update all selected days
+            const newTimes: Record<number, string> = {};
+            selectedDays.forEach(id => {
+                newTimes[id] = time;
+            });
+            setTimes(newTimes);
+        } else {
+            setTimes({ ...times, [dayId]: time });
+        }
+    };
+
+    const handleNext = () => {
+        if (selectedDays.length === 0) return;
+
+        onNext({
+            weekDays: selectedDays,
+            times,
+            sessionType,
+            duration
+        });
+    };
+
+    const canProceed = selectedDays.length > 0 && selectedDays.every(day => times[day]);
+
+    return (
+        <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 overflow-y-auto"
+        >
+            <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.9, opacity: 0 }}
+                className="bg-[#0A0E27] rounded-2xl p-6 max-w-md w-full border border-[#1E293B] shadow-2xl my-8"
+                onClick={(e) => e.stopPropagation()}
+            >
+                {/* Header */}
+                <div className="mb-6">
+                    <button
+                        onClick={onBack}
+                        className="text-blue-400 hover:text-blue-300 mb-3 flex items-center gap-2"
+                    >
+                        <span>←</span> Voltar
+                    </button>
+                    <h2 className="text-2xl font-bold text-white mb-1">
+                        Padrão Semanal
+                    </h2>
+                    <p className="text-sm text-gray-400">
+                        Selecione os dias da semana
+                    </p>
+                </div>
+
+                {/* Week Days Selector */}
+                <div className="mb-6">
+                    <div className="grid grid-cols-4 gap-2 mb-2">
+                        {WEEKDAYS.slice(0, 4).map((day) => (
+                            <button
+                                key={day.id}
+                                onClick={() => toggleDay(day.id)}
+                                className={`
+                  py-3 px-4 rounded-xl font-semibold text-sm transition-all
+                  ${selectedDays.includes(day.id)
+                                        ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30'
+                                        : 'bg-transparent border border-gray-700 text-gray-400 hover:border-blue-500'
+                                    }
+                `}
+                            >
+                                {day.label}
+                            </button>
+                        ))}
+                    </div>
+                    <div className="grid grid-cols-3 gap-2">
+                        {WEEKDAYS.slice(4).map((day) => (
+                            <button
+                                key={day.id}
+                                onClick={() => toggleDay(day.id)}
+                                className={`
+                  py-3 px-4 rounded-xl font-semibold text-sm transition-all
+                  ${selectedDays.includes(day.id)
+                                        ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30'
+                                        : 'bg-transparent border border-gray-700 text-gray-400 hover:border-blue-500'
+                                    }
+                `}
+                            >
+                                {day.label}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Same Time Toggle */}
+                {selectedDays.length > 1 && (
+                    <div className="mb-4">
+                        <label className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
+                            <input
+                                type="checkbox"
+                                checked={useSameTime}
+                                onChange={(e) => setUseSameTime(e.target.checked)}
+                                className="w-4 h-4 rounded text-blue-600"
+                            />
+                            Usar mesmo horário para todos os dias
+                        </label>
+                    </div>
+                )}
+
+                {/* Times */}
+                {selectedDays.length > 0 && (
+                    <div className="mb-6">
+                        <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">
+                            Horários
+                        </h3>
+                        <div className="space-y-2">
+                            {useSameTime ? (
+                                <div className="flex items-center justify-between bg-[#0F1629] p-3 rounded-lg">
+                                    <span className="text-white text-sm">Horário único</span>
+                                    <input
+                                        type="time"
+                                        value={times[selectedDays[0]] || '14:00'}
+                                        onChange={(e) => updateTime(selectedDays[0], e.target.value)}
+                                        className="bg-blue-600 text-white px-3 py-2 rounded-lg text-sm font-semibold"
+                                    />
+                                </div>
+                            ) : (
+                                selectedDays.map((dayId) => {
+                                    const day = WEEKDAYS.find(d => d.id === dayId);
+                                    return (
+                                        <div key={dayId} className="flex items-center justify-between bg-[#0F1629] p-3 rounded-lg">
+                                            <span className="text-white text-sm">{day?.name}</span>
+                                            <input
+                                                type="time"
+                                                value={times[dayId] || '14:00'}
+                                                onChange={(e) => updateTime(dayId, e.target.value)}
+                                                className="bg-blue-600 text-white px-3 py-2 rounded-lg text-sm font-semibold"
+                                            />
+                                        </div>
+                                    );
+                                })
+                            )}
+                        </div>
+                    </div>
+                )}
+
+                {/* Session Type */}
+                <div className="mb-6">
+                    <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">
+                        Tipo de Sessão
+                    </h3>
+                    <div className="grid grid-cols-3 gap-2">
+                        {[
+                            { value: 'training', label: 'Treino', icon: '🏋️' },
+                            { value: 'assessment', label: 'Avaliação', icon: '📊' },
+                            { value: 'consultation', label: 'Consulta', icon: '💬' }
+                        ].map((type) => (
+                            <button
+                                key={type.value}
+                                onClick={() => setSessionType(type.value as any)}
+                                className={`
+                  py-3 px-2 rounded-lg text-xs font-semibold transition-all
+                  ${sessionType === type.value
+                                        ? 'bg-blue-600 text-white'
+                                        : 'bg-[#0F1629] text-gray-400 hover:bg-[#1a2235]'
+                                    }
+                `}
+                            >
+                                <div className="text-lg mb-1">{type.icon}</div>
+                                {type.label}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Duration */}
+                <div className="mb-6">
+                    <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">
+                        Duração
+                    </h3>
+                    <div className="grid grid-cols-4 gap-2">
+                        {['30min', '1h', '1h30', '2h'].map((dur) => (
+                            <button
+                                key={dur}
+                                onClick={() => setDuration(dur)}
+                                className={`
+                  py-2 px-3 rounded-lg text-sm font-semibold transition-all
+                  ${duration === dur
+                                        ? 'bg-blue-600 text-white'
+                                        : 'bg-[#0F1629] text-gray-400 hover:bg-[#1a2235]'
+                                    }
+                `}
+                            >
+                                {dur}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Next Button */}
+                <button
+                    onClick={handleNext}
+                    disabled={!canProceed}
+                    className={`
+            w-full py-4 rounded-xl font-bold text-white transition-all
+            ${canProceed
+                            ? 'bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-500/30'
+                            : 'bg-gray-700 cursor-not-allowed opacity-50'
+                        }
+          `}
+                >
+                    PRÓXIMO
+                </button>
+            </motion.div>
+        </motion.div>
+    );
+};
+
+export default WeeklyPatternSelector;

@@ -335,3 +335,64 @@ export interface Workout {
   templateId?: string;
   sportParams?: SportTrainingParams;  // Premium: Para treinos esportivos
 }
+
+// ============ MONTHLY SCHEDULING ============
+export interface MonthlyScheduleTemplate {
+  id: string;
+  coach_id: string;
+  client_id: string;
+  name?: string;
+  pattern_type: 'weekly' | 'custom' | 'specific_dates';
+  week_days?: number[];
+  times?: Record<number, string>;
+  session_type: 'training' | 'assessment' | 'consultation';
+  duration: string;
+  is_active: boolean;
+  last_used_at?: string;
+  created_at: string;
+}
+
+export interface MonthlyScheduleBatch {
+  id: string;
+  coach_id: string;
+  client_id: string;
+  month: number;
+  year: number;
+  total_sessions: number;
+  template_id?: string;
+  pattern_type?: string;
+  week_days?: number[];
+  times?: Record<number, string>;
+  session_type?: string;
+  duration?: string;
+  exceptions: string[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface MonthlyScheduleConfig {
+  clientId: string;
+  patternType: 'weekly' | 'custom' | 'specific_dates';
+  month: number;
+  year: number;
+  weekDays?: number[];
+  times?: Record<number, string>;
+  specificDates?: string[];
+  sessionType: 'training' | 'assessment' | 'consultation';
+  duration: string;
+  exceptions?: string[];
+  saveAsTemplate?: boolean;
+  templateName?: string;
+}
+
+export interface ConflictInfo {
+  date: string;
+  time: string;
+  conflictingAppointment: {
+    id: string;
+    clientName: string;
+    type: string;
+  };
+  suggestedAlternatives: string[];
+}
+

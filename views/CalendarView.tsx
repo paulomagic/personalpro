@@ -4,6 +4,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { getAppointments, createAppointment, updateAppointment, getClients, DBClient, Appointment as DBAppointment } from '../services/supabaseClient';
 import { mockClients } from '../mocks/demoData';
 import PendingRequestsPanel from '../components/PendingRequestsPanel';
+import MonthlyScheduleModal from '../components/MonthlyScheduleModal';
+import { getMonthlyBatches } from '../services/monthlyScheduleService';
 
 interface CalendarViewProps {
     user?: any;
@@ -37,6 +39,8 @@ const CalendarView: React.FC<CalendarViewProps> = ({ user, onBack, onSelectClien
     const [viewMode, setViewMode] = useState<'day' | 'week'>('day');
     const [showNewModal, setShowNewModal] = useState(false);
     const [showDetailModal, setShowDetailModal] = useState<DisplayAppointment | null>(null);
+    const [showMonthlyModal, setShowMonthlyModal] = useState(false);
+    const [monthlyBatchesCount, setMonthlyBatchesCount] = useState(0);
     const [appointments, setAppointments] = useState<DisplayAppointment[]>(demoAppointments);
     const [clients, setClients] = useState<DBClient[]>([]);
     const [loading, setLoading] = useState(false);
@@ -90,6 +94,12 @@ const CalendarView: React.FC<CalendarViewProps> = ({ user, onBack, onSelectClien
                     // No appointments for this date, show empty
                     setAppointments([]);
                 }
+
+                // Fetch monthly batches count for current month
+                const month = selectedDate.getMonth() + 1;
+                const year = selectedDate.getFullYear();
+                const batches = await getMonthlyBatches('', year, month);
+                setMonthlyBatchesCount(batches.reduce((sum, b) => sum + b.total_sessions, 0));
             } catch (error) {
                 console.error('Error fetching calendar data:', error);
                 setAppointments(demoAppointments);
@@ -246,12 +256,28 @@ const CalendarView: React.FC<CalendarViewProps> = ({ user, onBack, onSelectClien
                         <h1 className="text-xl font-black text-white tracking-tight">Agenda</h1>
                         <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest">Sincronização Elite</p>
                     </div>
-                    <button
-                        onClick={() => setShowNewModal(true)}
-                        className="size-12 rounded-2xl bg-blue-600 flex items-center justify-center text-white shadow-glow active:scale-95 transition-all"
-                    >
-                        <span className="material-symbols-outlined">add</span>
-                    </button>
+                    <div className="flex gap-2">
+                        {!isDemo && (
+                            <button
+                                onClick={() => setShowMonthlyModal(true)}
+                                className="relative size-12 rounded-2xl bg-blue-600/20 border border-blue-500/30 flex items-center justify-center text-blue-400 hover:bg-blue-600 hover:text-white transition-all active:scale-95"
+                                title="Agendamento Mensal"
+                            >
+                                <span className="text-sm">📅</span>
+                                {monthlyBatchesCount > 0 && (
+                                    <span className="absolute -top-1 -right-1 bg-blue-600 text-white text-[8px] font-bold size-4 rounded-full flex items-center justify-center">
+                                        {monthlyBatchesCount}
+                                    </span>
+                                )}
+                            </button>
+                        )}
+                        <button
+                            onClick={() => setShowNewModal(true)}
+                            className="size-12 rounded-2xl bg-blue-600 flex items-center justify-center text-white shadow-glow active:scale-95 transition-all"
+                        >
+                            <span className="material-symbols-outlined">add</span>
+                        </button>
+                    </div>
                 </div>
 
                 {/* Month & View Toggle */}
@@ -644,6 +670,39 @@ const CalendarView: React.FC<CalendarViewProps> = ({ user, onBack, onSelectClien
                             </div>
                         </motion.div>
                     </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Monthly Schedule Modal */}
+            <AnimatePresence>
+                {showMonthlyModal && !isDemo && (
+                    <MonthlyScheduleModal
+                        coachId={user.id}
+                        month={selectedDate.getMonth() + 1}
+                        year={selectedDate.getFullYear()}
+                        onClose={() => setShowMonthlyModal(false)}
+                        onSuccess={() => {
+                            setShowMonthlyModal(false);
+                            // Refresh appointments
+                            const dateStr = selectedDate.toISOString().split('T')[0];
+                            getAppointments(user.id, dateStr).then(data => {
+                                if (data.length > 0) {
+                                    const mapped = data.map((apt: any) => ({
+                                        id: apt.id,
+                                        clientId: apt.client_id,
+                                        clientName: apt.clients?.name || 'Cliente',
+                                        clientAvatar: apt.clients?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(apt.clients?.name || 'C')}&background=3b82f6&color=fff`,
+                                        time: (apt.time || '').slice(0, 5) || '00:00',
+                                        duration: apt.duration,
+                                        type: apt.type,
+                                        status: apt.status,
+                                        phone: apt.clients?.phone,
+                                    }));
+                                    setAppointments(mapped);
+                                }
+                            });
+                        }}
+                    />
                 )}
             </AnimatePresence>
         </div>

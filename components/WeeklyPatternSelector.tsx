@@ -1,11 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { getClients, DBClient } from '../services/supabaseClient';
 
 interface WeeklyPatternSelectorProps {
-    clientId: string;
-    clientName: string;
+    coachId: string;
+    clientId?: string;
+    clientName?: string;
     onBack: () => void;
     onNext: (config: {
+        clientId: string;
+        clientName: string;
         weekDays: number[];
         times: Record<number, string>;
         sessionType: 'training' | 'assessment' | 'consultation';
@@ -24,16 +28,30 @@ const WEEKDAYS = [
 ];
 
 const WeeklyPatternSelector: React.FC<WeeklyPatternSelectorProps> = ({
-    clientId,
-    clientName,
+    coachId,
+    clientId: initialClientId,
+    clientName: initialClientName,
     onBack,
     onNext
 }) => {
+    const [clients, setClients] = useState<DBClient[]>([]);
+    const [selectedClientId, setSelectedClientId] = useState(initialClientId || '');
+    const [selectedClientName, setSelectedClientName] = useState(initialClientName || '');
     const [selectedDays, setSelectedDays] = useState<number[]>([]);
     const [times, setTimes] = useState<Record<number, string>>({});
     const [sessionType, setSessionType] = useState<'training' | 'assessment' | 'consultation'>('training');
     const [duration, setDuration] = useState('1h');
     const [useSameTime, setUseSameTime] = useState(true);
+
+    useEffect(() => {
+        const fetchClients = async () => {
+            const data = await getClients(coachId);
+            setClients(data);
+        };
+        if (coachId) {
+            fetchClients();
+        }
+    }, [coachId]);
 
     const toggleDay = (dayId: number) => {
         if (selectedDays.includes(dayId)) {
@@ -67,9 +85,11 @@ const WeeklyPatternSelector: React.FC<WeeklyPatternSelectorProps> = ({
     };
 
     const handleNext = () => {
-        if (selectedDays.length === 0) return;
+        if (!selectedClientId || selectedDays.length === 0) return;
 
         onNext({
+            clientId: selectedClientId,
+            clientName: selectedClientName,
             weekDays: selectedDays,
             times,
             sessionType,
@@ -77,7 +97,12 @@ const WeeklyPatternSelector: React.FC<WeeklyPatternSelectorProps> = ({
         });
     };
 
-    const canProceed = selectedDays.length > 0 && selectedDays.every(day => times[day]);
+    const handleSelectClient = (client: DBClient) => {
+        setSelectedClientId(client.id);
+        setSelectedClientName(client.name);
+    };
+
+    const canProceed = selectedClientId && selectedDays.length > 0 && selectedDays.every(day => times[day]);
 
     return (
         <motion.div
@@ -105,9 +130,38 @@ const WeeklyPatternSelector: React.FC<WeeklyPatternSelectorProps> = ({
                         Padrão Semanal
                     </h2>
                     <p className="text-sm text-gray-400">
-                        Selecione os dias da semana
+                        Configure o agendamento mensal
                     </p>
                 </div>
+
+                {/* Client Selection */}
+                {!initialClientId && (
+                    <div className="mb-6">
+                        <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">
+                            Selecionar Aluno
+                        </h3>
+                        <div className="grid grid-cols-3 gap-2 max-h-40 overflow-y-auto">
+                            {clients.map((client) => (
+                                <button
+                                    key={client.id}
+                                    onClick={() => handleSelectClient(client)}
+                                    className={`flex flex-col items-center p-3 rounded-2xl transition-all ${selectedClientId === client.id
+                                            ? 'bg-blue-600 border-blue-500'
+                                            : 'bg-[#0F1629] border border-gray-700 hover:bg-[#1a2235]'
+                                        }`}
+                                >
+                                    <div
+                                        className="size-12 rounded-xl bg-cover bg-center border-2 border-white/10 mb-2"
+                                        style={{ backgroundImage: `url(${client.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(client.name)}&background=3b82f6&color=fff`})` }}
+                                    />
+                                    <span className="text-[9px] font-bold text-white truncate w-full text-center">
+                                        {client.name.split(' ')[0]}
+                                    </span>
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                )}
 
                 {/* Week Days Selector */}
                 <div className="mb-6">

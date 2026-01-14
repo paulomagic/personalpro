@@ -46,6 +46,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({ user, onBack, onSelectClien
     const [clients, setClients] = useState<DBClient[]>([]);
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
+    const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
     // New appointment form state
     const [newAppointment, setNewAppointment] = useState({
@@ -216,6 +217,29 @@ const CalendarView: React.FC<CalendarViewProps> = ({ user, onBack, onSelectClien
     const handleCreateAppointment = async () => {
         if (!newAppointment.clientId) {
             // Visual feedback already shown by disabled button
+            return;
+        }
+
+        // Clear previous error
+        setErrorMessage(null);
+
+        // Check for time conflicts
+        const hasConflict = appointments.some(apt => {
+            const [aptHours, aptMinutes] = apt.time.split(':').map(Number);
+            const aptTime = aptHours * 60 + aptMinutes;
+            const aptEnd = aptTime + durationToMinutes(apt.duration);
+
+            const [newHours, newMinutes] = newAppointment.time.split(':').map(Number);
+            const newTime = newHours * 60 + newMinutes;
+            const newEnd = newTime + durationToMinutes(newAppointment.duration);
+
+            // Check for overlap
+            return (newTime >= aptTime && newTime < aptEnd) ||
+                (aptTime >= newTime && aptTime < newEnd);
+        });
+
+        if (hasConflict) {
+            setErrorMessage('⚠️ Conflito de horário! Já existe um agendamento neste horário.');
             return;
         }
 
@@ -574,6 +598,19 @@ const CalendarView: React.FC<CalendarViewProps> = ({ user, onBack, onSelectClien
                                     {selectedDate.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}
                                 </p>
                             </div>
+
+                            {/* Error Message */}
+                            {errorMessage && (
+                                <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-4 mb-6 animate-slide-up">
+                                    <div className="flex items-center gap-3">
+                                        <span className="material-symbols-outlined text-red-500 text-xl">error</span>
+                                        <p className="text-red-400 text-sm font-bold flex-1">{errorMessage}</p>
+                                        <button onClick={() => setErrorMessage(null)} className="text-red-500/50 hover:text-red-500">
+                                            <span className="material-symbols-outlined text-base">close</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
 
                             <div className="space-y-6 mb-8">
                                 {/* Client Selection */}

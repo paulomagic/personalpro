@@ -285,6 +285,43 @@ export async function deleteAppointment(id: string): Promise<boolean> {
     return true;
 }
 
+// Get all appointments for a coach (for cleanup purposes)
+export async function getAllAppointmentsForCoach(coachId: string): Promise<Appointment[]> {
+    if (!supabase) return [];
+
+    const { data, error } = await supabase
+        .from('appointments')
+        .select('*, clients(name)')
+        .eq('coach_id', coachId)
+        .neq('status', 'cancelled')
+        .order('date')
+        .order('time');
+
+    if (error) {
+        console.error('Error fetching all appointments:', error);
+        return [];
+    }
+
+    return data || [];
+}
+
+// Delete multiple appointments by IDs (bulk delete)
+export async function deleteAppointmentsBulk(ids: string[]): Promise<boolean> {
+    if (!supabase || ids.length === 0) return false;
+
+    const { error } = await supabase
+        .from('appointments')
+        .delete()
+        .in('id', ids);
+
+    if (error) {
+        console.error('Error bulk deleting appointments:', error);
+        return false;
+    }
+
+    return true;
+}
+
 // ============ PAYMENTS ============
 
 export async function getPayments(coachId: string, status?: string): Promise<Payment[]> {

@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { getAppointments, createAppointment, updateAppointment, deleteAppointment, getClients, DBClient, Appointment as DBAppointment } from '../services/supabaseClient';
+import { getAppointments, createAppointment, updateAppointment, deleteAppointment, deleteAppointmentsBulk, getAllAppointmentsForCoach, getClients, DBClient, Appointment as DBAppointment } from '../services/supabaseClient';
 import { mockClients } from '../mocks/demoData';
 import PendingRequestsPanel from '../components/PendingRequestsPanel';
 import MonthlyScheduleModal from '../components/MonthlyScheduleModal';
@@ -300,6 +300,42 @@ const CalendarView: React.FC<CalendarViewProps> = ({ user, onBack, onSelectClien
         setNewAppointment({ clientId: '', time: '09:00', duration: '1h', type: 'training' });
     };
 
+    // Função para limpar todos os agendamentos duplicados
+    const handleCleanupDuplicates = async () => {
+        if (isDemo) {
+            alert('Não disponível no modo demo');
+            return;
+        }
+
+        const confirmCleanup = confirm('⚠️ Isso irá EXCLUIR TODOS os agendamentos deste mês.\n\nDeseja continuar?');
+        if (!confirmCleanup) return;
+
+        setLoading(true);
+        try {
+            const allAppts = await getAllAppointmentsForCoach(user.id);
+
+            if (allAppts.length === 0) {
+                alert('Nenhum agendamento encontrado.');
+                setLoading(false);
+                return;
+            }
+
+            const idsToDelete = allAppts.map(a => a.id);
+            const deleted = await deleteAppointmentsBulk(idsToDelete);
+
+            if (deleted) {
+                alert(`✅ ${idsToDelete.length} agendamentos excluídos com sucesso!`);
+                setAppointments([]);
+            } else {
+                alert('Erro ao excluir agendamentos. Tente novamente.');
+            }
+        } catch (error) {
+            console.error('Error in cleanup:', error);
+            alert('Erro ao limpar agendamentos.');
+        }
+        setLoading(false);
+    };
+
     return (
         <div className="max-w-md mx-auto min-h-screen bg-slate-950 text-white selection:bg-blue-500/30 pb-12">
             {/* Header */}
@@ -325,6 +361,15 @@ const CalendarView: React.FC<CalendarViewProps> = ({ user, onBack, onSelectClien
                                         {monthlyBatchesCount}
                                     </span>
                                 )}
+                            </button>
+                        )}
+                        {!isDemo && (
+                            <button
+                                onClick={handleCleanupDuplicates}
+                                className="size-12 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400 hover:bg-red-500 hover:text-white transition-all active:scale-95"
+                                title="Limpar Todos Agendamentos"
+                            >
+                                <span className="material-symbols-outlined text-lg">delete_sweep</span>
                             </button>
                         )}
                         <button

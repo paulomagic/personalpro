@@ -140,7 +140,7 @@ export async function createMonthlyScheduleBatch(
             throw new Error('No dates generated');
         }
 
-        // 2. Check for conflicts with existing appointments
+        // 2. Check for conflicts with existing appointments for THE SAME CLIENT
         const dateStrings = dates.map(d => d.toISOString().split('T')[0]);
         const timeValues = Object.values(config.times || {});
 
@@ -148,6 +148,7 @@ export async function createMonthlyScheduleBatch(
             .from('appointments')
             .select('date, time')
             .eq('coach_id', coachId)
+            .eq('client_id', config.clientId)  // Verificar apenas para o MESMO cliente
             .in('date', dateStrings)
             .in('time', timeValues)
             .neq('status', 'cancelled');
@@ -158,7 +159,7 @@ export async function createMonthlyScheduleBatch(
 
         if (existingAppointments && existingAppointments.length > 0) {
             const conflicts = existingAppointments.map(a => `${a.date} às ${a.time}`).join(', ');
-            throw new Error(`Conflito de horário! Já existem agendamentos em: ${conflicts}`);
+            throw new Error(`Este cliente já possui agendamentos em: ${conflicts}. Exclua os existentes primeiro.`);
         }
 
         // 2. Create batch record

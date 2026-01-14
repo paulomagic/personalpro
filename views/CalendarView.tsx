@@ -132,9 +132,35 @@ const CalendarView: React.FC<CalendarViewProps> = ({ user, onBack, onSelectClien
 
     const availableSlots = ['06:00', '07:00', '08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00', '21:00'];
 
-    // Filter out already booked times
-    const bookedTimes = appointments.map(a => a.time);
-    const freeSlots = availableSlots.filter(s => !bookedTimes.includes(s));
+    // Helper: Convert duration to minutes
+    const durationToMinutes = (duration: string): number => {
+        if (duration === '30min') return 30;
+        if (duration === '1h') return 60;
+        if (duration === '1h30') return 90;
+        if (duration === '2h') return 120;
+        return 60; // default
+    };
+
+    // Helper: Check if a time slot conflicts with existing appointments
+    const isSlotAvailable = (slot: string): boolean => {
+        const [slotHours, slotMinutes] = slot.split(':').map(Number);
+        const slotTime = slotHours * 60 + slotMinutes;
+
+        // Assume default slot duration is 1h
+        const slotEnd = slotTime + 60;
+
+        return !appointments.some(apt => {
+            const [aptHours, aptMinutes] = apt.time.split(':').map(Number);
+            const aptTime = aptHours * 60 + aptMinutes;
+            const aptEnd = aptTime + durationToMinutes(apt.duration);
+
+            // Check for overlap: slot starts during appointment OR appointment starts during slot
+            return (slotTime >= aptTime && slotTime < aptEnd) ||
+                (aptTime >= slotTime && aptTime < slotEnd);
+        });
+    };
+
+    const freeSlots = availableSlots.filter(isSlotAvailable);
 
     const getTypeColor = (type: string) => {
         switch (type) {

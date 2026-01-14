@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { getClients, DBClient } from '../services/supabaseClient';
+import { getClients, DBClient, Appointment } from '../services/supabaseClient';
+import { supabase } from '../services/supabaseClient';
 
 interface WeeklyPatternSelectorProps {
     coachId: string;
@@ -42,6 +43,11 @@ const WeeklyPatternSelector: React.FC<WeeklyPatternSelectorProps> = ({
     const [sessionType, setSessionType] = useState<'training' | 'assessment' | 'consultation'>('training');
     const [duration, setDuration] = useState('1h');
     const [useSameTime, setUseSameTime] = useState(true);
+    const [occupiedTimes, setOccupiedTimes] = useState<string[]>([]);
+    const [showTimeSelector, setShowTimeSelector] = useState(false);
+
+    // Horários disponíveis para seleção
+    const ALL_TIMES = ['06:00', '07:00', '08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00', '21:00'];
 
     useEffect(() => {
         const fetchClients = async () => {
@@ -51,6 +57,39 @@ const WeeklyPatternSelector: React.FC<WeeklyPatternSelectorProps> = ({
         if (coachId) {
             fetchClients();
         }
+    }, [coachId]);
+
+    // Buscar horários ocupados
+    useEffect(() => {
+        const fetchOccupiedTimes = async () => {
+            if (!supabase || !coachId) return;
+
+            // Buscar todos os appointments para o mês atual
+            const today = new Date();
+            const year = today.getFullYear();
+            const month = today.getMonth();
+            const firstDay = new Date(year, month, 1).toISOString().split('T')[0];
+            const lastDay = new Date(year, month + 1, 0).toISOString().split('T')[0];
+
+            const { data, error } = await supabase
+                .from('appointments')
+                .select('time')
+                .eq('coach_id', coachId)
+                .gte('date', firstDay)
+                .lte('date', lastDay)
+                .neq('status', 'cancelled');
+
+            if (error) {
+                console.error('Error fetching occupied times:', error);
+                return;
+            }
+
+            // Extrair horários únicos ocupados
+            const times = [...new Set(data?.map(a => (a.time || '').slice(0, 5)) || [])];
+            setOccupiedTimes(times);
+        };
+
+        fetchOccupiedTimes();
     }, [coachId]);
 
     const toggleDay = (dayId: number) => {
@@ -146,8 +185,8 @@ const WeeklyPatternSelector: React.FC<WeeklyPatternSelectorProps> = ({
                                     key={client.id}
                                     onClick={() => handleSelectClient(client)}
                                     className={`flex flex-col items-center p-3 rounded-2xl transition-all ${selectedClientId === client.id
-                                            ? 'bg-blue-600 border-blue-500'
-                                            : 'bg-[#0F1629] border border-gray-700 hover:bg-[#1a2235]'
+                                        ? 'bg-blue-600 border-blue-500'
+                                        : 'bg-[#0F1629] border border-gray-700 hover:bg-[#1a2235]'
                                         }`}
                                 >
                                     <div
@@ -220,31 +259,70 @@ const WeeklyPatternSelector: React.FC<WeeklyPatternSelectorProps> = ({
                 {selectedDays.length > 0 && (
                     <div className="mb-6">
                         <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">
-                            Horários
+                            Horários {occupiedTimes.length > 0 && <span className="text-red-400">(⚫ = ocupado)</span>}
                         </h3>
                         <div className="space-y-2">
                             {useSameTime ? (
-                                <div className="flex items-center justify-between bg-[#0F1629] p-3 rounded-lg">
-                                    <span className="text-white text-sm">Horário único</span>
-                                    <input
-                                        type="time"
-                                        value={times[selectedDays[0]] || '14:00'}
-                                        onChange={(e) => updateTime(selectedDays[0], e.target.value)}
-                                        className="bg-blue-600 text-white px-3 py-2 rounded-lg text-sm font-semibold"
-                                    />
+                                <div className="space-y-3">
+                                    <div className="flex items-center justify-between bg-[#0F1629] p-3 rounded-lg">
+                                        <span className="text-white text-sm">Horário único</span>
+                                        <span className="text-blue-400 font-bold">{times[selectedDays[0]] || 'Selecione'}</span>
+                                    </div>
+                                    {/* Grid de slots */}
+                                    <div className="grid grid-cols-4 gap-2">
+                                        {ALL_TIMES.map((time) => {
+                                            const isOccupied = occupiedTimes.includes(time);
+                                            const isSelected = times[selectedDays[0]] === time;
+                                            return (
+                                                <button
+                                                    key={time}
+                                                    onClick={() => !isOccupied && updateTime(selectedDays[0], time)}
+                                                    disabled={isOccupied}
+                                                    className={`py-2 rounded-lg text-xs font-bold transition-all ${isOccupied
+                                                            ? 'bg-red-500/10 text-red-400/50 border border-red-500/20 cursor-not-allowed line-through'
+                                                            : isSelected
+                                                                ? 'bg-blue-600 text-white shadow-lg'
+                                                                : 'bg-[#0F1629] text-gray-400 hover:bg-[#1a2235] hover:text-white'
+                                                        }`}
+                                                    title={isOccupied ? 'Horário ocupado' : `Selecionar ${time}`}
+                                                >
+                                                    {time}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
                                 </div>
                             ) : (
                                 selectedDays.map((dayId) => {
                                     const day = WEEKDAYS.find(d => d.id === dayId);
                                     return (
-                                        <div key={dayId} className="flex items-center justify-between bg-[#0F1629] p-3 rounded-lg">
-                                            <span className="text-white text-sm">{day?.name}</span>
-                                            <input
-                                                type="time"
-                                                value={times[dayId] || '14:00'}
-                                                onChange={(e) => updateTime(dayId, e.target.value)}
-                                                className="bg-blue-600 text-white px-3 py-2 rounded-lg text-sm font-semibold"
-                                            />
+                                        <div key={dayId} className="space-y-2">
+                                            <div className="flex items-center justify-between bg-[#0F1629] p-3 rounded-lg">
+                                                <span className="text-white text-sm">{day?.name}</span>
+                                                <span className="text-blue-400 font-bold">{times[dayId] || 'Selecione'}</span>
+                                            </div>
+                                            <div className="grid grid-cols-4 gap-2">
+                                                {ALL_TIMES.map((time) => {
+                                                    const isOccupied = occupiedTimes.includes(time);
+                                                    const isSelected = times[dayId] === time;
+                                                    return (
+                                                        <button
+                                                            key={time}
+                                                            onClick={() => !isOccupied && updateTime(dayId, time)}
+                                                            disabled={isOccupied}
+                                                            className={`py-2 rounded-lg text-xs font-bold transition-all ${isOccupied
+                                                                    ? 'bg-red-500/10 text-red-400/50 border border-red-500/20 cursor-not-allowed line-through'
+                                                                    : isSelected
+                                                                        ? 'bg-blue-600 text-white shadow-lg'
+                                                                        : 'bg-[#0F1629] text-gray-400 hover:bg-[#1a2235] hover:text-white'
+                                                                }`}
+                                                            title={isOccupied ? 'Horário ocupado' : `Selecionar ${time}`}
+                                                        >
+                                                            {time}
+                                                        </button>
+                                                    );
+                                                })}
+                                            </div>
                                         </div>
                                     );
                                 })

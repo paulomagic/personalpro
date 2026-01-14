@@ -140,6 +140,27 @@ export async function createMonthlyScheduleBatch(
             throw new Error('No dates generated');
         }
 
+        // 2. Check for conflicts with existing appointments
+        const dateStrings = dates.map(d => d.toISOString().split('T')[0]);
+        const timeValues = Object.values(config.times || {});
+
+        const { data: existingAppointments, error: conflictError } = await supabase
+            .from('appointments')
+            .select('date, time')
+            .eq('coach_id', coachId)
+            .in('date', dateStrings)
+            .in('time', timeValues)
+            .neq('status', 'cancelled');
+
+        if (conflictError) {
+            console.error('Error checking conflicts:', conflictError);
+        }
+
+        if (existingAppointments && existingAppointments.length > 0) {
+            const conflicts = existingAppointments.map(a => `${a.date} às ${a.time}`).join(', ');
+            throw new Error(`Conflito de horário! Já existem agendamentos em: ${conflicts}`);
+        }
+
         // 2. Create batch record
         const { data: batch, error: batchError } = await supabase
             .from('monthly_schedule_batches')

@@ -115,9 +115,12 @@ const MonthlyScheduleModal: React.FC<MonthlyScheduleModalProps> = ({
                 alert('Erro ao criar agendamento mensal. Tente novamente.');
                 setIsCreating(false);
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error creating monthly schedule:', error);
-            alert('Erro ao criar agendamento mensal. Tente novamente.');
+            const errorMessage = error?.message?.includes('Conflito')
+                ? error.message
+                : 'Erro ao criar agendamento mensal. Tente novamente.';
+            alert(errorMessage);
             setIsCreating(false);
         }
     };

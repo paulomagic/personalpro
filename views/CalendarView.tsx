@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { getAppointments, createAppointment, updateAppointment, getClients, DBClient, Appointment as DBAppointment } from '../services/supabaseClient';
+import { getAppointments, createAppointment, updateAppointment, deleteAppointment, getClients, DBClient, Appointment as DBAppointment } from '../services/supabaseClient';
 import { mockClients } from '../mocks/demoData';
 import PendingRequestsPanel from '../components/PendingRequestsPanel';
 import MonthlyScheduleModal from '../components/MonthlyScheduleModal';
@@ -202,7 +202,12 @@ const CalendarView: React.FC<CalendarViewProps> = ({ user, onBack, onSelectClien
 
     const handleCancelAppointment = async (apt: DisplayAppointment) => {
         if (!isDemo && apt.id) {
-            await updateAppointment(apt.id, { status: 'cancelled' });
+            // Deletar permanentemente do banco de dados
+            const deleted = await deleteAppointment(apt.id);
+            if (!deleted) {
+                alert('Erro ao excluir agendamento. Tente novamente.');
+                return;
+            }
         }
         setAppointments(prev => prev.filter(a => a.id !== apt.id));
         setShowDetailModal(null);
@@ -463,6 +468,20 @@ const CalendarView: React.FC<CalendarViewProps> = ({ user, onBack, onSelectClien
                                                 }`}>
                                                 {apt.status === 'confirmed' ? '✓' : apt.status === 'pending' ? '⋯' : '●'}
                                             </div>
+
+                                            {/* Quick Delete Button */}
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    if (confirm(`Excluir agendamento de ${apt.clientName} às ${apt.time}?`)) {
+                                                        handleCancelAppointment(apt);
+                                                    }
+                                                }}
+                                                className="size-8 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400 hover:bg-red-500 hover:text-white transition-all opacity-0 group-hover:opacity-100"
+                                                title="Excluir agendamento"
+                                            >
+                                                <span className="material-symbols-outlined text-sm">close</span>
+                                            </button>
                                         </motion.button>
                                     ))}
                                 </AnimatePresence>

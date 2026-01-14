@@ -215,6 +215,7 @@ export async function getAppointments(coachId: string, date?: string): Promise<A
         .from('appointments')
         .select('*, clients(name, avatar_url, phone)')
         .eq('coach_id', coachId)
+        .neq('status', 'cancelled')  // Filtrar cancelados
         .order('date')
         .order('time');
 
@@ -265,6 +266,23 @@ export async function updateAppointment(id: string, updates: Partial<Appointment
     }
 
     return data;
+}
+
+// Delete appointment permanently
+export async function deleteAppointment(id: string): Promise<boolean> {
+    if (!supabase) return false;
+
+    const { error } = await supabase
+        .from('appointments')
+        .delete()
+        .eq('id', id);
+
+    if (error) {
+        console.error('Error deleting appointment:', error);
+        return false;
+    }
+
+    return true;
 }
 
 // ============ PAYMENTS ============

@@ -689,9 +689,9 @@ const CalendarView: React.FC<CalendarViewProps> = ({ user, onBack, onSelectClien
                             <div className="space-y-6 mb-8">
                                 {/* Client Selection */}
                                 <div>
-                                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-3">
+                                    <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">
                                         Selecionar Aluno
-                                    </label>
+                                    </h3>
                                     <div className="grid grid-cols-3 gap-2 max-h-40 overflow-y-auto p-1">
                                         {(isDemo ? mockClients : clients).map((client: any) => (
                                             <button
@@ -716,9 +716,9 @@ const CalendarView: React.FC<CalendarViewProps> = ({ user, onBack, onSelectClien
 
                                 {/* Time Selection */}
                                 <div>
-                                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-3">
+                                    <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">
                                         Horário
-                                    </label>
+                                    </h3>
                                     <div className="grid grid-cols-4 gap-2">
                                         {freeSlots.map((time) => (
                                             <button
@@ -737,9 +737,9 @@ const CalendarView: React.FC<CalendarViewProps> = ({ user, onBack, onSelectClien
 
                                 {/* Type Selection */}
                                 <div>
-                                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-3">
+                                    <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">
                                         Tipo de Sessão
-                                    </label>
+                                    </h3>
                                     <div className="grid grid-cols-2 gap-2">
                                         {[
                                             { value: 'training', label: 'Treino', icon: 'fitness_center', color: 'blue' },
@@ -762,9 +762,9 @@ const CalendarView: React.FC<CalendarViewProps> = ({ user, onBack, onSelectClien
 
                                 {/* Duration - Fixado em 1h */}
                                 <div>
-                                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-3">
+                                    <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">
                                         Duração
-                                    </label>
+                                    </h3>
                                     <div className="flex justify-center">
                                         <div className="bg-blue-600 text-white px-8 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-glow">
                                             1h
@@ -784,7 +784,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({ user, onBack, onSelectClien
                                     ) : (
                                         <>
                                             <span className="material-symbols-outlined">event_available</span>
-                                            Confirmar Agendamento
+                                            CONFIRMAR
                                         </>
                                     )}
                                 </button>

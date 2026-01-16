@@ -685,7 +685,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({ user, onBack, onSelectClien
                                 </div>
                             )}
 
-                            <div className="space-y-6 mb-8">
+                            <div className="space-y-6">{/* Removido mb-8, adicionado espaçamento uniforme */}
                                 {/* Client Selection */}
                                 <div className="mb-6">
                                     <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">
@@ -780,7 +780,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({ user, onBack, onSelectClien
                                 onClick={handleCreateAppointment}
                                 disabled={saving || !newAppointment.clientId}
                                 className={`
-                                    w-full py-4 rounded-xl font-bold text-white transition-all
+                                    w-full py-4 rounded-xl font-bold text-white transition-all mt-8
                                     ${!saving && newAppointment.clientId
                                         ? 'bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-500/30'
                                         : 'bg-gray-700 cursor-not-allowed opacity-50'

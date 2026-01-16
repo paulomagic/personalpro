@@ -59,33 +59,32 @@ const WeeklyPatternSelector: React.FC<WeeklyPatternSelectorProps> = ({
         }
     }, [coachId]);
 
-    // Buscar horários ocupados
+    // Buscar horários ocupados - TODOS os appointments ativos
     useEffect(() => {
         const fetchOccupiedTimes = async () => {
-            if (!supabase || !coachId) return;
-
-            // Buscar todos os appointments para o mês atual
-            const today = new Date();
-            const year = today.getFullYear();
-            const month = today.getMonth();
-            const firstDay = new Date(year, month, 1).toISOString().split('T')[0];
-            const lastDay = new Date(year, month + 1, 0).toISOString().split('T')[0];
-
-            const { data, error } = await supabase
-                .from('appointments')
-                .select('time')
-                .eq('coach_id', coachId)
-                .gte('date', firstDay)
-                .lte('date', lastDay)
-                .neq('status', 'cancelled');
-
-            if (error) {
-                console.error('Error fetching occupied times:', error);
+            if (!supabase || !coachId) {
+                console.log('⚠️ WeeklyPattern: Missing supabase or coachId');
                 return;
             }
 
+            console.log('📅 WeeklyPattern: Fetching occupied times for coach:', coachId);
+
+            const { data, error } = await supabase
+                .from('appointments')
+                .select('time, date')
+                .eq('coach_id', coachId)
+                .neq('status', 'cancelled');
+
+            if (error) {
+                console.error('❌ Error fetching occupied times:', error);
+                return;
+            }
+
+            console.log('📊 WeeklyPattern: Found appointments:', data);
+
             // Extrair horários únicos ocupados
             const times = [...new Set(data?.map(a => (a.time || '').slice(0, 5)) || [])];
+            console.log('🔴 WeeklyPattern: Occupied times:', times);
             setOccupiedTimes(times);
         };
 
@@ -279,10 +278,10 @@ const WeeklyPatternSelector: React.FC<WeeklyPatternSelectorProps> = ({
                                                     onClick={() => !isOccupied && updateTime(selectedDays[0], time)}
                                                     disabled={isOccupied}
                                                     className={`py-2 rounded-lg text-xs font-bold transition-all ${isOccupied
-                                                            ? 'bg-red-500/10 text-red-400/50 border border-red-500/20 cursor-not-allowed line-through'
-                                                            : isSelected
-                                                                ? 'bg-blue-600 text-white shadow-lg'
-                                                                : 'bg-[#0F1629] text-gray-400 hover:bg-[#1a2235] hover:text-white'
+                                                        ? 'bg-red-500/10 text-red-400/50 border border-red-500/20 cursor-not-allowed line-through'
+                                                        : isSelected
+                                                            ? 'bg-blue-600 text-white shadow-lg'
+                                                            : 'bg-[#0F1629] text-gray-400 hover:bg-[#1a2235] hover:text-white'
                                                         }`}
                                                     title={isOccupied ? 'Horário ocupado' : `Selecionar ${time}`}
                                                 >
@@ -311,10 +310,10 @@ const WeeklyPatternSelector: React.FC<WeeklyPatternSelectorProps> = ({
                                                             onClick={() => !isOccupied && updateTime(dayId, time)}
                                                             disabled={isOccupied}
                                                             className={`py-2 rounded-lg text-xs font-bold transition-all ${isOccupied
-                                                                    ? 'bg-red-500/10 text-red-400/50 border border-red-500/20 cursor-not-allowed line-through'
-                                                                    : isSelected
-                                                                        ? 'bg-blue-600 text-white shadow-lg'
-                                                                        : 'bg-[#0F1629] text-gray-400 hover:bg-[#1a2235] hover:text-white'
+                                                                ? 'bg-red-500/10 text-red-400/50 border border-red-500/20 cursor-not-allowed line-through'
+                                                                : isSelected
+                                                                    ? 'bg-blue-600 text-white shadow-lg'
+                                                                    : 'bg-[#0F1629] text-gray-400 hover:bg-[#1a2235] hover:text-white'
                                                                 }`}
                                                             title={isOccupied ? 'Horário ocupado' : `Selecionar ${time}`}
                                                         >

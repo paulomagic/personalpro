@@ -652,152 +652,141 @@ const CalendarView: React.FC<CalendarViewProps> = ({ user, onBack, onSelectClien
                             initial={{ y: '100%' }}
                             animate={{ y: 0 }}
                             exit={{ y: '100%' }}
-                            className="w-full max-w-md mx-auto bg-slate-900 rounded-t-[40px] border-t border-white/10 max-h-[85vh] flex flex-col"
+                            className="w-full max-w-md mx-auto bg-slate-900 rounded-t-[40px] p-8 pb-28 border-t border-white/10 max-h-[85vh] overflow-y-auto"
                         >
-                            <div className="w-12 h-1 bg-white/10 rounded-full mx-auto mt-6 mb-6"></div>
+                            <div className="w-12 h-1 bg-white/10 rounded-full mx-auto mb-6"></div>
 
-                            {/* Scrollable Content */}
-                            <div className="flex-1 overflow-y-auto px-8">
-                                {/* Header - padrão igual ao WeeklyPatternSelector */}
-                                <div className="mb-6">
-                                    <button
-                                        onClick={() => setShowNewModal(false)}
-                                        className="text-blue-400 hover:text-blue-300 mb-3 flex items-center gap-2"
-                                    >
-                                        <span>←</span> Voltar
-                                    </button>
-                                    <h2 className="text-2xl font-bold text-white mb-1">
-                                        Novo Agendamento
-                                    </h2>
-                                    <p className="text-sm text-gray-400">
-                                        {selectedDate.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}
-                                    </p>
-                                </div>
-
-                                {/* Error Message */}
-                                {errorMessage && (
-                                    <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-4 mb-6 animate-slide-up">
-                                        <div className="flex items-center gap-3">
-                                            <span className="material-symbols-outlined text-red-500 text-xl">error</span>
-                                            <p className="text-red-400 text-sm font-bold flex-1">{errorMessage}</p>
-                                            <button onClick={() => setErrorMessage(null)} className="text-red-500/50 hover:text-red-500">
-                                                <span className="material-symbols-outlined text-base">close</span>
-                                            </button>
-                                        </div>
-                                    </div>
-                                )}
-
-                                <div className="space-y-6 pb-6">
-                                    {/* Client Selection */}
-                                    <div className="mb-6">
-                                        <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">
-                                            Selecionar Aluno
-                                        </h3>
-                                        <div className="grid grid-cols-3 gap-2 max-h-40 overflow-y-auto">
-                                            {(isDemo ? mockClients : clients).map((client: any) => (
-                                                <button
-                                                    key={client.id}
-                                                    onClick={() => setNewAppointment(prev => ({ ...prev, clientId: client.id }))}
-                                                    className={`flex flex-col items-center p-3 rounded-2xl transition-all ${newAppointment.clientId === client.id
-                                                        ? 'bg-blue-600 border-blue-500'
-                                                        : 'bg-[#0F1629] border border-gray-700 hover:bg-[#1a2235]'
-                                                        }`}
-                                                >
-                                                    <div
-                                                        className="size-12 rounded-xl bg-cover bg-center border-2 border-white/10 mb-2"
-                                                        style={{ backgroundImage: `url(${client.avatar || client.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(client.name)}&background=3b82f6&color=fff`})` }}
-                                                    />
-                                                    <span className="text-[9px] font-bold text-white truncate w-full text-center">
-                                                        {client.name.split(' ')[0]}
-                                                    </span>
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </div>
-
-                                    {/* Time Selection */}
-                                    <div className="mb-6">
-                                        <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">
-                                            Horário
-                                        </h3>
-                                        <div className="grid grid-cols-4 gap-2">
-                                            {freeSlots.map((time) => (
-                                                <button
-                                                    key={time}
-                                                    onClick={() => setNewAppointment(prev => ({ ...prev, time }))}
-                                                    className={`py-2 rounded-lg text-xs font-bold transition-all ${newAppointment.time === time
-                                                        ? 'bg-blue-600 text-white shadow-lg'
-                                                        : 'bg-[#0F1629] text-gray-400 hover:bg-[#1a2235] hover:text-white'
-                                                        }`}
-                                                >
-                                                    {time}
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </div>
-
-                                    {/* Type Selection */}
-                                    <div className="mb-6">
-                                        <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">
-                                            Tipo de Sessão
-                                        </h3>
-                                        <div className="grid grid-cols-2 gap-2">
-                                            {[
-                                                { value: 'training', label: 'Treino', icon: '🏋️' },
-                                                { value: 'assessment', label: 'Avaliação', icon: '📊' },
-                                            ].map((type) => (
-                                                <button
-                                                    key={type.value}
-                                                    onClick={() => setNewAppointment(prev => ({ ...prev, type: type.value as any }))}
-                                                    className={`
-                                                        py-3 px-2 rounded-lg text-xs font-semibold transition-all
-                                                        ${newAppointment.type === type.value
-                                                            ? 'bg-blue-600 text-white'
-                                                            : 'bg-[#0F1629] text-gray-400 hover:bg-[#1a2235]'
-                                                        }
-                                                    `}
-                                                >
-                                                    <div className="text-lg mb-1">{type.icon}</div>
-                                                    {type.label}
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </div>
-
-                                    {/* Duration - Fixado em 1h */}
-                                    <div className="mb-6">
-                                        <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">
-                                            Duração
-                                        </h3>
-                                        <div className="flex justify-center">
-                                            <div className="bg-blue-600 text-white px-6 py-3 rounded-lg text-sm font-semibold">
-                                                1h
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Fixed Action Button */}
-                            <div className="p-8 pt-4 pb-24 bg-slate-900 border-t border-white/5">
+                            {/* Header - padrão igual ao WeeklyPatternSelector */}
+                            <div className="mb-6">
                                 <button
-                                    onClick={handleCreateAppointment}
-                                    disabled={saving || !newAppointment.clientId}
-                                    className={`
-                                        w-full py-4 rounded-xl font-bold text-white transition-all
-                                        ${!saving && newAppointment.clientId
-                                            ? 'bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-500/30'
-                                            : 'bg-gray-700 cursor-not-allowed opacity-50'
-                                        }
-                                    `}
+                                    onClick={() => setShowNewModal(false)}
+                                    className="text-blue-400 hover:text-blue-300 mb-3 flex items-center gap-2"
                                 >
-                                    {saving ? (
-                                        <div className="size-5 border-2 border-white border-t-transparent rounded-full animate-spin mx-auto" />
-                                    ) : (
-                                        'CONFIRMAR'
-                                    )}
+                                    <span>←</span> Voltar
                                 </button>
+                                <h2 className="text-2xl font-bold text-white mb-1">
+                                    Novo Agendamento
+                                </h2>
+                                <p className="text-sm text-gray-400">
+                                    {selectedDate.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}
+                                </p>
                             </div>
+
+                            {/* Error Message */}
+                            {errorMessage && (
+                                <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-4 mb-6 animate-slide-up">
+                                    <div className="flex items-center gap-3">
+                                        <span className="material-symbols-outlined text-red-500 text-xl">error</span>
+                                        <p className="text-red-400 text-sm font-bold flex-1">{errorMessage}</p>
+                                        <button onClick={() => setErrorMessage(null)} className="text-red-500/50 hover:text-red-500">
+                                            <span className="material-symbols-outlined text-base">close</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+
+                            <div className="space-y-6 mb-8">
+                                {/* Client Selection */}
+                                <div>
+                                    <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">
+                                        Selecionar Aluno
+                                    </h3>
+                                    <div className="grid grid-cols-3 gap-2 max-h-40 overflow-y-auto">
+                                        {(isDemo ? mockClients : clients).map((client: any) => (
+                                            <button
+                                                key={client.id}
+                                                onClick={() => setNewAppointment(prev => ({ ...prev, clientId: client.id }))}
+                                                className={`flex flex-col items-center p-3 rounded-2xl transition-all ${newAppointment.clientId === client.id
+                                                    ? 'bg-blue-600 border-blue-500'
+                                                    : 'bg-[#0F1629] border border-gray-700 hover:bg-[#1a2235]'
+                                                    }`}
+                                            >
+                                                <div
+                                                    className="size-12 rounded-xl bg-cover bg-center border-2 border-white/10 mb-2"
+                                                    style={{ backgroundImage: `url(${client.avatar || client.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(client.name)}&background=3b82f6&color=fff`})` }}
+                                                />
+                                                <span className="text-[9px] font-bold text-white truncate w-full text-center">
+                                                    {client.name.split(' ')[0]}
+                                                </span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Time Selection */}
+                                <div>
+                                    <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">
+                                        Horário
+                                    </h3>
+                                    <div className="grid grid-cols-4 gap-2">
+                                        {freeSlots.map((time) => (
+                                            <button
+                                                key={time}
+                                                onClick={() => setNewAppointment(prev => ({ ...prev, time }))}
+                                                className={`py-2 rounded-lg text-xs font-bold transition-all ${newAppointment.time === time
+                                                    ? 'bg-blue-600 text-white shadow-lg'
+                                                    : 'bg-[#0F1629] text-gray-400 hover:bg-[#1a2235] hover:text-white'
+                                                    }`}
+                                            >
+                                                {time}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Type Selection */}
+                                <div>
+                                    <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">
+                                        Tipo de Sessão
+                                    </h3>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        {[
+                                            { value: 'training', label: 'Treino', icon: '🏋️' },
+                                            { value: 'assessment', label: 'Avaliação', icon: '📊' },
+                                        ].map((type) => (
+                                            <button
+                                                key={type.value}
+                                                onClick={() => setNewAppointment(prev => ({ ...prev, type: type.value as any }))}
+                                                className={`
+                                                    py-3 px-2 rounded-lg text-xs font-semibold transition-all
+                                                    ${newAppointment.type === type.value
+                                                        ? 'bg-blue-600 text-white'
+                                                        : 'bg-[#0F1629] text-gray-400 hover:bg-[#1a2235]'
+                                                    }
+                                                `}
+                                            >
+                                                <div className="text-lg mb-1">{type.icon}</div>
+                                                {type.label}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Duration - Fixado em 1h */}
+                                <div>
+                                    <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">
+                                        Duração
+                                    </h3>
+                                    <div className="flex justify-center">
+                                        <div className="bg-blue-600 text-white px-6 py-3 rounded-lg text-sm font-semibold">
+                                            1h
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Action Button */}
+                            <button
+                                onClick={handleCreateAppointment}
+                                disabled={saving || !newAppointment.clientId}
+                                className="w-full py-4 rounded-xl font-bold text-white transition-all bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-500/30 disabled:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                                {saving ? (
+                                    <div className="size-5 border-2 border-white border-t-transparent rounded-full animate-spin mx-auto" />
+                                ) : (
+                                    'CONFIRMAR'
+                                )}
+                            </button>
                         </motion.div>
                     </motion.div>
                 )}

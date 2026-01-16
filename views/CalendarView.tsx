@@ -687,23 +687,23 @@ const CalendarView: React.FC<CalendarViewProps> = ({ user, onBack, onSelectClien
 
                             <div className="space-y-6 mb-8">
                                 {/* Client Selection */}
-                                <div>
+                                <div className="mb-6">
                                     <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">
                                         Selecionar Aluno
                                     </h3>
-                                    <div className="grid grid-cols-3 gap-2 max-h-40 overflow-y-auto p-1">
+                                    <div className="grid grid-cols-3 gap-2 max-h-40 overflow-y-auto">
                                         {(isDemo ? mockClients : clients).map((client: any) => (
                                             <button
                                                 key={client.id}
                                                 onClick={() => setNewAppointment(prev => ({ ...prev, clientId: client.id }))}
                                                 className={`flex flex-col items-center p-3 rounded-2xl transition-all ${newAppointment.clientId === client.id
                                                     ? 'bg-blue-600 border-blue-500'
-                                                    : 'glass-card hover:bg-white/10'
+                                                    : 'bg-[#0F1629] border border-gray-700 hover:bg-[#1a2235]'
                                                     }`}
                                             >
                                                 <div
                                                     className="size-12 rounded-xl bg-cover bg-center border-2 border-white/10 mb-2"
-                                                    style={{ backgroundImage: `url(${client.avatar || client.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(client.name)}`})` }}
+                                                    style={{ backgroundImage: `url(${client.avatar || client.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(client.name)}&background=3b82f6&color=fff`})` }}
                                                 />
                                                 <span className="text-[9px] font-bold text-white truncate w-full text-center">
                                                     {client.name.split(' ')[0]}
@@ -714,7 +714,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({ user, onBack, onSelectClien
                                 </div>
 
                                 {/* Time Selection */}
-                                <div>
+                                <div className="mb-6">
                                     <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">
                                         Horário
                                     </h3>
@@ -723,9 +723,9 @@ const CalendarView: React.FC<CalendarViewProps> = ({ user, onBack, onSelectClien
                                             <button
                                                 key={time}
                                                 onClick={() => setNewAppointment(prev => ({ ...prev, time }))}
-                                                className={`py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${newAppointment.time === time
-                                                    ? 'bg-blue-600 text-white shadow-glow'
-                                                    : 'glass-card text-slate-400 hover:text-white'
+                                                className={`py-2 rounded-lg text-xs font-bold transition-all ${newAppointment.time === time
+                                                    ? 'bg-blue-600 text-white shadow-lg'
+                                                    : 'bg-[#0F1629] text-gray-400 hover:bg-[#1a2235] hover:text-white'
                                                     }`}
                                             >
                                                 {time}
@@ -735,66 +735,64 @@ const CalendarView: React.FC<CalendarViewProps> = ({ user, onBack, onSelectClien
                                 </div>
 
                                 {/* Type Selection */}
-                                <div>
+                                <div className="mb-6">
                                     <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">
                                         Tipo de Sessão
                                     </h3>
                                     <div className="grid grid-cols-2 gap-2">
                                         {[
-                                            { value: 'training', label: 'Treino', icon: 'fitness_center', color: 'blue' },
-                                            { value: 'assessment', label: 'Avaliação', icon: 'monitoring', color: 'purple' },
+                                            { value: 'training', label: 'Treino', icon: '🏋️' },
+                                            { value: 'assessment', label: 'Avaliação', icon: '📊' },
                                         ].map((type) => (
                                             <button
                                                 key={type.value}
                                                 onClick={() => setNewAppointment(prev => ({ ...prev, type: type.value as any }))}
-                                                className={`py-4 rounded-xl flex flex-col items-center gap-2 transition-all ${newAppointment.type === type.value
-                                                    ? `bg-${type.color}-600 text-white shadow-glow`
-                                                    : 'glass-card text-slate-400 hover:text-white'
-                                                    }`}
+                                                className={`
+                                                    py-3 px-2 rounded-lg text-xs font-semibold transition-all
+                                                    ${newAppointment.type === type.value
+                                                        ? 'bg-blue-600 text-white'
+                                                        : 'bg-[#0F1629] text-gray-400 hover:bg-[#1a2235]'
+                                                    }
+                                                `}
                                             >
-                                                <span className="material-symbols-outlined">{type.icon}</span>
-                                                <span className="text-[9px] font-black uppercase tracking-widest">{type.label}</span>
+                                                <div className="text-lg mb-1">{type.icon}</div>
+                                                {type.label}
                                             </button>
                                         ))}
                                     </div>
                                 </div>
 
                                 {/* Duration - Fixado em 1h */}
-                                <div>
+                                <div className="mb-6">
                                     <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">
                                         Duração
                                     </h3>
                                     <div className="flex justify-center">
-                                        <div className="bg-blue-600 text-white px-8 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-glow">
+                                        <div className="bg-blue-600 text-white px-6 py-3 rounded-lg text-sm font-semibold">
                                             1h
                                         </div>
                                     </div>
                                 </div>
                             </div>
 
-                            <div className="space-y-3">
-                                <button
-                                    onClick={handleCreateAppointment}
-                                    disabled={saving || !newAppointment.clientId}
-                                    className="w-full h-16 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-black rounded-3xl flex items-center justify-center gap-3 active:scale-[0.98] transition-all uppercase tracking-widest shadow-lg shadow-blue-900/20"
-                                >
-                                    {saving ? (
-                                        <div className="size-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                                    ) : (
-                                        <>
-                                            <span className="material-symbols-outlined">event_available</span>
-                                            CONFIRMAR
-                                        </>
-                                    )}
-                                </button>
-
-                                <button
-                                    onClick={() => setShowNewModal(false)}
-                                    className="w-full h-14 bg-white/5 text-slate-500 font-bold rounded-2xl active:scale-[0.98] transition-all uppercase tracking-widest text-[10px]"
-                                >
-                                    Cancelar
-                                </button>
-                            </div>
+                            {/* Action Button */}
+                            <button
+                                onClick={handleCreateAppointment}
+                                disabled={saving || !newAppointment.clientId}
+                                className={`
+                                    w-full py-4 rounded-xl font-bold text-white transition-all
+                                    ${!saving && newAppointment.clientId
+                                        ? 'bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-500/30'
+                                        : 'bg-gray-700 cursor-not-allowed opacity-50'
+                                    }
+                                `}
+                            >
+                                {saving ? (
+                                    <div className="size-5 border-2 border-white border-t-transparent rounded-full animate-spin mx-auto" />
+                                ) : (
+                                    'CONFIRMAR'
+                                )}
+                            </button>
                         </motion.div>
                     </motion.div>
                 )}

@@ -121,17 +121,15 @@ const AddClientModal: React.FC<AddClientModalProps> = ({ isOpen, onClose, onSave
                 className="w-full max-w-md bg-slate-900 rounded-[32px] border border-white/10 shadow-2xl overflow-hidden max-h-[90vh] flex flex-col"
             >
                 {/* Header */}
-                <div className="p-6 border-b border-white/5 flex justify-between items-center">
-                    <div>
-                        <h2 className="text-xl font-black text-white">Novo Aluno</h2>
-                        <p className="text-xs text-slate-500 font-bold uppercase tracking-widest mt-1">Cadastro de Protocolo</p>
-                    </div>
+                <div className="p-6 border-b border-white/5">
                     <button
                         onClick={() => { resetForm(); onClose(); }}
-                        className="size-10 rounded-full bg-white/5 flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
+                        className="text-blue-400 hover:text-blue-300 mb-3 flex items-center gap-2"
                     >
-                        <X size={20} />
+                        <span>←</span> Voltar
                     </button>
+                    <h2 className="text-2xl font-bold text-white mb-1">Novo Aluno</h2>
+                    <p className="text-sm text-gray-400">Cadastro de Protocolo</p>
                 </div>
 
                 {/* Tabs */}
@@ -165,7 +163,7 @@ const AddClientModal: React.FC<AddClientModalProps> = ({ isOpen, onClose, onSave
                         >
                             {/* Name */}
                             <div>
-                                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-2">
+                                <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide block mb-2">
                                     Nome Completo *
                                 </label>
                                 <div className="relative">
@@ -182,7 +180,7 @@ const AddClientModal: React.FC<AddClientModalProps> = ({ isOpen, onClose, onSave
 
                             {/* Email */}
                             <div>
-                                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-2">
+                                <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide block mb-2">
                                     E-mail
                                 </label>
                                 <div className="relative">
@@ -199,7 +197,7 @@ const AddClientModal: React.FC<AddClientModalProps> = ({ isOpen, onClose, onSave
 
                             {/* Phone */}
                             <div>
-                                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-2">
+                                <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide block mb-2">
                                     Telefone / WhatsApp
                                 </label>
                                 <div className="relative">
@@ -227,7 +225,7 @@ const AddClientModal: React.FC<AddClientModalProps> = ({ isOpen, onClose, onSave
 
                             {/* Birth Date */}
                             <div>
-                                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-2">
+                                <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide block mb-2">
                                     Data de Nascimento
                                 </label>
                                 <input
@@ -248,7 +246,7 @@ const AddClientModal: React.FC<AddClientModalProps> = ({ isOpen, onClose, onSave
                         >
                             {/* Goal */}
                             <div>
-                                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-2">
+                                <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide block mb-2">
                                     <Target size={12} className="inline mr-1" />
                                     Objetivo Principal
                                 </label>
@@ -270,7 +268,7 @@ const AddClientModal: React.FC<AddClientModalProps> = ({ isOpen, onClose, onSave
 
                             {/* Level */}
                             <div>
-                                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-2">
+                                <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide block mb-2">
                                     <TrendingUp size={12} className="inline mr-1" />
                                     Nível de Experiência
                                 </label>
@@ -292,7 +290,7 @@ const AddClientModal: React.FC<AddClientModalProps> = ({ isOpen, onClose, onSave
 
                             {/* Start Date */}
                             <div>
-                                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-2">
+                                <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide block mb-2">
                                     Data de Início
                                 </label>
                                 <input
@@ -313,7 +311,7 @@ const AddClientModal: React.FC<AddClientModalProps> = ({ isOpen, onClose, onSave
                         >
                             {/* Observations */}
                             <div>
-                                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-2">
+                                <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide block mb-2">
                                     <FileText size={12} className="inline mr-1" />
                                     Observações Gerais
                                 </label>
@@ -328,7 +326,7 @@ const AddClientModal: React.FC<AddClientModalProps> = ({ isOpen, onClose, onSave
 
                             {/* Injuries */}
                             <div>
-                                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-2">
+                                <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide block mb-2">
                                     <AlertTriangle size={12} className="inline mr-1 text-amber-500" />
                                     Lesões / Restrições
                                 </label>
@@ -343,7 +341,7 @@ const AddClientModal: React.FC<AddClientModalProps> = ({ isOpen, onClose, onSave
 
                             {/* Preferences */}
                             <div>
-                                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-2">
+                                <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide block mb-2">
                                     <Heart size={12} className="inline mr-1 text-pink-500" />
                                     Preferências de Treino
                                 </label>
@@ -369,9 +367,9 @@ const AddClientModal: React.FC<AddClientModalProps> = ({ isOpen, onClose, onSave
                     </button>
                     <button
                         onClick={handleSave}
-                        className="flex-1 py-3 rounded-xl bg-blue-600 text-white font-bold shadow-glow hover:bg-blue-500 transition-all active:scale-95"
+                        className="flex-1 py-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-lg shadow-blue-500/30 transition-all"
                     >
-                        Salvar Aluno
+                        SALVAR
                     </button>
                 </div>
             </motion.div>

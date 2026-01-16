@@ -59,22 +59,20 @@ const PaymentStatusModal: React.FC<PaymentStatusModalProps> = ({
                     className="w-full max-w-sm bg-slate-900 rounded-[32px] p-6 border border-white/10"
                 >
                     {/* Header */}
-                    <div className="flex items-center justify-between mb-6">
-                        <div>
-                            <h2 className="text-lg font-black text-white">{payment.clientName}</h2>
-                            <p className="text-sm text-slate-400">R$ {payment.amount} • {payment.dueDate}</p>
-                        </div>
+                    <div className="mb-6">
                         <button
                             onClick={onClose}
-                            className="size-10 rounded-full bg-white/10 flex items-center justify-center text-slate-400 hover:bg-white/20 transition-colors"
+                            className="text-blue-400 hover:text-blue-300 mb-3 flex items-center gap-2"
                         >
-                            <X size={20} />
+                            <span>←</span> Voltar
                         </button>
+                        <h2 className="text-2xl font-bold text-white mb-1">{payment.clientName}</h2>
+                        <p className="text-sm text-gray-400">R$ {payment.amount} • {payment.dueDate}</p>
                     </div>
 
                     {/* Status Selection */}
                     <div className="mb-6">
-                        <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">Status</p>
+                        <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Status</h3>
                         <div className="grid grid-cols-3 gap-2">
                             {statusOptions.map((option) => {
                                 const Icon = option.icon;
@@ -84,8 +82,8 @@ const PaymentStatusModal: React.FC<PaymentStatusModalProps> = ({
                                         key={option.value}
                                         onClick={() => setSelectedStatus(option.value)}
                                         className={`py-3 px-2 rounded-xl flex flex-col items-center gap-2 transition-all ${isSelected
-                                                ? `${option.bg} text-white`
-                                                : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
+                                            ? `${option.bg} text-white`
+                                            : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
                                             }`}
                                     >
                                         <Icon size={20} />
@@ -104,7 +102,7 @@ const PaymentStatusModal: React.FC<PaymentStatusModalProps> = ({
                             exit={{ height: 0, opacity: 0 }}
                             className="mb-6"
                         >
-                            <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">Método</p>
+                            <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Método</h3>
                             <div className="grid grid-cols-4 gap-2">
                                 {methodOptions.map((method) => {
                                     const Icon = method.icon;
@@ -114,8 +112,8 @@ const PaymentStatusModal: React.FC<PaymentStatusModalProps> = ({
                                             key={method.value}
                                             onClick={() => setSelectedMethod(method.value)}
                                             className={`py-3 rounded-xl flex flex-col items-center gap-1 transition-all ${isSelected
-                                                    ? 'bg-blue-500 text-white'
-                                                    : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
+                                                ? 'bg-blue-500 text-white'
+                                                : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
                                                 }`}
                                         >
                                             <Icon size={18} />
@@ -131,15 +129,12 @@ const PaymentStatusModal: React.FC<PaymentStatusModalProps> = ({
                     <button
                         onClick={handleSave}
                         disabled={saving}
-                        className="w-full py-4 bg-blue-500 hover:bg-blue-600 text-white font-bold rounded-2xl flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
+                        className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg shadow-blue-500/30 transition-all disabled:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                         {saving ? (
-                            <div className="size-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                            <div className="size-5 border-2 border-white border-t-transparent rounded-full animate-spin mx-auto" />
                         ) : (
-                            <>
-                                <Check size={20} />
-                                Salvar Alterações
-                            </>
+                            'SALVAR'
                         )}
                     </button>
                 </motion.div>

@@ -157,15 +157,25 @@ const MonthlyScheduleModal: React.FC<MonthlyScheduleModalProps> = ({
                         exit={{ y: '100%' }}
                         className="w-full max-w-md mx-auto bg-slate-900 rounded-t-[40px] p-8 border-t border-white/10 max-h-[85vh] overflow-y-auto"
                     >
-                        <div className="w-12 h-1 bg-white/10 rounded-full mx-auto mb-8"></div>
+                        <div className="w-12 h-1 bg-white/10 rounded-full mx-auto mb-6"></div>
 
-                        <div className="text-center mb-8">
-                            <h3 className="text-2xl font-black text-white tracking-tight mb-2">
-                                Selecionar Aluno
-                            </h3>
-                            <p className="text-slate-500 text-xs font-bold uppercase tracking-widest">
-                                Para quem é o agendamento mensal?
-                            </p>
+                        {/* Header com botão voltar */}
+                        <div className="flex items-center mb-8">
+                            <button
+                                onClick={onClose}
+                                className="size-12 rounded-2xl glass-card flex items-center justify-center active:scale-90 transition-all"
+                            >
+                                <span className="material-symbols-outlined text-white">arrow_back</span>
+                            </button>
+                            <div className="flex-1 text-center">
+                                <h3 className="text-2xl font-black text-white tracking-tight mb-1">
+                                    Selecionar Aluno
+                                </h3>
+                                <p className="text-slate-500 text-xs font-bold uppercase tracking-widest">
+                                    Para quem é o agendamento mensal?
+                                </p>
+                            </div>
+                            <div className="size-12"></div>
                         </div>
 
                         {loadingClients ? (

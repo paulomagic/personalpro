@@ -779,7 +779,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({ user, onBack, onSelectClien
                             </div>
 
                             {/* Fixed Action Button */}
-                            <div className="p-8 pt-4 bg-slate-900 border-t border-white/5">
+                            <div className="p-8 pt-4 pb-24 bg-slate-900 border-t border-white/5">
                                 <button
                                     onClick={handleCreateAppointment}
                                     disabled={saving || !newAppointment.clientId}

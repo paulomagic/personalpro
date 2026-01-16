@@ -228,6 +228,7 @@ const MonthlyScheduleModal: React.FC<MonthlyScheduleModalProps> = ({
             {step === 'configure' && patternType === 'weekly' && (
                 <WeeklyPatternSelector
                     key="configure"
+                    coachId={coachId}
                     clientId={selectedClientId || ''}
                     clientName={selectedClientName || ''}
                     onBack={() => setStep('type')}

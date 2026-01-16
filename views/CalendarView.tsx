@@ -656,21 +656,20 @@ const CalendarView: React.FC<CalendarViewProps> = ({ user, onBack, onSelectClien
                         >
                             <div className="w-12 h-1 bg-white/10 rounded-full mx-auto mb-6"></div>
 
-                            {/* Header com botão voltar */}
-                            <div className="flex items-center mb-8">
+                            {/* Header - padrão igual ao WeeklyPatternSelector */}
+                            <div className="mb-6">
                                 <button
                                     onClick={() => setShowNewModal(false)}
-                                    className="size-12 rounded-2xl glass-card flex items-center justify-center active:scale-90 transition-all"
+                                    className="text-blue-400 hover:text-blue-300 mb-3 flex items-center gap-2"
                                 >
-                                    <span className="material-symbols-outlined text-white">arrow_back</span>
+                                    <span>←</span> Voltar
                                 </button>
-                                <div className="flex-1 text-center">
-                                    <h3 className="text-2xl font-black text-white tracking-tight mb-1">Novo Agendamento</h3>
-                                    <p className="text-slate-500 text-xs font-bold uppercase tracking-widest">
-                                        {selectedDate.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}
-                                    </p>
-                                </div>
-                                <div className="size-12"></div>
+                                <h2 className="text-2xl font-bold text-white mb-1">
+                                    Novo Agendamento
+                                </h2>
+                                <p className="text-sm text-gray-400">
+                                    {selectedDate.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}
+                                </p>
                             </div>
 
                             {/* Error Message */}

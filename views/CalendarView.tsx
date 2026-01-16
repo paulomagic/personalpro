@@ -654,13 +654,23 @@ const CalendarView: React.FC<CalendarViewProps> = ({ user, onBack, onSelectClien
                             exit={{ y: '100%' }}
                             className="w-full max-w-md mx-auto bg-slate-900 rounded-t-[40px] p-8 border-t border-white/10 max-h-[85vh] overflow-y-auto"
                         >
-                            <div className="w-12 h-1 bg-white/10 rounded-full mx-auto mb-8"></div>
+                            <div className="w-12 h-1 bg-white/10 rounded-full mx-auto mb-6"></div>
 
-                            <div className="text-center mb-8">
-                                <h3 className="text-2xl font-black text-white tracking-tight mb-2">Novo Agendamento</h3>
-                                <p className="text-slate-500 text-xs font-bold uppercase tracking-widest">
-                                    {selectedDate.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}
-                                </p>
+                            {/* Header com botão voltar */}
+                            <div className="flex items-center mb-8">
+                                <button
+                                    onClick={() => setShowNewModal(false)}
+                                    className="size-12 rounded-2xl glass-card flex items-center justify-center active:scale-90 transition-all"
+                                >
+                                    <span className="material-symbols-outlined text-white">arrow_back</span>
+                                </button>
+                                <div className="flex-1 text-center">
+                                    <h3 className="text-2xl font-black text-white tracking-tight mb-1">Novo Agendamento</h3>
+                                    <p className="text-slate-500 text-xs font-bold uppercase tracking-widest">
+                                        {selectedDate.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}
+                                    </p>
+                                </div>
+                                <div className="size-12"></div>
                             </div>
 
                             {/* Error Message */}
@@ -730,11 +740,10 @@ const CalendarView: React.FC<CalendarViewProps> = ({ user, onBack, onSelectClien
                                     <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-3">
                                         Tipo de Sessão
                                     </label>
-                                    <div className="grid grid-cols-3 gap-2">
+                                    <div className="grid grid-cols-2 gap-2">
                                         {[
                                             { value: 'training', label: 'Treino', icon: 'fitness_center', color: 'blue' },
                                             { value: 'assessment', label: 'Avaliação', icon: 'monitoring', color: 'purple' },
-                                            { value: 'consultation', label: 'Consulta', icon: 'chat', color: 'emerald' },
                                         ].map((type) => (
                                             <button
                                                 key={type.value}
@@ -751,24 +760,15 @@ const CalendarView: React.FC<CalendarViewProps> = ({ user, onBack, onSelectClien
                                     </div>
                                 </div>
 
-                                {/* Duration */}
+                                {/* Duration - Fixado em 1h */}
                                 <div>
                                     <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-3">
                                         Duração
                                     </label>
-                                    <div className="grid grid-cols-4 gap-2">
-                                        {['30min', '1h', '1h30', '2h'].map((dur) => (
-                                            <button
-                                                key={dur}
-                                                onClick={() => setNewAppointment(prev => ({ ...prev, duration: dur }))}
-                                                className={`py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${newAppointment.duration === dur
-                                                    ? 'bg-blue-600 text-white shadow-glow'
-                                                    : 'glass-card text-slate-400 hover:text-white'
-                                                    }`}
-                                            >
-                                                {dur}
-                                            </button>
-                                        ))}
+                                    <div className="flex justify-center">
+                                        <div className="bg-blue-600 text-white px-8 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-glow">
+                                            1h
+                                        </div>
                                     </div>
                                 </div>
                             </div>

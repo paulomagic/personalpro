@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { getClients, DBClient, Appointment } from '../services/supabaseClient';
-import { supabase } from '../services/supabaseClient';
+import { getClients, DBClient, getAllAppointmentsForCoach } from '../services/supabaseClient';
 
 interface WeeklyPatternSelectorProps {
     coachId: string;
@@ -62,28 +61,20 @@ const WeeklyPatternSelector: React.FC<WeeklyPatternSelectorProps> = ({
     // Buscar horários ocupados - TODOS os appointments ativos
     useEffect(() => {
         const fetchOccupiedTimes = async () => {
-            if (!supabase || !coachId) {
-                console.log('⚠️ WeeklyPattern: Missing supabase or coachId');
+            if (!coachId) {
+                console.log('⚠️ WeeklyPattern: Missing coachId');
                 return;
             }
 
             console.log('📅 WeeklyPattern: Fetching occupied times for coach:', coachId);
 
-            const { data, error } = await supabase
-                .from('appointments')
-                .select('time, date')
-                .eq('coach_id', coachId)
-                .neq('status', 'cancelled');
+            // Usar a função helper que já existe e funciona
+            const appointments = await getAllAppointmentsForCoach(coachId);
 
-            if (error) {
-                console.error('❌ Error fetching occupied times:', error);
-                return;
-            }
-
-            console.log('📊 WeeklyPattern: Found appointments:', data);
+            console.log('📊 WeeklyPattern: Found appointments:', appointments);
 
             // Extrair horários únicos ocupados
-            const times = [...new Set(data?.map(a => (a.time || '').slice(0, 5)) || [])];
+            const times = [...new Set(appointments?.map(a => (a.time || '').slice(0, 5)) || [])];
             console.log('🔴 WeeklyPattern: Occupied times:', times);
             setOccupiedTimes(times);
         };

@@ -326,11 +326,10 @@ const WeeklyPatternSelector: React.FC<WeeklyPatternSelectorProps> = ({
                     <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">
                         Tipo de Sessão
                     </h3>
-                    <div className="grid grid-cols-3 gap-2">
+                    <div className="grid grid-cols-2 gap-2">
                         {[
                             { value: 'training', label: 'Treino', icon: '🏋️' },
-                            { value: 'assessment', label: 'Avaliação', icon: '📊' },
-                            { value: 'consultation', label: 'Consulta', icon: '💬' }
+                            { value: 'assessment', label: 'Avaliação', icon: '📊' }
                         ].map((type) => (
                             <button
                                 key={type.value}
@@ -355,8 +354,13 @@ const WeeklyPatternSelector: React.FC<WeeklyPatternSelectorProps> = ({
                     <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">
                         Duração
                     </h3>
-                    <div className="grid grid-cols-4 gap-2">
-                        {['30min', '1h', '1h30', '2h'].map((dur) => (
+                    <div className="flex justify-center">
+                        <div className="bg-blue-600 text-white px-6 py-3 rounded-lg text-sm font-semibold">
+                            1h
+                        </div>
+                    </div>
+                    <div className="hidden grid-cols-4 gap-2">
+                        {['1h'].map((dur) => (
                             <button
                                 key={dur}
                                 onClick={() => setDuration(dur)}

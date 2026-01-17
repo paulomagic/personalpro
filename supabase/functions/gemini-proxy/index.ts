@@ -3,16 +3,14 @@
 //
 // Deploy with: supabase functions deploy gemini-proxy
 // Set secrets:
-//   supabase secrets set GEMINI_API_KEY_PRIMARY=your-primary-key
-//   supabase secrets set GEMINI_API_KEY_FALLBACK=your-fallback-key
+//   supabase secrets set GEMINI_API_KEY=your-key
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models";
 
-// Models
-const MODEL_PRIMARY = "gemini-2.5-flash";
-const MODEL_FALLBACK = "gemini-2.5-flash-lite";
+// Model
+const MODEL = "gemini-2.5-flash";
 
 interface GeminiRequest {
     prompt: string;
@@ -112,58 +110,35 @@ serve(async (req: Request) => {
             );
         }
 
-        // Get API keys from environment
-        const primaryKey = Deno.env.get("GEMINI_API_KEY_PRIMARY");
-        const fallbackKey = Deno.env.get("GEMINI_API_KEY_FALLBACK");
+        // Get API key from environment (try both names for compatibility)
+        const apiKey = Deno.env.get("GEMINI_API_KEY") || Deno.env.get("GEMINI_API_KEY_PRIMARY");
 
-        if (!primaryKey && !fallbackKey) {
-            console.error("No Gemini API keys configured");
+        if (!apiKey) {
+            console.error("No Gemini API key configured");
             return new Response(
                 JSON.stringify({ success: false, error: "AI service not configured" }),
                 { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
             );
         }
 
-        let result: { text: string | null; error: string | null } = { text: null, error: null };
-        let modelUsed: string | null = null;
-
-        // Try primary first
-        if (primaryKey) {
-            console.log(`[gemini-proxy] Trying ${MODEL_PRIMARY}...`);
-            result = await callGemini(primaryKey, MODEL_PRIMARY, prompt);
-            if (result.text) {
-                modelUsed = MODEL_PRIMARY;
-            } else {
-                console.warn(`[gemini-proxy] Primary failed: ${result.error}`);
-            }
-        }
-
-        // Try fallback if primary failed
-        if (!result.text && fallbackKey) {
-            console.log(`[gemini-proxy] Trying ${MODEL_FALLBACK}...`);
-            result = await callGemini(fallbackKey, MODEL_FALLBACK, prompt);
-            if (result.text) {
-                modelUsed = MODEL_FALLBACK;
-            } else {
-                console.warn(`[gemini-proxy] Fallback failed: ${result.error}`);
-            }
-        }
+        console.log(`[gemini-proxy] Calling ${MODEL}...`);
+        const result = await callGemini(apiKey, MODEL, prompt);
 
         const latencyMs = Date.now() - startTime;
 
         if (result.text) {
-            console.log(`[gemini-proxy] Success with ${modelUsed} in ${latencyMs}ms (action: ${action || 'unknown'})`);
+            console.log(`[gemini-proxy] Success with ${MODEL} in ${latencyMs}ms (action: ${action || 'unknown'})`);
             return new Response(
                 JSON.stringify({
                     success: true,
                     text: result.text,
-                    model: modelUsed,
+                    model: MODEL,
                     latencyMs,
                 }),
                 { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
             );
         } else {
-            console.error(`[gemini-proxy] Both APIs failed: ${result.error}`);
+            console.error(`[gemini-proxy] Failed: ${result.error}`);
             return new Response(
                 JSON.stringify({
                     success: false,

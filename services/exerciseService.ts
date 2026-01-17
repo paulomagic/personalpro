@@ -13,7 +13,13 @@ export type MovementPattern =
     | 'puxar_vertical'
     | 'agachar'
     | 'hinge'
-    | 'core';
+    | 'core'
+    // Isolados
+    | 'isolar_biceps'
+    | 'isolar_triceps'
+    | 'isolar_ombro'
+    | 'isolar_panturrilha'
+    | 'isolar_antebraco';
 
 export type SpinalLoad = 'baixo' | 'moderado' | 'alto';
 export type StabilityDemand = 'baixo' | 'moderado' | 'alto';
@@ -153,25 +159,52 @@ function normalizeMuscle(muscle: string): string {
     const normalized = muscle.toLowerCase().trim();
 
     const mapping: Record<string, string> = {
+        // Posterior
         'posterior': 'posterior_coxa',
         'posterior de coxa': 'posterior_coxa',
         'posteriores': 'posterior_coxa',
         'isquiotibiais': 'posterior_coxa',
+        'hamstrings': 'posterior_coxa',
+        // Glúteos
         'gluteo': 'gluteos',
         'glúteo': 'gluteos',
         'glúteos': 'gluteos',
+        'glutes': 'gluteos',
+        // Costas
         'dorsal': 'costas',
         'dorsais': 'costas',
         'latissimo': 'costas',
+        'lats': 'costas',
+        'back': 'costas',
+        // Peito
         'peitoral': 'peito',
         'peitorais': 'peito',
+        'chest': 'peito',
+        // Ombro
         'deltoides': 'ombro',
         'deltoide': 'ombro',
+        'shoulders': 'ombro',
+        'delts': 'ombro',
+        // Core
         'abdominal': 'core',
         'abdomen': 'core',
         'abs': 'core',
+        'obliquos': 'core',
+        // Quadríceps
         'quadricep': 'quadriceps',
-        'quads': 'quadriceps'
+        'quads': 'quadriceps',
+        // Bíceps
+        'bicep': 'biceps',
+        // Tríceps
+        'tricep': 'triceps',
+        // Panturrilha
+        'panturrilhas': 'panturrilha',
+        'calves': 'panturrilha',
+        'calf': 'panturrilha',
+        'gastrocnemio': 'panturrilha',
+        // Antebraço
+        'forearms': 'antebraco',
+        'antebracos': 'antebraco'
     };
 
     return mapping[normalized] || normalized;

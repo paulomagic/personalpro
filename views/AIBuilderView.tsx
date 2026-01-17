@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Client } from '../types';
 import { mockClients } from '../mocks/demoData';
 import { generateWorkoutWithAI, isAIAvailable, regenerateExerciseWithAI, refineWorkoutWithAI, handleAIError } from '../services/geminiService';
-import { generateTrainingIntent, isAIAvailable as isNewAIAvailable } from '../services/ai/aiRouter';
+import { generateWorkout as generateWithEngine } from '../services/ai/trainingEngine';
+import { isAIAvailable as isNewAIAvailable } from '../services/ai/aiRouter';
 import { saveAIWorkout, getClients, mapDBClientToClient } from '../services/supabaseClient';
 import { ThumbsUp, ThumbsDown, RefreshCw, Download } from 'lucide-react';
 
@@ -432,46 +433,45 @@ const AIBuilderView: React.FC<AIBuilderViewProps> = ({ user, onBack, onDone }) =
     };
 
     try {
-      // NEW: Use intention-based AI Router (Groq default)
-      if (USE_NEW_AI_ROUTER && isNewAIAvailable()) {
-        const intentResult = await generateTrainingIntent({
+      // NEW: Deterministic Training Engine with slot-based templates
+      if (USE_NEW_AI_ROUTER) {
+        const engineResult = await generateWithEngine({
           name: selectedClient.name,
           goal: selectedClient.goal,
           level: selectedClient.level,
-          days: 3,
+          daysPerWeek: selectedDays,
           injuries: selectedClient.injuries,
-          preferences: selectedClient.preferences,
-          adherence: selectedClient.adherence,
-          equipment: ['halter', 'barra', 'maquina', 'cabo'],
-          sessionDuration: 60
+          useAI: isNewAIAvailable() // Use AI selection if available
         });
 
-        if (intentResult && intentResult.splits.length > 0) {
-          // Convert intention result to existing format
+        if (engineResult && engineResult.days.length > 0) {
+          // Convert engine result to existing UI format
           const aiResult = {
-            title: intentResult.title,
-            objective: intentResult.objective,
-            splits: intentResult.splits.map(split => ({
-              name: split.name,
-              focus: split.focus,
-              exercises: split.exercises.map(ex => ({
-                name: ex.exercise.name,
-                sets: ex.sets,
-                reps: ex.reps,
-                rest: ex.rest,
-                targetMuscle: ex.exercise.primary_muscle,
-                method: ex.method || 'simples',
-                technique: ex.notes || ''
-              }))
+            title: `${engineResult.template_name} - ${selectedClient.name}`,
+            objective: `Template ${engineResult.template_id} otimizado para ${selectedClient.goal}`,
+            splits: engineResult.days.map(day => ({
+              name: day.label,
+              focus: day.label,
+              exercises: day.slots
+                .filter(slot => slot.selected)
+                .map(slot => ({
+                  name: slot.selected!.name,
+                  sets: slot.sets,
+                  reps: slot.reps,
+                  rest: slot.rest,
+                  targetMuscle: slot.selected!.primary_muscle,
+                  method: 'simples',
+                  technique: ''
+                }))
             })),
             personalNotes: [
-              `🚀 Gerado por ${intentResult.provider === 'groq' ? 'LLaMA 3.3 70B' : intentResult.provider}`,
-              intentResult.fallbackUsed ? '⚡ Fallback usado' : '',
+              `🎯 Template: ${engineResult.template_name}`,
+              `📊 Arquitetura determinística com slots`,
               selectedClient.injuries && selectedClient.injuries.toLowerCase() !== 'nenhuma'
                 ? `⚠️ Considerando: ${selectedClient.injuries.split('-')[0].trim()}`
                 : ''
             ].filter(Boolean),
-            optionLabel: 'Intenção'
+            optionLabel: 'Engine'
           };
 
           setWorkoutOptions([aiResult]);

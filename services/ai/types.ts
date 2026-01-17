@@ -5,13 +5,20 @@ import { z } from 'zod';
 
 // ============ MOVEMENT PATTERNS ============
 export const MovementPatternSchema = z.enum([
+    // Compostos principais
     'empurrar_horizontal',
     'empurrar_vertical',
     'puxar_horizontal',
     'puxar_vertical',
     'agachar',
     'hinge',
-    'core'
+    'core',
+    // Isolados
+    'isolar_biceps',
+    'isolar_triceps',
+    'isolar_ombro',
+    'isolar_panturrilha',
+    'isolar_antebraco'
 ]);
 
 export type MovementPattern = z.infer<typeof MovementPatternSchema>;
@@ -133,7 +140,7 @@ export function validateIntentResponse(data: unknown): {
     }
     return {
         valid: false,
-        error: result.error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join('; ')
+        error: result.error.issues.map(e => `${e.path.join('.')}: ${e.message}`).join('; ')
     };
 }
 

@@ -2,8 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { Client } from '../types';
 import { mockClients } from '../mocks/demoData';
 import { generateWorkoutWithAI, isAIAvailable, regenerateExerciseWithAI, refineWorkoutWithAI, handleAIError } from '../services/geminiService';
+import { generateTrainingIntent, isAIAvailable as isNewAIAvailable } from '../services/ai/aiRouter';
 import { saveAIWorkout, getClients, mapDBClientToClient } from '../services/supabaseClient';
 import { ThumbsUp, ThumbsDown, RefreshCw, Download } from 'lucide-react';
+
+// Feature flag: use new AI Router (Groq + intention-based)
+const USE_NEW_AI_ROUTER = true;
 
 interface AIBuilderViewProps {
   user: any;
@@ -428,7 +432,57 @@ const AIBuilderView: React.FC<AIBuilderViewProps> = ({ user, onBack, onDone }) =
     };
 
     try {
-      // Generate 3 variations in parallel
+      // NEW: Use intention-based AI Router (Groq default)
+      if (USE_NEW_AI_ROUTER && isNewAIAvailable()) {
+        const intentResult = await generateTrainingIntent({
+          name: selectedClient.name,
+          goal: selectedClient.goal,
+          level: selectedClient.level,
+          days: 3,
+          injuries: selectedClient.injuries,
+          preferences: selectedClient.preferences,
+          adherence: selectedClient.adherence,
+          equipment: ['halter', 'barra', 'maquina', 'cabo'],
+          sessionDuration: 60
+        });
+
+        if (intentResult && intentResult.splits.length > 0) {
+          // Convert intention result to existing format
+          const aiResult = {
+            title: intentResult.title,
+            objective: intentResult.objective,
+            splits: intentResult.splits.map(split => ({
+              name: split.name,
+              focus: split.focus,
+              exercises: split.exercises.map(ex => ({
+                name: ex.exercise.name,
+                sets: ex.sets,
+                reps: ex.reps,
+                rest: ex.rest,
+                targetMuscle: ex.exercise.primary_muscle,
+                method: ex.method || 'simples',
+                technique: ex.notes || ''
+              }))
+            })),
+            personalNotes: [
+              `🚀 Gerado por ${intentResult.provider === 'groq' ? 'LLaMA 3.1 8B' : intentResult.provider}`,
+              intentResult.fallbackUsed ? '⚡ Fallback usado' : '',
+              selectedClient.injuries && selectedClient.injuries.toLowerCase() !== 'nenhuma'
+                ? `⚠️ Considerando: ${selectedClient.injuries.split('-')[0].trim()}`
+                : ''
+            ].filter(Boolean),
+            optionLabel: 'Intenção'
+          };
+
+          setWorkoutOptions([aiResult]);
+          setResult(aiResult);
+          setLoading(false);
+          setActiveTabIndex(0);
+          return;
+        }
+      }
+
+      // FALLBACK: Old generation method (Gemini)
       const variationPrompts = [
         observations, // Original
         `${observations}. Foco em métodos avançados como drop sets e supersets.`, // Variation 2

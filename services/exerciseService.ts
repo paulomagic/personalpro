@@ -56,11 +56,14 @@ export interface ExerciseIntention {
     prefer_machine?: boolean;     // Opcional: preferir máquinas (menos estabilidade)
 }
 
-// ============ FUNÇÕES ============
-
 /**
  * Resolve exercício por intenção biomecânica
  * Usado pela IA para transformar intenção abstrata em exercícios reais
+ * 
+ * Estratégia de fallback:
+ * 1. Tenta match exato (pattern + muscle)
+ * 2. Se falhar, busca apenas por pattern
+ * 3. Filtra por lesões e preferências
  */
 export async function resolveExercise(
     intention: ExerciseIntention
@@ -70,11 +73,15 @@ export async function resolveExercise(
         return [];
     }
 
+    // Normalizar muscle name para match flexível
+    const normalizedMuscle = normalizeMuscle(intention.primary_muscle);
+
+    // Primeira tentativa: match exato
     let query = supabase
         .from('exercises')
         .select('*')
         .eq('movement_pattern', intention.movement_pattern)
-        .eq('primary_muscle', intention.primary_muscle);
+        .eq('primary_muscle', normalizedMuscle);
 
     // Filtrar por equipamento disponível
     if (intention.equipment && intention.equipment.length > 0) {
@@ -83,7 +90,6 @@ export async function resolveExercise(
 
     // Evitar exercícios incompatíveis com lesões
     if (intention.avoid_injuries && intention.avoid_injuries.length > 0) {
-        // Usar NOT overlaps para excluir exercícios que devem ser evitados
         for (const injury of intention.avoid_injuries) {
             query = query.not('avoid_for_injuries', 'cs', `{${injury}}`);
         }
@@ -94,7 +100,7 @@ export async function resolveExercise(
         query = query.order('is_compound', { ascending: !intention.prefer_compound });
     }
 
-    // Preferir máquinas (para iniciantes ou reabilitação)
+    // Preferir máquinas
     if (intention.prefer_machine !== undefined) {
         query = query.order('is_machine', { ascending: !intention.prefer_machine });
     }
@@ -106,7 +112,69 @@ export async function resolveExercise(
         return [];
     }
 
-    return (data || []) as Exercise[];
+    // Se encontrou resultados, retorna
+    if (data && data.length > 0) {
+        return data as Exercise[];
+    }
+
+    // FALLBACK: busca apenas por movement_pattern
+    console.log(`[resolveExercise] Fallback: no match for ${intention.movement_pattern}+${normalizedMuscle}, trying pattern only`);
+
+    let fallbackQuery = supabase
+        .from('exercises')
+        .select('*')
+        .eq('movement_pattern', intention.movement_pattern);
+
+    // Evitar exercícios incompatíveis com lesões
+    if (intention.avoid_injuries && intention.avoid_injuries.length > 0) {
+        for (const injury of intention.avoid_injuries) {
+            fallbackQuery = fallbackQuery.not('avoid_for_injuries', 'cs', `{${injury}}`);
+        }
+    }
+
+    // Ordenar por compostos primeiro
+    fallbackQuery = fallbackQuery.order('is_compound', { ascending: false });
+    fallbackQuery = fallbackQuery.limit(1);
+
+    const { data: fallbackData, error: fallbackError } = await fallbackQuery;
+
+    if (fallbackError) {
+        console.error('Error in fallback resolution:', fallbackError);
+        return [];
+    }
+
+    return (fallbackData || []) as Exercise[];
+}
+
+/**
+ * Normaliza nome do músculo para match
+ */
+function normalizeMuscle(muscle: string): string {
+    const normalized = muscle.toLowerCase().trim();
+
+    const mapping: Record<string, string> = {
+        'posterior': 'posterior_coxa',
+        'posterior de coxa': 'posterior_coxa',
+        'posteriores': 'posterior_coxa',
+        'isquiotibiais': 'posterior_coxa',
+        'gluteo': 'gluteos',
+        'glúteo': 'gluteos',
+        'glúteos': 'gluteos',
+        'dorsal': 'costas',
+        'dorsais': 'costas',
+        'latissimo': 'costas',
+        'peitoral': 'peito',
+        'peitorais': 'peito',
+        'deltoides': 'ombro',
+        'deltoide': 'ombro',
+        'abdominal': 'core',
+        'abdomen': 'core',
+        'abs': 'core',
+        'quadricep': 'quadriceps',
+        'quads': 'quadriceps'
+    };
+
+    return mapping[normalized] || normalized;
 }
 
 /**

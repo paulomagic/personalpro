@@ -5,6 +5,7 @@ import type { AIProvider, ProviderRequest, ProviderResponse } from '../types';
 
 // Supabase URL for Edge Function
 const SUPABASE_URL = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SUPABASE_URL) || '';
+const SUPABASE_ANON_KEY = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SUPABASE_ANON_KEY) || '';
 const GEMINI_PROXY_URL = `${SUPABASE_URL}/functions/v1/gemini-proxy`;
 
 const isDev = typeof import.meta !== 'undefined' && import.meta.env?.DEV;
@@ -17,21 +18,21 @@ export const geminiProvider: AIProvider = {
     name: 'gemini',
 
     isAvailable(): boolean {
-        return !!SUPABASE_URL;
+        return !!SUPABASE_URL && !!SUPABASE_ANON_KEY;
     },
 
     async execute(request: ProviderRequest): Promise<ProviderResponse> {
         const startTime = Date.now();
         const tokensInput = estimateTokens(request.prompt);
 
-        if (!SUPABASE_URL) {
+        if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
             return {
                 success: false,
                 text: null,
                 provider: 'gemini',
                 model: 'gemini-2.0-flash',
                 latencyMs: 0,
-                error: 'Supabase URL not configured'
+                error: 'Supabase URL or anon key not configured'
             };
         }
 
@@ -42,6 +43,8 @@ export const geminiProvider: AIProvider = {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                    'apikey': SUPABASE_ANON_KEY
                 },
                 body: JSON.stringify({
                     prompt: request.prompt,

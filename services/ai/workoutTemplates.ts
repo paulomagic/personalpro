@@ -288,6 +288,193 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
                 ]
             }
         ]
+    },
+
+    // ====== BRO SPLIT 5x (CLÁSSICO) ======
+    {
+        template_id: 'bro_split_5',
+        name: 'Bro Split 5x',
+        frequency: 5,
+        suitable_goals: ['hipertrofia', 'forca'],
+        suitable_levels: ['intermediario', 'avancado', 'atleta'],
+        weekly_volume_guideline: { min_sets: 16, max_sets: 24 },
+        days: [
+            // A: PEITO + TRÍCEPS
+            {
+                day_id: 'chest_triceps',
+                label: 'A - Peito e Tríceps',
+                slots: [
+                    { id: 'ct_1', movement_pattern: 'empurrar_horizontal', intensity: 'very_high', preferred_load: 'axial', priority: 1 },
+                    { id: 'ct_2', movement_pattern: 'empurrar_horizontal', intensity: 'high', priority: 2 },
+                    { id: 'ct_3', movement_pattern: 'empurrar_horizontal', intensity: 'moderate', priority: 3 },
+                    { id: 'ct_4', movement_pattern: 'empurrar_horizontal', intensity: 'low', priority: 4 },
+                    { id: 'ct_5', movement_pattern: 'isolar_triceps', intensity: 'moderate', priority: 5 },
+                    { id: 'ct_6', movement_pattern: 'isolar_triceps', intensity: 'low', priority: 6 }
+                ]
+            },
+            // B: QUADRÍCEPS + GLÚTEO + PANTURRILHA
+            {
+                day_id: 'quads_glutes',
+                label: 'B - Quadríceps, Glúteo e Panturrilha',
+                slots: [
+                    { id: 'qg_1', movement_pattern: 'agachar', intensity: 'very_high', preferred_load: 'axial', priority: 1 },
+                    { id: 'qg_2', movement_pattern: 'agachar', intensity: 'high', priority: 2 },
+                    { id: 'qg_3', movement_pattern: 'hinge', intensity: 'high', target_muscles: ['gluteos'], priority: 3 },
+                    { id: 'qg_4', movement_pattern: 'agachar', intensity: 'moderate', priority: 4 },
+                    { id: 'qg_5', movement_pattern: 'hinge', intensity: 'moderate', target_muscles: ['gluteos'], priority: 5 },
+                    { id: 'qg_6', movement_pattern: 'isolar_panturrilha', intensity: 'moderate', priority: 6 },
+                    { id: 'qg_7', movement_pattern: 'isolar_panturrilha', intensity: 'low', priority: 7 }
+                ]
+            },
+            // C: COSTAS + BÍCEPS
+            {
+                day_id: 'back_biceps',
+                label: 'C - Costas e Bíceps',
+                slots: [
+                    { id: 'bb_1', movement_pattern: 'puxar_vertical', intensity: 'very_high', priority: 1 },
+                    { id: 'bb_2', movement_pattern: 'puxar_horizontal', intensity: 'high', priority: 2 },
+                    { id: 'bb_3', movement_pattern: 'puxar_horizontal', intensity: 'moderate', priority: 3 },
+                    { id: 'bb_4', movement_pattern: 'puxar_vertical', intensity: 'moderate', priority: 4 },
+                    { id: 'bb_5', movement_pattern: 'isolar_biceps', intensity: 'moderate', priority: 5 },
+                    { id: 'bb_6', movement_pattern: 'isolar_biceps', intensity: 'low', priority: 6 }
+                ]
+            },
+            // D: OMBRO + TRAPÉZIO
+            {
+                day_id: 'shoulders',
+                label: 'D - Ombro e Trapézio',
+                slots: [
+                    { id: 'sh_1', movement_pattern: 'empurrar_vertical', intensity: 'very_high', priority: 1 },
+                    { id: 'sh_2', movement_pattern: 'empurrar_vertical', intensity: 'high', priority: 2 },
+                    { id: 'sh_3', movement_pattern: 'isolar_ombro', intensity: 'moderate', priority: 3 },
+                    { id: 'sh_4', movement_pattern: 'isolar_ombro', intensity: 'moderate', priority: 4 },
+                    { id: 'sh_5', movement_pattern: 'isolar_ombro', intensity: 'low', priority: 5 },
+                    { id: 'sh_6', movement_pattern: 'isolar_ombro', intensity: 'low', priority: 6 }
+                ]
+            },
+            // E: POSTERIOR DE COXA + PANTURRILHA
+            {
+                day_id: 'hamstrings',
+                label: 'E - Posterior de Coxa e Panturrilha',
+                slots: [
+                    { id: 'hm_1', movement_pattern: 'hinge', intensity: 'very_high', preferred_load: 'axial', target_muscles: ['posterior_coxa'], priority: 1 },
+                    { id: 'hm_2', movement_pattern: 'hinge', intensity: 'high', target_muscles: ['posterior_coxa'], priority: 2 },
+                    { id: 'hm_3', movement_pattern: 'hinge', intensity: 'moderate', target_muscles: ['posterior_coxa'], priority: 3 },
+                    { id: 'hm_4', movement_pattern: 'hinge', intensity: 'moderate', target_muscles: ['gluteos'], priority: 4 },
+                    { id: 'hm_5', movement_pattern: 'isolar_panturrilha', intensity: 'moderate', priority: 5 },
+                    { id: 'hm_6', movement_pattern: 'isolar_panturrilha', intensity: 'low', priority: 6 }
+                ]
+            }
+        ]
+    },
+
+    // ====== ABC 3x (INICIANTE) ======
+    {
+        template_id: 'abc_3',
+        name: 'ABC Iniciante 3x',
+        frequency: 3,
+        suitable_goals: ['hipertrofia', 'condicionamento', 'saude'],
+        suitable_levels: ['iniciante'],
+        weekly_volume_guideline: { min_sets: 8, max_sets: 12 },
+        days: [
+            // A: PEITO + OMBRO + TRÍCEPS
+            {
+                day_id: 'push_day',
+                label: 'A - Peito, Ombro e Tríceps',
+                slots: [
+                    { id: 'pd_1', movement_pattern: 'empurrar_horizontal', intensity: 'high', priority: 1 },
+                    { id: 'pd_2', movement_pattern: 'empurrar_horizontal', intensity: 'moderate', priority: 2 },
+                    { id: 'pd_3', movement_pattern: 'empurrar_vertical', intensity: 'moderate', priority: 3 },
+                    { id: 'pd_4', movement_pattern: 'isolar_ombro', intensity: 'low', priority: 4 },
+                    { id: 'pd_5', movement_pattern: 'isolar_triceps', intensity: 'low', priority: 5 }
+                ]
+            },
+            // B: COSTAS + BÍCEPS
+            {
+                day_id: 'pull_day',
+                label: 'B - Costas e Bíceps',
+                slots: [
+                    { id: 'pld_1', movement_pattern: 'puxar_vertical', intensity: 'high', priority: 1 },
+                    { id: 'pld_2', movement_pattern: 'puxar_horizontal', intensity: 'high', priority: 2 },
+                    { id: 'pld_3', movement_pattern: 'puxar_horizontal', intensity: 'moderate', priority: 3 },
+                    { id: 'pld_4', movement_pattern: 'isolar_biceps', intensity: 'low', priority: 4 },
+                    { id: 'pld_5', movement_pattern: 'isolar_biceps', intensity: 'low', priority: 5 }
+                ]
+            },
+            // C: PERNAS COMPLETO
+            {
+                day_id: 'legs_day',
+                label: 'C - Pernas Completo',
+                slots: [
+                    { id: 'ld_1', movement_pattern: 'agachar', intensity: 'high', priority: 1 },
+                    { id: 'ld_2', movement_pattern: 'hinge', intensity: 'high', priority: 2 },
+                    { id: 'ld_3', movement_pattern: 'agachar', intensity: 'moderate', priority: 3 },
+                    { id: 'ld_4', movement_pattern: 'hinge', intensity: 'moderate', priority: 4 },
+                    { id: 'ld_5', movement_pattern: 'isolar_panturrilha', intensity: 'low', priority: 5 }
+                ]
+            }
+        ]
+    },
+
+    // ====== ABCD 4x (INTERMEDIÁRIO) ======
+    {
+        template_id: 'abcd_4',
+        name: 'ABCD 4x',
+        frequency: 4,
+        suitable_goals: ['hipertrofia', 'forca'],
+        suitable_levels: ['intermediario', 'avancado'],
+        weekly_volume_guideline: { min_sets: 12, max_sets: 18 },
+        days: [
+            // A: PEITO + TRÍCEPS
+            {
+                day_id: 'abcd_chest',
+                label: 'A - Peito e Tríceps',
+                slots: [
+                    { id: 'ac_1', movement_pattern: 'empurrar_horizontal', intensity: 'very_high', priority: 1 },
+                    { id: 'ac_2', movement_pattern: 'empurrar_horizontal', intensity: 'high', priority: 2 },
+                    { id: 'ac_3', movement_pattern: 'empurrar_horizontal', intensity: 'moderate', priority: 3 },
+                    { id: 'ac_4', movement_pattern: 'isolar_triceps', intensity: 'moderate', priority: 4 },
+                    { id: 'ac_5', movement_pattern: 'isolar_triceps', intensity: 'low', priority: 5 }
+                ]
+            },
+            // B: COSTAS + BÍCEPS
+            {
+                day_id: 'abcd_back',
+                label: 'B - Costas e Bíceps',
+                slots: [
+                    { id: 'ab_1', movement_pattern: 'puxar_vertical', intensity: 'very_high', priority: 1 },
+                    { id: 'ab_2', movement_pattern: 'puxar_horizontal', intensity: 'high', priority: 2 },
+                    { id: 'ab_3', movement_pattern: 'puxar_horizontal', intensity: 'moderate', priority: 3 },
+                    { id: 'ab_4', movement_pattern: 'isolar_biceps', intensity: 'moderate', priority: 4 },
+                    { id: 'ab_5', movement_pattern: 'isolar_biceps', intensity: 'low', priority: 5 }
+                ]
+            },
+            // C: OMBRO + TRAPÉZIO
+            {
+                day_id: 'abcd_shoulders',
+                label: 'C - Ombro e Trapézio',
+                slots: [
+                    { id: 'as_1', movement_pattern: 'empurrar_vertical', intensity: 'very_high', priority: 1 },
+                    { id: 'as_2', movement_pattern: 'empurrar_vertical', intensity: 'high', priority: 2 },
+                    { id: 'as_3', movement_pattern: 'isolar_ombro', intensity: 'moderate', priority: 3 },
+                    { id: 'as_4', movement_pattern: 'isolar_ombro', intensity: 'low', priority: 4 },
+                    { id: 'as_5', movement_pattern: 'isolar_ombro', intensity: 'low', priority: 5 }
+                ]
+            },
+            // D: PERNAS COMPLETO
+            {
+                day_id: 'abcd_legs',
+                label: 'D - Pernas Completo',
+                slots: [
+                    { id: 'al_1', movement_pattern: 'agachar', intensity: 'very_high', priority: 1 },
+                    { id: 'al_2', movement_pattern: 'hinge', intensity: 'high', priority: 2 },
+                    { id: 'al_3', movement_pattern: 'agachar', intensity: 'moderate', priority: 3 },
+                    { id: 'al_4', movement_pattern: 'hinge', intensity: 'moderate', priority: 4 },
+                    { id: 'al_5', movement_pattern: 'isolar_panturrilha', intensity: 'moderate', priority: 5 },
+                    { id: 'al_6', movement_pattern: 'core', intensity: 'low', priority: 6 }
+                ]
+            }
+        ]
     }
 ];
 

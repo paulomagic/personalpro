@@ -30,7 +30,7 @@ export const groqProvider: AIProvider = {
                 success: false,
                 text: null,
                 provider: 'groq',
-                model: 'llama-3.1-8b-instant',
+                model: 'llama-3.3-70b-versatile',
                 latencyMs: 0,
                 error: 'Supabase URL or anon key not configured'
             };
@@ -49,7 +49,7 @@ export const groqProvider: AIProvider = {
                 body: JSON.stringify({
                     prompt: request.prompt,
                     action: request.action,
-                    model: 'llama-3.1-8b-instant'
+                    model: 'llama-3.3-70b-versatile'
                 }),
             });
 
@@ -63,7 +63,7 @@ export const groqProvider: AIProvider = {
                     success: false,
                     text: null,
                     provider: 'groq',
-                    model: 'llama-3.1-8b-instant',
+                    model: 'llama-3.3-70b-versatile',
                     latencyMs,
                     tokensInput,
                     error: `HTTP ${response.status}: ${errorText}`
@@ -90,7 +90,7 @@ export const groqProvider: AIProvider = {
                     success: false,
                     text: null,
                     provider: 'groq',
-                    model: 'llama-3.1-8b-instant',
+                    model: 'llama-3.3-70b-versatile',
                     latencyMs,
                     tokensInput,
                     error: data.error || 'Unknown error'
@@ -105,7 +105,7 @@ export const groqProvider: AIProvider = {
                 success: false,
                 text: null,
                 provider: 'groq',
-                model: 'llama-3.1-8b-instant',
+                model: 'llama-3.3-70b-versatile',
                 latencyMs,
                 tokensInput,
                 error: error?.message || 'Network error'

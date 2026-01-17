@@ -11,8 +11,8 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 const GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions";
 
 // Models
-const MODEL_DEFAULT = "llama-3.1-8b-instant";
-const MODEL_FALLBACK = "llama3-8b-8192";
+const MODEL_DEFAULT = "llama-3.3-70b-versatile";
+const MODEL_FALLBACK = "llama-3.1-8b-instant";
 
 interface GroqRequest {
     prompt: string;

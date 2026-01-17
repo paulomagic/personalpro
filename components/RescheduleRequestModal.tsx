@@ -108,26 +108,22 @@ const RescheduleRequestModal: React.FC<RescheduleRequestModalProps> = ({
                     className="w-full max-w-md bg-slate-900 rounded-t-[32px] sm:rounded-[32px] p-6 max-h-[85vh] overflow-y-auto"
                 >
                     {/* Header */}
-                    <div className="flex items-center justify-between mb-6">
-                        <div>
-                            <h2 className="text-xl font-black text-white">Solicitar Reagendamento</h2>
-                            <p className="text-sm text-slate-400 mt-1">
-                                Seu personal será notificado
-                            </p>
-                        </div>
+                    <div className="mb-6">
                         <button
                             onClick={onClose}
-                            className="size-10 rounded-full bg-white/10 flex items-center justify-center text-slate-400 hover:bg-white/20 transition-colors"
+                            className="text-blue-400 hover:text-blue-300 mb-3 flex items-center gap-2"
                         >
-                            <X size={20} />
+                            <span>←</span> Voltar
                         </button>
+                        <h2 className="text-2xl font-bold text-white mb-1">Solicitar Reagendamento</h2>
+                        <p className="text-sm text-gray-400">Seu personal será notificado</p>
                     </div>
 
                     {/* Original Appointment */}
                     <div className="bg-slate-800/50 rounded-2xl p-4 mb-6 border border-slate-700">
-                        <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">
+                        <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">
                             Agendamento Atual
-                        </p>
+                        </h3>
                         <p className="text-white font-bold">
                             {appointment.type === 'training' ? '🏋️ Treino' :
                                 appointment.type === 'assessment' ? '📊 Avaliação' : '💬 Consulta'}
@@ -199,13 +195,13 @@ const RescheduleRequestModal: React.FC<RescheduleRequestModalProps> = ({
                     <button
                         onClick={handleSubmit}
                         disabled={loading || !selectedDate || !selectedTime}
-                        className={`w-full mt-6 py-4 rounded-2xl font-bold text-lg flex items-center justify-center gap-2 transition-all ${loading || !selectedDate || !selectedTime
-                            ? 'bg-slate-700 text-slate-500 cursor-not-allowed'
-                            : 'bg-gradient-to-r from-blue-500 to-indigo-500 text-white shadow-lg shadow-blue-500/30 active:scale-[0.98]'
-                            }`}
+                        className="w-full mt-6 py-4 rounded-xl font-bold text-white transition-all bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-500/30 disabled:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-50"
                     >
-                        <Send size={20} />
-                        {loading ? 'Enviando...' : 'Enviar Solicitação'}
+                        {loading ? (
+                            <div className="size-5 border-2 border-white border-t-transparent rounded-full animate-spin mx-auto" />
+                        ) : (
+                            'ENVIAR SOLICITAÇÃO'
+                        )}
                     </button>
 
                     <p className="text-center text-xs text-slate-500 mt-4">

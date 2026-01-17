@@ -465,7 +465,7 @@ const AIBuilderView: React.FC<AIBuilderViewProps> = ({ user, onBack, onDone }) =
               }))
             })),
             personalNotes: [
-              `🚀 Gerado por ${intentResult.provider === 'groq' ? 'LLaMA 3.1 8B' : intentResult.provider}`,
+              `🚀 Gerado por ${intentResult.provider === 'groq' ? 'LLaMA 3.3 70B' : intentResult.provider}`,
               intentResult.fallbackUsed ? '⚡ Fallback usado' : '',
               selectedClient.injuries && selectedClient.injuries.toLowerCase() !== 'nenhuma'
                 ? `⚠️ Considerando: ${selectedClient.injuries.split('-')[0].trim()}`

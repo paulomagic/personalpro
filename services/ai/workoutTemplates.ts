@@ -50,6 +50,44 @@ export interface WorkoutTemplate {
 // ============ TEMPLATES ============
 
 export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
+    // ====== AB 2x (INICIANTE/TEMPO LIMITADO) ======
+    {
+        template_id: 'ab_2',
+        name: 'AB Superior/Inferior 2x',
+        frequency: 2,
+        suitable_goals: ['hipertrofia', 'condicionamento', 'saude', 'emagrecimento'],
+        suitable_levels: ['iniciante', 'intermediario'],
+        weekly_volume_guideline: { min_sets: 6, max_sets: 10 },
+        days: [
+            // A: SUPERIOR COMPLETO
+            {
+                day_id: 'upper_full',
+                label: 'A - Superior Completo',
+                slots: [
+                    { id: 'uf_1', movement_pattern: 'empurrar_horizontal', intensity: 'high', priority: 1 },
+                    { id: 'uf_2', movement_pattern: 'puxar_horizontal', intensity: 'high', priority: 2 },
+                    { id: 'uf_3', movement_pattern: 'empurrar_vertical', intensity: 'moderate', priority: 3 },
+                    { id: 'uf_4', movement_pattern: 'puxar_vertical', intensity: 'moderate', priority: 4 },
+                    { id: 'uf_5', movement_pattern: 'isolar_biceps', intensity: 'low', priority: 5 },
+                    { id: 'uf_6', movement_pattern: 'isolar_triceps', intensity: 'low', priority: 6 }
+                ]
+            },
+            // B: INFERIOR COMPLETO
+            {
+                day_id: 'lower_full',
+                label: 'B - Inferior Completo',
+                slots: [
+                    { id: 'lf_1', movement_pattern: 'agachar', intensity: 'high', priority: 1 },
+                    { id: 'lf_2', movement_pattern: 'hinge', intensity: 'high', priority: 2 },
+                    { id: 'lf_3', movement_pattern: 'agachar', intensity: 'moderate', priority: 3 },
+                    { id: 'lf_4', movement_pattern: 'hinge', intensity: 'moderate', target_muscles: ['gluteos'], priority: 4 },
+                    { id: 'lf_5', movement_pattern: 'isolar_panturrilha', intensity: 'low', priority: 5 },
+                    { id: 'lf_6', movement_pattern: 'core', intensity: 'low', priority: 6 }
+                ]
+            }
+        ]
+    },
+
     // ====== PUSH PULL LEGS 6x ======
     {
         template_id: 'ppl_6',

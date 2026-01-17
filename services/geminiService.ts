@@ -578,4 +578,278 @@ Responda apenas com a mensagem, sem explicações.`;
 export function isAIAvailable(): boolean {
   return !!SUPABASE_URL;
 }
+
+// ============================================================
+// INTENTION-BASED WORKOUT GENERATION (Phase 2 - New approach)
+// IA returns movement patterns, system resolves to real exercises
+// ============================================================
+
+import {
+  resolveExercise,
+  parseClientInjuries,
+  type ExerciseIntention,
+  type Exercise,
+  type MovementPattern
+} from './exerciseService';
+
+// Types for intention-based generation
+interface IntentionWorkoutData {
+  name: string;
+  goal: string;
+  level: string;
+  days: number;
+  injuries?: string;
+  preferences?: string;
+  adherence?: number;
+  equipment?: string[];
+  sessionDuration?: number;
+}
+
+interface AIIntentionResponse {
+  title: string;
+  objective: string;
+  splits: Array<{
+    name: string;
+    focus: string;
+    intentions: Array<{
+      movement_pattern: MovementPattern;
+      primary_muscle: string;
+      sets: number;
+      reps: string;
+      rest: string;
+      method?: string;
+      notes?: string;
+    }>;
+  }>;
+}
+
+/**
+ * NEW: Generate workout by intention
+ * IA returns abstract intentions, system resolves to real exercises
+ * This eliminates the problem of IA inventing non-existent exercises
+ */
+export async function generateWorkoutByIntention(
+  clientData: IntentionWorkoutData
+): Promise<{
+  title: string;
+  objective: string;
+  splits: Array<{
+    name: string;
+    focus: string;
+    exercises: Array<{
+      exercise: Exercise;
+      sets: number;
+      reps: string;
+      rest: string;
+      method?: string;
+      notes?: string;
+    }>;
+  }>;
+} | null> {
+  try {
+    const injuries = clientData.injuries || 'Nenhuma';
+    const preferences = clientData.preferences || 'Não especificadas';
+    const adherence = clientData.adherence || 80;
+    const equipment = clientData.equipment?.join(', ') || 'Academia completa';
+    const sessionDuration = clientData.sessionDuration || 60;
+
+    // Parse injuries for resolution
+    const parsedInjuries = parseClientInjuries(injuries);
+
+    const prompt = `Você é um personal trainer de elite. Crie um programa de treino PERSONALIZADO.
+
+===== PERFIL =====
+NOME: ${clientData.name}
+OBJETIVO: ${clientData.goal}
+NÍVEL: ${clientData.level}
+FREQUÊNCIA: ${clientData.days} dias/semana
+ADERÊNCIA: ${adherence}%
+DURAÇÃO: ${sessionDuration} min
+
+===== RESTRIÇÕES =====
+LESÕES: ${injuries}
+PREFERÊNCIAS: ${preferences}
+EQUIPAMENTOS: ${equipment}
+
+===== INSTRUÇÕES CRÍTICAS =====
+Você NÃO deve retornar nomes de exercícios.
+Retorne apenas INTENÇÕES BIOMECÂNICAS que o sistema vai resolver.
+
+Padrões de movimento disponíveis:
+- empurrar_horizontal (supino, flexão)
+- empurrar_vertical (desenvolvimento)
+- puxar_horizontal (remada)
+- puxar_vertical (puxada)
+- agachar (agachamento, leg press)
+- hinge (stiff, terra, hip thrust)
+- core (prancha, abdominal)
+
+Músculos principais:
+- peito, ombro, costas, quadriceps, posterior_coxa, gluteos, core
+
+EVITE padrões que agravam: ${injuries}
+
+Responda APENAS com JSON puro:
+{
+  "title": "Nome do Protocolo",
+  "objective": "Estratégia geral",
+  "splits": [
+    {
+      "name": "Treino A",
+      "focus": "Superior - Push",
+      "intentions": [
+        {
+          "movement_pattern": "empurrar_horizontal",
+          "primary_muscle": "peito",
+          "sets": 4,
+          "reps": "8-12",
+          "rest": "60s",
+          "method": "simples",
+          "notes": "Foco em contração"
+        }
+      ]
+    }
+  ]
+}
+
+Crie ${clientData.days} splits com 5-7 intenções cada.`;
+
+    const { text, model, latencyMs, tokensInput, tokensOutput } = await callGeminiWithFallback(prompt, 'generate_workout_intention');
+
+    if (!text) {
+      logAIAction({
+        action_type: 'generate_workout_intention',
+        model_used: 'none',
+        prompt: prompt.substring(0, 500) + '...',
+        response: null,
+        latency_ms: latencyMs,
+        tokens_input: tokensInput,
+        tokens_output: 0,
+        success: false,
+        error_message: 'API failed',
+        metadata: { clientName: clientData.name, goal: clientData.goal }
+      });
+      return null;
+    }
+
+    // Clean JSON
+    let cleanText = text.trim()
+      .replace(/```json\n?/gi, '')
+      .replace(/```\n?/gi, '')
+      .trim();
+
+    const jsonStart = cleanText.indexOf('{');
+    const jsonEnd = cleanText.lastIndexOf('}');
+    if (jsonStart !== -1 && jsonEnd !== -1) {
+      cleanText = cleanText.slice(jsonStart, jsonEnd + 1);
+    }
+    cleanText = cleanText
+      .replace(/,\s*}/g, '}')
+      .replace(/,\s*]/g, ']');
+
+    try {
+      const aiResponse: AIIntentionResponse = JSON.parse(cleanText);
+
+      // RESOLVE: Transform intentions into real exercises
+      const resolvedSplits = await Promise.all(
+        aiResponse.splits.map(async (split) => {
+          const resolvedExercises = await Promise.all(
+            split.intentions.map(async (intention) => {
+              const exercises = await resolveExercise({
+                movement_pattern: intention.movement_pattern,
+                primary_muscle: intention.primary_muscle,
+                avoid_injuries: parsedInjuries,
+                prefer_compound: true
+              });
+
+              // Pick first match or null
+              const exercise = exercises[0] || null;
+
+              return exercise ? {
+                exercise,
+                sets: intention.sets,
+                reps: intention.reps,
+                rest: intention.rest,
+                method: intention.method,
+                notes: intention.notes
+              } : null;
+            })
+          );
+
+          return {
+            name: split.name,
+            focus: split.focus,
+            exercises: resolvedExercises.filter(Boolean) as Array<{
+              exercise: Exercise;
+              sets: number;
+              reps: string;
+              rest: string;
+              method?: string;
+              notes?: string;
+            }>
+          };
+        })
+      );
+
+      // Validate we have exercises
+      const hasExercises = resolvedSplits.some(s => s.exercises.length > 0);
+
+      if (!hasExercises) {
+        logAIAction({
+          action_type: 'generate_workout_intention',
+          model_used: model || 'unknown',
+          prompt: prompt.substring(0, 300) + '...',
+          response: cleanText.substring(0, 500),
+          latency_ms: latencyMs,
+          tokens_input: tokensInput,
+          tokens_output: tokensOutput,
+          success: false,
+          error_message: 'No exercises resolved from intentions',
+          metadata: { clientName: clientData.name }
+        });
+        return null;
+      }
+
+      // Log success
+      logAIAction({
+        action_type: 'generate_workout_intention',
+        model_used: model || 'unknown',
+        prompt: prompt.substring(0, 300) + '...',
+        response: cleanText.substring(0, 500),
+        latency_ms: latencyMs,
+        tokens_input: tokensInput,
+        tokens_output: tokensOutput,
+        success: true,
+        metadata: {
+          clientName: clientData.name,
+          intentionsCount: aiResponse.splits.reduce((acc, s) => acc + s.intentions.length, 0),
+          resolvedCount: resolvedSplits.reduce((acc, s) => acc + s.exercises.length, 0)
+        }
+      });
+
+      return {
+        title: aiResponse.title,
+        objective: aiResponse.objective,
+        splits: resolvedSplits
+      };
+
+    } catch (parseError) {
+      console.warn('Intention JSON parse failed:', parseError);
+      logAIAction({
+        action_type: 'generate_workout_intention',
+        model_used: model || 'unknown',
+        prompt: prompt.substring(0, 300) + '...',
+        response: cleanText.substring(0, 300),
+        latency_ms: latencyMs,
+        success: false,
+        error_message: 'JSON Parse Error'
+      });
+      return null;
+    }
+
+  } catch (error) {
+    console.error('Error generating workout by intention:', error);
+    return null;
+  }
+}
 // Security update

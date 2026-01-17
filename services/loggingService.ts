@@ -5,7 +5,7 @@ import { supabase } from './supabaseClient';
 // ============================================
 
 export interface AILogEntry {
-    action_type: 'generate_workout' | 'refine' | 'regenerate_exercise' | 'insight' | 'message_template' | 'analyze_progress';
+    action_type: 'generate_workout' | 'generate_workout_intention' | 'refine' | 'regenerate_exercise' | 'insight' | 'message_template' | 'analyze_progress';
     model_used: string;
     prompt: string;
     response: string | null;

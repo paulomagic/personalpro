@@ -127,12 +127,31 @@ export const SPECIAL_CONDITION_RULES: ConditionRule[] = [
         intensity_modifier: 0.8,  // 80% intensidade
         blocked_movements: [],  // Não bloqueia, mas score desfavorece
         blocked_exercises: [
-            'box jump',
-            'burpee',
-            'salto em profundidade'
+            // Pliométricos/Impacto
+            'box jump', 'burpee', 'salto em profundidade', 'jump squat', 'pular corda',
+
+            // Posições desconfortáveis/instáveis
+            'donkey calf raise', 'sissy squat', 'jefferson squat', 'zercher squat',
+            'pistol squat', 'dragon flag', 'handstand push up',
+
+            // Alta complexidade/risco de queda
+            'agachamento búlgaro', 'bulgarian split squat', 'passada com salto',
+            'walking lunge', 'single leg deadlift',
+
+            // Peso livre pesado com risco de coluna
+            'levantamento terra', 'terra', 'stiff', 'good morning',
+            'agachamento livre', 'agachamento com barra',
+
+            // Overhead com risco
+            'militar em pé', 'push press', 'thruster',
+
+            // Core intenso
+            'abdominal crunch', 'russian twist', 'v-up', 'dragon flag'
         ],
-        preferred_equipment: ['maquina', 'apoio', 'cadeira'],
+        preferred_equipment: ['maquina', 'apoio', 'cadeira', 'cabo'],
         special_notes: [
+            'PRIORIZAR máquinas com apoio e assentos',
+            'EVITAR exercícios em pé sem apoio',
             'Priorizar prevenção de quedas (equilíbrio)',
             'Exercícios de carga para densidade óssea',
             'Mobilidade articular essencial',

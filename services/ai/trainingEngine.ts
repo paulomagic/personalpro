@@ -5,6 +5,7 @@ import { selectTemplate, type WorkoutTemplate, type TrainingSlot, type Intensity
 import { resolveExercise, type Exercise, type Injury } from '../exerciseService';
 import { aiRouter } from './aiRouter';
 import type { MovementPattern } from './types';
+import { detectConditions, getAggregatedModifiers, type SpecialCondition } from './knowledge/specialConditions';
 
 // ============ TIPOS ============
 
@@ -90,14 +91,16 @@ const CANDIDATES_PER_SLOT = 5;
 function getPersonalizedConfig(
     intensity: IntensityLevel,
     level: string,
-    goal: string
+    goal: string,
+    conditionVolumeModifier: number = 1.0  // NOVO: modificador de condições especiais
 ): { sets: number; reps: string; rest: string } {
     const baseConfig = BASE_INTENSITY_CONFIG[intensity];
     const levelMultiplier = LEVEL_MULTIPLIERS[level.toLowerCase()] || LEVEL_MULTIPLIERS['intermediario'];
     const goalRange = GOAL_REP_RANGES[goal.toLowerCase()] || GOAL_REP_RANGES['hipertrofia'];
 
-    // Ajusta sets pelo nível
-    const adjustedSets = Math.max(2, Math.round(baseConfig.sets * levelMultiplier.volume));
+    // Ajusta sets pelo nível E condições especiais
+    const combinedVolumeMultiplier = levelMultiplier.volume * conditionVolumeModifier;
+    const adjustedSets = Math.max(2, Math.round(baseConfig.sets * combinedVolumeMultiplier));
 
     // Usa rep range do objetivo
     const reps = `${goalRange.min}-${goalRange.max}`;
@@ -120,9 +123,18 @@ export async function generateWorkout(params: {
     level: string;
     daysPerWeek: number;
     injuries?: string;
-    useAI?: boolean;  // Se false, usa ranking determinístico
+    observations?: string;  // Novo: para detectar condições
+    birthDate?: string;     // Novo: para calcular idade
+    useAI?: boolean;        // Se false, usa ranking determinístico
 }): Promise<GeneratedWorkout | null> {
-    const { name, goal, level, daysPerWeek, injuries, useAI = true } = params;
+    const { name, goal, level, daysPerWeek, injuries, observations, birthDate, useAI = true } = params;
+
+    // NOVO: Detecta condições especiais (pós-parto, gestante, idoso, etc)
+    const specialConditions = detectConditions(observations, injuries, birthDate);
+    const conditionModifiers = getAggregatedModifiers(specialConditions);
+
+    console.log('[TrainingEngine] Special conditions detected:', specialConditions);
+    console.log('[TrainingEngine] Modifiers:', conditionModifiers);
 
     // 1. SELECIONA TEMPLATE (regra, não IA)
     const template = selectTemplate(goal, daysPerWeek, level);
@@ -141,11 +153,21 @@ export async function generateWorkout(params: {
         const resolvedSlots: ResolvedSlot[] = [];
 
         for (const slot of day.slots) {
-            // 3.1 Busca candidatos válidos para o slot
-            const candidates = await getCandidatesForSlot(slot, parsedInjuries, level);
+            // 3.1 Busca candidatos válidos para o slot (com bloqueios de condições especiais)
+            const candidates = await getCandidatesForSlot(
+                slot,
+                parsedInjuries,
+                level,
+                conditionModifiers.blockedExercises
+            );
 
-            // 3.2 Configura sets/reps/rest baseado na intensidade, nível e objetivo
-            const config = getPersonalizedConfig(slot.intensity, level, goal);
+            // 3.2 Configura sets/reps/rest baseado na intensidade, nível, objetivo E condições
+            const config = getPersonalizedConfig(
+                slot.intensity,
+                level,
+                goal,
+                conditionModifiers.volume
+            );
 
             const resolvedSlot: ResolvedSlot = {
                 slot_id: slot.id,
@@ -197,7 +219,8 @@ export async function generateWorkout(params: {
 async function getCandidatesForSlot(
     slot: TrainingSlot,
     injuries: Injury[],
-    level: string
+    level: string,
+    blockedExercises: string[] = []  // NOVO: exercícios bloqueados por condições
 ): Promise<SlotCandidate[]> {
     // Busca exercícios pelo pattern
     const exercises = await resolveExercise({
@@ -207,8 +230,16 @@ async function getCandidatesForSlot(
         prefer_compound: slot.intensity === 'very_high' || slot.intensity === 'high'
     });
 
+    // NOVO: Filtra exercícios bloqueados por condições especiais
+    const filteredExercises = exercises.filter(ex => {
+        const exerciseLower = ex.name.toLowerCase();
+        return !blockedExercises.some(blocked =>
+            exerciseLower.includes(blocked.toLowerCase())
+        );
+    });
+
     // Score determinístico considerando nível
-    const scored = exercises.map(ex => ({
+    const scored = filteredExercises.map(ex => ({
         exercise: ex,
         score: calculateScore(ex, slot, injuries, level)
     }));

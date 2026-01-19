@@ -51,6 +51,7 @@ export interface GeneratedWorkout {
 // Multipliers por nível (baseado em knowledge/volume.ts)
 const LEVEL_MULTIPLIERS: Record<string, { volume: number; intensity: number }> = {
     'iniciante': { volume: 0.6, intensity: 0.8 },      // -40% volume, -20% intensidade
+    'idoso': { volume: 0.5, intensity: 0.7 },          // -50% volume, -30% intensidade (SEGURANÇA)
     'intermediario': { volume: 1.0, intensity: 1.0 },  // Baseline
     'intermediário': { volume: 1.0, intensity: 1.0 },  // Alias
     'avancado': { volume: 1.2, intensity: 1.1 },       // +20% volume, +10% intensidade

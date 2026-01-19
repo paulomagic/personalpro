@@ -623,23 +623,34 @@ export function selectTemplate(
 ): WorkoutTemplate | null {
     const goalLower = goal.toLowerCase();
     const levelNorm = normalizeLevel(level);
+    const isElderly = level.toLowerCase().includes('idoso') || level.toLowerCase().includes('senior');
 
-    // PRIORIDADE 1: Idoso/Longevidade → Template Senior (SEGURANÇA)
-    if (level.toLowerCase().includes('idoso') || level.toLowerCase().includes('senior') ||
-        goalLower.includes('longevidade') || goalLower.includes('qualidade')) {
+    // PRIORIDADE 1: Longevidade/Saúde EXPLÍCITO para idoso → Template Senior
+    // Só força Senior se o objetivo é explicitamente saúde/qualidade de vida
+    if (isElderly && (goalLower.includes('saúde') || goalLower.includes('saude') ||
+        goalLower.includes('longevidade') || goalLower.includes('qualidade'))) {
         const senior = WORKOUT_TEMPLATES.find(t => t.template_id === 'senior_longevity_2');
         if (senior) {
-            console.log('[TemplateSelector] Idoso/Longevidade detectado → Senior template');
+            console.log('[TemplateSelector] Idoso + Saúde/Longevidade → Senior template');
             return senior;
         }
     }
 
-    // PRIORIDADE 2: Força explícita → Powerbuilding
+    // PRIORIDADE 2: Força explícita → Powerbuilding (mesmo para idosos se avançados)
     if (goalLower.includes('força') || goalLower.includes('forca') || goalLower.includes('powerlifting')) {
         const powerbuilding = WORKOUT_TEMPLATES.find(t => t.template_id === 'powerbuilding_4');
         if (powerbuilding && ['intermediario', 'avancado', 'atleta'].includes(levelNorm)) {
             console.log('[TemplateSelector] Força detectada → Powerbuilding template');
             return powerbuilding;
+        }
+    }
+
+    // PRIORIDADE 3: Idoso sem objetivo específico → Full Body 3x (seguro, flexível)
+    if (isElderly) {
+        const fullBody = WORKOUT_TEMPLATES.find(t => t.template_id === 'full_body_3');
+        if (fullBody) {
+            console.log('[TemplateSelector] Idoso genérico → Full Body 3x (adaptável)');
+            return fullBody;
         }
     }
 

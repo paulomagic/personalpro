@@ -668,8 +668,8 @@ const AIBuilderView: React.FC<AIBuilderViewProps> = ({ user, onBack, onDone }) =
 
   if (loading) {
     return (
-      <div className="fixed inset-0 bg-slate-950 z-50">
-        <div className="max-w-md mx-auto h-full flex flex-col items-center justify-center p-8 overflow-hidden relative">
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+        <div className="w-full max-w-md h-full bg-slate-950 flex flex-col items-center justify-center p-8 overflow-hidden relative">
           <div className="absolute inset-0 opacity-40">
             <div className="absolute top-1/4 left-1/4 size-64 bg-blue-600 rounded-full blur-[100px] animate-pulse"></div>
             <div className="absolute bottom-1/4 right-1/4 size-64 bg-purple-600 rounded-full blur-[100px] animate-pulse delay-1000"></div>
@@ -820,8 +820,8 @@ const AIBuilderView: React.FC<AIBuilderViewProps> = ({ user, onBack, onDone }) =
 
       {/* Result Modal */}
       {result && (
-        <div className="fixed inset-0 z-50 bg-slate-950">
-          <div className="max-w-md mx-auto h-full flex flex-col animate-fade-in relative">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="w-full max-w-md h-full bg-slate-950 flex flex-col animate-fade-in relative">
             <div className="absolute inset-0 z-0 opacity-20">
               <div className="absolute top-0 right-0 size-96 bg-blue-600 rounded-full blur-[120px]"></div>
               <div className="absolute bottom-0 left-0 size-96 bg-purple-600 rounded-full blur-[120px]"></div>

@@ -139,7 +139,9 @@ export async function generateWorkout(params: {
     console.time('[TrainingEngine] TOTAL Generation Time');
 
     // 1. DETECTAR CONDIÇÕES ESPECIAIS
-    const specialConditions = detectConditions(observations, injuries, birthDate);
+    // IMPORTANTE: Inclui level nas observações para detectar 'idoso' mesmo sem birthDate
+    const combinedObservations = `${observations || ''} nivel:${level}`;
+    const specialConditions = detectConditions(combinedObservations, injuries, birthDate);
     const conditionModifiers = getAggregatedModifiers(specialConditions);
 
     console.log('[TrainingEngine] Special conditions detected:', specialConditions);

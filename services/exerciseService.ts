@@ -62,6 +62,147 @@ export interface ExerciseIntention {
     prefer_machine?: boolean;     // Opcional: preferir máquinas (menos estabilidade)
 }
 
+// ============ CACHE & BATCH QUERY (PERFORMANCE OPTIMIZATION) ============
+
+interface ExerciseCache {
+    data: Exercise[];
+    timestamp: number;
+}
+
+let exerciseCache: ExerciseCache | null = null;
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutos
+
+/**
+ * Busca TODOS os exercícios de uma vez (batch query)
+ * Usa cache em memória para evitar queries repetidas
+ * ~165KB de dados (110 exercícios)
+ */
+export async function fetchAllExercises(): Promise<Exercise[]> {
+    // Check cache first
+    if (exerciseCache && (Date.now() - exerciseCache.timestamp < CACHE_TTL)) {
+        console.log('[ExerciseService] Cache hit - returning cached exercises');
+        return exerciseCache.data;
+    }
+
+    if (!supabase) {
+        console.warn('Supabase not configured - cannot fetch exercises');
+        return [];
+    }
+
+    console.time('[ExerciseService] fetchAllExercises');
+
+    const { data, error } = await supabase
+        .from('exercises')
+        .select('*')
+        .order('name');
+
+    console.timeEnd('[ExerciseService] fetchAllExercises');
+
+    if (error) {
+        console.error('Error fetching all exercises:', error);
+        return [];
+    }
+
+    // Update cache
+    exerciseCache = {
+        data: data || [],
+        timestamp: Date.now()
+    };
+
+    console.log(`[ExerciseService] Fetched ${data?.length || 0} exercises`);
+    return data || [];
+}
+
+/**
+ * Busca exercícios filtrados por movement patterns específicos
+ * Mais eficiente que fetchAllExercises se soubermos quais patterns precisamos
+ * Reduz de 165KB para ~40-60KB
+ */
+export async function fetchExercisesByPatterns(patterns: MovementPattern[]): Promise<Exercise[]> {
+    if (!supabase) return [];
+
+    console.time('[ExerciseService] fetchExercisesByPatterns');
+
+    const { data, error } = await supabase
+        .from('exercises')
+        .select('*')
+        .in('movement_pattern', patterns)
+        .order('name');
+
+    console.timeEnd('[ExerciseService] fetchExercisesByPatterns');
+
+    if (error) {
+        console.error('Error fetching exercises by patterns:', error);
+        return [];
+    }
+
+    console.log(`[ExerciseService] Fetched ${data?.length || 0} exercises for ${patterns.length} patterns`);
+    return data || [];
+}
+
+/**
+ * Filtra exercícios EM MEMÓRIA (sem DB query)
+ * Substitui query complexa do Supabase por loop local
+ * Muito mais rápido que RTT de rede
+ */
+export function filterExercisesInMemory(
+    allExercises: Exercise[],
+    criteria: {
+        movement_pattern: MovementPattern;
+        primary_muscle: string;
+        avoid_injuries?: Injury[];
+        prefer_compound?: boolean;
+        prefer_machine?: boolean;
+    }
+): Exercise[] {
+    console.time('[ExerciseService] filterExercisesInMemory');
+
+    const filtered = allExercises.filter(ex => {
+        // 1. Movement pattern MUST match
+        if (ex.movement_pattern !== criteria.movement_pattern) return false;
+
+        // 2. Primary muscle MUST match
+        if (ex.primary_muscle !== criteria.primary_muscle) return false;
+
+        // 3. Avoid exercises that are contraindicated for injuries
+        if (criteria.avoid_injuries && criteria.avoid_injuries.length > 0) {
+            const hasContraindication = criteria.avoid_injuries.some(injury =>
+                ex.avoid_for_injuries.includes(injury)
+            );
+            if (hasContraindication) return false;
+        }
+
+        return true;
+    });
+
+    // Sort by preferences
+    const sorted = filtered.sort((a, b) => {
+        let scoreA = 0;
+        let scoreB = 0;
+
+        // Prefer compound if requested
+        if (criteria.prefer_compound) {
+            if (a.is_compound) scoreA += 10;
+            if (b.is_compound) scoreB += 10;
+        }
+
+        // Prefer machines if requested
+        if (criteria.prefer_machine) {
+            if (a.is_machine) scoreA += 5;
+            if (b.is_machine) scoreB += 5;
+        }
+
+        return scoreB - scoreA;
+    });
+
+    console.timeEnd('[ExerciseService] filterExercisesInMemory');
+
+    return sorted.slice(0, 10); // Limit to top 10
+}
+
+// ============ ORIGINAL RESOLUTION FUNCTION ============
+
+
 /**
  * Resolve exercício por intenção biomecânica
  * Usado pela IA para transformar intenção abstrata em exercícios reais

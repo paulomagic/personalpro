@@ -668,29 +668,31 @@ const AIBuilderView: React.FC<AIBuilderViewProps> = ({ user, onBack, onDone }) =
 
   if (loading) {
     return (
-      <div className="fixed inset-0 bg-slate-950 flex flex-col items-center justify-center p-8 z-50 overflow-hidden">
-        <div className="absolute inset-0 opacity-40">
-          <div className="absolute top-1/4 left-1/4 size-64 bg-blue-600 rounded-full blur-[100px] animate-pulse"></div>
-          <div className="absolute bottom-1/4 right-1/4 size-64 bg-purple-600 rounded-full blur-[100px] animate-pulse delay-1000"></div>
-        </div>
-
-        <div className="relative z-10 text-center flex flex-col items-center">
-          <div className="size-24 rounded-[32px] bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center mb-10 shadow-glow animate-bounce">
-            <span className="material-symbols-outlined text-white text-[48px]">psychology</span>
+      <div className="fixed inset-0 bg-slate-950 z-50">
+        <div className="max-w-md mx-auto h-full flex flex-col items-center justify-center p-8 overflow-hidden relative">
+          <div className="absolute inset-0 opacity-40">
+            <div className="absolute top-1/4 left-1/4 size-64 bg-blue-600 rounded-full blur-[100px] animate-pulse"></div>
+            <div className="absolute bottom-1/4 right-1/4 size-64 bg-purple-600 rounded-full blur-[100px] animate-pulse delay-1000"></div>
           </div>
 
-          <h2 className="text-2xl font-black text-white mb-4 tracking-tight">PersonalPro IA</h2>
-          <div className="h-6 overflow-hidden">
-            <p className="text-blue-400 text-xs font-black uppercase tracking-[0.2em]">
-              {messages[loadingMessageIndex]}
-            </p>
-          </div>
+          <div className="relative z-10 text-center flex flex-col items-center">
+            <div className="size-24 rounded-[32px] bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center mb-10 shadow-glow animate-bounce">
+              <span className="material-symbols-outlined text-white text-[48px]">psychology</span>
+            </div>
 
-          <div className="mt-12 w-64 h-1.5 bg-white/5 rounded-full overflow-hidden">
-            <div
-              className="h-full bg-gradient-to-r from-blue-600 to-indigo-600 transition-all duration-500"
-              style={{ width: `${(loadingMessageIndex + 1) * 20}%` }}
-            ></div>
+            <h2 className="text-2xl font-black text-white mb-4 tracking-tight">PersonalPro IA</h2>
+            <div className="h-6 overflow-hidden">
+              <p className="text-blue-400 text-xs font-black uppercase tracking-[0.2em]">
+                {messages[loadingMessageIndex]}
+              </p>
+            </div>
+
+            <div className="mt-12 w-64 h-1.5 bg-white/5 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-gradient-to-r from-blue-600 to-indigo-600 transition-all duration-500"
+                style={{ width: `${(loadingMessageIndex + 1) * 20}%` }}
+              ></div>
+            </div>
           </div>
         </div>
       </div>

@@ -52,24 +52,71 @@ export const SPECIAL_CONDITION_RULES: ConditionRule[] = [
     {
         condition: 'gestante',
         keywords: ['gestante', 'grávida', 'gravida', 'semanas', 'trimestre', 'dpp'],
-        volume_modifier: 0.7,  // 70% volume
-        intensity_modifier: 0.75,  // 75% intensidade
-        blocked_movements: ['supino_reto', 'posicao_supina'],
+        volume_modifier: 0.6,  // 60% volume (REDUZIDO de 70%)
+        intensity_modifier: 0.65,  // 65% intensidade (REDUZIDO de 75%)
+        blocked_movements: ['supino_reto', 'posicao_supina', 'compressao_abdominal'],
         blocked_exercises: [
+            // Posição supina (síndrome veia cava após 20 semanas)
             'supino reto',
+            'supino inclinado',
             'supino declinado',
+            'supino',
+            'fly',
+            'crucifixo',
+            'pullover',
+
+            // Carga axial alta
+            'agachamento livre',
+            'agachamento com barra',
             'leg press 45',
-            'agachamento livre pesado'
+            'leg press',
+            'hack squat',
+            'stiff',
+            'levantamento terra',
+            'terra',
+            'good morning',
+
+            // Overhead/sobre a cabeça (risco de queda)
+            'desenvolvimento',
+            'militar',
+            'push press',
+            'thruster',
+
+            // Pulling vertical (aumenta pressão abdominal)
+            'barra fixa',
+            'pull up',
+            'chin up',
+            'muscle up',
+
+            // Impacto
+            'box jump',
+            'salto',
+            'burpee',
+            'jump',
+
+            // Core intenso
+            'prancha',
+            'abdominal',
+            'crunch',
+            'sit up',
+            'russian twist',
+            'v-up',
+
+            // Máquinas que fecham ângulo do quadril muito
+            'leg curl deitado'
         ],
-        preferred_equipment: ['maquina', 'cabo'],
+        preferred_equipment: ['maquina', 'cabo', 'halter_leve'],
         special_notes: [
-            'Evitar posição supina após 20 semanas (síndrome veia cava)',
-            'Evitar exercícios de impacto',
+            '🚨 ATENÇÃO: Evitar posição supina após 20 semanas (síndrome veia cava)',
+            'Evitar exercícios de alta carga axial (compressão coluna)',
+            'NUNCA aumentar pressão intra-abdominal (sem valsalva)',
             'Monitorar frequência cardíaca (<140bpm)',
+            'Priorizar máquinas/cabos com apoio',
             'Hidratação constante',
-            'Parar em caso de dor, sangramento, tontura'
+            'PARAR IMEDIATAMENTE em caso de: dor, sangramento, tontura, falta de ar',
+            'Exercícios de mobilidade e alongamento são seguros e recomendados'
         ],
-        source: 'ACOG Committee Opinion 804'
+        source: 'ACOG Committee Opinion 804 (2020)'
     },
 
     // IDOSO (>65 anos)

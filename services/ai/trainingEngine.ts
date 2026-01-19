@@ -369,56 +369,49 @@ async function getCandidatesForSlot(
 function calculateScore(ex: Exercise, slot: TrainingSlot, injuries: Injury[], level: string): number {
     let score = 50;  // Base
 
-    const isBeginnerOrElderly = level.toLowerCase() === 'iniciante';
+    const isBeginnerOrElderly = level.toLowerCase() === 'iniciante' || level.toLowerCase() === 'idoso';
     const isAdvanced = level.toLowerCase().includes('avançado') || level.toLowerCase() === 'atleta';
 
     // Compostos preferidos para alta intensidade E avançados
     if (ex.is_compound && (slot.intensity === 'very_high' || slot.intensity === 'high')) {
-        score += isAdvanced ? 25 : 15;  // Avançado ganha mais pontos
+        score += isAdvanced ? 25 : 15;
     }
 
     // Máquinas MUITO preferidas para iniciantes e lesões
     if (ex.is_machine) {
-        if (isBeginnerOrElderly) score += 30;  // PRIORIDADE máxima para iniciantes
+        if (isBeginnerOrElderly) score += 30;
         if (injuries.length > 0) score += 20;
         if (slot.intensity === 'low' || slot.intensity === 'very_low') score += 10;
     }
 
     // Pesos livres EVITADOS para iniciantes
     if (!ex.is_machine && isBeginnerOrElderly) {
-        score -= 20;  // Penalty para pesos livres em iniciantes
+        score -= 20;
     }
 
-    // Penaliza FORTEMENTE se tem lesão relacionada
-    if (injuries.some(inj => ex.caution_for_injuries.includes(inj))) {
-        score -= 30;  // Penalty aumentado
+    // LESÕES - penalidade severa se contraindicado
+    if (injuries && injuries.length > 0) {
+        for (const injury of injuries) {
+            if (ex.avoid_for_injuries?.includes(injury)) {
+                score -= 1000; // Eliminatório
+            }
+            if (ex.caution_for_injuries?.includes(injury)) {
+                score -= 30;
+            }
+        }
     }
 
-    // BLOQUEIA se é contraindicação absoluta para lesão
-    if (injuries.some(inj => ex.avoid_for_injuries?.includes(inj))) {
-        score -= 1000;  // Efetivamente bloqueado
+    // CARGA AXIAL - penaliza se alto para iniciante/idoso
+    if (ex.spinal_load === 'alto' && isBeginnerOrElderly) {
+        score -= 25;
     }
 
-    // Carga axial EVITADA para iniciantes e lesões de coluna
-    const hasSpinalInjury = injuries.some(inj =>
-        inj.toLowerCase().includes('hérnia') ||
-        inj.toLowerCase().includes('hernia') ||
-        inj.toLowerCase().includes('lombar')
-    );
-
-    if (ex.spinal_load === 'alto') {
-        if (hasSpinalInjury) score -= 50;  // BLOQUEIO para lesões de coluna
-        if (isBeginnerOrElderly) score -= 15;  // Evita para iniciantes
-    }
-
-    // Estabilidade baixa preferida para iniciantes
-    if (ex.stability_demand === 'baixo' && isBeginnerOrElderly) {
-        score += 15;  // Aumentado de 5 para 15
-    }
-
-    // Penaliza alta estabilidade para iniciantes
+    // DEMANDA DE ESTABILIDADE
     if (ex.stability_demand === 'alto' && isBeginnerOrElderly) {
         score -= 20;
+    }
+    if (ex.stability_demand === 'baixo' && isBeginnerOrElderly) {
+        score += 15;
     }
 
     return score;

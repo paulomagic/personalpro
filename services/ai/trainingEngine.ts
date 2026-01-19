@@ -45,7 +45,37 @@ export interface GeneratedWorkout {
 
 // ============ CONFIGURAÇÃO ============
 
-const INTENSITY_CONFIG: Record<IntensityLevel, { sets: number; reps: string; rest: string }> = {
+// Multipliers por nível (baseado em knowledge/volume.ts)
+const LEVEL_MULTIPLIERS: Record<string, { volume: number; intensity: number }> = {
+    'iniciante': { volume: 0.6, intensity: 0.8 },      // -40% volume, -20% intensidade
+    'intermediario': { volume: 1.0, intensity: 1.0 },  // Baseline
+    'intermediário': { volume: 1.0, intensity: 1.0 },  // Alias
+    'avancado': { volume: 1.2, intensity: 1.1 },       // +20% volume, +10% intensidade
+    'avançado': { volume: 1.2, intensity: 1.1 },       // Alias
+    'atleta': { volume: 1.4, intensity: 1.2 }          // +40% volume, +20% intensidade
+};
+
+// Rep ranges por objetivo (baseado em knowledge/progression.ts)
+const GOAL_REP_RANGES: Record<string, { min: number; max: number; rest: string }> = {
+    'forca': { min: 4, max: 6, rest: '180s' },
+    'força': { min: 4, max: 6, rest: '180s' },
+    'força máxima': { min: 4, max: 6, rest: '180s' },
+    'hipertrofia': { min: 8, max: 12, rest: '90s' },
+    'hipertrofia glúteo': { min: 8, max: 12, rest: '90s' },
+    'hipertrofia gluteo': { min: 8, max: 12, rest: '90s' },
+    'emagrecimento': { min: 12, max: 20, rest: '45s' },
+    'perda de peso': { min: 12, max: 20, rest: '45s' },
+    'saude': { min: 10, max: 15, rest: '90s' },
+    'saúde': { min: 10, max: 15, rest: '90s' },
+    'qualidade de vida': { min: 10, max: 15, rest: '90s' },
+    'bem-estar': { min: 10, max: 15, rest: '90s' },
+    'condicionamento': { min: 12, max: 15, rest: '60s' },
+    'resistencia': { min: 15, max: 25, rest: '45s' },
+    'resistência': { min: 15, max: 25, rest: '45s' },
+};
+
+// Baseline por intensidade (ajustado por level e goal depois)
+const BASE_INTENSITY_CONFIG: Record<IntensityLevel, { sets: number; reps: string; rest: string }> = {
     'very_high': { sets: 4, reps: '4-6', rest: '180s' },
     'high': { sets: 4, reps: '6-8', rest: '120s' },
     'moderate': { sets: 3, reps: '8-12', rest: '90s' },
@@ -54,6 +84,29 @@ const INTENSITY_CONFIG: Record<IntensityLevel, { sets: number; reps: string; res
 };
 
 const CANDIDATES_PER_SLOT = 5;
+
+// ============ HELPERS DE PERSONALIZAÇÃO ============
+
+function getPersonalizedConfig(
+    intensity: IntensityLevel,
+    level: string,
+    goal: string
+): { sets: number; reps: string; rest: string } {
+    const baseConfig = BASE_INTENSITY_CONFIG[intensity];
+    const levelMultiplier = LEVEL_MULTIPLIERS[level.toLowerCase()] || LEVEL_MULTIPLIERS['intermediario'];
+    const goalRange = GOAL_REP_RANGES[goal.toLowerCase()] || GOAL_REP_RANGES['hipertrofia'];
+
+    // Ajusta sets pelo nível
+    const adjustedSets = Math.max(2, Math.round(baseConfig.sets * levelMultiplier.volume));
+
+    // Usa rep range do objetivo
+    const reps = `${goalRange.min}-${goalRange.max}`;
+
+    // Usa descanso do objetivo
+    const rest = goalRange.rest;
+
+    return { sets: adjustedSets, reps, rest };
+}
 
 // ============ ENGINE ============
 
@@ -89,10 +142,10 @@ export async function generateWorkout(params: {
 
         for (const slot of day.slots) {
             // 3.1 Busca candidatos válidos para o slot
-            const candidates = await getCandidatesForSlot(slot, parsedInjuries);
+            const candidates = await getCandidatesForSlot(slot, parsedInjuries, level);
 
-            // 3.2 Configura sets/reps/rest baseado na intensidade
-            const config = INTENSITY_CONFIG[slot.intensity];
+            // 3.2 Configura sets/reps/rest baseado na intensidade, nível e objetivo
+            const config = getPersonalizedConfig(slot.intensity, level, goal);
 
             const resolvedSlot: ResolvedSlot = {
                 slot_id: slot.id,
@@ -143,7 +196,8 @@ export async function generateWorkout(params: {
 
 async function getCandidatesForSlot(
     slot: TrainingSlot,
-    injuries: Injury[]
+    injuries: Injury[],
+    level: string
 ): Promise<SlotCandidate[]> {
     // Busca exercícios pelo pattern
     const exercises = await resolveExercise({
@@ -153,10 +207,10 @@ async function getCandidatesForSlot(
         prefer_compound: slot.intensity === 'very_high' || slot.intensity === 'high'
     });
 
-    // Score determinístico
+    // Score determinístico considerando nível
     const scored = exercises.map(ex => ({
         exercise: ex,
-        score: calculateScore(ex, slot, injuries)
+        score: calculateScore(ex, slot, injuries, level)
     }));
 
     // Ordena por score e pega top N
@@ -165,33 +219,59 @@ async function getCandidatesForSlot(
         .slice(0, CANDIDATES_PER_SLOT);
 }
 
-function calculateScore(ex: Exercise, slot: TrainingSlot, injuries: Injury[]): number {
+function calculateScore(ex: Exercise, slot: TrainingSlot, injuries: Injury[], level: string): number {
     let score = 50;  // Base
 
-    // Compostos preferidos para alta intensidade
+    const isBeginnerOrElderly = level.toLowerCase() === 'iniciante';
+    const isAdvanced = level.toLowerCase().includes('avançado') || level.toLowerCase() === 'atleta';
+
+    // Compostos preferidos para alta intensidade E avançados
     if (ex.is_compound && (slot.intensity === 'very_high' || slot.intensity === 'high')) {
-        score += 20;
+        score += isAdvanced ? 25 : 15;  // Avançado ganha mais pontos
     }
 
-    // Máquinas preferidas para lesões ou baixa intensidade
+    // Máquinas MUITO preferidas para iniciantes e lesões
     if (ex.is_machine) {
-        if (injuries.length > 0) score += 15;
+        if (isBeginnerOrElderly) score += 30;  // PRIORIDADE máxima para iniciantes
+        if (injuries.length > 0) score += 20;
         if (slot.intensity === 'low' || slot.intensity === 'very_low') score += 10;
     }
 
-    // Penaliza se tem lesão relacionada (mas não bloqueante)
+    // Pesos livres EVITADOS para iniciantes
+    if (!ex.is_machine && isBeginnerOrElderly) {
+        score -= 20;  // Penalty para pesos livres em iniciantes
+    }
+
+    // Penaliza FORTEMENTE se tem lesão relacionada
     if (injuries.some(inj => ex.caution_for_injuries.includes(inj))) {
-        score -= 10;
+        score -= 30;  // Penalty aumentado
     }
 
-    // Carga axial preferida quando especificado
-    if (slot.preferred_load === 'axial' && ex.spinal_load === 'alto') {
-        score += 10;
+    // BLOQUEIA se é contraindicação absoluta para lesão
+    if (injuries.some(inj => ex.avoid_for_injuries?.includes(inj))) {
+        score -= 1000;  // Efetivamente bloqueado
     }
 
-    // Baixa demanda de estabilidade para iniciantes simulado
-    if (ex.stability_demand === 'baixo') {
-        score += 5;
+    // Carga axial EVITADA para iniciantes e lesões de coluna
+    const hasSpinalInjury = injuries.some(inj =>
+        inj.toLowerCase().includes('hérnia') ||
+        inj.toLowerCase().includes('hernia') ||
+        inj.toLowerCase().includes('lombar')
+    );
+
+    if (ex.spinal_load === 'alto') {
+        if (hasSpinalInjury) score -= 50;  // BLOQUEIO para lesões de coluna
+        if (isBeginnerOrElderly) score -= 15;  // Evita para iniciantes
+    }
+
+    // Estabilidade baixa preferida para iniciantes
+    if (ex.stability_demand === 'baixo' && isBeginnerOrElderly) {
+        score += 15;  // Aumentado de 5 para 15
+    }
+
+    // Penaliza alta estabilidade para iniciantes
+    if (ex.stability_demand === 'alto' && isBeginnerOrElderly) {
+        score -= 20;
     }
 
     return score;

@@ -144,6 +144,16 @@ export async function generateWorkout(params: {
     console.log('[TrainingEngine] Special conditions detected:', specialConditions);
     console.log('[TrainingEngine] Modifiers:', conditionModifiers);
 
+    // NOVO: Setar contexto para o prompt da IA
+    setWorkoutContext({
+        clientName: name,
+        level,
+        goal,
+        injuries: injuries || '',
+        observations: observations || '',
+        specialConditions
+    });
+
     // 2. SELECIONAR TEMPLATE
     const template = selectTemplate(goal, daysPerWeek, level);
     if (!template) {
@@ -437,41 +447,119 @@ function getDefaultMuscle(pattern: MovementPattern): string {
 
 // ============ SELEÇÃO COM IA (MINIMALISTA) ============
 
+// Contexto global para o prompt (setado em generateWorkout)
+let currentWorkoutContext: {
+    clientName: string;
+    level: string;
+    goal: string;
+    injuries: string;
+    observations: string;
+    specialConditions: string[];
+} | null = null;
+
+export function setWorkoutContext(context: typeof currentWorkoutContext) {
+    currentWorkoutContext = context;
+}
+
 async function selectWithAI(
     slot: TrainingSlot,
     candidates: SlotCandidate[]
 ): Promise<Exercise> {
     // Fallback se menos de 2 candidatos
     if (candidates.length < 2) {
-        return candidates[0]?.exercise || candidates[0].exercise;
+        return candidates[0]?.exercise;
     }
 
-    // Prompt MINIMALISTA - IA só escolhe ID
-    const optionsText = candidates
-        .map((c, i) => `${i + 1}. ${c.exercise.name}`)
-        .join('\n');
+    // Contexto do cliente (se disponível)
+    const ctx = currentWorkoutContext || {
+        clientName: 'Aluno',
+        level: 'Intermediário',
+        goal: 'Hipertrofia',
+        injuries: 'Nenhuma',
+        observations: '',
+        specialConditions: []
+    };
 
-    const prompt = `Slot: ${slot.movement_pattern} | ${slot.intensity}
-Opções válidas:
-${optionsText}
+    // Lista de candidatos formatada
+    const candidatesList = candidates.map((c, i) => ({
+        num: i + 1,
+        name: c.exercise.name,
+        equipment: c.exercise.equipment?.join(', ') || 'variado',
+        is_machine: c.exercise.is_machine,
+        is_compound: c.exercise.is_compound,
+        spinal_load: c.exercise.spinal_load
+    }));
 
-Escolha a opção mais adequada para continuidade muscular.
-Retorne APENAS o número (1-${candidates.length}).`;
+    // PROMPT REFINADO - PhD em Biomecânica
+    const systemPrompt = `Você é um Treinador de Elite (PhD em Biomecânica) e uma API JSON.
+Sua função é selecionar o MELHOR exercício baseado no perfil do aluno.
+
+REGRAS DE SEGURANÇA (CRÍTICO):
+1. HÉRNIA/LOMBAR: PROIBIDO carga axial alta (Agachamento Livre, Terra, Militar em pé). Use máquinas.
+2. OMBRO: Prefira pegada neutra. Evite rotação interna excessiva.
+3. JOELHO: Evite impacto ou ângulos agudos de flexão sob carga alta.
+4. GESTANTE: APENAS máquinas e cabos. ZERO carga axial.
+5. IDOSO: Priorize máquinas com apoio. Evite alta complexidade.
+
+REGRAS DE OBJETIVO:
+- FORÇA: Priorize compostos com barra, alta estabilidade.
+- HIPERTROFIA: Priorize exercícios com boa amplitude e tensão constante.
+- EMAGRECIMENTO: Priorize exercícios que permitem alta densidade (menos descanso).
+- SAÚDE/QUALIDADE DE VIDA: Priorize máquinas seguras e mobilidade.
+
+REGRAS DE NÍVEL:
+- INICIANTE: SEMPRE máquinas guiadas primeiro.
+- AVANÇADO/ATLETA: Pode usar peso livre e compostos complexos.
+
+Responda APENAS com JSON válido, sem introduções.`;
+
+    const userPrompt = `ALUNO: ${ctx.clientName}
+NÍVEL: ${ctx.level}
+OBJETIVO: ${ctx.goal}
+LESÕES: ${ctx.injuries === '' ? 'Nenhuma' : ctx.injuries}
+CONDIÇÕES ESPECIAIS: ${ctx.specialConditions.length > 0 ? ctx.specialConditions.join(', ') : 'Nenhuma'}
+OBSERVAÇÕES: ${ctx.observations || 'Nenhuma'}
+
+SLOT ATUAL:
+- Padrão de Movimento: ${slot.movement_pattern}
+- Músculo Alvo: ${slot.target_muscles?.[0] || 'geral'}
+- Intensidade: ${slot.intensity} (high = composto principal, low = isolador)
+
+CANDIDATOS (escolha UM):
+${JSON.stringify(candidatesList, null, 2)}
+
+Responda com JSON: { "selected": <número 1-${candidates.length}>, "reasoning": "<1 frase explicando por que>" }`;
 
     try {
         const result = await aiRouter.execute({
             action: 'training_intent',
-            prompt,
-            metadata: { slot_id: slot.id, type: 'exercise_selection' }
+            prompt: `${systemPrompt}\n\n${userPrompt}`,
+            metadata: {
+                slot_id: slot.id,
+                type: 'exercise_selection',
+                client_level: ctx.level,
+                client_goal: ctx.goal,
+                has_injuries: ctx.injuries !== 'Nenhuma' && ctx.injuries !== ''
+            }
         });
 
         if (result.success && result.text) {
-            // Parse resposta - espera apenas número
-            const match = result.text.trim().match(/^(\d+)/);
-            if (match) {
-                const idx = parseInt(match[1], 10) - 1;
-                if (idx >= 0 && idx < candidates.length) {
-                    return candidates[idx].exercise;
+            // Parse JSON response
+            try {
+                const parsed = JSON.parse(result.text);
+                const selectedNum = parsed.selected || parsed.num || parsed.choice;
+                if (selectedNum && selectedNum >= 1 && selectedNum <= candidates.length) {
+                    console.log(`[AI] Selected ${candidates[selectedNum - 1].exercise.name}: ${parsed.reasoning || 'No reason'}`);
+                    return candidates[selectedNum - 1].exercise;
+                }
+            } catch {
+                // Fallback: tenta encontrar número na resposta
+                const match = result.text.match(/(\d+)/);
+                if (match) {
+                    const idx = parseInt(match[1], 10) - 1;
+                    if (idx >= 0 && idx < candidates.length) {
+                        return candidates[idx].exercise;
+                    }
                 }
             }
         }

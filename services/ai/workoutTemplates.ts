@@ -513,6 +513,104 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
                 ]
             }
         ]
+    },
+
+    // ====== POWERBUILDING 4x (FORÇA + HIPERTROFIA) ======
+    {
+        template_id: 'powerbuilding_4',
+        name: 'Powerbuilding (Força + Hipertrofia)',
+        frequency: 4,
+        suitable_goals: ['forca', 'hipertrofia'],
+        suitable_levels: ['intermediario', 'avancado', 'atleta'],
+        weekly_volume_guideline: { min_sets: 14, max_sets: 22 },
+        days: [
+            // DIA 1: UPPER POWER (Força 3-5 reps)
+            {
+                day_id: 'upper_power',
+                label: 'Upper Power (Força)',
+                notes: 'Foco em carga máxima, 3-5 reps, compostos com barra',
+                slots: [
+                    { id: 'up_1', movement_pattern: 'empurrar_horizontal', intensity: 'very_high', target_muscles: ['peito'], priority: 1 },
+                    { id: 'up_2', movement_pattern: 'puxar_horizontal', intensity: 'very_high', target_muscles: ['costas'], priority: 2 },
+                    { id: 'up_3', movement_pattern: 'empurrar_vertical', intensity: 'high', target_muscles: ['ombro'], priority: 3 },
+                    { id: 'up_4', movement_pattern: 'puxar_vertical', intensity: 'high', target_muscles: ['costas'], priority: 4 }
+                ]
+            },
+            // DIA 2: LOWER POWER (Força 3-5 reps)
+            {
+                day_id: 'lower_power',
+                label: 'Lower Power (Força)',
+                notes: 'Agachamento e Terra pesados, 3-5 reps',
+                slots: [
+                    { id: 'lp_1', movement_pattern: 'agachar', intensity: 'very_high', target_muscles: ['quadriceps'], priority: 1 },
+                    { id: 'lp_2', movement_pattern: 'hinge', intensity: 'very_high', target_muscles: ['gluteos', 'posterior'], priority: 2 },
+                    { id: 'lp_3', movement_pattern: 'agachar', intensity: 'high', target_muscles: ['quadriceps'], priority: 3 },
+                    { id: 'lp_4', movement_pattern: 'isolar_panturrilha', intensity: 'moderate', priority: 4 }
+                ]
+            },
+            // DIA 3: UPPER HYPERTROPHY (Volume 8-12 reps)
+            {
+                day_id: 'upper_hypertrophy',
+                label: 'Upper Hypertrophy (Volume)',
+                notes: 'Foco em volume e amplitude, 8-12 reps, halteres e máquinas',
+                slots: [
+                    { id: 'uh_1', movement_pattern: 'empurrar_horizontal', intensity: 'moderate', target_muscles: ['peito'], priority: 1 },
+                    { id: 'uh_2', movement_pattern: 'puxar_vertical', intensity: 'moderate', target_muscles: ['costas'], priority: 2 },
+                    { id: 'uh_3', movement_pattern: 'isolar_ombro', intensity: 'low', target_muscles: ['ombro'], priority: 3 },
+                    { id: 'uh_4', movement_pattern: 'isolar_biceps', intensity: 'low', target_muscles: ['biceps'], priority: 4 },
+                    { id: 'uh_5', movement_pattern: 'isolar_triceps', intensity: 'low', target_muscles: ['triceps'], priority: 5 }
+                ]
+            },
+            // DIA 4: LOWER HYPERTROPHY (Volume 8-12 reps)
+            {
+                day_id: 'lower_hypertrophy',
+                label: 'Lower Hypertrophy (Volume)',
+                notes: 'Foco em isolamento e volume, 8-12 reps',
+                slots: [
+                    { id: 'lh_1', movement_pattern: 'agachar', intensity: 'moderate', target_muscles: ['quadriceps'], priority: 1 },
+                    { id: 'lh_2', movement_pattern: 'hinge', intensity: 'moderate', target_muscles: ['gluteos'], priority: 2 },
+                    { id: 'lh_3', movement_pattern: 'agachar', intensity: 'low', target_muscles: ['quadriceps'], priority: 3 },
+                    { id: 'lh_4', movement_pattern: 'hinge', intensity: 'low', target_muscles: ['posterior'], priority: 4 },
+                    { id: 'lh_5', movement_pattern: 'isolar_panturrilha', intensity: 'moderate', priority: 5 }
+                ]
+            }
+        ]
+    },
+
+    // ====== LONGEVIDADE ATIVA 2x (IDOSOS +60) ======
+    {
+        template_id: 'senior_longevity_2',
+        name: 'Longevidade Ativa (+60)',
+        frequency: 2,
+        suitable_goals: ['saude', 'condicionamento'],
+        suitable_levels: ['iniciante'],
+        weekly_volume_guideline: { min_sets: 6, max_sets: 10 },
+        days: [
+            // DIA A: FULL BODY POSTURAL
+            {
+                day_id: 'senior_a',
+                label: 'Full Body A (Postural)',
+                notes: 'APENAS máquinas, foco em segurança e postura',
+                slots: [
+                    { id: 'sa_1', movement_pattern: 'agachar', intensity: 'moderate', target_muscles: ['quadriceps'], priority: 1 },
+                    { id: 'sa_2', movement_pattern: 'puxar_horizontal', intensity: 'moderate', target_muscles: ['costas'], priority: 2 },
+                    { id: 'sa_3', movement_pattern: 'empurrar_horizontal', intensity: 'moderate', target_muscles: ['peito'], priority: 3 },
+                    { id: 'sa_4', movement_pattern: 'core', intensity: 'low', target_muscles: ['core'], priority: 4 }
+                ]
+            },
+            // DIA B: FULL BODY FUNCIONAL
+            {
+                day_id: 'senior_b',
+                label: 'Full Body B (Funcional)',
+                notes: 'Foco em movimentos funcionais: sentar, levantar, puxar',
+                slots: [
+                    { id: 'sb_1', movement_pattern: 'agachar', intensity: 'low', target_muscles: ['quadriceps'], priority: 1 },
+                    { id: 'sb_2', movement_pattern: 'puxar_vertical', intensity: 'moderate', target_muscles: ['costas'], priority: 2 },
+                    { id: 'sb_3', movement_pattern: 'isolar_ombro', intensity: 'low', target_muscles: ['ombro'], priority: 3 },
+                    { id: 'sb_4', movement_pattern: 'isolar_panturrilha', intensity: 'low', target_muscles: ['panturrilha'], priority: 4 }
+                ]
+            }
+        ]
     }
 ];
 
@@ -526,7 +624,26 @@ export function selectTemplate(
     const goalLower = goal.toLowerCase();
     const levelNorm = normalizeLevel(level);
 
-    // Filtra compatíveis
+    // PRIORIDADE 1: Idoso/Longevidade → Template Senior (SEGURANÇA)
+    if (level.toLowerCase().includes('idoso') || level.toLowerCase().includes('senior') ||
+        goalLower.includes('longevidade') || goalLower.includes('qualidade')) {
+        const senior = WORKOUT_TEMPLATES.find(t => t.template_id === 'senior_longevity_2');
+        if (senior) {
+            console.log('[TemplateSelector] Idoso/Longevidade detectado → Senior template');
+            return senior;
+        }
+    }
+
+    // PRIORIDADE 2: Força explícita → Powerbuilding
+    if (goalLower.includes('força') || goalLower.includes('forca') || goalLower.includes('powerlifting')) {
+        const powerbuilding = WORKOUT_TEMPLATES.find(t => t.template_id === 'powerbuilding_4');
+        if (powerbuilding && ['intermediario', 'avancado', 'atleta'].includes(levelNorm)) {
+            console.log('[TemplateSelector] Força detectada → Powerbuilding template');
+            return powerbuilding;
+        }
+    }
+
+    // Filtra compatíveis (lógica original)
     const compatible = WORKOUT_TEMPLATES.filter(t => {
         if (!t.suitable_levels.includes(levelNorm)) return false;
         if (Math.abs(t.frequency - daysPerWeek) > 1) return false;

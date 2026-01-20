@@ -619,16 +619,24 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
 export function selectTemplate(
     goal: string,
     daysPerWeek: number,
-    level: string
+    level: string,
+    age?: number  // NOVO: idade do cliente
 ): WorkoutTemplate | null {
     const goalLower = goal.toLowerCase();
     const levelNorm = normalizeLevel(level);
-    const isElderly = level.toLowerCase().includes('idoso') || level.toLowerCase().includes('senior');
+
+    // CORREÇÃO: Verifica idade (60+) OU keywords 'idoso'/'senior' no level
+    const isElderly = (age !== undefined && age >= 60) ||
+        level.toLowerCase().includes('idoso') ||
+        level.toLowerCase().includes('senior');
+
+    console.log(`[TemplateSelector] Age: ${age}, Level: ${level}, isElderly: ${isElderly}`);
 
     // PRIORIDADE 1: Longevidade/Saúde EXPLÍCITO para idoso → Template Senior
     // Só força Senior se o objetivo é explicitamente saúde/qualidade de vida
     if (isElderly && (goalLower.includes('saúde') || goalLower.includes('saude') ||
-        goalLower.includes('longevidade') || goalLower.includes('qualidade'))) {
+        goalLower.includes('longevidade') || goalLower.includes('qualidade') ||
+        goalLower.includes('mobilidade'))) {
         const senior = WORKOUT_TEMPLATES.find(t => t.template_id === 'senior_longevity_2');
         if (senior) {
             console.log('[TemplateSelector] Idoso + Saúde/Longevidade → Senior template');

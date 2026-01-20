@@ -131,6 +131,7 @@ export async function generateWorkout(params: {
     injuries?: string;
     observations?: string;
     birthDate?: string;
+    age?: number;  // NOVO: idade direta do cliente
     useAI?: boolean;
     onProgress?: (progress: { stage: string; current: number; total: number; message: string }) => void;
 }): Promise<GeneratedWorkout | null> {
@@ -157,8 +158,26 @@ export async function generateWorkout(params: {
         specialConditions
     });
 
-    // 2. SELECIONAR TEMPLATE
-    const template = selectTemplate(goal, daysPerWeek, level);
+    // 2. OBTER IDADE (de birthDate OU campo age direto)
+    let age: number | undefined;
+    if (birthDate) {
+        // Calcular de birthDate se fornecido
+        const birth = new Date(birthDate);
+        const today = new Date();
+        age = today.getFullYear() - birth.getFullYear();
+        const monthDiff = today.getMonth() - birth.getMonth();
+        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+            age--;
+        }
+        console.log(`[TrainingEngine] Calculated age from birthDate: ${age}`);
+    } else if (params.age !== undefined) {
+        // Usar campo age direto (mais simples)
+        age = params.age;
+        console.log(`[TrainingEngine] Using provided age: ${age}`);
+    }
+
+    // 3. SELECIONAR TEMPLATE (agora com idade)
+    const template = selectTemplate(goal, daysPerWeek, level, age);
     if (!template) {
         console.error('[TrainingEngine] No template found for params:', params);
         return null;

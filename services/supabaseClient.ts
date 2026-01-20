@@ -52,11 +52,13 @@ export function mapDBClientToClient(dbClient: DBClient & { avatar?: string }): a
         avatar: dbClient.avatar || dbClient.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(dbClient.name)}&background=3b82f6&color=fff`,
         goal: dbClient.goal,
         level: dbClient.level as 'Iniciante' | 'Intermediário' | 'Avançado' | 'Atleta',
+        age: dbClient.age,  // CRÍTICO: Campo estava faltando!
         status: dbClient.status === 'inactive' ? 'paused' : dbClient.status,
         adherence: dbClient.adherence || 0,
         startDate: dbClient.created_at,
         lastTraining: 'Não registrado',
         observations: dbClient.observations,
+        injuries: dbClient.injuries || 'Nenhuma',  // Também faltava
         missedClasses: [],
         assessments: [],
         totalClasses: 0,

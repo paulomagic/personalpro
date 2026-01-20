@@ -444,7 +444,7 @@ const AIBuilderView: React.FC<AIBuilderViewProps> = ({ user, onBack, onDone }) =
           observations: selectedClient.observations,  // NOVO: detecta condições especiais
           birthDate: selectedClient.birth_date,       // NOVO: calcula idade para idoso/adolescente
           age: selectedClient.age,                     // NOVO: ou usa idade direta se disponível
-          useAI: false // TEMPORÁRIO: Desabilitado por rate limit do Groq
+          useAI: isNewAIAvailable() // Reativado: bug de age mapeado corrigido
         });
 
         if (engineResult && engineResult.days.length > 0) {

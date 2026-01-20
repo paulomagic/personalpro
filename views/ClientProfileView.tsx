@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Settings, Play, Pause, AlertTriangle, CheckCircle, Calendar, FileText, TrendingUp, Camera, Dumbbell, Clock, Phone, Mail, Edit, Save, X, PlusCircle, User, Zap, Sparkles, UserPlus } from 'lucide-react';
+import { ArrowLeft, Settings, Play, Pause, AlertTriangle, CheckCircle, Calendar, FileText, TrendingUp, Camera, Dumbbell, Clock, Phone, Mail, Edit, Save, X, PlusCircle, User, Zap, Sparkles, UserPlus, Trash2 } from 'lucide-react';
 import { Client, MissedClass } from '../types';
 import { analyzeClientProgress } from '../services/geminiService';
-import { updateClient } from '../services/supabaseClient';
+import { updateClient, deleteClient } from '../services/supabaseClient';
 import InviteStudentModal from '../components/InviteStudentModal';
 import ClientFinanceSection from '../components/ClientFinanceSection';
 
@@ -32,6 +32,8 @@ const ClientProfileView: React.FC<ClientProfileViewProps> = ({ client: initialCl
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [showMissedClassModal, setShowMissedClassModal] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Fetch full client data on mount
   useEffect(() => {
@@ -174,6 +176,20 @@ const ClientProfileView: React.FC<ClientProfileViewProps> = ({ client: initialCl
         mc.id === missedClassId ? { ...mc, replaced: true, replacementDate: new Date().toISOString() } : mc
       )
     }));
+  };
+
+  const handleDeleteClient = async () => {
+    setIsDeleting(true);
+    const success = await deleteClient(client.id);
+    setIsDeleting(false);
+
+    if (success) {
+      // Client deleted successfully, go back to clients list
+      onBack();
+    } else {
+      alert('Erro ao deletar aluno. Tente novamente.');
+      setShowDeleteConfirm(false);
+    }
   };
 
   const getStatusColor = (status: Client['status']) => {
@@ -916,9 +932,23 @@ const ClientProfileView: React.FC<ClientProfileViewProps> = ({ client: initialCl
                 </button>
               </div>
 
+              {/* Delete Client Button */}
+              <div className="mt-6 pt-6 border-t border-white/5">
+                <button
+                  onClick={() => {
+                    setShowStatusModal(false);
+                    setShowDeleteConfirm(true);
+                  }}
+                  className="w-full p-4 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center gap-3 hover:bg-red-500/20 transition-all group"
+                >
+                  <Trash2 size={18} className="text-red-400" />
+                  <span className="font-bold text-red-400">Excluir Aluno</span>
+                </button>
+              </div>
+
               <button
                 onClick={() => setShowStatusModal(false)}
-                className="w-full mt-6 py-3 rounded-xl bg-white/5 text-slate-400 font-bold hover:bg-white/10 transition-colors"
+                className="w-full mt-4 py-3 rounded-xl bg-white/5 text-slate-400 font-bold hover:bg-white/10 transition-colors"
               >
                 Cancelar
               </button>
@@ -1086,6 +1116,64 @@ const ClientProfileView: React.FC<ClientProfileViewProps> = ({ client: initialCl
                 </div>
               )}
             </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Delete Confirmation Modal */}
+      <AnimatePresence>
+        {showDeleteConfirm && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4"
+            onClick={() => !isDeleting && setShowDeleteConfirm(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95 }}
+              animate={{ scale: 1 }}
+              exit={{ scale: 0.95 }}
+              className="bg-slate-900 rounded-[28px] p-6 w-full max-w-sm border border-red-500/20"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="size-16 rounded-full bg-red-500/10 flex items-center justify-center mx-auto mb-4">
+                <AlertTriangle size={32} className="text-red-400" />
+              </div>
+
+              <h3 className="text-xl font-black text-white mb-2 text-center">Excluir Aluno?</h3>
+              <p className="text-sm text-slate-400 text-center mb-6">
+                Tem certeza que deseja excluir <b className="text-white">{client.name}</b>?
+                Todos os dados, avaliações, treinos e pagamentos serão <b className="text-red-400">permanentemente deletados</b>.
+              </p>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowDeleteConfirm(false)}
+                  disabled={isDeleting}
+                  className="flex-1 py-3 rounded-xl bg-white/5 text-slate-400 font-bold hover:bg-white/10 transition-colors disabled:opacity-50"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleDeleteClient}
+                  disabled={isDeleting}
+                  className="flex-1 py-3 rounded-xl bg-red-600 text-white font-bold shadow-glow hover:bg-red-500 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {isDeleting ? (
+                    <>
+                      <div className="size-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      Excluindo...
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 size={16} />
+                      Excluir
+                    </>
+                  )}
+                </button>
+              </div>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>

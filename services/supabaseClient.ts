@@ -178,6 +178,69 @@ export async function updateClient(clientId: string, updates: Partial<DBClient>)
     return data;
 }
 
+export async function deleteClient(clientId: string): Promise<boolean> {
+    if (!supabase) return false;
+
+    try {
+        // 1. Delete assessments first (foreign key dependency)
+        const { error: assessError } = await supabase
+            .from('assessments')
+            .delete()
+            .eq('client_id', clientId);
+
+        if (assessError) {
+            console.error('Error deleting assessments:', assessError);
+            // Continue anyway - assessments might not exist
+        }
+
+        // 2. Delete payments
+        const { error: paymentError } = await supabase
+            .from('payments')
+            .delete()
+            .eq('client_id', clientId);
+
+        if (paymentError) {
+            console.error('Error deleting payments:', paymentError);
+        }
+
+        // 3. Delete workouts
+        const { error: workoutError } = await supabase
+            .from('workouts')
+            .delete()
+            .eq('client_id', clientId);
+
+        if (workoutError) {
+            console.error('Error deleting workouts:', workoutError);
+        }
+
+        // 4. Delete appointments
+        const { error: appointmentError } = await supabase
+            .from('appointments')
+            .delete()
+            .eq('client_id', clientId);
+
+        if (appointmentError) {
+            console.error('Error deleting appointments:', appointmentError);
+        }
+
+        // 5. Finally, delete the client
+        const { error: clientError } = await supabase
+            .from('clients')
+            .delete()
+            .eq('id', clientId);
+
+        if (clientError) {
+            console.error('Error deleting client:', clientError);
+            return false;
+        }
+
+        return true;
+    } catch (error) {
+        console.error('Error in deleteClient:', error);
+        return false;
+    }
+}
+
 export interface Assessment {
     id: string;
     client_id: string;

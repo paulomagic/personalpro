@@ -1,13 +1,15 @@
 // Training Engine v2.0 - Híbrido: Determinístico + IA
 // Templates biomecânicos + Seleção inteligente de exercícios
 // OPTIMIZED: Parallel processing with batch queries
+// v2.1: BiomechanicalProfile integration for precise safety filtering
 
 import PQueue from 'p-queue';
 import { selectTemplate, type IntensityLevel, type TrainingSlot } from './workoutTemplates';
-import { resolveExercise, type Exercise, type Injury, fetchAllExercises, filterExercisesInMemory } from '../exerciseService';
+import { resolveExercise, type Exercise, type Injury, fetchAllExercises, filterExercisesInMemory, parseClientInjuries } from '../exerciseService';
 import { aiRouter } from './aiRouter';
 import type { MovementPattern } from './types';
 import { detectConditions, getAggregatedModifiers, type SpecialCondition } from './knowledge/specialConditions';
+import { compileBiomechanicalProfile, isExerciseCompatible, type BiomechanicalProfile } from './biomechanicalProfile';
 
 // ============ TIPOS ============
 
@@ -145,8 +147,31 @@ export async function generateWorkout(params: {
     const specialConditions = detectConditions(combinedObservations, injuries, birthDate);
     const conditionModifiers = getAggregatedModifiers(specialConditions);
 
+    // 2. OBTER IDADE (de birthDate OU campo age direto) - MOVIDO PARA CIMA
+    let clientAge: number | undefined;
+    if (birthDate) {
+        const birth = new Date(birthDate);
+        const today = new Date();
+        clientAge = today.getFullYear() - birth.getFullYear();
+        const monthDiff = today.getMonth() - birth.getMonth();
+        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+            clientAge--;
+        }
+        console.log(`[TrainingEngine] Calculated age from birthDate: ${clientAge}`);
+    } else if (params.age !== undefined) {
+        clientAge = params.age;
+        console.log(`[TrainingEngine] Using provided age: ${clientAge}`);
+    }
+
+    // 3. PARSE INJURIES (uma única vez)
+    const parsedInjuries = parseInjuries(injuries);
+
+    // 4. COMPILAR PERFIL BIOMECÂNICO para filtro preciso
+    const biomechProfile = compileBiomechanicalProfile(specialConditions, parsedInjuries, clientAge);
+
     console.log('[TrainingEngine] Special conditions detected:', specialConditions);
     console.log('[TrainingEngine] Modifiers:', conditionModifiers);
+    console.log('[TrainingEngine] BiomechanicalProfile:', biomechProfile);
 
     // NOVO: Setar contexto para o prompt da IA
     setWorkoutContext({
@@ -158,26 +183,8 @@ export async function generateWorkout(params: {
         specialConditions
     });
 
-    // 2. OBTER IDADE (de birthDate OU campo age direto)
-    let age: number | undefined;
-    if (birthDate) {
-        // Calcular de birthDate se fornecido
-        const birth = new Date(birthDate);
-        const today = new Date();
-        age = today.getFullYear() - birth.getFullYear();
-        const monthDiff = today.getMonth() - birth.getMonth();
-        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
-            age--;
-        }
-        console.log(`[TrainingEngine] Calculated age from birthDate: ${age}`);
-    } else if (params.age !== undefined) {
-        // Usar campo age direto (mais simples)
-        age = params.age;
-        console.log(`[TrainingEngine] Using provided age: ${age}`);
-    }
-
-    // 3. SELECIONAR TEMPLATE (agora com idade)
-    const template = selectTemplate(goal, daysPerWeek, level, age);
+    // 5. SELECIONAR TEMPLATE (agora com idade)
+    const template = selectTemplate(goal, daysPerWeek, level, clientAge);
     if (!template) {
         console.error('[TrainingEngine] No template found for params:', params);
         return null;
@@ -185,10 +192,7 @@ export async function generateWorkout(params: {
 
     onProgress?.({ stage: 'template', current: 1, total: 4, message: 'Template selecionado' });
 
-    // 3. PARSE INJURIES
-    const parsedInjuries = parseInjuries(injuries);
-
-    // 4. OTIMIZAÇÃO #1: Batch DB Query (96% faster)
+    // 6. OTIMIZAÇÃO #1: Batch DB Query (96% faster)
     console.time('[TrainingEngine] DB Fetch');
     onProgress?.({ stage: 'database', current: 2, total: 4, message: 'Carregando exercícios...' });
 
@@ -239,12 +243,21 @@ export async function generateWorkout(params: {
                         prefer_compound: task.slot.intensity === 'high' || task.slot.intensity === 'very_high'
                     });
 
-                    // Filtrar exercícios bloqueados por condições especiais
-                    const filteredCandidates = candidates.filter(ex => {
+                    // FILTRO 1: Exercícios bloqueados por condições especiais (strings - rede de segurança)
+                    let filteredCandidates = candidates.filter(ex => {
                         const exerciseLower = ex.name.toLowerCase();
                         return !conditionModifiers.blockedExercises.some(blocked =>
                             exerciseLower.includes(blocked.toLowerCase())
                         );
+                    });
+
+                    // FILTRO 2: Compatibilidade biomecânica (tags - mais preciso)
+                    filteredCandidates = filteredCandidates.filter(ex => {
+                        const compatibility = isExerciseCompatible(ex, biomechProfile);
+                        if (!compatibility.compatible) {
+                            console.log(`[TrainingEngine] Blocked ${ex.name}: ${compatibility.reason}`);
+                        }
+                        return compatibility.compatible;
                     });
 
                     // B. Calcular score determinístico

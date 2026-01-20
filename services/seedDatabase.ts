@@ -83,17 +83,17 @@ const PERSONAS = [
         history: { startWeight: 78, currentWeight: 80, startBF: 15, currentBF: 18 } // Ganhou gordura parado
     },
     {
-        name: 'Patrícia Lima',
-        age: 34,
-        goal: 'Pós-parto',
+        name: 'Ana Soares',
+        age: 70,
+        goal: 'Saúde e Mobilidade',
         level: 'Iniciante',
         status: 'active',
-        adherence: 70,
-        avatar_url: 'https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=200&q=80',
-        observations: 'Bebê de 4 meses. Diástase abdominal de 2cm. Sono irregular.',
-        injuries: 'Diástase abdominal.',
-        preferences: 'Treinos curtos (30min) em casa.',
-        history: { startWeight: 75, currentWeight: 70, startBF: 30, currentBF: 28 } // Recuperando bem
+        adherence: 95,
+        avatar_url: 'https://images.unsplash.com/photo-1594824476967-48c8b964273f?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=200&q=80',
+        observations: 'Idosa ativa de 70 anos. Sem lesões ou limitações graves. Foco em longevidade, força funcional e manutenção da qualidade de vida.',
+        injuries: 'Nenhuma.',
+        preferences: 'Gosta de exercícios com peso corporal e elásticos. Prefere treinos pela manhã.',
+        history: { startWeight: 58, currentWeight: 57, startBF: 26, currentBF: 24 } // Melhorando composição
     },
     {
         name: 'Marcos Strong',
@@ -122,17 +122,17 @@ const PERSONAS = [
         history: { startWeight: 60, currentWeight: 60, startBF: 24, currentBF: 22 } // Manutenção
     },
     {
-        name: 'João Maratonista',
-        age: 35,
-        goal: 'Performance Corrida',
-        level: 'Avançado',
+        name: 'Carlos Mendes',
+        age: 72,
+        goal: 'Saúde e Mobilidade',
+        level: 'Iniciante',
         status: 'active',
-        adherence: 92,
-        avatar_url: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=200&q=80',
-        observations: 'Preparando para Maratona de SP. Precisa fortalecer core e glúteo médio.',
-        injuries: 'Canelite ocasional.',
-        preferences: 'Treino de força para corredores. Odeia ganhar peso (massa) em excesso.',
-        history: { startWeight: 70, currentWeight: 68, startBF: 10, currentBF: 8 } // Seco
+        adherence: 85,
+        avatar_url: 'https://images.unsplash.com/photo-1607990281513-2c110a25bd8c?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=200&q=80',
+        observations: 'Idoso de 72 anos com artrose de quadril bilateral. Foco em manter mobilidade articular e prevenir atrofia muscular. Evitar impactos e amplitudes extremas.',
+        injuries: 'Artrose de quadril bilateral (grau 2), Rigidez matinal.',
+        preferences: 'Prefere exercícios na água ou sentado. Não gosta de agachamentos profundos.',
+        history: { startWeight: 72, currentWeight: 70, startBF: 22, currentBF: 20 } // Melhorando força
     }
 ];
 

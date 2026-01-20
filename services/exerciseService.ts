@@ -26,7 +26,7 @@ export type StabilityDemand = 'baixo' | 'moderado' | 'alto';
 export type Difficulty = 'iniciante' | 'intermediario' | 'avancado' | 'atleta';
 export type Category = 'forca' | 'cardio' | 'mobilidade' | 'core';
 export type Equipment = 'halter' | 'barra' | 'maquina' | 'cabo' | 'peso_corporal';
-export type Injury = 'ombro' | 'joelho' | 'coluna' | 'cotovelo' | 'punho';
+export type Injury = 'ombro' | 'joelho' | 'coluna' | 'cotovelo' | 'punho' | 'quadril';
 
 export interface Exercise {
     id: string;
@@ -497,6 +497,10 @@ export function parseClientInjuries(injuriesText?: string): Injury[] {
     }
     if (text.includes('cotovelo')) injuries.push('cotovelo');
     if (text.includes('punho') || text.includes('pulso')) injuries.push('punho');
+    // NOVO: Detectar lesões de quadril (artrose, etc.)
+    if (text.includes('quadril') || text.includes('artrose') || text.includes('hip')) {
+        injuries.push('quadril');
+    }
 
     return injuries;
 }

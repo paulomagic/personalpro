@@ -167,7 +167,8 @@ export async function generateWorkout(params: {
     const parsedInjuries = parseInjuries(injuries);
 
     // 4. COMPILAR PERFIL BIOMECÂNICO para filtro preciso
-    const biomechProfile = compileBiomechanicalProfile(specialConditions, parsedInjuries, clientAge);
+    // NOVO: Passa observations para detectar artrose, condromalácia, etc.
+    const biomechProfile = compileBiomechanicalProfile(specialConditions, parsedInjuries, clientAge, observations);
 
     console.log('[TrainingEngine] Special conditions detected:', specialConditions);
     console.log('[TrainingEngine] Modifiers:', conditionModifiers);

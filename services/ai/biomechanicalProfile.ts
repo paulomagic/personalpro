@@ -136,6 +136,32 @@ const CONDITION_BIOMECHANICS: Record<string, ConditionBiomechanics> = {
     'punho': {
         // Afeta pegadas, prefere máquinas
         preferred_equipment: ['maquina', 'cabo']
+    },
+
+    // === CONDIÇÕES ARTICULARES (NOVO) ===
+    'artrose': {
+        knee_impact: 'forbidden',
+        deep_knee_flexion: 'forbidden',  // Evita flexão profunda
+        instability_tolerance: 'low',
+        preferred_equipment: ['maquina', 'cabo']
+    },
+    'artrose_quadril': {
+        knee_impact: 'forbidden',
+        deep_knee_flexion: 'forbidden',  // Quadril não deve fechar muito
+        axial_load: 'limited',
+        instability_tolerance: 'low',
+        preferred_equipment: ['maquina', 'cabo']
+    },
+    'condromalacia': {
+        knee_impact: 'forbidden',
+        deep_knee_flexion: 'forbidden',  // Evita compressão patelar
+        instability_tolerance: 'moderate',
+        preferred_equipment: ['maquina', 'cabo']
+    },
+    'quadril': {
+        deep_knee_flexion: 'limited',  // Limita ângulo de fechamento
+        instability_tolerance: 'moderate',
+        preferred_equipment: ['maquina', 'cabo']
     }
 };
 
@@ -147,12 +173,14 @@ const CONDITION_BIOMECHANICS: Record<string, ConditionBiomechanics> = {
  * @param conditions - Condições especiais detectadas (idoso, gestante, etc.)
  * @param injuries - Lesões parseadas do texto do cliente
  * @param age - Idade do cliente (para age_group)
+ * @param observations - Observações em texto livre (detecta artrose, condromalácia, etc.)
  * @returns BiomechanicalProfile pronto para filtrar exercícios
  */
 export function compileBiomechanicalProfile(
     conditions: SpecialCondition[],
     injuries: Injury[],
-    age?: number
+    age?: number,
+    observations?: string
 ): BiomechanicalProfile {
     // Começa com adulto saudável
     const profile: BiomechanicalProfile = { ...HEALTHY_ADULT_PROFILE };
@@ -172,7 +200,7 @@ export function compileBiomechanicalProfile(
         }
     }
 
-    // 3. Aplicar restrições de lesões
+    // 3. Aplicar restrições de lesões tipadas
     for (const injury of injuries) {
         const biomechanics = CONDITION_BIOMECHANICS[injury];
         if (biomechanics) {
@@ -180,7 +208,41 @@ export function compileBiomechanicalProfile(
         }
     }
 
-    // 4. Buscar modificadores de volume/intensidade das condições
+    // 4. NOVO: Detectar condições articulares do texto de observações
+    if (observations) {
+        const obsLower = observations.toLowerCase();
+
+        // Artrose de quadril
+        if (obsLower.includes('artrose') && (obsLower.includes('quadril') || obsLower.includes('hip'))) {
+            console.log('[BiomechanicalProfile] Detected: artrose_quadril');
+            applyRestrictions(profile, CONDITION_BIOMECHANICS['artrose_quadril']);
+        }
+        // Artrose geral (joelho, etc.)
+        else if (obsLower.includes('artrose') || obsLower.includes('osteoartrite')) {
+            console.log('[BiomechanicalProfile] Detected: artrose');
+            applyRestrictions(profile, CONDITION_BIOMECHANICS['artrose']);
+        }
+
+        // Condromalácia
+        if (obsLower.includes('condromalacia') || obsLower.includes('condromalácia')) {
+            console.log('[BiomechanicalProfile] Detected: condromalacia');
+            applyRestrictions(profile, CONDITION_BIOMECHANICS['condromalacia']);
+        }
+
+        // Problemas de quadril genéricos
+        if (obsLower.includes('quadril') && !obsLower.includes('artrose')) {
+            console.log('[BiomechanicalProfile] Detected: quadril issue');
+            applyRestrictions(profile, CONDITION_BIOMECHANICS['quadril']);
+        }
+
+        // Rigidez matinal (indicativo de condição reumática)
+        if (obsLower.includes('rigidez') || obsLower.includes('rigidity')) {
+            console.log('[BiomechanicalProfile] Detected: rigidez (reducing instability tolerance)');
+            profile.instability_tolerance = 'low';
+        }
+    }
+
+    // 5. Buscar modificadores de volume/intensidade das condições
     let minVolume = 1.0;
     let minIntensity = 1.0;
 
@@ -199,6 +261,7 @@ export function compileBiomechanicalProfile(
         conditions,
         injuries,
         age,
+        hasObservations: !!observations,
         result: profile
     });
 

@@ -6,6 +6,8 @@ import { generateWorkout as generateWithEngine } from '../services/ai/trainingEn
 import { isAIAvailable as isNewAIAvailable } from '../services/ai/aiRouter';
 import { saveAIWorkout, getClients, mapDBClientToClient } from '../services/supabaseClient';
 import { ThumbsUp, ThumbsDown, RefreshCw, Download } from 'lucide-react';
+import DetectionFeedback from '../components/DetectionFeedback';
+
 
 // Feature flag: use new AI Router (Groq + intention-based)
 const USE_NEW_AI_ROUTER = true;
@@ -805,6 +807,20 @@ const AIBuilderView: React.FC<AIBuilderViewProps> = ({ user, onBack, onDone }) =
               </button>
             ))}
           </div>
+
+          {/* NOVO: Feedback de condições detectadas */}
+          {selectedClient && (observations || selectedClient.injuries || selectedClient.observations) && (
+            <div className="mt-4">
+              <DetectionFeedback
+                observations={`${observations} ${selectedClient.observations || ''}`}
+                injuries={selectedClient.injuries}
+                age={selectedClient.age}
+                weight={selectedClient.weight}
+                height={selectedClient.height}
+                compact={false}
+              />
+            </div>
+          )}
         </section>
 
         <div className="pt-6">

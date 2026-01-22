@@ -10,6 +10,9 @@ import { aiRouter } from './aiRouter';
 import type { MovementPattern } from './types';
 import { detectConditions, getAggregatedModifiers, type SpecialCondition } from './knowledge/specialConditions';
 import { compileBiomechanicalProfile, isExerciseCompatible, type BiomechanicalProfile } from './biomechanicalProfile';
+// NOVO v2.2: Sistema de detecção expandido com keywords robustas
+import { detectConditionsEnhanced, type DetectionResult } from './knowledge/conditionDetection';
+
 
 // ============ TIPOS ============
 
@@ -133,21 +136,18 @@ export async function generateWorkout(params: {
     injuries?: string;
     observations?: string;
     birthDate?: string;
-    age?: number;  // NOVO: idade direta do cliente
+    age?: number;  // idade direta do cliente
+    weight?: number;  // peso em kg (para cálculo de IMC)
+    height?: number;  // altura em cm (para cálculo de IMC)
     useAI?: boolean;
     onProgress?: (progress: { stage: string; current: number; total: number; message: string }) => void;
 }): Promise<GeneratedWorkout | null> {
+
     const { name, goal, level, daysPerWeek, injuries, observations, birthDate, useAI = true, onProgress } = params;
 
     console.time('[TrainingEngine] TOTAL Generation Time');
 
-    // 1. DETECTAR CONDIÇÕES ESPECIAIS
-    // IMPORTANTE: Inclui level nas observações para detectar 'idoso' mesmo sem birthDate
-    const combinedObservations = `${observations || ''} nivel:${level}`;
-    const specialConditions = detectConditions(combinedObservations, injuries, birthDate);
-    const conditionModifiers = getAggregatedModifiers(specialConditions);
-
-    // 2. OBTER IDADE (de birthDate OU campo age direto) - MOVIDO PARA CIMA
+    // 1. OBTER IDADE (de birthDate OU campo age direto)
     let clientAge: number | undefined;
     if (birthDate) {
         const birth = new Date(birthDate);
@@ -163,18 +163,49 @@ export async function generateWorkout(params: {
         console.log(`[TrainingEngine] Using provided age: ${clientAge}`);
     }
 
-    // 3. PARSE INJURIES (uma única vez)
-    const parsedInjuries = parseInjuries(injuries);
+    // 2. NOVO v2.2: DETECÇÃO EXPANDIDA (usa keywords robustas)
+    const enhancedDetection = detectConditionsEnhanced(
+        observations || '',
+        injuries || '',
+        clientAge,
+        undefined, // bmi
+        params.weight,
+        params.height
+    );
 
-    // 4. COMPILAR PERFIL BIOMECÂNICO para filtro preciso
-    // NOVO: Passa observations para detectar artrose, condromalácia, etc.
+    console.log('[TrainingEngine] Enhanced detection result:', {
+        conditions: enhancedDetection.conditions.map(c => `${c.type}${c.location ? `_${c.location}` : ''}`),
+        blockedExercises: enhancedDetection.blockedExercises.length,
+        parsedInjuries: enhancedDetection.parsedInjuries
+    });
+
+    // 3. DETECTAR CONDIÇÕES ESPECIAIS (sistema legado - compatibilidade)
+    const combinedObservations = `${observations || ''} nivel:${level}`;
+    const specialConditions = detectConditions(combinedObservations, injuries, birthDate);
+    const conditionModifiers = getAggregatedModifiers(specialConditions);
+
+    // 4. PARSE INJURIES - combina legado + novo
+    const parsedInjuries = [
+        ...parseInjuries(injuries),
+        ...enhancedDetection.parsedInjuries
+    ].filter((v, i, a) => a.indexOf(v) === i); // Remove duplicates
+
+    // 5. COMBINAR exercícios bloqueados (legado + novo sistema)
+    const allBlockedExercises = [
+        ...conditionModifiers.blockedExercises,
+        ...enhancedDetection.blockedExercises
+    ];
+
+    // 6. COMPILAR PERFIL BIOMECÂNICO (agora com dados enriquecidos)
     const biomechProfile = compileBiomechanicalProfile(specialConditions, parsedInjuries, clientAge, observations);
 
     console.log('[TrainingEngine] Special conditions detected:', specialConditions);
     console.log('[TrainingEngine] Modifiers:', conditionModifiers);
     console.log('[TrainingEngine] BiomechanicalProfile:', biomechProfile);
+    console.log('[TrainingEngine] Total blocked exercises:', allBlockedExercises.length);
 
     // NOVO: Setar contexto para o prompt da IA
+
     setWorkoutContext({
         clientName: name,
         level,
@@ -245,9 +276,10 @@ export async function generateWorkout(params: {
                     });
 
                     // FILTRO 1: Exercícios bloqueados por condições especiais (strings - rede de segurança)
+                    // ATUALIZADO v2.2: Usa lista combinada (legado + novo sistema)
                     let filteredCandidates = candidates.filter(ex => {
                         const exerciseLower = ex.name.toLowerCase();
-                        return !conditionModifiers.blockedExercises.some(blocked =>
+                        return !allBlockedExercises.some(blocked =>
                             exerciseLower.includes(blocked.toLowerCase())
                         );
                     });

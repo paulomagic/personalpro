@@ -233,6 +233,9 @@ export interface Client {
   email?: string;
   phone?: string;
   birthDate?: string;
+  age?: number;             // Idade em anos (calculada ou informada diretamente)
+  weight?: number;          // Peso em kg
+  height?: number;          // Altura em cm
   startDate?: string;
 
   // Observations & Notes (MVP)

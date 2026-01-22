@@ -295,14 +295,15 @@ export const CONDITION_KEYWORDS: Record<string, ConditionKeywords> = {
         }
     },
 
-    // ============ IDOSO (detectado por keywords também) ============
+    // ============ IDOSO (detectado APENAS por idade numérica, não keywords genéricas) ============
+    // IMPORTANTE: Removidas keywords como "60 anos", "65 anos" pois causam falsos positivos
+    // A detecção de idoso é feita pelo campo `age` estruturado ou pela função extractAgeFromText()
     idoso: {
         keywords: [
             'idoso', 'idosa', 'terceira idade', '3ª idade',
             'melhor idade', 'idade avançada', 'sênior', 'senior',
-            'aposentado', 'aposentada', '60 anos', '65 anos',
-            '70 anos', '75 anos', '80 anos', '85 anos',
             'osteoporose', 'sarcopenia', 'fragilidade'
+            // NÃO inclui "60 anos", "65 anos" etc - detectado via idade numérica
         ],
         restrictions: {
             avoid_axial_load: true,
@@ -435,7 +436,47 @@ export const CONDITION_KEYWORDS: Record<string, ConditionKeywords> = {
     }
 };
 
+// ============ FUNÇÃO AUXILIAR: EXTRAÇÃO DE IDADE DO TEXTO ============
+
+/**
+ * Extrai idade numérica do texto de observações
+ * Padrões detectados: "idade: 38 anos", "38 anos de idade", "tem 38 anos"
+ * Retorna undefined se não encontrar ou se idade for inválida
+ */
+function extractAgeFromText(text: string): number | undefined {
+    if (!text) return undefined;
+
+    // Padrões para extrair idade
+    const patterns = [
+        /idade[:\s]+(\d{1,3})\s*anos?/i,        // "idade: 38 anos" ou "idade 38 anos"
+        /(\d{1,3})\s*anos?\s+de\s+idade/i,       // "38 anos de idade"
+        /tem\s+(\d{1,3})\s*anos?/i,              // "tem 38 anos"
+        /,\s*(\d{1,3})\s*anos?[,.\s]/i,          // ", 38 anos," ou ". 38 anos."
+        /nasceu.*(\d{4})/i                        // "nasceu em 1986" (calcula idade)
+    ];
+
+    for (const pattern of patterns) {
+        const match = text.match(pattern);
+        if (match && match[1]) {
+            const value = parseInt(match[1], 10);
+
+            // Se for ano de nascimento (4 dígitos), calcula idade
+            if (value > 1900 && value <= new Date().getFullYear()) {
+                return new Date().getFullYear() - value;
+            }
+
+            // Se for idade direta (1-120 anos válidos)
+            if (value >= 1 && value <= 120) {
+                return value;
+            }
+        }
+    }
+
+    return undefined;
+}
+
 // ============ FUNÇÃO PRINCIPAL DE DETECÇÃO ============
+
 
 /**
  * Detecta condições especiais a partir de texto livre
@@ -458,15 +499,24 @@ export function detectConditionsEnhanced(
     const fullText = `${observations} ${injuries}`.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
     const fullTextOriginal = `${observations} ${injuries}`.toLowerCase();
 
-    // 1. Detecta por idade
-    if (age !== undefined) {
-        if (age >= 60) {
-            detected.push({ type: 'idoso', notes: `Idade: ${age} anos` });
-            warnings.push(`🧓 Idoso (${age} anos): Priorizar máquinas e exercícios de baixo impacto`);
-        } else if (age < 18) {
-            detected.push({ type: 'adolescente', notes: `Idade: ${age} anos` });
-            warnings.push(`👦 Adolescente (${age} anos): Evitar cargas máximas, foco em técnica`);
+    // 1. Detecta por idade (campo numérico estruturado)
+    // PRIORIDADE: usa idade passada como parâmetro
+    let detectedAge = age;
+
+    // Se não tiver idade estruturada, tenta extrair do texto de observações
+    if (detectedAge === undefined) {
+        detectedAge = extractAgeFromText(fullTextOriginal);
+    }
+
+    if (detectedAge !== undefined) {
+        if (detectedAge >= 60) {
+            detected.push({ type: 'idoso', notes: `Idade: ${detectedAge} anos` });
+            warnings.push(`🧓 Idoso (${detectedAge} anos): Priorizar máquinas e exercícios de baixo impacto`);
+        } else if (detectedAge < 18) {
+            detected.push({ type: 'adolescente', notes: `Idade: ${detectedAge} anos` });
+            warnings.push(`👦 Adolescente (${detectedAge} anos): Evitar cargas máximas, foco em técnica`);
         }
+        // Adultos (18-59) não recebem tag especial de idade
     }
 
     // 2. Detecta por IMC (calcula se tiver peso e altura)

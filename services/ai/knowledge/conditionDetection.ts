@@ -446,32 +446,40 @@ export const CONDITION_KEYWORDS: Record<string, ConditionKeywords> = {
 function extractAgeFromText(text: string): number | undefined {
     if (!text) return undefined;
 
+    console.log('🔍 [extractAgeFromText] Texto recebido:', text);
+
     // Padrões para extrair idade
     const patterns = [
-        /idade[:\s]+(\d{1,3})\s*anos?/i,        // "idade: 38 anos" ou "idade 38 anos"
+        /idade[:\\s]+(\d{1,3})\s*anos?/i,        // "idade: 38 anos" ou "idade 38 anos"
         /(\d{1,3})\s*anos?\s+de\s+idade/i,       // "38 anos de idade"
         /tem\s+(\d{1,3})\s*anos?/i,              // "tem 38 anos"
         /,\s*(\d{1,3})\s*anos?[,.\s]/i,          // ", 38 anos," ou ". 38 anos."
         /nasceu.*(\d{4})/i                        // "nasceu em 1986" (calcula idade)
     ];
 
-    for (const pattern of patterns) {
+    for (let i = 0; i < patterns.length; i++) {
+        const pattern = patterns[i];
         const match = text.match(pattern);
         if (match && match[1]) {
+            console.log(`✅ [extractAgeFromText] Pattern ${i} matched:`, match[0], '=> valor:', match[1]);
             const value = parseInt(match[1], 10);
 
             // Se for ano de nascimento (4 dígitos), calcula idade
             if (value > 1900 && value <= new Date().getFullYear()) {
-                return new Date().getFullYear() - value;
+                const age = new Date().getFullYear() - value;
+                console.log(`📅 [extractAgeFromText] Detectado ano de nascimento ${value} => idade ${age}`);
+                return age;
             }
 
             // Se for idade direta (1-120 anos válidos)
             if (value >= 1 && value <= 120) {
+                console.log(`✅ [extractAgeFromText] Idade extraída: ${value} anos`);
                 return value;
             }
         }
     }
 
+    console.log('❌ [extractAgeFromText] Nenhuma idade encontrada no texto');
     return undefined;
 }
 
@@ -502,21 +510,33 @@ export function detectConditionsEnhanced(
     // 1. Detecta por idade (campo numérico estruturado)
     // PRIORIDADE: usa idade passada como parâmetro
     let detectedAge = age;
+    console.log('🎯 [detectConditionsEnhanced] Idade estruturada recebida:', age);
+    console.log('📝 [detectConditionsEnhanced] Texto completo:', fullTextOriginal.substring(0, 200));
 
     // Se não tiver idade estruturada, tenta extrair do texto de observações
     if (detectedAge === undefined) {
+        console.log('⚠️ [detectConditionsEnhanced] Idade estruturada não fornecida, tentando extrair do texto...');
         detectedAge = extractAgeFromText(fullTextOriginal);
+    } else {
+        console.log('✅ [detectConditionsEnhanced] Usando idade estruturada:', detectedAge);
     }
+
+    console.log('🔢 [detectConditionsEnhanced] Idade final detectada:', detectedAge);
 
     if (detectedAge !== undefined) {
         if (detectedAge >= 60) {
+            console.log('👴 [detectConditionsEnhanced] Classificado como IDOSO');
             detected.push({ type: 'idoso', notes: `Idade: ${detectedAge} anos` });
             warnings.push(`🧓 Idoso (${detectedAge} anos): Priorizar máquinas e exercícios de baixo impacto`);
         } else if (detectedAge < 18) {
+            console.log('👦 [detectConditionsEnhanced] Classificado como ADOLESCENTE');
             detected.push({ type: 'adolescente', notes: `Idade: ${detectedAge} anos` });
             warnings.push(`👦 Adolescente (${detectedAge} anos): Evitar cargas máximas, foco em técnica`);
+        } else {
+            console.log('👨 [detectConditionsEnhanced] Classificado como ADULTO (18-59 anos) - sem tag especial');
         }
-        // Adultos (18-59) não recebem tag especial de idade
+    } else {
+        console.log('❓ [detectConditionsEnhanced] Idade não detectada');
     }
 
     // 2. Detecta por IMC (calcula se tiver peso e altura)

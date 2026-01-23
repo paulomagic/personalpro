@@ -3,9 +3,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Settings, Play, Pause, AlertTriangle, CheckCircle, Calendar, FileText, TrendingUp, Camera, Dumbbell, Clock, Phone, Mail, Edit, Save, X, PlusCircle, User, Zap, Sparkles, UserPlus, Trash2 } from 'lucide-react';
 import { Client, MissedClass } from '../types';
 import { analyzeClientProgress } from '../services/geminiService';
-import { updateClient, deleteClient } from '../services/supabaseClient';
+import { updateClient, deleteClient, supabase } from '../services/supabaseClient';
 import InviteStudentModal from '../components/InviteStudentModal';
 import ClientFinanceSection from '../components/ClientFinanceSection';
+import { ClientPhysicalDataForm } from '../components/ClientPhysicalDataForm';
 
 interface ClientProfileViewProps {
   client: Client;
@@ -742,6 +743,36 @@ const ClientProfileView: React.FC<ClientProfileViewProps> = ({ client: initialCl
                 }}
                 coachId={coachId}
                 onUpdate={(updates) => setClient(prev => ({ ...prev, ...updates }))}
+              />
+
+              {/* Physical Data Section */}
+              <ClientPhysicalDataForm
+                age={client.age}
+                weight={client.weight}
+                height={client.height}
+                compact={false}
+                onUpdate={async (data) => {
+                  // Atualiza estado local
+                  setClient(prev => ({ ...prev, ...data }));
+
+                  // Atualiza no Supabase
+                  try {
+                    const { error } = await supabase
+                      .from('clients')
+                      .update({
+                        age: data.age,
+                        weight: data.weight,
+                        height: data.height,
+                      })
+                      .eq('id', client.id);
+
+                    if (error) {
+                      console.error('Erro ao atualizar dados físicos:', error);
+                    }
+                  } catch (err) {
+                    console.error('Erro ao salvar dados físicos:', err);
+                  }
+                }}
               />
 
               {/* Notes Section */}

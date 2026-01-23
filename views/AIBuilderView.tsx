@@ -7,7 +7,6 @@ import { isAIAvailable as isNewAIAvailable } from '../services/ai/aiRouter';
 import { saveAIWorkout, getClients, mapDBClientToClient, supabase } from '../services/supabaseClient';
 import { ThumbsUp, ThumbsDown, RefreshCw, Download } from 'lucide-react';
 import DetectionFeedback from '../components/DetectionFeedback';
-import { ClientPhysicalDataForm } from '../components/ClientPhysicalDataForm';
 
 
 // Feature flag: use new AI Router (Groq + intention-based)

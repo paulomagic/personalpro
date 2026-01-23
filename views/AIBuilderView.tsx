@@ -808,44 +808,6 @@ const AIBuilderView: React.FC<AIBuilderViewProps> = ({ user, onBack, onDone }) =
             ))}
           </div>
 
-          {/* NOVO: Formulário de dados físicos */}
-          {selectedClient && (
-            <div className="mt-4">
-              <ClientPhysicalDataForm
-                age={selectedClient.age}
-                weight={selectedClient.weight}
-                height={selectedClient.height}
-                compact={true}
-                onUpdate={async (data) => {
-                  // Atualiza estado local
-                  setClients(prev => prev.map(c =>
-                    c.id === selectedClient.id
-                      ? { ...c, ...data }
-                      : c
-                  ));
-
-                  // Atualiza no Supabase
-                  try {
-                    const { error } = await supabase
-                      .from('clients')
-                      .update({
-                        age: data.age,
-                        weight: data.weight,
-                        height: data.height,
-                      })
-                      .eq('id', selectedClient.id);
-
-                    if (error) {
-                      console.error('Erro ao atualizar dados físicos:', error);
-                    }
-                  } catch (err) {
-                    console.error('Erro ao salvar dados físicos:', err);
-                  }
-                }}
-              />
-            </div>
-          )}
-
           {/* NOVO: Feedback de condições detectadas */}
           {selectedClient && (observations || selectedClient.injuries || selectedClient.observations) && (
             <div className="mt-4">

@@ -52,17 +52,21 @@ export function mapDBClientToClient(dbClient: DBClient & { avatar?: string }): a
         avatar: dbClient.avatar || dbClient.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(dbClient.name)}&background=3b82f6&color=fff`,
         goal: dbClient.goal,
         level: dbClient.level as 'Iniciante' | 'Intermediário' | 'Avançado' | 'Atleta',
-        age: dbClient.age,  // CRÍTICO: Campo estava faltando!
+        age: dbClient.age,
+        weight: dbClient.weight,  // ✅ Adicionado para preservar peso
+        height: dbClient.height,  // ✅ Adicionado para preservar altura
         status: dbClient.status === 'inactive' ? 'paused' : dbClient.status,
         adherence: dbClient.adherence || 0,
         startDate: dbClient.created_at,
         lastTraining: 'Não registrado',
         observations: dbClient.observations,
-        injuries: dbClient.injuries || 'Nenhuma',  // Também faltava
+        injuries: dbClient.injuries,
+        preferences: dbClient.preferences,  // ✅ Adicionado para preservar preferências
         missedClasses: [],
         assessments: [],
         totalClasses: 0,
         completedClasses: 0,
+        paymentStatus: 'paid',
         // Financial fields
         monthly_fee: dbClient.monthly_fee,
         payment_day: dbClient.payment_day,

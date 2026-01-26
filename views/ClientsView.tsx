@@ -49,6 +49,9 @@ const ClientsView: React.FC<ClientsViewProps> = ({ user, onBack, onSelectClient 
                 avatar: dbClient.avatar_url || '',
                 goal: dbClient.goal,
                 level: dbClient.level as any,
+                age: dbClient.age,  // ✅ Incluído
+                weight: dbClient.weight,  // ✅ Incluído
+                height: dbClient.height,  // ✅ Incluído
                 adherence: dbClient.adherence || 0,
                 lastTraining: 'Hoje', // Placeholder for now
                 status: dbClient.status as any,
@@ -56,6 +59,8 @@ const ClientsView: React.FC<ClientsViewProps> = ({ user, onBack, onSelectClient 
                 email: dbClient.email,
                 phone: dbClient.phone,
                 observations: dbClient.observations,
+                injuries: dbClient.injuries,  // ✅ Incluído
+                preferences: dbClient.preferences,  // ✅ Incluído
                 missedClasses: [],
                 assessments: [],
                 paymentStatus: 'paid', // Default

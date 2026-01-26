@@ -39,12 +39,13 @@ export function ClientPhysicalDataForm({
     };
 
     const getBMIClassification = (bmi: number): { label: string; color: string } => {
-        if (bmi < 18.5) return { label: 'Baixo peso', color: 'text-yellow-400' };
+        // Tabela OMS atualizada
+        if (bmi < 18.5) return { label: 'Abaixo do peso', color: 'text-yellow-400' };
         if (bmi < 25) return { label: 'Normal', color: 'text-green-400' };
         if (bmi < 30) return { label: 'Sobrepeso', color: 'text-orange-400' };
-        if (bmi < 35) return { label: 'Obesidade I', color: 'text-red-400' };
-        if (bmi < 40) return { label: 'Obesidade II', color: 'text-red-500' };
-        return { label: 'Obesidade III', color: 'text-red-600' };
+        if (bmi < 35) return { label: 'Obesidade Grau I', color: 'text-red-400' };
+        if (bmi < 40) return { label: 'Obesidade Grau II', color: 'text-red-500' };
+        return { label: 'Obesidade Grau III', color: 'text-red-600' };
     };
 
     const handleUpdate = () => {

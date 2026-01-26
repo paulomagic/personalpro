@@ -1,5 +1,6 @@
 
 import { createClient as createSupabaseClient, SupabaseClient } from '@supabase/supabase-js';
+import { hydrateWorkoutWithVideos } from './exerciseService';
 
 // Configuração Supabase - defina suas credenciais no arquivo .env
 // @ts-ignore - Vite env
@@ -523,6 +524,15 @@ export async function getClientCurrentWorkout(clientId: string): Promise<Workout
             console.error('Error fetching client workout:', error);
         }
         return null;
+    }
+
+    if (data) {
+        try {
+            return await hydrateWorkoutWithVideos(data);
+        } catch (err) {
+            console.error('Error hydrating workout:', err);
+            return data;
+        }
     }
 
     return data;

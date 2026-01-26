@@ -4,7 +4,6 @@
 
 import { supabase } from './supabaseClient';
 
-// ============ TIPOS ============
 
 export type MovementPattern =
     | 'empurrar_horizontal'
@@ -529,4 +528,100 @@ export function getPatternsByGoal(goal: string): MovementPattern[] {
 
     // Default: full body
     return ['empurrar_horizontal', 'puxar_horizontal', 'agachar', 'hinge', 'core'];
+}
+
+/**
+ * Hidrata exercícios de um treino com URLs de vídeo atualizadas
+ * Resolve o problema de treinos antigos (snapshots) que não têm os vídeos novos
+ */
+export async function hydrateWorkoutWithVideos(workout: any): Promise<any> {
+    if (!supabase || !workout) return workout;
+
+    // 1. Coletar todos os nomes/slugs de exercícios do treino
+    const exerciseNames: string[] = [];
+    const exerciseIds: string[] = [];
+
+    // Função auxiliar para processar lista de exercícios
+    const processExercises = (exercises: any[]) => {
+        if (!Array.isArray(exercises)) return;
+        exercises.forEach(ex => {
+            if (ex.name) exerciseNames.push(ex.name);
+            if (ex.id && ex.id.length > 5) exerciseIds.push(ex.id); // IDs curtos costumam ser mocks
+        });
+    };
+
+    // Coletar do nível raiz (se houver)
+    if (workout.exercises) processExercises(workout.exercises);
+
+    // Coletar dos splits
+    if (workout.splits) {
+        workout.splits.forEach((split: any) => {
+            if (split.exercises) processExercises(split.exercises);
+        });
+    }
+
+    if (exerciseNames.length === 0 && exerciseIds.length === 0) return workout;
+
+    try {
+        // 2. Buscar dados atuais no banco (apenas campos necessários)
+        // Usamos ILIKE para match flexível por nome, já que o slug pode não estar no objeto do treino
+        const { data: dbExercises, error } = await supabase
+            .from('exercises')
+            .select('slug, name, video_url')
+            .in('name', exerciseNames) // Tenta match exato primeiro
+            .not('video_url', 'is', null); // Só o que tem vídeo
+
+        if (error || !dbExercises || dbExercises.length === 0) return workout;
+
+        // Helper para normalizar strings para comparação
+        const normalize = (str: string) => {
+            return str.toLowerCase()
+                .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // Remove acentos
+                .replace(/[^a-z0-9]/g, ""); // Remove tudo que não for letra ou número (incluindo espaços e símbolos)
+        };
+
+        // Criar mapa de vídeos: Nome Normalizado -> URL
+        const videoMap = new Map<string, string>();
+        dbExercises.forEach(ex => {
+            if (ex.video_url) {
+                videoMap.set(normalize(ex.name), ex.video_url);
+                // Também mapear pelo slug removendo hífens
+                if (ex.slug) videoMap.set(ex.slug.replace(/-/g, ''), ex.video_url);
+            }
+        });
+
+        // 3. Injetar vídeos no objeto workout
+        const workoutCopy = JSON.parse(JSON.stringify(workout));
+
+        const injectVideos = (exercises: any[]) => {
+            if (!Array.isArray(exercises)) return;
+            exercises.forEach(ex => {
+                if (!ex.name) return;
+
+                // Se já tem vídeo, mantém (mas se for um placeholder antigo, poderia substituir)
+                if (!ex.videoUrl) {
+                    const key = normalize(ex.name);
+                    const url = videoMap.get(key);
+
+                    if (url) {
+                        ex.videoUrl = url;
+                        console.log(`[Hydration] Vídeo injetado para: ${ex.name} -> ${url}`);
+                    }
+                }
+            });
+        };
+
+        if (workoutCopy.exercises) injectVideos(workoutCopy.exercises);
+        if (workoutCopy.splits) {
+            workoutCopy.splits.forEach((split: any) => {
+                if (split.exercises) injectVideos(split.exercises);
+            });
+        }
+
+        return workoutCopy;
+
+    } catch (err) {
+        console.error('Error hydrating workout videos:', err);
+        return workout; // Retorna original em caso de erro
+    }
 }

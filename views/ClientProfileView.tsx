@@ -757,14 +757,24 @@ const ClientProfileView: React.FC<ClientProfileViewProps> = ({ client: initialCl
                   setClient(prev => ({ ...prev, ...data }));
 
                   // Atualiza no Supabase
+                  if (!supabase) {
+                    console.warn('Supabase não configurado - dados não salvos');
+                    return;
+                  }
+
                   try {
+                    // Converte undefined para null (Supabase não aceita undefined)
+                    const updateData: Record<string, number | null> = {};
+                    if (data.age !== undefined) updateData.age = data.age ?? null;
+                    if (data.weight !== undefined) updateData.weight = data.weight ?? null;
+                    if (data.height !== undefined) updateData.height = data.height ?? null;
+
+                    // Só atualiza se houver dados para atualizar
+                    if (Object.keys(updateData).length === 0) return;
+
                     const { error } = await supabase
                       .from('clients')
-                      .update({
-                        age: data.age,
-                        weight: data.weight,
-                        height: data.height,
-                      })
+                      .update(updateData)
                       .eq('id', client.id);
 
                     if (error) {

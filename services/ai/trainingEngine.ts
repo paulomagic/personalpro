@@ -1,7 +1,7 @@
-// Training Engine v2.0 - Híbrido: Determinístico + IA
-// Templates biomecânicos + Seleção inteligente de exercícios
+// Training Engine v3.0 - Arquitetura Neuro-Simbólica
+// Templates biomecânicos + Seleção inteligente + Validação de segurança
 // OPTIMIZED: Parallel processing with batch queries
-// v2.1: BiomechanicalProfile integration for precise safety filtering
+// v3.0: Sistema completo com prompts dinâmicos, validação simbólica e base EXMO
 
 import PQueue from 'p-queue';
 import { selectTemplate, type IntensityLevel, type TrainingSlot } from './workoutTemplates';
@@ -10,8 +10,12 @@ import { aiRouter } from './aiRouter';
 import type { MovementPattern } from './types';
 import { detectConditions, getAggregatedModifiers, type SpecialCondition } from './knowledge/specialConditions';
 import { compileBiomechanicalProfile, isExerciseCompatible, type BiomechanicalProfile } from './biomechanicalProfile';
-// NOVO v2.2: Sistema de detecção expandido com keywords robustas
-import { detectConditionsEnhanced, type DetectionResult } from './knowledge/conditionDetection';
+// v2.2: Sistema de detecção expandido com keywords robustas
+import { detectConditionsEnhanced, type DetectionResult, type BiomechanicalRestrictions } from './knowledge/conditionDetection';
+// v3.0: Sistema Neuro-Simbólico
+import { buildDynamicSystemPrompt, buildUserPrompt, type ClientContext } from './prompts/systemPromptBuilder';
+import { validateAIResponse, findSafeAlternative, type ValidationResult } from './validation/exerciseValidator';
+import { getRelevantRules, formatRulesForPrompt } from './knowledge/exerciseOntology';
 
 
 // ============ TIPOS ============
@@ -204,7 +208,7 @@ export async function generateWorkout(params: {
     console.log('[TrainingEngine] BiomechanicalProfile:', biomechProfile);
     console.log('[TrainingEngine] Total blocked exercises:', allBlockedExercises.length);
 
-    // NOVO: Setar contexto para o prompt da IA
+    // v3.0: Setar contexto completo para o sistema neuro-simbólico
 
     setWorkoutContext({
         clientName: name,
@@ -212,7 +216,12 @@ export async function generateWorkout(params: {
         goal,
         injuries: injuries || '',
         observations: observations || '',
-        specialConditions
+        specialConditions,
+        // v3.0: Campos expandidos para arquitetura neuro-simbólica
+        age: clientAge,
+        conditions: enhancedDetection.conditions,
+        restrictions: enhancedDetection.restrictions,
+        biomechProfile
     });
 
     // 5. SELECIONAR TEMPLATE (agora com idade)
@@ -513,21 +522,30 @@ function getDefaultMuscle(pattern: MovementPattern): string {
     return defaults[pattern] || 'core';
 }
 
-// ============ SELEÇÃO COM IA (MINIMALISTA) ============
+// ============ SELEÇÃO COM IA (NEURO-SIMBÓLICA v3.0) ============
 
-// Contexto global para o prompt (setado em generateWorkout)
+// Contexto completo para o sistema neuro-simbólico
 let currentWorkoutContext: {
     clientName: string;
     level: string;
     goal: string;
     injuries: string;
     observations: string;
-    specialConditions: string[];
+    specialConditions: SpecialCondition[];
+    // v3.0: Dados expandidos
+    age?: number;
+    conditions: Array<{ type: string; location?: string; notes?: string }>;
+    restrictions: BiomechanicalRestrictions;
+    biomechProfile: BiomechanicalProfile;
 } | null = null;
 
 export function setWorkoutContext(context: typeof currentWorkoutContext) {
     currentWorkoutContext = context;
 }
+
+// v3.0: Contador de retries para logging
+let aiRetryCount = 0;
+const MAX_AI_RETRIES = 2;
 
 async function selectWithAI(
     slot: TrainingSlot,
@@ -545,10 +563,53 @@ async function selectWithAI(
         goal: 'Hipertrofia',
         injuries: 'Nenhuma',
         observations: '',
-        specialConditions: []
+        specialConditions: [] as SpecialCondition[],
+        conditions: [],
+        restrictions: {
+            avoid_axial_load: false,
+            avoid_spinal_shear: false,
+            avoid_knee_shear: false,
+            avoid_deep_knee_flexion: false,
+            avoid_shoulder_overhead: false,
+            avoid_spinal_flexion: false,
+            avoid_spinal_rotation: false,
+            avoid_hip_impact: false,
+            max_impact_level: 'high' as const,
+            requires_supervision: false,
+            prefer_machines: false,
+            volume_modifier: 1.0,
+            intensity_modifier: 1.0
+        },
+        biomechProfile: {} as BiomechanicalProfile
     };
 
-    // Lista de candidatos formatada
+    // v3.0: Preparar contexto completo para o prompt builder
+    const clientContext: ClientContext = {
+        name: ctx.clientName,
+        age: ctx.age,
+        level: ctx.level,
+        goal: ctx.goal,
+        injuries: ctx.injuries,
+        observations: ctx.observations,
+        conditions: ctx.conditions || [],
+        specialConditions: ctx.specialConditions || [],
+        restrictions: ctx.restrictions,
+        biomechProfile: ctx.biomechProfile
+    };
+
+    // v3.0: Buscar regras EXMO relevantes (RAG)
+    const relevantRules = getRelevantRules({
+        conditions: ctx.conditions || [],
+        specialConditions: ctx.specialConditions || [],
+        age: ctx.age,
+        level: ctx.level,
+        goal: ctx.goal
+    });
+    const rulesContext = formatRulesForPrompt(relevantRules);
+
+    // v3.0: Construir prompts dinâmicos
+    const systemPrompt = buildDynamicSystemPrompt(clientContext) + rulesContext;
+
     const candidatesList = candidates.map((c, i) => ({
         num: i + 1,
         name: c.exercise.name,
@@ -558,84 +619,89 @@ async function selectWithAI(
         spinal_load: c.exercise.spinal_load
     }));
 
-    // PROMPT REFINADO - PhD em Biomecânica
-    const systemPrompt = `Você é um Treinador de Elite (PhD em Biomecânica) e uma API JSON.
-Sua função é selecionar o MELHOR exercício baseado no perfil do aluno.
+    const userPrompt = buildUserPrompt(
+        clientContext,
+        {
+            movement_pattern: slot.movement_pattern,
+            target_muscle: slot.target_muscles?.[0],
+            intensity: slot.intensity,
+            candidateCount: candidates.length
+        },
+        candidatesList
+    );
 
-REGRAS DE SEGURANÇA (CRÍTICO):
-1. HÉRNIA/LOMBAR: PROIBIDO carga axial alta (Agachamento Livre, Terra, Militar em pé). Use máquinas.
-2. OMBRO: Prefira pegada neutra. Evite rotação interna excessiva.
-3. JOELHO: Evite impacto ou ângulos agudos de flexão sob carga alta.
-4. GESTANTE: APENAS máquinas e cabos. ZERO carga axial.
-5. IDOSO: Priorize máquinas com apoio. Evite alta complexidade.
-
-REGRAS DE OBJETIVO:
-- FORÇA: Priorize compostos com barra, alta estabilidade.
-- HIPERTROFIA: Priorize exercícios com boa amplitude e tensão constante.
-- EMAGRECIMENTO: Priorize exercícios que permitem alta densidade (menos descanso).
-- SAÚDE/QUALIDADE DE VIDA: Priorize máquinas seguras e mobilidade.
-
-REGRAS DE NÍVEL:
-- INICIANTE: SEMPRE máquinas guiadas primeiro.
-- AVANÇADO/ATLETA: Pode usar peso livre e compostos complexos.
-
-Responda APENAS com JSON válido, sem introduções.`;
-
-    const userPrompt = `ALUNO: ${ctx.clientName}
-NÍVEL: ${ctx.level}
-OBJETIVO: ${ctx.goal}
-LESÕES: ${ctx.injuries === '' ? 'Nenhuma' : ctx.injuries}
-CONDIÇÕES ESPECIAIS: ${ctx.specialConditions.length > 0 ? ctx.specialConditions.join(', ') : 'Nenhuma'}
-OBSERVAÇÕES: ${ctx.observations || 'Nenhuma'}
-
-SLOT ATUAL:
-- Padrão de Movimento: ${slot.movement_pattern}
-- Músculo Alvo: ${slot.target_muscles?.[0] || 'geral'}
-- Intensidade: ${slot.intensity} (high = composto principal, low = isolador)
-
-CANDIDATOS (escolha UM):
-${JSON.stringify(candidatesList, null, 2)}
-
-Responda com JSON: { "selected": <número 1-${candidates.length}>, "reasoning": "<1 frase explicando por que>" }`;
-
-    try {
-        const result = await aiRouter.execute({
-            action: 'training_intent',
-            prompt: `${systemPrompt}\n\n${userPrompt}`,
-            metadata: {
-                slot_id: slot.id,
-                type: 'exercise_selection',
-                client_level: ctx.level,
-                client_goal: ctx.goal,
-                has_injuries: ctx.injuries !== 'Nenhuma' && ctx.injuries !== ''
-            }
-        });
-
-        if (result.success && result.text) {
-            // Parse JSON response
-            try {
-                const parsed = JSON.parse(result.text);
-                const selectedNum = parsed.selected || parsed.num || parsed.choice;
-                if (selectedNum && selectedNum >= 1 && selectedNum <= candidates.length) {
-                    console.log(`[AI] Selected ${candidates[selectedNum - 1].exercise.name}: ${parsed.reasoning || 'No reason'}`);
-                    return candidates[selectedNum - 1].exercise;
+    // v3.0: Loop de retry com validação
+    for (let attempt = 0; attempt <= MAX_AI_RETRIES; attempt++) {
+        try {
+            const result = await aiRouter.execute({
+                action: 'training_intent',
+                prompt: `${systemPrompt}\n\n${userPrompt}`,
+                metadata: {
+                    slot_id: slot.id,
+                    type: 'exercise_selection_v3',
+                    client_level: ctx.level,
+                    client_goal: ctx.goal,
+                    has_injuries: ctx.injuries !== 'Nenhuma' && ctx.injuries !== '',
+                    conditions_count: (ctx.conditions || []).length,
+                    attempt: attempt + 1,
+                    rules_injected: relevantRules.length
                 }
-            } catch {
-                // Fallback: tenta encontrar número na resposta
-                const match = result.text.match(/(\d+)/);
-                if (match) {
-                    const idx = parseInt(match[1], 10) - 1;
-                    if (idx >= 0 && idx < candidates.length) {
-                        return candidates[idx].exercise;
+            });
+
+            if (result.success && result.text) {
+                // v3.0: VALIDAÇÃO SIMBÓLICA
+                const validation = validateAIResponse(
+                    result.text,
+                    candidates.map(c => c.exercise),
+                    {
+                        conditions: ctx.conditions || [],
+                        restrictions: ctx.restrictions,
+                        biomechProfile: ctx.biomechProfile,
+                        level: ctx.level,
+                        goal: ctx.goal
+                    }
+                );
+
+                if (validation.valid && validation.selectedExercise) {
+                    // ✅ Resposta válida!
+                    console.log(`[AI v3.0] ✅ Selected ${validation.selectedExercise.name}: ${validation.response?.reasoning || 'No reason'}`);
+                    if (validation.warnings.length > 0) {
+                        console.log(`[AI v3.0] ⚠️ Warnings: ${validation.warnings.join(', ')}`);
+                    }
+                    aiRetryCount = 0;
+                    return validation.selectedExercise;
+                } else {
+                    // ❌ Validação falhou
+                    console.warn(`[AI v3.0] ❌ Validation failed (attempt ${attempt + 1}/${MAX_AI_RETRIES + 1}):`);
+                    validation.violations.forEach(v => console.warn(`  - ${v}`));
+
+                    // Se é última tentativa, buscar alternativa segura
+                    if (attempt === MAX_AI_RETRIES) {
+                        console.log('[AI v3.0] 🔄 Finding safe alternative...');
+                        const safeAlternative = findSafeAlternative(
+                            candidates.map(c => c.exercise),
+                            {
+                                conditions: ctx.conditions || [],
+                                restrictions: ctx.restrictions,
+                                biomechProfile: ctx.biomechProfile,
+                                level: ctx.level,
+                                goal: ctx.goal
+                            }
+                        );
+                        if (safeAlternative) {
+                            console.log(`[AI v3.0] ✅ Safe alternative found: ${safeAlternative.name}`);
+                            return safeAlternative;
+                        }
                     }
                 }
             }
+        } catch (error) {
+            console.warn(`[AI v3.0] Error in attempt ${attempt + 1}:`, error);
         }
-    } catch (error) {
-        console.warn('[TrainingEngine] AI selection failed, using deterministic:', error);
     }
 
-    // Fallback: melhor do ranking
+    // Fallback final: melhor do ranking determinístico
+    console.log('[AI v3.0] 🔙 Using deterministic fallback (top candidate)');
     return candidates[0].exercise;
 }
 

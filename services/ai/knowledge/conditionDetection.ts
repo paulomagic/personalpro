@@ -542,7 +542,18 @@ export function detectConditionsEnhanced(
     // 2. Detecta por IMC (calcula se tiver peso e altura)
     let calculatedBmi = bmi;
     if (!calculatedBmi && weight && height) {
-        calculatedBmi = weight / ((height / 100) ** 2);
+        // Detecta automaticamente se altura está em metros (< 3) ou centímetros (>= 100)
+        // Valores entre 3 e 100 são ambíguos - assumimos centímetros para segurança
+        let heightInMeters: number;
+        if (height < 3) {
+            // Altura já está em metros (ex: 1.7)
+            heightInMeters = height;
+        } else {
+            // Altura está em centímetros (ex: 170)
+            heightInMeters = height / 100;
+        }
+        calculatedBmi = weight / (heightInMeters ** 2);
+        console.log(`📏 [detectConditionsEnhanced] Altura: ${height} -> ${heightInMeters}m, Peso: ${weight}kg, IMC calculado: ${calculatedBmi.toFixed(1)}`);
     }
     if (calculatedBmi && calculatedBmi >= 30) {
         detected.push({

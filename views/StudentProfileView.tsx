@@ -82,6 +82,11 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({
     };
 
     // Biometrics data (would come from client/assessments)
+    // Detecta automaticamente se altura está em metros (< 3) ou centímetros (>= 100)
+    const getHeightInMeters = (h: number | undefined) => {
+        if (!h) return 1.75; // default
+        return h < 3 ? h : h / 100;
+    };
     const biometrics = {
         weight: clientData?.weight || 72,
         height: clientData?.height || 175,
@@ -89,7 +94,7 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({
         muscleMass: 35,
         hydration: 55,
         bmi: clientData?.weight && clientData?.height
-            ? (clientData.weight / Math.pow(clientData.height / 100, 2)).toFixed(1)
+            ? (clientData.weight / Math.pow(getHeightInMeters(clientData.height), 2)).toFixed(1)
             : '23.5'
     };
 

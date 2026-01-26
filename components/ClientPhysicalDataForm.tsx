@@ -31,9 +31,17 @@ export function ClientPhysicalDataForm({
     // Calcula IMC automaticamente
     const calculateBMI = (): number | null => {
         const w = parseFloat(localWeight);
-        const h = parseFloat(localHeight);
+        let h = parseFloat(localHeight);
+
         if (w > 0 && h > 0) {
-            return w / ((h / 100) ** 2);
+            // Se altura < 3, assume que está em metros e converte para cm
+            if (h < 3) {
+                h = h * 100; // Converte metros para centímetros
+            }
+
+            const bmi = w / ((h / 100) ** 2);
+            // Arredonda para 1 casa decimal
+            return Math.round(bmi * 10) / 10;
         }
         return null;
     };

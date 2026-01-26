@@ -751,6 +751,7 @@ const ClientProfileView: React.FC<ClientProfileViewProps> = ({ client: initialCl
                 weight={client.weight}
                 height={client.height}
                 compact={false}
+                readOnly={false}
                 onUpdate={async (data) => {
                   // Atualiza estado local
                   setClient(prev => ({ ...prev, ...data }));

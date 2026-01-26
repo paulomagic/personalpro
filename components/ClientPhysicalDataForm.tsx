@@ -72,17 +72,34 @@ export function ClientPhysicalDataForm({
     const bmi = calculateBMI();
     const bmiClass = bmi ? getBMIClassification(bmi) : null;
 
+    // Classes de input com cores corretas (fundo escuro, texto claro)
+    const inputClasses = `
+        w-full 
+        bg-slate-800 
+        border border-slate-700 
+        rounded-lg 
+        px-4 py-3 
+        text-slate-100 
+        placeholder-slate-500 
+        focus:outline-none 
+        focus:ring-2 
+        focus:ring-blue-500/50 
+        focus:border-blue-500/50
+        disabled:opacity-50 
+        disabled:cursor-not-allowed
+    `.replace(/\s+/g, ' ').trim();
+
     if (compact) {
         return (
-            <div className="bg-dark-lighter rounded-xl p-4 border border-dark-border">
+            <div className="bg-slate-900/50 rounded-xl p-4 border border-slate-700/50">
                 <div className="flex items-center gap-2 mb-3">
-                    <Activity className="w-4 h-4 text-primary" />
-                    <h3 className="text-sm font-medium text-gray-300">Dados Físicos</h3>
+                    <Activity className="w-4 h-4 text-blue-400" />
+                    <h3 className="text-sm font-medium text-slate-300">Dados Físicos</h3>
                 </div>
 
                 <div className="grid grid-cols-3 gap-3">
                     <div>
-                        <label className="text-xs text-gray-400 flex items-center gap-1 mb-1">
+                        <label className="text-xs text-slate-400 flex items-center gap-1 mb-1">
                             <Cake className="w-3 h-3" />
                             Idade
                         </label>
@@ -95,12 +112,12 @@ export function ClientPhysicalDataForm({
                             min="1"
                             max="120"
                             disabled={readOnly}
-                            className="w-full bg-dark border border-dark-border rounded-lg px-2 py-1.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50"
+                            className={inputClasses}
                         />
                     </div>
 
                     <div>
-                        <label className="text-xs text-gray-400 flex items-center gap-1 mb-1">
+                        <label className="text-xs text-slate-400 flex items-center gap-1 mb-1">
                             <Weight className="w-3 h-3" />
                             Peso
                         </label>
@@ -114,12 +131,12 @@ export function ClientPhysicalDataForm({
                             max="500"
                             step="0.1"
                             disabled={readOnly}
-                            className="w-full bg-dark border border-dark-border rounded-lg px-2 py-1.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50"
+                            className={inputClasses}
                         />
                     </div>
 
                     <div>
-                        <label className="text-xs text-gray-400 flex items-center gap-1 mb-1">
+                        <label className="text-xs text-slate-400 flex items-center gap-1 mb-1">
                             <Ruler className="w-3 h-3" />
                             Altura
                         </label>
@@ -133,15 +150,15 @@ export function ClientPhysicalDataForm({
                             max="250"
                             step="0.1"
                             disabled={readOnly}
-                            className="w-full bg-dark border border-dark-border rounded-lg px-2 py-1.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50"
+                            className={inputClasses}
                         />
                     </div>
                 </div>
 
                 {bmi && bmiClass && (
-                    <div className="mt-3 pt-3 border-t border-dark-border">
+                    <div className="mt-3 pt-3 border-t border-slate-700/50">
                         <div className="flex items-center justify-between text-xs">
-                            <span className="text-gray-400">IMC:</span>
+                            <span className="text-slate-400">IMC:</span>
                             <span className={`font-medium ${bmiClass.color}`}>
                                 {bmi.toFixed(1)} - {bmiClass.label}
                             </span>
@@ -154,15 +171,15 @@ export function ClientPhysicalDataForm({
 
     // Versão completa (para perfil do cliente)
     return (
-        <div className="bg-dark-lighter rounded-xl p-6 border border-dark-border">
+        <div className="bg-slate-900/50 rounded-xl p-6 border border-slate-700/50">
             <div className="flex items-center gap-2 mb-4">
-                <Activity className="w-5 h-5 text-primary" />
+                <Activity className="w-5 h-5 text-blue-400" />
                 <h3 className="text-lg font-semibold text-white">Dados Físicos</h3>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 gap-4">
                 <div>
-                    <label className="text-sm text-gray-400 flex items-center gap-2 mb-2">
+                    <label className="text-sm text-slate-400 flex items-center gap-2 mb-2">
                         <Cake className="w-4 h-4" />
                         Idade (anos)
                     </label>
@@ -175,12 +192,12 @@ export function ClientPhysicalDataForm({
                         min="1"
                         max="120"
                         disabled={readOnly}
-                        className="w-full bg-dark border border-dark-border rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50"
+                        className={inputClasses}
                     />
                 </div>
 
                 <div>
-                    <label className="text-sm text-gray-400 flex items-center gap-2 mb-2">
+                    <label className="text-sm text-slate-400 flex items-center gap-2 mb-2">
                         <Weight className="w-4 h-4" />
                         Peso (kg)
                     </label>
@@ -194,12 +211,12 @@ export function ClientPhysicalDataForm({
                         max="500"
                         step="0.1"
                         disabled={readOnly}
-                        className="w-full bg-dark border border-dark-border rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50"
+                        className={inputClasses}
                     />
                 </div>
 
                 <div>
-                    <label className="text-sm text-gray-400 flex items-center gap-2 mb-2">
+                    <label className="text-sm text-slate-400 flex items-center gap-2 mb-2">
                         <Ruler className="w-4 h-4" />
                         Altura (cm)
                     </label>
@@ -213,15 +230,15 @@ export function ClientPhysicalDataForm({
                         max="250"
                         step="0.1"
                         disabled={readOnly}
-                        className="w-full bg-dark border border-dark-border rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50"
+                        className={inputClasses}
                     />
                 </div>
             </div>
 
             {bmi && bmiClass && (
-                <div className="mt-4 pt-4 border-t border-dark-border">
+                <div className="mt-4 pt-4 border-t border-slate-700/50">
                     <div className="flex items-center justify-between">
-                        <span className="text-sm text-gray-400">Índice de Massa Corporal (IMC):</span>
+                        <span className="text-sm text-slate-400">Índice de Massa Corporal (IMC):</span>
                         <div className="flex items-center gap-2">
                             <span className="text-lg font-bold text-white">{bmi.toFixed(1)}</span>
                             <span className={`text-sm font-medium ${bmiClass.color}`}>

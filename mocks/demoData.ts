@@ -347,7 +347,7 @@ export const mockExercises: WorkoutExercise[] = [
 
     // ============ INFERIOR: QUADRÍCEPS ============
     { id: 'quad1', name: 'Agachamento Livre', category: 'musculacao', sets: [{ method: 'simples', reps: '10', load: '80kg', rest: '120s' }], targetMuscle: 'Quadríceps', videoUrl: 'https://upload.wikimedia.org/wikipedia/commons/transcoded/1/18/Squat_-_exercise_demonstration_video.webm/Squat_-_exercise_demonstration_video.webm.480p.vp9.webm' },
-    { id: 'quad2', name: 'Leg Press 45', category: 'musculacao', sets: [{ method: 'simples', reps: '12', load: '200kg', rest: '120s' }], targetMuscle: 'Quadríceps', videoUrl: 'https://youtu.be/fppT8gFqGwA' },
+    { id: 'quad2', name: 'Leg Press 45 (COM VÍDEO)', category: 'musculacao', sets: [{ method: 'simples', reps: '12', load: '200kg', rest: '120s' }], targetMuscle: 'Quadríceps', videoUrl: 'https://youtu.be/fppT8gFqGwA' },
     { id: 'quad3', name: 'Cadeira Extensora', category: 'musculacao', sets: [{ method: 'dropset', reps: '15+10', load: '50kg', rest: '60s' }], targetMuscle: 'Quadríceps' },
     { id: 'quad4', name: 'Agachamento Búlgaro', category: 'musculacao', sets: [{ method: 'simples', reps: '10/cada', load: '10kg', rest: '90s' }], targetMuscle: 'Quadríceps' },
     { id: 'quad5', name: 'Hack Squat', category: 'musculacao', sets: [{ method: 'simples', reps: '12', load: '100kg', rest: '90s' }], targetMuscle: 'Quadríceps' },

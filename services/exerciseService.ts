@@ -563,15 +563,19 @@ export async function hydrateWorkoutWithVideos(workout: any): Promise<any> {
     if (exerciseNames.length === 0 && exerciseIds.length === 0) return workout;
 
     try {
-        // 2. Buscar dados atuais no banco (apenas campos necessários)
-        // Usamos ILIKE para match flexível por nome, já que o slug pode não estar no objeto do treino
+        // 2. Buscar TODOS os exercícios que têm vídeo (para permitir match fuzzy)
+        // Não usamos .in() pois os nomes podem ter diferenças sutis (ex: "Leg Press 45" vs "Leg Press 45°")
         const { data: dbExercises, error } = await supabase
             .from('exercises')
             .select('slug, name, video_url')
-            .in('name', exerciseNames) // Tenta match exato primeiro
             .not('video_url', 'is', null); // Só o que tem vídeo
 
-        if (error || !dbExercises || dbExercises.length === 0) return workout;
+        if (error || !dbExercises || dbExercises.length === 0) {
+            console.log('[Hydration] Nenhum exercício com vídeo encontrado no banco');
+            return workout;
+        }
+
+        console.log(`[Hydration] Encontrados ${dbExercises.length} exercícios com vídeo no banco`);
 
         // Helper para normalizar strings para comparação
         const normalize = (str: string) => {

@@ -3,7 +3,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabaseClient';
+import { supabase } from '../services/supabaseClient';
 
 // ============ TYPES ============
 
@@ -201,8 +201,8 @@ export function MonitoringDashboardConnected() {
                             key={range}
                             onClick={() => setTimeRange(range)}
                             className={`px-4 py-2 rounded-md text-sm font-medium ${timeRange === range
-                                    ? 'bg-blue-600 text-white'
-                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                ? 'bg-blue-600 text-white'
+                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                                 }`}
                         >
                             {range === '24h' ? 'Últimas 24h' : range === '7d' ? 'Últimos 7 dias' : 'Últimos 30 dias'}
@@ -277,8 +277,8 @@ export function MonitoringDashboardConnected() {
                     <div className="flex items-center justify-between">
                         <span className="text-sm">Taxa de Sucesso</span>
                         <span className={`text-sm font-medium ${metrics.success_rate >= 95 ? 'text-green-600' :
-                                metrics.success_rate >= 85 ? 'text-yellow-600' :
-                                    'text-red-600'
+                            metrics.success_rate >= 85 ? 'text-yellow-600' :
+                                'text-red-600'
                             }`}>
                             {metrics.success_rate >= 95 ? '✅ Excelente' :
                                 metrics.success_rate >= 85 ? '⚠️ Atenção' :
@@ -290,8 +290,8 @@ export function MonitoringDashboardConnected() {
                     <div className="flex items-center justify-between">
                         <span className="text-sm">Rate Limiting</span>
                         <span className={`text-sm font-medium ${metrics.rate_limit_errors <= 2 ? 'text-green-600' :
-                                metrics.rate_limit_errors <= 5 ? 'text-yellow-600' :
-                                    'text-red-600'
+                            metrics.rate_limit_errors <= 5 ? 'text-yellow-600' :
+                                'text-red-600'
                             }`}>
                             {metrics.rate_limit_errors <= 2 ? '✅ Otimizado' :
                                 metrics.rate_limit_errors <= 5 ? '⚠️ Verificar' :

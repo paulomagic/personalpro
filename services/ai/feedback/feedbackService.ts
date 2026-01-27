@@ -2,7 +2,7 @@
 // Handles session feedback storage and retrieval
 // Integrates with adaptive progression system
 
-import { supabase } from '@/lib/supabaseClient';
+import { supabase } from '../../supabaseClient';
 import type { SessionFeedback, ProgressionHistory } from './types';
 import { analyzeSessionFeedback, analyzeTrend, DEFAULT_PROGRESSION_CONFIG } from './adaptiveProgression';
 import type { ProgressionAdjustment } from './types';

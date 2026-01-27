@@ -28,7 +28,7 @@ const ClientProfileView: React.FC<ClientProfileViewProps> = ({ client: initialCl
     workouts: [],
     ...initialClient
   });
-  const [activeTab, setActiveTab] = useState('Evolução');
+  const [activeTab, setActiveTab] = useState('Bio');
   const [isEditing, setIsEditing] = useState(false);
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [showMissedClassModal, setShowMissedClassModal] = useState(false);
@@ -80,7 +80,7 @@ const ClientProfileView: React.FC<ClientProfileViewProps> = ({ client: initialCl
   const [missedReason, setMissedReason] = useState<MissedClass['reason']>('sick');
   const [missedNotes, setMissedNotes] = useState('');
 
-  const tabs = ['Evolução', 'Avaliações', 'Treinos', 'Bio'];
+  const tabs = ['Bio', 'Treinos', 'Avaliações', 'Evolução'];
 
   // Progress Analysis State
   const [progressAnalysis, setProgressAnalysis] = useState<{

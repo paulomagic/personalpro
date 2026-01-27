@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Workout, WorkoutExercise, Exercise } from '../types';
 import VideoPlayerModal from '../components/VideoPlayerModal';
+import { FeedbackForm } from '../components/FeedbackForm';
+import { saveSessionFeedback, getProgressionSuggestion } from '../services/ai/feedback';
+import type { SessionFeedback } from '../services/ai/feedback/types';
 
 interface TrainingExecutionViewProps {
   workout: Workout;
@@ -25,6 +28,11 @@ const TrainingExecutionView: React.FC<TrainingExecutionViewProps> = ({ workout, 
   const [restTime, setRestTime] = useState(90);
   const [elapsedTime, setElapsedTime] = useState(0);
   const [showVideoModal, setShowVideoModal] = useState(false);
+
+  // Feedback state
+  const [showFeedbackForm, setShowFeedbackForm] = useState(false);
+  const [feedbackExerciseIndex, setFeedbackExerciseIndex] = useState(0);
+  const [completedExercises, setCompletedExercises] = useState<Set<number>>(new Set());
 
   const currentExercise = exercises[currentExerciseIndex] as WorkoutExercise;
 
@@ -66,12 +74,70 @@ const TrainingExecutionView: React.FC<TrainingExecutionViewProps> = ({ workout, 
         });
       }, 1000);
     } else if (currentExerciseIndex < exercises.length - 1) {
-      // Next exercise
+      // Exercise completed - show feedback form
+      setShowFeedbackForm(true);
+      setFeedbackExerciseIndex(currentExerciseIndex);
+    } else {
+      // Last exercise - show feedback form
+      setShowFeedbackForm(true);
+      setFeedbackExerciseIndex(currentExerciseIndex);
+    }
+  };
+
+  const handleFeedbackSubmit = async (feedback: Omit<SessionFeedback, 'session_date'>) => {
+    try {
+      const result = await saveSessionFeedback(feedback);
+
+      if (result.success) {
+        // Mark exercise as completed
+        setCompletedExercises(prev => new Set(prev).add(feedbackExerciseIndex));
+
+        // Get progression suggestion
+        const suggestion = await getProgressionSuggestion(
+          feedback.student_id,
+          feedback.exercise_id
+        );
+
+        if (suggestion) {
+          // Show suggestion (could use toast/notification)
+          console.log('[Feedback] Suggestion:', suggestion);
+        }
+
+        // Move to next exercise or finish
+        if (currentExerciseIndex < exercises.length - 1) {
+          setCurrentExerciseIndex(prev => prev + 1);
+          setCurrentSet(1);
+          setCurrentLoad(0);
+          setShowFeedbackForm(false);
+        } else {
+          // All exercises completed
+          onFinish();
+        }
+      }
+    } catch (error) {
+      console.error('[Feedback] Error:', error);
+      alert('Erro ao salvar feedback. Continuando...');
+
+      // Continue anyway
+      if (currentExerciseIndex < exercises.length - 1) {
+        setCurrentExerciseIndex(prev => prev + 1);
+        setCurrentSet(1);
+        setCurrentLoad(0);
+        setShowFeedbackForm(false);
+      } else {
+        onFinish();
+      }
+    }
+  };
+
+  const handleSkipFeedback = () => {
+    // Move to next exercise or finish without feedback
+    if (currentExerciseIndex < exercises.length - 1) {
       setCurrentExerciseIndex(prev => prev + 1);
       setCurrentSet(1);
       setCurrentLoad(0);
+      setShowFeedbackForm(false);
     } else {
-      // Workout finished
       onFinish();
     }
   };
@@ -226,6 +292,25 @@ const TrainingExecutionView: React.FC<TrainingExecutionViewProps> = ({ workout, 
           exerciseName={exerciseName}
           onClose={() => setShowVideoModal(false)}
         />
+      )}
+
+      {/* Feedback Modal */}
+      {showFeedbackForm && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
+          <div className="max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <FeedbackForm
+              workoutId={workout.id || 'unknown'}
+              studentId={workout.studentId || 'unknown'}
+              exerciseId={(exercises[feedbackExerciseIndex] as any)?.id || `ex-${feedbackExerciseIndex}`}
+              exerciseName={exercises[feedbackExerciseIndex]?.name || 'Exercício'}
+              prescribedSets={Array.isArray((exercises[feedbackExerciseIndex] as any)?.sets) ? (exercises[feedbackExerciseIndex] as any).sets.length : 4}
+              prescribedReps={`${(exercises[feedbackExerciseIndex] as any)?.sets?.[0]?.reps || 12}`}
+              prescribedLoad={currentLoad}
+              onSubmit={handleFeedbackSubmit}
+              onCancel={handleSkipFeedback}
+            />
+          </div>
+        </div>
       )}
     </div>
   );

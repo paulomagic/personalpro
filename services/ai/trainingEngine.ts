@@ -16,6 +16,8 @@ import { detectConditionsEnhanced, type DetectionResult, type BiomechanicalRestr
 import { buildDynamicSystemPrompt, buildUserPrompt, type ClientContext } from './prompts/systemPromptBuilder';
 import { validateAIResponse, findSafeAlternative, type ValidationResult } from './validation/exerciseValidator';
 import { getRelevantRules, formatRulesForPrompt } from './knowledge/exerciseOntology';
+// v3.1: Volume Counter em Tempo Real
+import { initializeVolumeCounter, addSetsToCounter, adjustSetsToFitMRV, validateFinalVolume, getDefaultMuscleForPattern, type VolumeCounter } from './volumeCounter';
 
 
 // ============ TIPOS ============
@@ -233,6 +235,11 @@ export async function generateWorkout(params: {
 
     onProgress?.({ stage: 'template', current: 1, total: 4, message: 'Template selecionado' });
 
+    // v3.1: INICIALIZAR CONTADOR DE VOLUME EM TEMPO REAL
+    const levelNorm = normalizeLevel(level);
+    const volumeCounter = initializeVolumeCounter(levelNorm);
+    console.log('[TrainingEngine] Volume counter initialized for level:', levelNorm);
+
     // 6. OTIMIZAÇÃO #1: Batch DB Query (96% faster)
     console.time('[TrainingEngine] DB Fetch');
     onProgress?.({ stage: 'database', current: 2, total: 4, message: 'Carregando exercícios...' });
@@ -313,12 +320,33 @@ export async function generateWorkout(params: {
                     const topCandidates = scoredCandidates.slice(0, 5);
 
                     // C. Configuração personalizada
-                    const config = getPersonalizedConfig(
+                    let config = getPersonalizedConfig(
                         task.slot.intensity,
                         level,
                         goal,
                         conditionModifiers.volume
                     );
+
+                    // v3.1: VALIDAÇÃO DE VOLUME EM TEMPO REAL
+                    const targetMuscle = task.slot.target_muscles?.[0] ||
+                        getDefaultMuscleForPattern(task.slot.movement_pattern);
+
+                    const volumeCheck = addSetsToCounter(volumeCounter, targetMuscle, config.sets);
+
+                    if (!volumeCheck.success) {
+                        // Ajustar séries para caber no MRV
+                        const adjustedSets = adjustSetsToFitMRV(volumeCounter, targetMuscle, config.sets);
+                        console.warn(`[VolumeCounter] ${volumeCheck.reason}`);
+                        console.log(`[VolumeCounter] Ajustando ${task.slot.id} de ${config.sets} para ${adjustedSets} séries`);
+
+                        config = { ...config, sets: adjustedSets };
+
+                        // Adicionar séries ajustadas ao contador
+                        if (adjustedSets > 0) {
+                            addSetsToCounter(volumeCounter, targetMuscle, adjustedSets);
+                        }
+                    }
+
 
                     // D. Seleção (IA ou determinístico)
                     let selectedExercise: Exercise | undefined;
@@ -397,6 +425,17 @@ export async function generateWorkout(params: {
     });
 
     console.timeEnd('[TrainingEngine] Rehydration');
+
+    // v3.1: VALIDAÇÃO FINAL DO VOLUME
+    const volumeValidation = validateFinalVolume(volumeCounter);
+    console.log('\n' + volumeValidation.summary);
+
+    if (volumeValidation.warnings.length > 0) {
+        console.warn('[VolumeCounter] Warnings detected:');
+        volumeValidation.warnings.forEach(w => console.warn(w));
+    } else {
+        console.log('[VolumeCounter] ✅ All muscle groups within optimal volume ranges');
+    }
 
     onProgress?.({ stage: 'complete', current: 4, total: 4, message: 'Treino gerado!' });
 
@@ -706,6 +745,15 @@ async function selectWithAI(
 }
 
 // ============ HELPERS ============
+
+function normalizeLevel(level: string): 'iniciante' | 'intermediario' | 'avancado' | 'atleta' {
+    const l = level.toLowerCase();
+    if (l.includes('inic')) return 'iniciante';
+    if (l.includes('inter')) return 'intermediario';
+    if (l.includes('avanc')) return 'avancado';
+    if (l.includes('atlet')) return 'atleta';
+    return 'intermediario';
+}
 
 function parseInjuries(injuriesText?: string): Injury[] {
     if (!injuriesText || injuriesText.toLowerCase() === 'nenhuma') return [];

@@ -14,7 +14,7 @@ import type { Exercise } from '../../exerciseService';
  */
 export const AISelectionResponseSchema = z.object({
     selected: z.number().int().min(1).max(20),
-    reasoning: z.string().min(5).max(500),
+    reasoning: z.string().min(5).max(500).optional(),  // Made optional to handle varied AI responses
     safety_check: z.object({
         kinetic_chain: z.enum(['fechada', 'aberta']).optional(),
         spinal_load: z.enum(['baixo', 'moderado', 'alto']).optional(),

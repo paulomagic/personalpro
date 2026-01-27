@@ -272,9 +272,9 @@ export async function generateWorkout(params: {
 
     // Config p-queue: 5 concurrent para não estourar Groq rate limit (30 req/min)
     const queue = new PQueue({
-        concurrency: 5,
-        interval: 60000,      // 1 minuto
-        intervalCap: 25        // Max 25 requests/min (margem de segurança)
+        concurrency: 3,        // Reduced from 5 to avoid Groq rate limits
+        interval: 90000,       // Increased from 60s to 90s  
+        intervalCap: 20        // Reduced from 25 to be more conservative
     });
 
     let processedCount = 0;

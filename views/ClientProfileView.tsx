@@ -35,6 +35,9 @@ const ClientProfileView: React.FC<ClientProfileViewProps> = ({ client: initialCl
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [showContactModal, setShowContactModal] = useState(false);
+  const [editedEmail, setEditedEmail] = useState(client.email || '');
+  const [editedPhone, setEditedPhone] = useState(client.phone || '');
 
   // Fetch full client data on mount
   useEffect(() => {
@@ -73,6 +76,12 @@ const ClientProfileView: React.FC<ClientProfileViewProps> = ({ client: initialCl
   // Editable fields
   const [editedObservations, setEditedObservations] = useState(client.observations || '');
   const [editedInjuries, setEditedInjuries] = useState(client.injuries || '');
+
+  // Update contact fields when client changes
+  useEffect(() => {
+    setEditedEmail(client.email || '');
+    setEditedPhone(client.phone || '');
+  }, [client.email, client.phone]);
   const [editedPreferences, setEditedPreferences] = useState(client.preferences || '');
 
   // Missed class form
@@ -190,6 +199,43 @@ const ClientProfileView: React.FC<ClientProfileViewProps> = ({ client: initialCl
     } else {
       alert('Erro ao deletar aluno. Tente novamente.');
       setShowDeleteConfirm(false);
+    }
+  };
+
+  const handleSaveContact = async () => {
+    try {
+      if (!supabase) {
+        console.warn('Supabase não configurado - dados não salvos');
+        return;
+      }
+
+      const updates: Partial<Client> = {
+        email: editedEmail || null,
+        phone: editedPhone || null
+      };
+
+      const { error } = await supabase
+        .from('clients')
+        .update(updates)
+        .eq('id', client.id);
+
+      if (error) {
+        console.error('Erro ao atualizar contato:', error);
+        alert('Erro ao salvar dados de contato. Tente novamente.');
+        return;
+      }
+
+      // Update local state
+      setClient(prev => ({
+        ...prev,
+        email: editedEmail,
+        phone: editedPhone
+      }));
+
+      setShowContactModal(false);
+    } catch (err) {
+      console.error('Erro ao salvar contato:', err);
+      alert('Erro ao salvar dados de contato. Tente novamente.');
     }
   };
 
@@ -704,10 +750,18 @@ const ClientProfileView: React.FC<ClientProfileViewProps> = ({ client: initialCl
             >
               {/* Contact Info */}
               <div className="glass-card rounded-2xl p-4 space-y-3">
-                <h3 className="font-bold text-white text-sm flex items-center gap-2">
-                  <Phone size={14} className="text-blue-400" />
-                  Contato
-                </h3>
+                <div className="flex justify-between items-center">
+                  <h3 className="font-bold text-white text-sm flex items-center gap-2">
+                    <Phone size={14} className="text-blue-400" />
+                    Contato
+                  </h3>
+                  <button
+                    onClick={() => setShowContactModal(true)}
+                    className="text-xs font-bold px-3 py-1 rounded-full bg-white/5 text-slate-400 hover:text-white transition-all"
+                  >
+                    <Edit size={12} className="inline mr-1" /> Editar
+                  </button>
+                </div>
                 {client.email && (
                   <div className="flex items-center gap-3 text-sm text-slate-300">
                     <Mail size={14} className="text-slate-500" />
@@ -1213,6 +1267,94 @@ const ClientProfileView: React.FC<ClientProfileViewProps> = ({ client: initialCl
                       Excluir
                     </>
                   )}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Contact Edit Modal */}
+      <AnimatePresence>
+        {showContactModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4"
+            onClick={() => setShowContactModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95 }}
+              animate={{ scale: 1 }}
+              exit={{ scale: 0.95 }}
+              className="bg-slate-900 rounded-[28px] p-6 w-full max-w-sm border border-white/10"
+              onClick={e => e.stopPropagation()}
+            >
+              <h3 className="text-xl font-black text-white mb-2">Editar Contato</h3>
+              <p className="text-sm text-slate-400 mb-6">Atualize os dados de contato de {client.name}</p>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-2">
+                    <Mail size={10} className="inline mr-1" />
+                    Email
+                  </label>
+                  <input
+                    type="email"
+                    value={editedEmail}
+                    onChange={(e) => setEditedEmail(e.target.value)}
+                    className="w-full bg-slate-800/50 border border-white/10 rounded-xl py-3 px-4 text-white outline-none focus:border-blue-500/50"
+                    placeholder="email@exemplo.com"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-2">
+                    <Phone size={10} className="inline mr-1" />
+                    Telefone
+                  </label>
+                  <input
+                    type="tel"
+                    value={editedPhone}
+                    onChange={(e) => {
+                      // Format phone number as user types
+                      let value = e.target.value.replace(/\D/g, '');
+                      if (value.length <= 11) {
+                        if (value.length > 6) {
+                          value = `(${value.slice(0, 2)}) ${value.slice(2, 7)}-${value.slice(7)}`;
+                        } else if (value.length > 2) {
+                          value = `(${value.slice(0, 2)}) ${value.slice(2)}`;
+                        } else if (value.length > 0) {
+                          value = `(${value}`;
+                        }
+                        setEditedPhone(value);
+                      }
+                    }}
+                    className="w-full bg-slate-800/50 border border-white/10 rounded-xl py-3 px-4 text-white outline-none focus:border-blue-500/50"
+                    placeholder="(61) 99999-9999"
+                    maxLength={15}
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-3 mt-6">
+                <button
+                  onClick={() => {
+                    setEditedEmail(client.email || '');
+                    setEditedPhone(client.phone || '');
+                    setShowContactModal(false);
+                  }}
+                  className="flex-1 py-3 rounded-xl bg-white/5 text-slate-400 font-bold hover:bg-white/10 transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleSaveContact}
+                  className="flex-1 py-3 rounded-xl bg-blue-600 text-white font-bold shadow-glow hover:bg-blue-500 transition-all flex items-center justify-center gap-2"
+                >
+                  <Save size={16} />
+                  Salvar
                 </button>
               </div>
             </motion.div>

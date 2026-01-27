@@ -18,6 +18,8 @@ import { validateAIResponse, findSafeAlternative, type ValidationResult } from '
 import { getRelevantRules, formatRulesForPrompt } from './knowledge/exerciseOntology';
 // v3.1: Volume Counter em Tempo Real
 import { initializeVolumeCounter, addSetsToCounter, adjustSetsToFitMRV, validateFinalVolume, getDefaultMuscleForPattern, type VolumeCounter } from './volumeCounter';
+// v3.1.2: Pattern Validator - Prevenir padrões consecutivos
+import { validateConsecutivePatterns, extractPatternsFromWorkout, formatValidationResult } from './validation/patternValidator';
 
 
 // ============ TIPOS ============
@@ -54,6 +56,9 @@ export interface GeneratedWorkout {
         level: string;
         injuries: string[];
         generated_at: string;
+        pattern_warnings?: string[];
+        pattern_valid?: boolean;
+        [key: string]: any; // Allow additional properties
     };
 }
 
@@ -437,11 +442,13 @@ export async function generateWorkout(params: {
         console.log('[VolumeCounter] ✅ All muscle groups within optimal volume ranges');
     }
 
+
     onProgress?.({ stage: 'complete', current: 4, total: 4, message: 'Treino gerado!' });
 
     console.timeEnd('[TrainingEngine] TOTAL Generation Time');
 
-    return {
+    // v3.1.2: VALIDAÇÃO DE PADRÕES CONSECUTIVOS
+    const workout = {
         template_id: template.template_id,
         template_name: template.name,
         client_name: name,
@@ -453,6 +460,22 @@ export async function generateWorkout(params: {
             generated_at: new Date().toISOString()
         }
     };
+
+    const patternsData = extractPatternsFromWorkout(workout);
+    const patternValidation = validateConsecutivePatterns(patternsData);
+
+    console.log('\n' + formatValidationResult(patternValidation));
+
+    // Adicionar warnings ao metadata
+    if (patternValidation.warnings.length > 0) {
+        workout.metadata = {
+            ...workout.metadata,
+            pattern_warnings: patternValidation.warnings,
+            pattern_valid: patternValidation.valid
+        };
+    }
+
+    return workout;
 }
 
 

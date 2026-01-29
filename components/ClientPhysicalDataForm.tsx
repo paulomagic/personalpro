@@ -5,12 +5,14 @@ interface ClientPhysicalData {
     age?: number;
     weight?: number;
     height?: number;
+    bodyFat?: number;
 }
 
 interface Props {
     age?: number;
     weight?: number;
     height?: number;
+    bodyFat?: number;
     onUpdate: (data: ClientPhysicalData) => void;
     compact?: boolean;
     readOnly?: boolean;
@@ -20,6 +22,7 @@ export function ClientPhysicalDataForm({
     age,
     weight,
     height,
+    bodyFat,
     onUpdate,
     compact = false,
     readOnly = false
@@ -27,6 +30,7 @@ export function ClientPhysicalDataForm({
     const [localAge, setLocalAge] = useState(age?.toString() || '');
     const [localWeight, setLocalWeight] = useState(weight?.toString() || '');
     const [localHeight, setLocalHeight] = useState(height?.toString() || '');
+    const [localBodyFat, setLocalBodyFat] = useState(bodyFat?.toString() || '');
 
     // Calcula IMC automaticamente
     const calculateBMI = (): number | null => {
@@ -61,6 +65,7 @@ export function ClientPhysicalDataForm({
             age: localAge ? parseInt(localAge) : undefined,
             weight: localWeight ? parseFloat(localWeight) : undefined,
             height: localHeight ? parseFloat(localHeight) : undefined,
+            bodyFat: localBodyFat ? parseFloat(localBodyFat) : undefined,
         };
         onUpdate(data);
     };
@@ -77,6 +82,10 @@ export function ClientPhysicalDataForm({
     useEffect(() => {
         setLocalHeight(height?.toString() || '');
     }, [height]);
+
+    useEffect(() => {
+        setLocalBodyFat(bodyFat?.toString() || '');
+    }, [bodyFat]);
 
     const bmi = calculateBMI();
     const bmiClass = bmi ? getBMIClassification(bmi) : null;
@@ -106,7 +115,7 @@ export function ClientPhysicalDataForm({
                     <h3 className="text-sm font-medium text-slate-300">Dados Físicos</h3>
                 </div>
 
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-2 gap-3">
                     <div>
                         <label className="text-xs text-slate-400 flex items-center gap-1 mb-1">
                             <Cake className="w-3 h-3" />
@@ -162,6 +171,25 @@ export function ClientPhysicalDataForm({
                             className={inputClasses}
                         />
                     </div>
+
+                    <div>
+                        <label className="text-xs text-slate-400 flex items-center gap-1 mb-1">
+                            <Activity className="w-3 h-3" />
+                            % Gordura
+                        </label>
+                        <input
+                            type="number"
+                            value={localBodyFat}
+                            onChange={(e) => setLocalBodyFat(e.target.value)}
+                            onBlur={handleUpdate}
+                            placeholder="%"
+                            min="1"
+                            max="60"
+                            step="0.1"
+                            disabled={readOnly}
+                            className={inputClasses}
+                        />
+                    </div>
                 </div>
 
                 {bmi && bmiClass && (
@@ -182,7 +210,7 @@ export function ClientPhysicalDataForm({
     return (
         <div className="bg-slate-900/50 rounded-xl p-6 border border-slate-700/50">
             <div className="flex items-center gap-2 mb-4">
-                <Activity className="w-5 h-5 text-blue-400" />
+                <Activity className="w-4 h-4 text-blue-400" />
                 <h3 className="text-lg font-semibold text-white">Dados Físicos</h3>
             </div>
 
@@ -237,6 +265,25 @@ export function ClientPhysicalDataForm({
                         placeholder="Ex: 178"
                         min="50"
                         max="250"
+                        step="0.1"
+                        disabled={readOnly}
+                        className={inputClasses}
+                    />
+                </div>
+
+                <div>
+                    <label className="text-sm text-slate-400 flex items-center gap-2 mb-2">
+                        <Activity className="w-4 h-4" />
+                        Gordura Corporal (%)
+                    </label>
+                    <input
+                        type="number"
+                        value={localBodyFat}
+                        onChange={(e) => setLocalBodyFat(e.target.value)}
+                        onBlur={handleUpdate}
+                        placeholder="Ex: 15.5"
+                        min="1"
+                        max="60"
                         step="0.1"
                         disabled={readOnly}
                         className={inputClasses}

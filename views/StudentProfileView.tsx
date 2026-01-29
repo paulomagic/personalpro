@@ -50,7 +50,14 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({
                 if (profile?.client_id) {
                     const client = await getClient(profile.client_id);
                     if (client) {
-                        setClientData(client as any);
+                        // Map body_fat from DB to bodyFat in frontend
+                        const mappedClient: Client = {
+                            ...client as any,
+                            bodyFat: (client as any).body_fat
+                        };
+                        setClientData(mappedClient);
+
+                        console.log('📥 Perfil do aluno carregado:', { bodyFat: (client as any).body_fat });
 
                         // Load history
                         const workouts = await getCompletedWorkouts(profile.client_id);

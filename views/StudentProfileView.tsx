@@ -88,7 +88,7 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({
     const biometrics = {
         weight: clientData?.weight || 72,
         height: clientData?.height || 175,
-        bodyFat: 18,
+        bodyFat: clientData?.bodyFat || 18,
         muscleMass: 35,
         hydration: 55,
         bmi: clientData?.weight && clientData?.height

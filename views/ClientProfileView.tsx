@@ -808,6 +808,8 @@ const ClientProfileView: React.FC<ClientProfileViewProps> = ({ client: initialCl
                 compact={false}
                 readOnly={false}
                 onUpdate={async (data) => {
+                  console.log('🔵 onUpdate chamado com:', data);
+
                   // Atualiza estado local
                   setClient(prev => ({ ...prev, ...data }));
 
@@ -825,6 +827,8 @@ const ClientProfileView: React.FC<ClientProfileViewProps> = ({ client: initialCl
                     if (data.height !== undefined) updateData.height = data.height ?? null;
                     if (data.bodyFat !== undefined) updateData.body_fat = data.bodyFat ?? null;
 
+                    console.log('🟢 Enviando para Supabase:', updateData);
+
                     // Só atualiza se houver dados para atualizar
                     if (Object.keys(updateData).length === 0) return;
 
@@ -834,10 +838,12 @@ const ClientProfileView: React.FC<ClientProfileViewProps> = ({ client: initialCl
                       .eq('id', client.id);
 
                     if (error) {
-                      console.error('Erro ao atualizar dados físicos:', error);
+                      console.error('🔴 Erro ao atualizar dados físicos:', error);
+                    } else {
+                      console.log('✅ Dados salvos com sucesso!');
                     }
                   } catch (err) {
-                    console.error('Erro ao salvar dados físicos:', err);
+                    console.error('🔴 Erro ao salvar dados físicos:', err);
                   }
                 }}
               />

@@ -555,28 +555,28 @@ const StudentView: React.FC<StudentViewProps> = ({
             </main>
 
             {/* Finish Button */}
-            <div className="fixed bottom-20 left-0 right-0 bg-slate-950/90 backdrop-blur-md border-t border-white/5 p-4 safe-area-bottom">
+            <div className="fixed bottom-20 left-0 right-0 bg-slate-950/90 backdrop-blur-md border-t border-white/5 px-4 py-3 safe-area-bottom">
                 <div className="max-w-md mx-auto">
                     {progress >= 100 ? (
                         <button
                             onClick={handleFinishWorkout}
-                            className="w-full py-5 rounded-2xl font-black text-xl uppercase tracking-widest flex flex-col items-center justify-center gap-2 bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-2xl shadow-emerald-500/50 active:scale-[0.98] transition-all animate-pulse"
+                            className="w-full py-3.5 rounded-xl font-bold text-base flex items-center justify-center gap-3 bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-lg shadow-emerald-500/30 active:scale-[0.98] transition-all"
                         >
-                            <div className="flex items-center gap-3">
-                                <Trophy size={28} className="animate-bounce" />
-                                <span>Treino Finalizado!</span>
+                            <Trophy size={22} />
+                            <div className="flex flex-col items-center gap-0.5">
+                                <span className="uppercase tracking-wide">Treino Finalizado!</span>
+                                <span className="text-[10px] font-medium text-emerald-100/80 normal-case tracking-normal">
+                                    Toque para concluir
+                                </span>
                             </div>
-                            <span className="text-xs font-bold text-emerald-100 opacity-90 normal-case tracking-normal">
-                                Toque para concluir
-                            </span>
                         </button>
                     ) : (
                         <button
                             disabled
-                            className="w-full py-4 rounded-2xl font-black text-lg uppercase tracking-widest flex items-center justify-center gap-3 bg-slate-800 text-slate-500 cursor-not-allowed transition-all"
+                            className="w-full py-3.5 rounded-xl font-bold text-base flex items-center justify-center gap-3 bg-slate-800 text-slate-500 cursor-not-allowed transition-all"
                         >
-                            <Trophy size={24} />
-                            {Math.round(progress)}% Concluído
+                            <Trophy size={20} />
+                            <span>{Math.round(progress)}% Concluído</span>
                         </button>
                     )}
                 </div>

@@ -555,7 +555,7 @@ const StudentView: React.FC<StudentViewProps> = ({
             </main>
 
             {/* Finish Button */}
-            <div className="fixed bottom-0 left-0 right-0 bg-slate-950/90 backdrop-blur-md border-t border-white/5 p-4 safe-area-bottom">
+            <div className="fixed bottom-20 left-0 right-0 bg-slate-950/90 backdrop-blur-md border-t border-white/5 p-4 safe-area-bottom">
                 <div className="max-w-md mx-auto">
                     {progress >= 100 ? (
                         <button

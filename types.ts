@@ -399,3 +399,19 @@ export interface ConflictInfo {
   suggestedAlternatives: string[];
 }
 
+// ============ HISTORY ============
+export interface CompletedWorkout {
+  id: string;
+  client_id: string;
+  workout_id?: string;
+  title: string;
+  date: string;
+  duration: string;
+  exercises_count: number;
+  sets_completed: number;
+  total_load_volume: number;
+  feedback_notes?: string;
+  created_at: string;
+}
+
+

@@ -19,8 +19,8 @@ import {
     Heart,
     Droplets
 } from 'lucide-react';
-import { getUserProfile, getClient } from '../services/supabaseClient';
-import { AppUser, Client } from '../types';
+import { getUserProfile, getClient, getCompletedWorkouts } from '../services/supabaseClient';
+import { AppUser, Client, CompletedWorkout } from '../types';
 
 interface StudentProfileViewProps {
     user: AppUser;
@@ -28,14 +28,7 @@ interface StudentProfileViewProps {
     onSettings: () => void;
 }
 
-// Mock data for demo - would come from API
-const mockActivities = [
-    { id: 1, type: 'workout', title: 'Treino A - Peito e Tríceps', date: '2026-01-07', duration: '52 min', completed: true },
-    { id: 2, type: 'workout', title: 'Treino B - Costas e Bíceps', date: '2026-01-05', duration: '48 min', completed: true },
-    { id: 3, type: 'workout', title: 'Treino C - Pernas', date: '2026-01-03', duration: '55 min', completed: true },
-    { id: 4, type: 'rest', title: 'Dia de Descanso', date: '2026-01-04', duration: '-', completed: true },
-    { id: 5, type: 'workout', title: 'Treino A - Peito e Tríceps', date: '2026-01-01', duration: '45 min', completed: false },
-];
+
 
 const StudentProfileView: React.FC<StudentProfileViewProps> = ({
     user,
@@ -45,6 +38,7 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({
     const [loading, setLoading] = useState(true);
     const [clientData, setClientData] = useState<Client | null>(null);
     const [activeTab, setActiveTab] = useState<'bio' | 'goals' | 'history'>('bio');
+    const [history, setHistory] = useState<CompletedWorkout[]>([]);
 
     const studentName = user?.user_metadata?.name || user?.user_metadata?.full_name || 'Aluno';
 
@@ -57,6 +51,10 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({
                     const client = await getClient(profile.client_id);
                     if (client) {
                         setClientData(client as any);
+
+                        // Load history
+                        const workouts = await getCompletedWorkouts(profile.client_id);
+                        setHistory(workouts);
                     }
                 }
             } catch (error) {
@@ -386,42 +384,37 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({
                             {/* Activity List */}
                             <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest px-1">Atividades Recentes</h4>
                             <div className="space-y-2">
-                                {mockActivities.map((activity) => (
-                                    <div
-                                        key={activity.id}
-                                        className="card-dark p-4 flex items-center gap-4"
-                                    >
-                                        <div className={`size-10 rounded-xl flex items-center justify-center ${activity.type === 'workout'
-                                            ? activity.completed ? 'bg-emerald-500/20' : 'bg-red-500/20'
-                                            : 'bg-slate-700'
-                                            }`}>
-                                            {activity.type === 'workout' ? (
-                                                activity.completed ? (
-                                                    <CheckCircle size={20} className="text-emerald-400" />
-                                                ) : (
-                                                    <Dumbbell size={20} className="text-red-400" />
-                                                )
-                                            ) : (
-                                                <Calendar size={20} className="text-slate-500" />
-                                            )}
-                                        </div>
-                                        <div className="flex-1">
-                                            <p className="text-sm font-bold text-white">{activity.title}</p>
-                                            <div className="flex items-center gap-2 mt-1">
-                                                <span className="text-[10px] text-slate-500">
-                                                    {new Date(activity.date).toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' })}
-                                                </span>
-                                                {activity.duration !== '-' && (
-                                                    <>
-                                                        <span className="text-slate-700">•</span>
-                                                        <span className="text-[10px] text-slate-500">{activity.duration}</span>
-                                                    </>
-                                                )}
-                                            </div>
-                                        </div>
-                                        <ChevronRight size={18} className="text-slate-600" />
+                                {history.length === 0 ? (
+                                    <div className="card-dark p-6 text-center">
+                                        <p className="text-slate-400 text-sm">Nenhum treino registrado ainda.</p>
                                     </div>
-                                ))}
+                                ) : (
+                                    history.map((activity) => (
+                                        <div
+                                            key={activity.id}
+                                            className="card-dark p-4 flex items-center gap-4"
+                                        >
+                                            <div className="size-10 rounded-xl flex items-center justify-center bg-emerald-500/20">
+                                                <CheckCircle size={20} className="text-emerald-400" />
+                                            </div>
+                                            <div className="flex-1">
+                                                <p className="text-sm font-bold text-white">{activity.title}</p>
+                                                <div className="flex items-center gap-2 mt-1">
+                                                    <span className="text-[10px] text-slate-500">
+                                                        {new Date(activity.date).toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' })}
+                                                    </span>
+                                                    {activity.duration && (
+                                                        <>
+                                                            <span className="text-slate-700">•</span>
+                                                            <span className="text-[10px] text-slate-500">{activity.duration}</span>
+                                                        </>
+                                                    )}
+                                                </div>
+                                            </div>
+                                            <ChevronRight size={18} className="text-slate-600" />
+                                        </div>
+                                    ))
+                                )}
                             </div>
                         </motion.div>
                     )}

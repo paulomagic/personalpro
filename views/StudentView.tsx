@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Check, Clock, Dumbbell, ChevronRight, Play, Pause, RotateCcw, Trophy, Flame, Timer as TimerIcon, ArrowLeft, Layers, AlertCircle } from 'lucide-react';
 import { WorkoutExercise, ExerciseSet, WorkoutSplit } from '../types';
-import { getClientCurrentWorkout } from '../services/supabaseClient';
+import { getClientCurrentWorkout, saveCompletedWorkout } from '../services/supabaseClient';
 import { mockExercises } from '../mocks/demoData';
 import VideoPlayerModal from '../components/VideoPlayerModal';
 
@@ -65,6 +65,7 @@ const StudentView: React.FC<StudentViewProps> = ({
     const [showCompleteModal, setShowCompleteModal] = useState(false);
     const [showVideoModal, setShowVideoModal] = useState(false);
     const [activeVideo, setActiveVideo] = useState<{ url: string; name: string } | null>(null);
+    const [workoutStartTime, setWorkoutStartTime] = useState<Date | null>(null);
 
     // Fetch workout data on mount
     useEffect(() => {
@@ -142,6 +143,11 @@ const StudentView: React.FC<StudentViewProps> = ({
                 }))
             );
             setActiveExercise(0);
+
+            // Start timer if not already started
+            if (!workoutStartTime) {
+                setWorkoutStartTime(new Date());
+            }
         }
     }, [selectedSplit, processedSplitId]);
 
@@ -200,8 +206,47 @@ const StudentView: React.FC<StudentViewProps> = ({
     };
 
     // Handle workout completion
-    const handleFinishWorkout = () => {
+    const handleFinishWorkout = async () => {
         setShowCompleteModal(true);
+
+        // Save to history if we have a real client
+        if (clientId && selectedSplit) {
+            try {
+                // Calculate stats
+                const completedSetsCount = completions.reduce((acc, comp) =>
+                    acc + comp.setCompletions.filter(Boolean).length, 0
+                );
+
+                // Calculate actual duration
+                let duration = '0 min';
+                if (workoutStartTime) {
+                    const diffMs = new Date().getTime() - workoutStartTime.getTime();
+                    const diffMins = Math.round(diffMs / 60000);
+                    if (diffMins >= 60) {
+                        const hours = Math.floor(diffMins / 60);
+                        const mins = diffMins % 60;
+                        duration = `${hours}h ${mins}min`;
+                    } else {
+                        duration = `${diffMins} min`;
+                    }
+                }
+
+                await saveCompletedWorkout({
+                    client_id: clientId,
+                    workout_id: undefined, // We don't have the parent workout ID easily accessible here, or we could pass it if needed
+                    title: `Treino ${selectedSplit.name}`,
+                    duration: duration,
+                    exercises_count: selectedSplit.exercises.length,
+                    sets_completed: completedSetsCount,
+                    total_load_volume: 0, // Not tracked in this view
+                    feedback_notes: 'Treino concluído via app'
+                });
+                console.log('Workout saved successfully');
+            } catch (error) {
+                console.error('Error saving workout history:', error);
+            }
+        }
+
         if (onCompleteWorkout) {
             onCompleteWorkout();
         }
@@ -346,8 +391,9 @@ const StudentView: React.FC<StudentViewProps> = ({
                 <div className="max-w-md mx-auto">
                     <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center gap-3">
+
                             <button
-                                onClick={() => { setSelectedSplit(null); setProcessedSplitId(null); }}
+                                onClick={() => { setSelectedSplit(null); setProcessedSplitId(null); setWorkoutStartTime(null); }}
                                 className="size-10 rounded-full bg-white/10 backdrop-blur-md text-white border border-white/20 flex items-center justify-center active:scale-90 transition-all"
                             >
                                 <ArrowLeft size={20} />
@@ -658,6 +704,7 @@ const StudentView: React.FC<StudentViewProps> = ({
                                     setShowCompleteModal(false);
                                     setSelectedSplit(null);
                                     setProcessedSplitId(null);
+                                    setWorkoutStartTime(null);
                                 }}
                                 className="px-8 py-4 bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-black rounded-2xl shadow-lg shadow-emerald-500/30 active:scale-95 transition-transform"
                             >

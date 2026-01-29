@@ -582,6 +582,53 @@ export async function saveAIWorkout(
     return data;
 }
 
+// ============ WORKOUT HISTORY ============
+
+export interface CompletedWorkoutInput {
+    client_id: string;
+    workout_id?: string;
+    title: string;
+    duration: string;
+    exercises_count: number;
+    sets_completed: number;
+    total_load_volume: number;
+    feedback_notes?: string;
+}
+
+export async function saveCompletedWorkout(workoutData: CompletedWorkoutInput): Promise<any | null> {
+    if (!supabase) return null;
+
+    const { data, error } = await supabase
+        .from('completed_workouts')
+        .insert(workoutData)
+        .select()
+        .single();
+
+    if (error) {
+        console.error('Error saving completed workout:', error);
+        return null;
+    }
+
+    return data;
+}
+
+export async function getCompletedWorkouts(clientId: string): Promise<any[]> {
+    if (!supabase) return [];
+
+    const { data, error } = await supabase
+        .from('completed_workouts')
+        .select('*')
+        .eq('client_id', clientId)
+        .order('date', { ascending: false });
+
+    if (error) {
+        console.error('Error fetching completed workouts:', error);
+        return [];
+    }
+
+    return data || [];
+}
+
 // ============ AUTH ============
 
 export async function signIn(email: string, password: string) {

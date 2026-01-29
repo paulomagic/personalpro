@@ -138,7 +138,7 @@ export async function getClient(clientId: string): Promise<DBClient | null> {
 
     const { data, error } = await supabase
         .from('clients')
-        .select('*, avatar:avatar_url')
+        .select('*, avatar:avatar_url, body_fat')
         .eq('id', clientId)
         .single();
 

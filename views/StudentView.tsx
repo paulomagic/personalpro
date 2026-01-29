@@ -555,18 +555,18 @@ const StudentView: React.FC<StudentViewProps> = ({
             </main>
 
             {/* Finish Button */}
-            <div className="fixed bottom-20 left-0 right-0 bg-slate-950/90 backdrop-blur-md border-t border-white/5 px-4 py-3 safe-area-bottom">
-                <div className="max-w-md mx-auto">
+            <div className="fixed bottom-20 left-0 right-0 bg-slate-950/90 backdrop-blur-md border-t border-white/5 py-3 safe-area-bottom">
+                <div className="max-w-md mx-auto px-4">
                     {progress >= 100 ? (
                         <button
                             onClick={handleFinishWorkout}
-                            className="w-full py-4 px-5 rounded-[20px] font-bold text-lg flex items-center gap-4 bg-emerald-950/30 border-2 border-emerald-500/50 text-white hover:bg-emerald-950/50 hover:border-emerald-400 active:scale-[0.98] transition-all"
+                            className="w-full py-4 px-5 rounded-[24px] font-bold text-lg flex items-center gap-4 bg-emerald-950/40 border-2 border-emerald-500/40 text-white shadow-[0_0_20px_rgba(16,185,129,0.15)] hover:bg-emerald-950/60 hover:border-emerald-400 active:scale-[0.98] transition-all"
                         >
-                            <div className="size-12 rounded-xl bg-emerald-900/50 border-2 border-emerald-500/50 flex items-center justify-center flex-shrink-0">
+                            <div className="size-12 rounded-xl bg-emerald-500/10 border-2 border-emerald-500/50 flex items-center justify-center flex-shrink-0">
                                 <Check size={24} className="text-emerald-400" strokeWidth={3} />
                             </div>
                             <div className="flex flex-col items-start flex-1">
-                                <span className="text-white font-bold">Encerrar sessão</span>
+                                <span className="text-white font-bold leading-tight">Encerrar sessão</span>
                                 <span className="text-sm text-slate-400 font-normal">
                                     Ótimo trabalho hoje
                                 </span>

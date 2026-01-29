@@ -804,6 +804,7 @@ const ClientProfileView: React.FC<ClientProfileViewProps> = ({ client: initialCl
                 age={client.age}
                 weight={client.weight}
                 height={client.height}
+                bodyFat={client.bodyFat}
                 compact={false}
                 readOnly={false}
                 onUpdate={async (data) => {
@@ -822,6 +823,7 @@ const ClientProfileView: React.FC<ClientProfileViewProps> = ({ client: initialCl
                     if (data.age !== undefined) updateData.age = data.age ?? null;
                     if (data.weight !== undefined) updateData.weight = data.weight ?? null;
                     if (data.height !== undefined) updateData.height = data.height ?? null;
+                    if (data.bodyFat !== undefined) updateData.body_fat = data.bodyFat ?? null;
 
                     // Só atualiza se houver dados para atualizar
                     if (Object.keys(updateData).length === 0) return;

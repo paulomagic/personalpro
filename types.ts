@@ -236,6 +236,7 @@ export interface Client {
   age?: number;             // Idade em anos (calculada ou informada diretamente)
   weight?: number;          // Peso em kg
   height?: number;          // Altura em cm
+  bodyFat?: number;         // % de Gordura Corporal
   startDate?: string;
 
   // Observations & Notes (MVP)

@@ -29,6 +29,7 @@ export interface DBClient {
     age?: number;
     weight?: number;
     height?: number;
+    body_fat?: number;
     observations?: string;
     injuries?: string;
     preferences?: string;

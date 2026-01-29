@@ -43,9 +43,10 @@ const ClientProfileView: React.FC<ClientProfileViewProps> = ({ client: initialCl
   useEffect(() => {
     const loadFullData = async () => {
       try {
-        const { getAssessments, getWorkouts } = await import('../services/supabaseClient');
+        const { getAssessments, getWorkouts, getClient } = await import('../services/supabaseClient');
 
-        const [assessmentsData, workoutsData] = await Promise.all([
+        const [clientData, assessmentsData, workoutsData] = await Promise.all([
+          getClient(client.id),
           getAssessments(client.id),
           getWorkouts(client.id)
         ]);
@@ -58,11 +59,19 @@ const ClientProfileView: React.FC<ClientProfileViewProps> = ({ client: initialCl
           visceralFat: a.visceral_fat // Map visceral_fat -> visceralFat
         }));
 
+        // Update client with fresh data from database
         setClient(prev => ({
           ...prev,
+          // Map body_fat from DB to bodyFat in frontend
+          bodyFat: clientData?.body_fat ?? prev.bodyFat,
+          age: clientData?.age ?? prev.age,
+          weight: clientData?.weight ?? prev.weight,
+          height: clientData?.height ?? prev.height,
           assessments: mappedAssessments as any[], // Force type
           workouts: workoutsData
         }));
+
+        console.log('📥 Dados do cliente carregados:', { bodyFat: clientData?.body_fat });
 
       } catch (error) {
         console.error("Error loading client details:", error);

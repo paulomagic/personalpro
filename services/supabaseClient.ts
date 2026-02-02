@@ -857,12 +857,14 @@ export async function getUserProfile(userId: string): Promise<DBUserProfile | nu
         .eq('id', userId)
         .single();
 
-    if (error) {
-        // Profile might not exist yet - this is expected for new users
-        if (error.code !== 'PGRST116') {
-            console.error('Error fetching user profile:', error);
-        }
-        return null;
+    // Se perfil não existe, criar automaticamente
+    if (error || !data) {
+        console.log('[getUserProfile] Perfil não encontrado, criando automaticamente...');
+        const newProfile = await upsertUserProfile({
+            id: userId,
+            role: 'coach', // Padrão para novos usuários
+        });
+        return newProfile;
     }
 
     return data;

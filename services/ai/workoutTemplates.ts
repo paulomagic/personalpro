@@ -191,10 +191,10 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
                 day_id: 'lower_a',
                 label: 'Lower A - Força',
                 slots: [
-                    { id: 'lower_a_1', movement_pattern: 'agachar', intensity: 'very_high', preferred_load: 'axial', priority: 1 },
-                    { id: 'lower_a_2', movement_pattern: 'hinge', intensity: 'very_high', preferred_load: 'axial', priority: 2 },
-                    { id: 'lower_a_3', movement_pattern: 'agachar', intensity: 'moderate', priority: 3 },
-                    { id: 'lower_a_4', movement_pattern: 'hinge', intensity: 'moderate', priority: 4 },
+                    { id: 'lower_a_1', movement_pattern: 'agachar', intensity: 'very_high', preferred_load: 'axial', target_muscles: ['quadriceps'], priority: 1 },
+                    { id: 'lower_a_2', movement_pattern: 'hinge', intensity: 'very_high', preferred_load: 'axial', target_muscles: ['gluteos', 'posterior_coxa'], priority: 2 },
+                    { id: 'lower_a_3', movement_pattern: 'agachar', intensity: 'moderate', target_muscles: ['quadriceps'], priority: 3 },
+                    { id: 'lower_a_4', movement_pattern: 'hinge', intensity: 'moderate', target_muscles: ['posterior_coxa'], priority: 4 },
                     { id: 'lower_a_5', movement_pattern: 'isolar_panturrilha', intensity: 'low', priority: 5 }
                 ]
             },
@@ -215,10 +215,10 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
                 day_id: 'lower_b',
                 label: 'Lower B - Volume',
                 slots: [
-                    { id: 'lower_b_1', movement_pattern: 'hinge', intensity: 'high', priority: 1 },
-                    { id: 'lower_b_2', movement_pattern: 'agachar', intensity: 'moderate', priority: 2 },
-                    { id: 'lower_b_3', movement_pattern: 'agachar', intensity: 'moderate', priority: 3 },
-                    { id: 'lower_b_4', movement_pattern: 'hinge', intensity: 'moderate', priority: 4 },
+                    { id: 'lower_b_1', movement_pattern: 'hinge', intensity: 'high', target_muscles: ['gluteos'], priority: 1 },
+                    { id: 'lower_b_2', movement_pattern: 'agachar', intensity: 'moderate', target_muscles: ['quadriceps'], allow_unilateral: true, priority: 2 },
+                    { id: 'lower_b_3', movement_pattern: 'hinge', intensity: 'moderate', target_muscles: ['posterior_coxa'], priority: 3 },
+                    { id: 'lower_b_4', movement_pattern: 'hinge', intensity: 'moderate', target_muscles: ['gluteos'], priority: 4 },
                     { id: 'lower_b_5', movement_pattern: 'isolar_panturrilha', intensity: 'low', priority: 5 },
                     { id: 'lower_b_6', movement_pattern: 'core', intensity: 'low', priority: 6 }
                 ]

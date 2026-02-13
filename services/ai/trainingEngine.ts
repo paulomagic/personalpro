@@ -20,6 +20,10 @@ import { getRelevantRules, formatRulesForPrompt } from './knowledge/exerciseOnto
 import { initializeVolumeCounter, addSetsToCounter, adjustSetsToFitMRV, validateFinalVolume, getDefaultMuscleForPattern, type VolumeCounter } from './volumeCounter';
 // v3.1.2: Pattern Validator - Prevenir padrões consecutivos
 import { validateConsecutivePatterns, extractPatternsFromWorkout, formatValidationResult } from './validation/patternValidator';
+// v3.2: Workout Validator - Duplicatas e cobertura muscular
+import { validateNoDuplicatesInDay, validateMuscleCoverage, removeDuplicatesFromDay, type MuscleCoverageResult } from './validation/workoutValidator';
+// v3.2: Exercise Blacklist - Contexto de treino (academia vs. casa)
+import { filterByContext, prioritizeByContext } from './knowledge/exerciseBlacklist';
 
 
 // ============ TIPOS ============
@@ -58,6 +62,11 @@ export interface GeneratedWorkout {
         generated_at: string;
         pattern_warnings?: string[];
         pattern_valid?: boolean;
+        muscle_coverage?: {
+            valid: boolean;
+            missing: string[];
+        };
+        duplicates_removed?: number;
         [key: string]: any; // Allow additional properties
     };
 }
@@ -289,12 +298,18 @@ export async function generateWorkout(params: {
             queue.add(async () => {
                 try {
                     // A. Filtrar exercícios EM MEMÓRIA (instantâneo)
-                    const candidates = filterExercisesInMemory(allExercisesDB, {
+                    let candidates = filterExercisesInMemory(allExercisesDB, {
                         movement_pattern: task.slot.movement_pattern,
                         primary_muscle: task.slot.target_muscles?.[0] || getDefaultMuscle(task.slot.movement_pattern),
                         avoid_injuries: parsedInjuries,
                         prefer_compound: task.slot.intensity === 'high' || task.slot.intensity === 'very_high'
                     });
+
+                    // v3.2: FILTRO BLACKLIST - Contexto de academia (remove Flexão de Braços, etc)
+                    candidates = filterByContext(candidates, 'academia');
+
+                    // v3.2: PRIORIZAÇÃO - Exercícios de academia preferidos
+                    candidates = prioritizeByContext(candidates, 'academia');
 
                     // FILTRO 1: Exercícios bloqueados por condições especiais (strings - rede de segurança)
                     // ATUALIZADO v2.2: Usa lista combinada (legado + novo sistema)
@@ -442,6 +457,53 @@ export async function generateWorkout(params: {
         console.log('[VolumeCounter] ✅ All muscle groups within optimal volume ranges');
     }
 
+    // v3.2: VALIDAÇÃO DE DUPLICATAS E COBERTURA MUSCULAR
+    console.log('\n🔍 [Validation] Validando treino gerado...\n');
+
+    // Validar e corrigir duplicatas em cada dia
+    let totalDuplicatesRemoved = 0;
+    resolvedDays.forEach(day => {
+        const duplicateCheck = validateNoDuplicatesInDay(day.slots, day.label);
+
+        if (!duplicateCheck.valid) {
+            console.error(`\n❌ DUPLICATAS DETECTADAS em ${day.label}:`);
+            duplicateCheck.warnings.forEach(w => console.error(`   ${w}`));
+
+            // AÇÃO CORRETIVA: Remover duplicatas automaticamente
+            const { cleaned, removed } = removeDuplicatesFromDay(day.slots);
+            day.slots = cleaned;
+            totalDuplicatesRemoved += removed.length;
+
+            console.log(`   🔧 Correção automática: ${removed.length} duplicata(s) removida(s)`);
+        } else {
+            console.log(`✅ ${day.label}: Sem duplicatas`);
+        }
+    });
+
+    if (totalDuplicatesRemoved > 0) {
+        console.warn(`\n⚠️  Total de duplicatas removidas: ${totalDuplicatesRemoved}`);
+    }
+
+    // Validar cobertura muscular
+    const muscleCoverageResult = validateMuscleCoverage(template, resolvedDays);
+
+    if (!muscleCoverageResult.valid) {
+        console.warn('\n⚠️  GRUPOS MUSCULARES NÃO COBERTOS:');
+        muscleCoverageResult.missing.forEach(m =>
+            console.warn(`   - ${m}`)
+        );
+    } else {
+        console.log('\n✅ Todos os grupos musculares obrigatórios foram cobertos');
+    }
+
+    // Exibir cobertura detalhada
+    console.log('\n📊 Cobertura muscular:');
+    muscleCoverageResult.covered
+        .filter(c => c.covered)
+        .forEach(c => {
+            console.log(`   ✅ ${c.muscleGroup}: ${c.count} exercício(s)`);
+        });
+
 
     onProgress?.({ stage: 'complete', current: 4, total: 4, message: 'Treino gerado!' });
 
@@ -466,14 +528,17 @@ export async function generateWorkout(params: {
 
     console.log('\n' + formatValidationResult(patternValidation));
 
-    // Adicionar warnings ao metadata
-    if (patternValidation.warnings.length > 0) {
-        workout.metadata = {
-            ...workout.metadata,
-            pattern_warnings: patternValidation.warnings,
-            pattern_valid: patternValidation.valid
-        };
-    }
+    // Adicionar warnings e validações ao metadata
+    workout.metadata = {
+        ...workout.metadata,
+        pattern_warnings: patternValidation.warnings.length > 0 ? patternValidation.warnings : undefined,
+        pattern_valid: patternValidation.valid,
+        muscle_coverage: {
+            valid: muscleCoverageResult.valid,
+            missing: muscleCoverageResult.missing
+        },
+        duplicates_removed: totalDuplicatesRemoved > 0 ? totalDuplicatesRemoved : undefined
+    };
 
     return workout;
 }

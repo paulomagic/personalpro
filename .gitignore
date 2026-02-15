@@ -31,3 +31,4 @@ dist-ssr
 .env*.local
 supabase/.temp/
 .DS_Store
+organizacao-alteracoes-20260215/

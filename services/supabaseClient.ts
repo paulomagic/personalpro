@@ -893,12 +893,9 @@ export async function upsertUserProfile(profile: Partial<DBUserProfile> & { id: 
 
 // Generate secure random token for invitations
 function generateInvitationToken(): string {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-    let token = '';
-    for (let i = 0; i < 32; i++) {
-        token += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    return token;
+    const bytes = new Uint8Array(32);
+    crypto.getRandomValues(bytes);
+    return Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('');
 }
 
 // Create invitation for a student
@@ -959,37 +956,19 @@ export async function getInvitationByToken(token: string): Promise<DBInvitation 
 // Accept invitation and convert user to student
 export async function acceptInvitation(token: string, userId: string): Promise<{ success: boolean; error?: string }> {
     if (!supabase) return { success: false, error: 'Supabase not configured' };
+    void userId; // user id is resolved server-side by auth.uid() in RPC
 
-    // Get invitation
-    const invitation = await getInvitationByToken(token);
-    if (!invitation) {
-        return { success: false, error: 'Convite inválido ou expirado' };
-    }
+    const { data, error } = await supabase.rpc('accept_invitation', {
+        invitation_token: token
+    });
 
-    // Update invitation status
-    const { error: invError } = await supabase
-        .from('invitations')
-        .update({
-            status: 'accepted',
-            accepted_at: new Date().toISOString()
-        })
-        .eq('id', invitation.id);
-
-    if (invError) {
-        console.error('Error accepting invitation:', invError);
+    if (error) {
+        console.error('Error accepting invitation:', error);
         return { success: false, error: 'Erro ao aceitar convite' };
     }
 
-    // Create/update user profile as student
-    const profile = await upsertUserProfile({
-        id: userId,
-        role: 'student',
-        coach_id: invitation.coach_id,
-        client_id: invitation.client_id
-    });
-
-    if (!profile) {
-        return { success: false, error: 'Erro ao criar perfil' };
+    if (!data?.success) {
+        return { success: false, error: data?.error || 'Convite inválido ou expirado' };
     }
 
     return { success: true };

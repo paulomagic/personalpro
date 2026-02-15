@@ -1,7 +1,12 @@
 import { createClient } from '@supabase/supabase-js'
 
 const supabaseUrl = 'https://yuohwenofctcxdgqgtoo.supabase.co'
-const supabaseKey = 'sb_publishable_dH7seEcJnPHzrzkaz1mfGQ_wsg1AVUS'
+const supabaseKey = process.env.SUPABASE_ANON_KEY
+
+if (!supabaseKey) {
+    console.error('❌ SUPABASE_ANON_KEY não configurada no ambiente')
+    process.exit(1)
+}
 
 const supabase = createClient(supabaseUrl, supabaseKey)
 

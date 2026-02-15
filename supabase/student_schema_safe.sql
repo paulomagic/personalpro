@@ -1,15 +1,29 @@
 -- ============================================
--- STUDENT MODE SCHEMA - PersonalPro
+-- STUDENT MODE SCHEMA - PersonalPro (SAFE VERSION)
+-- Remove policies antigas antes de criar novas
 -- Execute este SQL no Supabase SQL Editor
 -- ============================================
 
+-- ============ REMOVER POLICIES ANTIGAS (Se existirem) ============
+
+-- Remover policies de invitations
+DROP POLICY IF EXISTS "Coaches can view their own invitations" ON invitations;
+DROP POLICY IF EXISTS "Coaches can create invitations" ON invitations;
+DROP POLICY IF EXISTS "Coaches can update their own invitations" ON invitations;
+DROP POLICY IF EXISTS "Anyone can view invitation by token" ON invitations;
+
+-- Remover policies de user_profiles
+DROP POLICY IF EXISTS "Users can view their own profile" ON user_profiles;
+DROP POLICY IF EXISTS "Users can update their own profile" ON user_profiles;
+DROP POLICY IF EXISTS "Coaches can view their students profiles" ON user_profiles;
+DROP POLICY IF EXISTS "System can insert profiles" ON user_profiles;
+
 -- ============ USER PROFILES TABLE ============
--- Stores role information and coach-student relationships
 CREATE TABLE IF NOT EXISTS user_profiles (
   id UUID REFERENCES auth.users(id) ON DELETE CASCADE PRIMARY KEY,
   role VARCHAR(20) NOT NULL DEFAULT 'coach' CHECK (role IN ('admin', 'coach', 'student')),
-  coach_id UUID REFERENCES auth.users(id) ON DELETE SET NULL, -- For students: who invited them
-  client_id UUID REFERENCES clients(id) ON DELETE SET NULL,   -- Links student to their client record
+  coach_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  client_id UUID REFERENCES clients(id) ON DELETE SET NULL,
   full_name VARCHAR(255),
   avatar_url TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
@@ -17,12 +31,11 @@ CREATE TABLE IF NOT EXISTS user_profiles (
 );
 
 -- ============ INVITATIONS TABLE ============
--- Stores pending invitations sent by coaches to students
 CREATE TABLE IF NOT EXISTS invitations (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
   coach_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
   email VARCHAR(255) NOT NULL,
-  client_id UUID REFERENCES clients(id) ON DELETE CASCADE, -- Links to existing client record
+  client_id UUID REFERENCES clients(id) ON DELETE CASCADE,
   token VARCHAR(64) UNIQUE NOT NULL,
   status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'accepted', 'expired', 'cancelled')),
   expires_at TIMESTAMP WITH TIME ZONE DEFAULT (NOW() + INTERVAL '7 days'),
@@ -43,12 +56,11 @@ CREATE INDEX IF NOT EXISTS idx_invitations_status ON invitations(status);
 ALTER TABLE user_profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE invitations ENABLE ROW LEVEL SECURITY;
 
--- Policies for user_profiles
-DROP POLICY IF EXISTS "Users can view their own profile" ON user_profiles;
+-- ============ POLICIES FOR user_profiles ============
+
 CREATE POLICY "Users can view their own profile" ON user_profiles
   FOR SELECT USING (auth.uid() = id);
 
-DROP POLICY IF EXISTS "Users can update their own profile" ON user_profiles;
 CREATE POLICY "Users can update their own profile" ON user_profiles
   FOR UPDATE
   USING (auth.uid() = id)
@@ -60,11 +72,9 @@ CREATE POLICY "Users can update their own profile" ON user_profiles
     AND client_id IS NOT DISTINCT FROM (SELECT client_id FROM user_profiles WHERE id = auth.uid())
   );
 
-DROP POLICY IF EXISTS "Coaches can view their students profiles" ON user_profiles;
 CREATE POLICY "Coaches can view their students profiles" ON user_profiles
   FOR SELECT USING (auth.uid() = coach_id);
 
-DROP POLICY IF EXISTS "System can insert profiles" ON user_profiles;
 CREATE POLICY "System can insert profiles" ON user_profiles
   FOR INSERT
   WITH CHECK (
@@ -75,7 +85,8 @@ CREATE POLICY "System can insert profiles" ON user_profiles
     AND client_id IS NULL
   );
 
--- Policies for invitations
+-- ============ POLICIES FOR invitations ============
+
 CREATE POLICY "Coaches can view their own invitations" ON invitations
   FOR SELECT USING (auth.uid() = coach_id);
 
@@ -86,18 +97,18 @@ CREATE POLICY "Coaches can update their own invitations" ON invitations
   FOR UPDATE USING (auth.uid() = coach_id);
 
 CREATE POLICY "Anyone can view invitation by token" ON invitations
-  FOR SELECT USING (true); -- Token-based lookup needs public access
+  FOR SELECT USING (true);
 
 -- ============ FUNCTIONS ============
 
--- Function to automatically create user_profile on signup
+-- Function to automatically create user_profile on signup (HARDENED)
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
   INSERT INTO public.user_profiles (id, role, full_name, avatar_url)
   VALUES (
     NEW.id,
-    'coach',
+    'coach',  -- FORCE coach role (ignore raw_user_meta_data)
     COALESCE(NEW.raw_user_meta_data->>'name', NEW.raw_user_meta_data->>'full_name'),
     NEW.raw_user_meta_data->>'avatar_url'
   );
@@ -111,7 +122,7 @@ CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 
--- Function to accept invitation
+-- Function to accept invitation (TRANSACTIONAL)
 CREATE OR REPLACE FUNCTION public.accept_invitation(invitation_token VARCHAR)
 RETURNS JSON AS $$
 DECLARE

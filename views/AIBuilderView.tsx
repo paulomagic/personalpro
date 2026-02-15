@@ -601,12 +601,20 @@ const AIBuilderView: React.FC<AIBuilderViewProps> = ({ user, onBack, onDone }) =
 
   const handleExportPDF = () => {
     if (!result) return;
+    const escapeHtml = (value: unknown) =>
+      String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+
     const printWindow = window.open('', '_blank');
     if (printWindow) {
       printWindow.document.write(`
         <html>
           <head>
-            <title>${result.title || 'Treino Apex'}</title>
+            <title>${escapeHtml(result.title || 'Treino Apex')}</title>
             <style>
               body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 40px; color: #1e293b; }
               h1 { color: #2563eb; font-size: 24px; margin-bottom: 10px; }
@@ -622,22 +630,22 @@ const AIBuilderView: React.FC<AIBuilderViewProps> = ({ user, onBack, onDone }) =
           </head>
           <body>
             <div class="header">
-              <h1>${result.title || 'Treino Personalizado'}</h1>
-              <p><strong>Objetivo:</strong> ${result.objective}</p>
-              <p><strong>Cliente:</strong> ${selectedClient?.name}</p>
+              <h1>${escapeHtml(result.title || 'Treino Personalizado')}</h1>
+              <p><strong>Objetivo:</strong> ${escapeHtml(result.objective)}</p>
+              <p><strong>Cliente:</strong> ${escapeHtml(selectedClient?.name)}</p>
             </div>
             ${result.splits.map((s: any) => `
               <div class="split">
-                <h3>${s.name}</h3>
+                <h3>${escapeHtml(s.name)}</h3>
                 ${s.exercises.map((e: any) => `
                   <div class="exercise">
                     <div>
-                      <div class="name">${e.name}</div>
-                      <div class="meta">${e.targetMuscle}</div>
+                      <div class="name">${escapeHtml(e.name)}</div>
+                      <div class="meta">${escapeHtml(e.targetMuscle)}</div>
                     </div>
                     <div class="details">
-                      ${e.sets} séries x ${e.reps} <br/>
-                      Descanso: ${e.rest}
+                      ${escapeHtml(e.sets)} séries x ${escapeHtml(e.reps)} <br/>
+                      Descanso: ${escapeHtml(e.rest)}
                     </div>
                   </div>
                 `).join('')}

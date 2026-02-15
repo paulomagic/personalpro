@@ -49,10 +49,38 @@ ALTER TABLE activity_logs ENABLE ROW LEVEL SECURITY;
 
 -- Políticas: Para simplificar, permitir acesso total (ajustar depois se necessário)
 DROP POLICY IF EXISTS "Admin can view all ai_logs" ON ai_logs;
-CREATE POLICY "Admin can view all ai_logs" ON ai_logs FOR ALL USING (true);
+CREATE POLICY "Admin can view all ai_logs" ON ai_logs
+  FOR SELECT
+  TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.user_profiles up
+      WHERE up.id = auth.uid() AND up.role = 'admin'
+    )
+  );
 
 DROP POLICY IF EXISTS "Admin can view all activity_logs" ON activity_logs;
-CREATE POLICY "Admin can view all activity_logs" ON activity_logs FOR ALL USING (true);
+CREATE POLICY "Admin can view all activity_logs" ON activity_logs
+  FOR SELECT
+  TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.user_profiles up
+      WHERE up.id = auth.uid() AND up.role = 'admin'
+    )
+  );
+
+DROP POLICY IF EXISTS "Users can insert own ai_logs" ON ai_logs;
+CREATE POLICY "Users can insert own ai_logs" ON ai_logs
+  FOR INSERT
+  TO authenticated
+  WITH CHECK (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Users can insert own activity_logs" ON activity_logs;
+CREATE POLICY "Users can insert own activity_logs" ON activity_logs
+  FOR INSERT
+  TO authenticated
+  WITH CHECK (auth.uid() = user_id);
 
 -- ================================================
 -- Verificação: Listar tabelas criadas

@@ -2,7 +2,12 @@ import { createClient } from '@supabase/supabase-js'
 import { readFileSync } from 'fs'
 
 const supabaseUrl = 'https://yuohwenofctcxdgqgtoo.supabase.co'
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY || 'sb_publishable_dH7seEcJnPHzrzkaz1mfGQ_wsg1AVUS'
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY
+
+if (!supabaseServiceKey) {
+    console.error('❌ SUPABASE_SERVICE_KEY não configurada no ambiente')
+    process.exit(1)
+}
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey)
 

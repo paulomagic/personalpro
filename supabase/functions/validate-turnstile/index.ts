@@ -7,6 +7,51 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const TURNSTILE_VERIFY_URL = "https://challenges.cloudflare.com/turnstile/v0/siteverify";
+const requestsByIp = new Map<string, { count: number; resetAt: number }>();
+
+function getAllowedOrigins(): string[] {
+    const raw = Deno.env.get("ALLOWED_ORIGINS") || "";
+    return raw.split(",").map((o) => o.trim()).filter(Boolean);
+}
+
+function buildCorsHeaders(req: Request): Record<string, string> | null {
+    const origin = req.headers.get("origin");
+    const allowedOrigins = getAllowedOrigins();
+    const allowOrigin = !origin || allowedOrigins.includes(origin);
+
+    if (!allowOrigin) return null;
+
+    return {
+        "Access-Control-Allow-Origin": origin || "null",
+        "Access-Control-Allow-Methods": "POST, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization",
+        "Vary": "Origin",
+    };
+}
+
+function getClientIp(req: Request): string {
+    return req.headers.get("cf-connecting-ip")
+        || req.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
+        || "unknown";
+}
+
+function isRateLimited(req: Request): boolean {
+    const max = Number(Deno.env.get("RATE_LIMIT_MAX") || "20");
+    const windowMs = Number(Deno.env.get("RATE_LIMIT_WINDOW_MS") || "60000");
+    const ip = getClientIp(req);
+    const now = Date.now();
+    const slot = requestsByIp.get(ip);
+
+    if (!slot || now >= slot.resetAt) {
+        requestsByIp.set(ip, { count: 1, resetAt: now + windowMs });
+        return false;
+    }
+
+    if (slot.count >= max) return true;
+    slot.count += 1;
+    requestsByIp.set(ip, slot);
+    return false;
+}
 
 interface TurnstileResponse {
     success: boolean;
@@ -16,15 +61,19 @@ interface TurnstileResponse {
 }
 
 serve(async (req: Request) => {
+    const corsHeaders = buildCorsHeaders(req);
+    if (!corsHeaders) {
+        return new Response(
+            JSON.stringify({ success: false, error: "Origin not allowed" }),
+            { status: 403, headers: { "Content-Type": "application/json" } }
+        );
+    }
+
     // Handle CORS preflight
     if (req.method === "OPTIONS") {
         return new Response(null, {
             status: 204,
-            headers: {
-                "Access-Control-Allow-Origin": "*",
-                "Access-Control-Allow-Methods": "POST, OPTIONS",
-                "Access-Control-Allow-Headers": "Content-Type, Authorization",
-            },
+            headers: corsHeaders,
         });
     }
 
@@ -32,8 +81,15 @@ serve(async (req: Request) => {
     if (req.method !== "POST") {
         return new Response(JSON.stringify({ error: "Method not allowed" }), {
             status: 405,
-            headers: { "Content-Type": "application/json" },
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
+    }
+
+    if (isRateLimited(req)) {
+        return new Response(
+            JSON.stringify({ success: false, error: "Rate limit exceeded" }),
+            { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
     }
 
     try {
@@ -42,7 +98,7 @@ serve(async (req: Request) => {
         if (!token) {
             return new Response(
                 JSON.stringify({ success: false, error: "Missing CAPTCHA token" }),
-                { status: 400, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" } }
+                { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
             );
         }
 
@@ -51,10 +107,9 @@ serve(async (req: Request) => {
 
         if (!secretKey) {
             console.error("TURNSTILE_SECRET_KEY not configured");
-            // In development/misconfigured state, allow through with warning
             return new Response(
-                JSON.stringify({ success: true, warning: "Validation skipped - secret not configured" }),
-                { status: 200, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" } }
+                JSON.stringify({ success: false, error: "Validation service not configured" }),
+                { status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" } }
             );
         }
 
@@ -86,10 +141,7 @@ serve(async (req: Request) => {
                 }),
                 {
                     status: 200,
-                    headers: {
-                        "Content-Type": "application/json",
-                        "Access-Control-Allow-Origin": "*"
-                    }
+                    headers: { ...corsHeaders, "Content-Type": "application/json" }
                 }
             );
         } else {
@@ -102,10 +154,7 @@ serve(async (req: Request) => {
                 }),
                 {
                     status: 400,
-                    headers: {
-                        "Content-Type": "application/json",
-                        "Access-Control-Allow-Origin": "*"
-                    }
+                    headers: { ...corsHeaders, "Content-Type": "application/json" }
                 }
             );
         }
@@ -115,10 +164,7 @@ serve(async (req: Request) => {
             JSON.stringify({ success: false, error: "Validation service error" }),
             {
                 status: 500,
-                headers: {
-                    "Content-Type": "application/json",
-                    "Access-Control-Allow-Origin": "*"
-                }
+                headers: { ...corsHeaders, "Content-Type": "application/json" }
             }
         );
     }

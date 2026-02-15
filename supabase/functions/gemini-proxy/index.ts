@@ -11,6 +11,51 @@ const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models"
 
 // Model
 const MODEL = "gemini-2.5-flash";
+const requestsByIp = new Map<string, { count: number; resetAt: number }>();
+
+function getAllowedOrigins(): string[] {
+    const raw = Deno.env.get("ALLOWED_ORIGINS") || "";
+    return raw.split(",").map((o) => o.trim()).filter(Boolean);
+}
+
+function buildCorsHeaders(req: Request): Record<string, string> | null {
+    const origin = req.headers.get("origin");
+    const allowedOrigins = getAllowedOrigins();
+    const allowOrigin = !origin || allowedOrigins.includes(origin);
+
+    if (!allowOrigin) return null;
+
+    return {
+        "Access-Control-Allow-Origin": origin || "null",
+        "Access-Control-Allow-Methods": "POST, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization, apikey, x-client-info",
+        "Vary": "Origin",
+    };
+}
+
+function getClientIp(req: Request): string {
+    return req.headers.get("cf-connecting-ip")
+        || req.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
+        || "unknown";
+}
+
+function isRateLimited(req: Request): boolean {
+    const max = Number(Deno.env.get("RATE_LIMIT_MAX") || "20");
+    const windowMs = Number(Deno.env.get("RATE_LIMIT_WINDOW_MS") || "60000");
+    const ip = getClientIp(req);
+    const now = Date.now();
+    const slot = requestsByIp.get(ip);
+
+    if (!slot || now >= slot.resetAt) {
+        requestsByIp.set(ip, { count: 1, resetAt: now + windowMs });
+        return false;
+    }
+
+    if (slot.count >= max) return true;
+    slot.count += 1;
+    requestsByIp.set(ip, slot);
+    return false;
+}
 
 interface GeminiRequest {
     prompt: string;
@@ -71,12 +116,13 @@ async function callGemini(
 }
 
 serve(async (req: Request) => {
-    // CORS headers
-    const corsHeaders = {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type, Authorization, apikey, x-client-info",
-    };
+    const corsHeaders = buildCorsHeaders(req);
+    if (!corsHeaders) {
+        return new Response(
+            JSON.stringify({ success: false, error: "Origin not allowed" }),
+            { status: 403, headers: { "Content-Type": "application/json" } }
+        );
+    }
 
     // Handle CORS preflight
     if (req.method === "OPTIONS") {
@@ -88,6 +134,13 @@ serve(async (req: Request) => {
         return new Response(
             JSON.stringify({ error: "Method not allowed" }),
             { status: 405, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+    }
+
+    if (isRateLimited(req)) {
+        return new Response(
+            JSON.stringify({ success: false, error: "Rate limit exceeded" }),
+            { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
     }
 

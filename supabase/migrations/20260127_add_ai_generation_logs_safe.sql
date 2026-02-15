@@ -1,4 +1,4 @@
--- Migration: Add AI Generation Logs Table for Monitoring
+-- Migration: Add AI Generation Logs Table for Monitoring (SAFE VERSION)
 -- Created: 2026-01-27
 -- Purpose: Track AI generation metrics for monitoring dashboard
 
@@ -36,7 +36,12 @@ CREATE INDEX IF NOT EXISTS idx_ai_logs_error_type ON public.ai_generation_logs(e
 -- Enable Row Level Security
 ALTER TABLE public.ai_generation_logs ENABLE ROW LEVEL SECURITY;
 
--- RLS Policies
+-- ============ REMOVE OLD POLICIES ============
+DROP POLICY IF EXISTS "Admins can view all generation logs" ON public.ai_generation_logs;
+DROP POLICY IF EXISTS "Users can view their own generation logs" ON public.ai_generation_logs;
+DROP POLICY IF EXISTS "System can insert generation logs" ON public.ai_generation_logs;
+
+-- ============ RLS Policies ============
 
 -- Admin can see all logs
 CREATE POLICY "Admins can view all generation logs"
@@ -65,7 +70,9 @@ CREATE POLICY "System can insert generation logs"
     TO authenticated
     WITH CHECK (true);
 
--- Create function to get aggregated metrics
+-- ============ Create function to get aggregated metrics ============
+-- (With admin validation - HARDENED)
+
 CREATE OR REPLACE FUNCTION public.get_ai_generation_metrics(
     time_range_hours INTEGER DEFAULT 24
 )
@@ -81,6 +88,7 @@ RETURNS TABLE (
 DECLARE
     is_admin BOOLEAN;
 BEGIN
+    -- HARDENED: Validate admin role before executing
     SELECT EXISTS (
         SELECT 1 FROM public.user_profiles
         WHERE id = auth.uid() AND role = 'admin'
@@ -107,6 +115,6 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 -- Grant execute permission
 GRANT EXECUTE ON FUNCTION public.get_ai_generation_metrics(INTEGER) TO authenticated;
 
--- Add comment
+-- Add comments
 COMMENT ON TABLE public.ai_generation_logs IS 'Logs de geração de treino por IA para monitoramento e métricas';
 COMMENT ON FUNCTION public.get_ai_generation_metrics IS 'Retorna métricas agregadas de geração de treino por período';

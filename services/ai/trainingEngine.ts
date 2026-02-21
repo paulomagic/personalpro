@@ -510,7 +510,7 @@ export async function generateWorkout(params: {
     console.timeEnd('[TrainingEngine] TOTAL Generation Time');
 
     // v3.1.2: VALIDAÇÃO DE PADRÕES CONSECUTIVOS
-    const workout = {
+    const workout: GeneratedWorkout = {
         template_id: template.template_id,
         template_name: template.name,
         client_name: name,

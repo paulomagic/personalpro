@@ -6,9 +6,9 @@ import type {
     SessionFeedback,
     ProgressionAdjustment,
     ProgressionConfig,
-    DEFAULT_PROGRESSION_CONFIG,
     AdjustmentReason
 } from './types';
+import { DEFAULT_PROGRESSION_CONFIG } from './types';
 
 // ============ ANÁLISE DE FEEDBACK ============
 

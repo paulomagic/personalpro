@@ -77,10 +77,11 @@ const AssessmentView: React.FC<AssessmentViewProps> = ({ user, client, onBack, o
     const handlePhotoSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const files = e.target.files;
         if (!files || files.length === 0) return;
+        const fileList: File[] = Array.from(files);
 
         setUploading(true);
 
-        for (const file of Array.from(files)) {
+        for (const file of fileList) {
             // Validate file type
             if (!file.type.startsWith('image/')) {
                 console.warn('File is not an image:', file.name);
@@ -117,8 +118,8 @@ const AssessmentView: React.FC<AssessmentViewProps> = ({ user, client, onBack, o
             date: new Date().toISOString(),
             weight: parseFloat(weight) || 0,
             bodyFat: parseFloat(bodyFat) || undefined,
-            measures: Object.entries(measures).reduce<Record<string, number>>((acc, [k, v]) => ({ ...acc, [k]: parseFloat(v) || 0 }), {}),
-            skinfolds: Object.entries(skinfolds).reduce<Record<string, number>>((acc, [k, v]) => ({ ...acc, [k]: parseFloat(v) || 0 }), {}),
+            measures: Object.entries(measures as Record<string, string>).reduce<Record<string, number>>((acc, [k, v]) => ({ ...acc, [k]: parseFloat(v) || 0 }), {}),
+            skinfolds: Object.entries(skinfolds as Record<string, string>).reduce<Record<string, number>>((acc, [k, v]) => ({ ...acc, [k]: parseFloat(v) || 0 }), {}),
             photos: photos
         };
 

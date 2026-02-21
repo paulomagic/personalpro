@@ -58,9 +58,18 @@ function App() {
       (event, session) => {
         if (event === 'SIGNED_OUT' || !session) {
           setUser(null);
+          setUserProfile(null);
           setCurrentView(View.LOGIN);
         } else if (event === 'SIGNED_IN' && session?.user) {
           setUser(session.user);
+          getUserProfile(session.user.id).then((profile) => {
+            if (profile) {
+              setUserProfile(profile);
+              setUser({ ...session.user, profile });
+            }
+          }).catch((error) => {
+            console.error('Error loading profile on SIGNED_IN:', error);
+          });
         }
       }
     );
@@ -209,12 +218,17 @@ function App() {
         const profile = await getUserProfile(loggedUser.id);
         if (profile) {
           setUserProfile(profile);
+          setUser({ ...loggedUser, profile });
 
           // Redirect based on role
           if (profile.role === 'student') {
             navigateTo(View.STUDENT);
             return;
           }
+        } else if (loggedUser?.user_metadata?.role === 'student') {
+          setUserProfile({ id: loggedUser.id, role: 'student' } as any);
+          navigateTo(View.STUDENT);
+          return;
         }
       } catch (error) {
         console.error('Error loading user profile:', error);
@@ -485,4 +499,3 @@ function App() {
 };
 
 export default App;
-

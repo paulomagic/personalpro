@@ -6,11 +6,13 @@ import { Client } from '../types';
 interface AddClientModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onSave: (client: Partial<Client>) => void;
+    onSave: (client: Partial<Client>) => Promise<void> | void;
 }
 
 const AddClientModal: React.FC<AddClientModalProps> = ({ isOpen, onClose, onSave }) => {
     const [activeTab, setActiveTab] = useState<'basic' | 'details' | 'notes'>('basic');
+    const [saving, setSaving] = useState(false);
+    const [formError, setFormError] = useState<string | null>(null);
 
     // Basic Info
     const [name, setName] = useState('');
@@ -47,9 +49,9 @@ const AddClientModal: React.FC<AddClientModalProps> = ({ isOpen, onClose, onSave
         'Atleta'
     ];
 
-    const handleSave = () => {
+    const handleSave = async () => {
         if (!name.trim()) {
-            alert('Nome é obrigatório');
+            setFormError('Nome é obrigatório');
             return;
         }
 
@@ -57,10 +59,13 @@ const AddClientModal: React.FC<AddClientModalProps> = ({ isOpen, onClose, onSave
         if (email.trim()) {
             const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
             if (!emailRegex.test(email.trim())) {
-                alert('Formato de email inválido');
+                setFormError('Formato de email inválido');
                 return;
             }
         }
+
+        setFormError(null);
+        setSaving(true);
 
         const newClient: Partial<Client> = {
             // Note: Don't set id here - Supabase will generate UUID automatically
@@ -85,9 +90,15 @@ const AddClientModal: React.FC<AddClientModalProps> = ({ isOpen, onClose, onSave
             completedClasses: 0,
         };
 
-        onSave(newClient);
-        resetForm();
-        onClose();
+        try {
+            await onSave(newClient);
+            resetForm();
+            onClose();
+        } catch (error) {
+            setFormError('Não foi possível salvar o aluno. Verifique os dados e tente novamente.');
+        } finally {
+            setSaving(false);
+        }
     };
 
     const resetForm = () => {
@@ -103,6 +114,7 @@ const AddClientModal: React.FC<AddClientModalProps> = ({ isOpen, onClose, onSave
         setInjuries('');
         setPreferences('');
         setActiveTab('basic');
+        setFormError(null);
     };
 
     if (!isOpen) return null;
@@ -355,21 +367,29 @@ const AddClientModal: React.FC<AddClientModalProps> = ({ isOpen, onClose, onSave
                             </div>
                         </motion.div>
                     )}
+
+                    {formError && (
+                        <div className="mt-3 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+                            {formError}
+                        </div>
+                    )}
                 </div>
 
                 {/* Footer */}
                 <div className="p-6 border-t border-white/5 flex gap-3">
                     <button
                         onClick={() => { resetForm(); onClose(); }}
+                        disabled={saving}
                         className="flex-1 py-3 rounded-xl bg-white/5 text-slate-400 font-bold hover:bg-white/10 transition-colors"
                     >
                         Cancelar
                     </button>
                     <button
                         onClick={handleSave}
+                        disabled={saving}
                         className="flex-1 py-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-lg shadow-blue-500/30 transition-all"
                     >
-                        SALVAR
+                        {saving ? 'SALVANDO...' : 'SALVAR'}
                     </button>
                 </div>
             </motion.div>

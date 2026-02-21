@@ -57,8 +57,6 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({
                         };
                         setClientData(mappedClient);
 
-                        console.log('📥 Perfil do aluno carregado:', { bodyFat: (client as any).body_fat });
-
                         // Load history
                         const workouts = await getCompletedWorkouts(profile.client_id);
                         setHistory(workouts);

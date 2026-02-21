@@ -24,6 +24,15 @@ export interface ActivityLogEntry {
     metadata?: Record<string, any>;
 }
 
+function redactSensitiveText(value?: string | null): string | null {
+    if (!value) return null;
+
+    return value
+        .replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, '[REDACTED_EMAIL]')
+        .replace(/\b(?:\+?55\s?)?(?:\(?\d{2}\)?\s?)?\d{4,5}-?\d{4}\b/g, '[REDACTED_PHONE]')
+        .slice(0, 2000);
+}
+
 // Log AI action with full details
 export async function logAIAction(entry: AILogEntry): Promise<void> {
     try {
@@ -33,13 +42,13 @@ export async function logAIAction(entry: AILogEntry): Promise<void> {
             user_id: user?.id,
             action_type: entry.action_type,
             model_used: entry.model_used,
-            prompt: entry.prompt,
-            response: entry.response,
+            prompt: redactSensitiveText(entry.prompt),
+            response: redactSensitiveText(entry.response),
             tokens_input: entry.tokens_input,
             tokens_output: entry.tokens_output,
             latency_ms: entry.latency_ms,
             success: entry.success,
-            error_message: entry.error_message,
+            error_message: redactSensitiveText(entry.error_message),
             metadata: entry.metadata
         });
 

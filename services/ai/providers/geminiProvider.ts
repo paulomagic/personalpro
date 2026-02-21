@@ -2,6 +2,7 @@
 // Used for progress analysis, complex insights
 
 import type { AIProvider, ProviderRequest, ProviderResponse } from '../types';
+import { supabase } from '../../supabaseClient';
 
 // Supabase URL for Edge Function
 const SUPABASE_URL = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SUPABASE_URL) || '';
@@ -12,6 +13,18 @@ const isDev = typeof import.meta !== 'undefined' && import.meta.env?.DEV;
 
 function estimateTokens(text: string): number {
     return Math.ceil(text.length / 4);
+}
+
+async function getAuthHeaders(): Promise<Record<string, string> | null> {
+    if (!supabase) return null;
+    const { data: { session } } = await supabase.auth.getSession();
+    const accessToken = session?.access_token;
+    if (!accessToken) return null;
+
+    return {
+        'Authorization': `Bearer ${accessToken}`,
+        'apikey': SUPABASE_ANON_KEY
+    };
 }
 
 export const geminiProvider: AIProvider = {
@@ -38,13 +51,24 @@ export const geminiProvider: AIProvider = {
 
         try {
             if (isDev) console.log('🚀 Calling Gemini via Edge Function...');
+            const authHeaders = await getAuthHeaders();
+            if (!authHeaders) {
+                return {
+                    success: false,
+                    text: null,
+                    provider: 'gemini',
+                    model: 'gemini-2.0-flash',
+                    latencyMs: Date.now() - startTime,
+                    tokensInput,
+                    error: 'User session not found'
+                };
+            }
 
             const response = await fetch(GEMINI_PROXY_URL, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-                    'apikey': SUPABASE_ANON_KEY
+                    ...authHeaders
                 },
                 body: JSON.stringify({
                     prompt: request.prompt,

@@ -37,38 +37,43 @@ const DashboardView: React.FC<DashboardViewProps> = ({ user, onSelectClient, onO
         setLoadingClients(true);
         try {
           const { getClients, getAppointments, getPayments } = await import('../services/supabaseClient');
+          const today = new Date().toISOString().split('T')[0];
 
           // Fetch clients
           if (user.isDemo) {
             setClients(mockClients.slice(0, 3));
+            setAppointmentData();
           } else {
-            const data = await getClients(user.id);
+            const [clientsData, todayAppointments, payments] = await Promise.all([
+              getClients(user.id),
+              getAppointments(user.id, today),
+              getPayments(user.id)
+            ]);
+
+            const data = clientsData;
             const mappedData = data.map((c: any) => ({
               ...c,
               startDate: c.created_at,
               avatar: c.avatar || c.avatar_url
             }));
             setClients(mappedData.slice(0, 3));
-          }
 
-          // Fetch today's appointments
-          const today = new Date().toISOString().split('T')[0];
-          const todayAppointments = await getAppointments(user.id, today);
-          if (todayAppointments.length > 0) {
-            setAppointments(todayAppointments.map((a: any) => ({
-              id: a.id,
-              time: a.time?.slice(0, 5) || '08:00',
-              clientName: a.clients?.name || 'Cliente'
-            })));
-          }
+            // Fetch today's appointments
+            if (todayAppointments.length > 0) {
+              setAppointments(todayAppointments.map((a: any) => ({
+                id: a.id,
+                time: a.time?.slice(0, 5) || '08:00',
+                clientName: a.clients?.name || 'Cliente'
+              })));
+            }
 
-          // Fetch monthly revenue from paid payments
-          const payments = await getPayments(user.id);
-          const paidTotal = payments
-            .filter((p: any) => p.status === 'paid')
-            .reduce((sum: number, p: any) => sum + (p.amount || 0), 0);
-          if (paidTotal > 0) {
-            setRevenue(paidTotal);
+            // Fetch monthly revenue from paid payments
+            const paidTotal = payments
+              .filter((p: any) => p.status === 'paid')
+              .reduce((sum: number, p: any) => sum + (p.amount || 0), 0);
+            if (paidTotal > 0) {
+              setRevenue(paidTotal);
+            }
           }
         } catch (error) {
           console.error("Error loading dashboard data:", error);
@@ -106,6 +111,8 @@ const DashboardView: React.FC<DashboardViewProps> = ({ user, onSelectClient, onO
   ]);
 
   const [revenue, setRevenue] = useState(12450);
+  const revenueMonth = new Date().toLocaleDateString('pt-BR', { month: 'long' });
+  const revenueMonthLabel = revenueMonth.charAt(0).toUpperCase() + revenueMonth.slice(1);
 
   // Find an at-risk client for the notification
   const atRiskClient = clients.find(c => c.status === 'at-risk' || c.adherence < 60) || clients[0];
@@ -221,7 +228,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ user, onSelectClient, onO
             <Wallet size={24} />
           </div>
           <div>
-            <p className="text-xs text-slate-400 font-medium mb-0.5">Receita de Dezembro</p>
+            <p className="text-xs text-slate-400 font-medium mb-0.5">Receita de {revenueMonthLabel}</p>
             <h3 className="text-xl font-black text-white">R$ {revenue.toLocaleString('pt-BR')}</h3>
           </div>
         </div>

@@ -26,6 +26,15 @@ const providers: Record<string, AIProvider> = {
 };
 
 // ============ LOGGING ============
+function redactSensitiveText(value?: string | null): string | null {
+    if (!value) return null;
+
+    return value
+        .replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, '[REDACTED_EMAIL]')
+        .replace(/\b(?:\+?55\s?)?(?:\(?\d{2}\)?\s?)?\d{4,5}-?\d{4}\b/g, '[REDACTED_PHONE]')
+        .slice(0, 2000);
+}
+
 async function logAIAction(entry: AILogEntry): Promise<void> {
     if (!supabase) return;
 
@@ -34,13 +43,13 @@ async function logAIAction(entry: AILogEntry): Promise<void> {
             action_type: entry.action_type,
             provider_used: entry.provider_used,
             model_used: entry.model_name,
-            prompt: entry.prompt?.substring(0, 2000),
-            response: entry.response?.substring(0, 2000),
+            prompt: redactSensitiveText(entry.prompt),
+            response: redactSensitiveText(entry.response),
             tokens_input: entry.tokens_input,
             tokens_output: entry.tokens_output,
             latency_ms: entry.latency_ms,
             success: entry.success,
-            error_message: entry.error_message,
+            error_message: redactSensitiveText(entry.error_message),
             metadata: {
                 schema_valid: entry.schema_valid,
                 rejection_reason: entry.rejection_reason,

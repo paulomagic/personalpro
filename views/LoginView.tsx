@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Turnstile } from '@marsidev/react-turnstile';
 import { supabase, getInvitationByToken, acceptInvitation } from '../services/supabaseClient';
 import { DBInvitation } from '../services/supabaseClient';
 
@@ -17,6 +18,8 @@ const InputField = ({ type, placeholder, value, onChange }: any) => (
 );
 
 const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
+  const TURNSTILE_SITE_KEY = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_TURNSTILE_SITE_KEY) || '';
+  const TURNSTILE_VALIDATE_URL = `${(typeof import.meta !== 'undefined' && import.meta.env?.VITE_SUPABASE_URL) || ''}/functions/v1/validate-turnstile`;
   const [currentSlide, setCurrentSlide] = useState(0);
   const [showRegister, setShowRegister] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
@@ -26,6 +29,9 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [captchaValidating, setCaptchaValidating] = useState(false);
+  const turnstileRef = useRef<any>(null);
 
   // Rate limiting states
   const [loginAttempts, setLoginAttempts] = useState(0);
@@ -74,6 +80,46 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
     }
   ];
 
+  const resetCaptcha = () => {
+    setCaptchaToken(null);
+    if (turnstileRef.current?.reset) {
+      turnstileRef.current.reset();
+    }
+  };
+
+  const validateCaptchaIfEnabled = async (): Promise<boolean> => {
+    if (!TURNSTILE_SITE_KEY) return true;
+    if (!supabase) return true;
+    if (!captchaToken) {
+      setError('Confirme que você não é robô');
+      return false;
+    }
+
+    setCaptchaValidating(true);
+    try {
+      const response = await fetch(TURNSTILE_VALIDATE_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: captchaToken })
+      });
+
+      const data = await response.json();
+      if (!response.ok || !data?.success) {
+        setError('Falha na validação anti-bot. Tente novamente.');
+        resetCaptcha();
+        return false;
+      }
+
+      return true;
+    } catch {
+      setError('Não foi possível validar o CAPTCHA');
+      resetCaptcha();
+      return false;
+    } finally {
+      setCaptchaValidating(false);
+    }
+  };
+
   const handleLogin = async () => {
     // Check if user is locked out
     if (lockUntil && Date.now() < lockUntil) {
@@ -86,6 +132,9 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
       setError('Preencha todos os campos');
       return;
     }
+
+    const captchaOk = await validateCaptchaIfEnabled();
+    if (!captchaOk) return;
 
     setLoading(true);
     setError(null);
@@ -116,6 +165,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
             ? `Email ou senha incorretos (${5 - newAttempts} tentativas restantes)`
             : authError.message);
         }
+        resetCaptcha();
         return;
       }
 
@@ -125,6 +175,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
       if (data.user) onLogin(data.user);
     } catch (err: any) {
       setError('Erro ao fazer login. Tente novamente.');
+      resetCaptcha();
     } finally {
       setLoading(false);
     }
@@ -135,6 +186,9 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
       setError('Preencha todos os campos');
       return;
     }
+
+    const captchaOk = await validateCaptchaIfEnabled();
+    if (!captchaOk) return;
 
     setLoading(true);
     setError(null);
@@ -161,6 +215,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
 
       if (authError) {
         setError(authError.message);
+        resetCaptcha();
         return;
       }
 
@@ -185,6 +240,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
       }
     } catch (err: any) {
       setError('Erro ao criar conta. Tente novamente.');
+      resetCaptcha();
     } finally {
       setLoading(false);
     }
@@ -239,7 +295,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
     return (
       <div className="flex flex-col min-h-screen bg-slate-950 px-8 py-12">
         <button
-          onClick={() => { setShowLogin(false); setShowRegister(false); setError(null); }}
+          onClick={() => { setShowLogin(false); setShowRegister(false); setError(null); resetCaptcha(); }}
           className="absolute top-12 left-6 size-10 rounded-full bg-slate-900 border border-white/10 flex items-center justify-center text-slate-400 hover:text-white transition-colors"
         >
           <span className="material-symbols-outlined">arrow_back</span>
@@ -296,11 +352,30 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
           </div>
         </div>
 
+        {TURNSTILE_SITE_KEY && (
+          <div className="mb-4 flex justify-center">
+            <Turnstile
+              ref={turnstileRef}
+              siteKey={TURNSTILE_SITE_KEY}
+              options={{ theme: 'dark', size: 'flexible' }}
+              onSuccess={(token) => {
+                setCaptchaToken(token);
+                setError(null);
+              }}
+              onError={() => {
+                setCaptchaToken(null);
+                setError('Falha na validação anti-bot');
+              }}
+              onExpire={() => setCaptchaToken(null)}
+            />
+          </div>
+        )}
+
 
 
         <button
           onClick={isRegister ? handleRegister : handleLogin}
-          disabled={loading}
+          disabled={loading || captchaValidating}
           className="w-full h-14 bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white font-bold rounded-2xl text-base transition-all shadow-xl shadow-blue-600/20 disabled:opacity-50 flex items-center justify-center border border-white/5 mb-4"
         >
           {loading ? (
@@ -322,7 +397,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
 
         <p className="text-center mt-6 text-sm text-slate-500">
           {isRegister ? 'Já tem uma conta?' : 'Não tem conta?'}
-          <button onClick={() => { setShowLogin(!isRegister); setShowRegister(!showRegister); setError(null); }} className="text-blue-500 font-bold ml-1 hover:underline">
+          <button onClick={() => { setShowLogin(!isRegister); setShowRegister(!showRegister); setError(null); resetCaptcha(); }} className="text-blue-500 font-bold ml-1 hover:underline">
             {isRegister ? 'Entrar' : 'Criar conta'}
           </button>
         </p>

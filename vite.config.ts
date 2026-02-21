@@ -4,9 +4,7 @@ import react from '@vitejs/plugin-react';
 
 export default defineConfig(({ mode }) => {
   // Load all env variables (empty prefix to load all)
-  const env = loadEnv(mode, process.cwd(), '');
-
-  console.log('🔑 Vite loading env - GEMINI key found:', !!env.VITE_GEMINI_API_KEY);
+  loadEnv(mode, process.cwd(), '');
 
   return {
     server: {

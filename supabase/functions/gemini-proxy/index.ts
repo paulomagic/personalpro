@@ -11,7 +11,7 @@ const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models"
 
 // Model
 const MODEL = "gemini-2.5-flash";
-const requestsByIp = new Map<string, { count: number; resetAt: number }>();
+const requestsByKey = new Map<string, { count: number; resetAt: number }>();
 
 function getAllowedOrigins(): string[] {
     const raw = Deno.env.get("ALLOWED_ORIGINS") || "";
@@ -21,7 +21,7 @@ function getAllowedOrigins(): string[] {
 function buildCorsHeaders(req: Request): Record<string, string> | null {
     const origin = req.headers.get("origin");
     const allowedOrigins = getAllowedOrigins();
-    const allowOrigin = !origin || allowedOrigins.includes(origin);
+    const allowOrigin = !!origin && (allowedOrigins.length === 0 || allowedOrigins.includes(origin));
 
     if (!allowOrigin) return null;
 
@@ -39,22 +39,47 @@ function getClientIp(req: Request): string {
         || "unknown";
 }
 
-function isRateLimited(req: Request): boolean {
+function isRateLimited(rateKey: string): boolean {
     const max = Number(Deno.env.get("RATE_LIMIT_MAX") || "20");
     const windowMs = Number(Deno.env.get("RATE_LIMIT_WINDOW_MS") || "60000");
-    const ip = getClientIp(req);
     const now = Date.now();
-    const slot = requestsByIp.get(ip);
+    const slot = requestsByKey.get(rateKey);
 
     if (!slot || now >= slot.resetAt) {
-        requestsByIp.set(ip, { count: 1, resetAt: now + windowMs });
+        requestsByKey.set(rateKey, { count: 1, resetAt: now + windowMs });
         return false;
     }
 
     if (slot.count >= max) return true;
     slot.count += 1;
-    requestsByIp.set(ip, slot);
+    requestsByKey.set(rateKey, slot);
     return false;
+}
+
+async function getAuthenticatedUserId(req: Request): Promise<string | null> {
+    const authHeader = req.headers.get("authorization") || req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) return null;
+
+    const jwt = authHeader.slice(7);
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
+    if (!supabaseUrl || !supabaseAnonKey) return null;
+
+    try {
+        const userResponse = await fetch(`${supabaseUrl}/auth/v1/user`, {
+            method: "GET",
+            headers: {
+                "Authorization": `Bearer ${jwt}`,
+                "apikey": supabaseAnonKey,
+            },
+        });
+
+        if (!userResponse.ok) return null;
+        const user = await userResponse.json();
+        return user?.id || null;
+    } catch {
+        return null;
+    }
 }
 
 interface GeminiRequest {
@@ -137,7 +162,16 @@ serve(async (req: Request) => {
         );
     }
 
-    if (isRateLimited(req)) {
+    const userId = await getAuthenticatedUserId(req);
+    if (!userId) {
+        return new Response(
+            JSON.stringify({ success: false, error: "Unauthorized" }),
+            { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+    }
+
+    const rateKey = `${userId}:${getClientIp(req)}`;
+    if (isRateLimited(rateKey)) {
         return new Response(
             JSON.stringify({ success: false, error: "Rate limit exceeded" }),
             { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -196,7 +230,6 @@ serve(async (req: Request) => {
                 JSON.stringify({
                     success: false,
                     error: "AI generation failed",
-                    details: result.error,
                 }),
                 { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
             );

@@ -722,12 +722,17 @@ export async function uploadAssessmentPhoto(
             return null;
         }
 
-        // Get public URL
-        const { data: urlData } = supabase.storage
+        // Use signed URL to avoid exposing permanent public links
+        const { data: signedData, error: signedError } = await supabase.storage
             .from(STORAGE_BUCKET)
-            .getPublicUrl(data.path);
+            .createSignedUrl(data.path, 60 * 60 * 24 * 7); // 7 days
 
-        return urlData.publicUrl;
+        if (signedError) {
+            console.error('Error creating signed URL:', signedError.message);
+            return null;
+        }
+
+        return signedData.signedUrl;
     } catch (error) {
         console.error('Error in uploadAssessmentPhoto:', error);
         return null;
@@ -743,9 +748,10 @@ export async function deleteAssessmentPhoto(photoUrl: string): Promise<boolean> 
         if (urlParts.length < 2) return false;
 
         const filePath = urlParts[1];
+        const cleanPath = filePath.split('?')[0];
         const { error } = await supabase.storage
             .from(STORAGE_BUCKET)
-            .remove([filePath]);
+            .remove([cleanPath]);
 
         return !error;
     } catch (error) {
@@ -819,6 +825,55 @@ export async function getAssessmentsWithPhotos(clientId: string): Promise<any[]>
         return [];
     }
 
+    // Auto-refresh signed URLs for photos to prevent broken images after 7 days
+    if (data && data.length > 0) {
+        const pathsToSign: string[] = [];
+        const pathRefMap = new Map<string, { objIndex: number, photoIndex: number }[]>();
+
+        data.forEach((assessment, objIndex) => {
+            if (assessment.photos && Array.isArray(assessment.photos)) {
+                assessment.photos.forEach((photoUrl: string, photoIndex: number) => {
+                    if (typeof photoUrl === 'string' && photoUrl.includes(`${STORAGE_BUCKET}/`)) {
+                        const urlParts = photoUrl.split(`${STORAGE_BUCKET}/`);
+                        if (urlParts.length >= 2) {
+                            // avoid decoding if it's already url encoded, split by ? handles params
+                            const cleanPath = urlParts[1].split('?')[0];
+
+                            // only add if not already in list to avoid duplicate requests for same path
+                            if (!pathRefMap.has(cleanPath)) {
+                                pathsToSign.push(cleanPath);
+                            }
+
+                            const refs = pathRefMap.get(cleanPath) || [];
+                            refs.push({ objIndex, photoIndex });
+                            pathRefMap.set(cleanPath, refs);
+                        }
+                    }
+                });
+            }
+        });
+
+        if (pathsToSign.length > 0) {
+            const { data: signedUrls, error: signError } = await supabase.storage
+                .from(STORAGE_BUCKET)
+                .createSignedUrls(pathsToSign, 60 * 60 * 24 * 7); // 7 days
+
+            if (!signError && signedUrls) {
+                signedUrls.forEach((signedItem, index) => {
+                    const cleanPath = pathsToSign[index];
+                    if (signedItem.signedUrl && cleanPath) {
+                        const refs = pathRefMap.get(cleanPath) || [];
+                        refs.forEach(ref => {
+                            data[ref.objIndex].photos[ref.photoIndex] = signedItem.signedUrl;
+                        });
+                    }
+                });
+            } else if (signError) {
+                console.error('Error refreshing signed urls:', signError);
+            }
+        }
+    }
+
     return data || [];
 }
 
@@ -857,21 +912,18 @@ export async function getUserProfile(userId: string): Promise<DBUserProfile | nu
         .eq('id', userId)
         .single();
 
-    // Se perfil não existe, criar automaticamente
     if (error || !data) {
-        console.log('[getUserProfile] Perfil não encontrado, criando automaticamente...');
-        const newProfile = await upsertUserProfile({
-            id: userId,
-            role: 'coach', // Padrão para novos usuários
-        });
-        return newProfile;
+        if (error?.code !== 'PGRST116') {
+            console.error('[getUserProfile] Error fetching profile:', error);
+        }
+        return null;
     }
 
     return data;
 }
 
-// Create or update user profile
-export async function upsertUserProfile(profile: Partial<DBUserProfile> & { id: string }): Promise<DBUserProfile | null> {
+// Create or update user profile (internal use only)
+async function upsertUserProfile(profile: Partial<DBUserProfile> & { id: string }): Promise<DBUserProfile | null> {
     if (!supabase) return null;
 
     const { data, error } = await supabase
@@ -1049,15 +1101,14 @@ export interface DBRescheduleRequest {
 export async function getStudentAppointments(clientId: string): Promise<Appointment[]> {
     if (!supabase) return [];
 
-    // Get today at midnight local time for filtering
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const now = new Date();
+    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
     const { data, error } = await supabase
         .from('appointments')
         .select('*')
         .eq('client_id', clientId)
-        .gte('date', today.toISOString())
+        .gte('date', today)
         .order('date', { ascending: true });
 
     if (error) {

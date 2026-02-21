@@ -79,6 +79,13 @@ function isApiRequest(url) {
     return API_PATTERNS.some(pattern => url.includes(pattern));
 }
 
+// Evitar persistir dados sensíveis de autenticação/DB em cache local
+function shouldCacheApiResponse(url) {
+    return !url.includes('/auth/v1/')
+        && !url.includes('/rest/v1/')
+        && !url.includes('/functions/v1/');
+}
+
 // Verifica se é um asset estático (somente imagens e fontes)
 function isStaticAsset(url) {
     return STATIC_PATTERNS.some(pattern => url.endsWith(pattern));
@@ -93,7 +100,7 @@ function isDevAsset(url) {
 async function networkFirst(request) {
     try {
         const networkResponse = await fetch(request);
-        if (networkResponse.ok) {
+        if (networkResponse.ok && shouldCacheApiResponse(request.url)) {
             const cache = await caches.open(DYNAMIC_CACHE);
             cache.put(request, networkResponse.clone());
         }

@@ -84,7 +84,10 @@ const ClientsView: React.FC<ClientsViewProps> = ({ user, onBack, onSelectClient 
 
     // Handle new client
     const handleAddClient = async (newClientData: Partial<Client>) => {
-        if (!user?.id) return;
+        if (!user?.id) {
+            showToast('Usuário inválido para criar aluno', 'error');
+            throw new Error('Missing user');
+        }
 
         try {
             const clientToCreate: any = {
@@ -120,11 +123,17 @@ const ClientsView: React.FC<ClientsViewProps> = ({ user, onBack, onSelectClient 
             // We should probably rely on default or separate insert. For now delete it to avoid error.
             if ('paymentStatus' in clientToCreate) delete clientToCreate.paymentStatus;
 
-            await createClient(clientToCreate);
+            const created = await createClient(clientToCreate);
+            if (!created) {
+                throw new Error('Create client failed');
+            }
+
             await fetchClients(); // Refresh list
-            setShowAddModal(false);
+            showToast('Aluno criado com sucesso!', 'success');
         } catch (error) {
             console.error('Error creating client:', error);
+            showToast('Erro ao criar aluno. Tente novamente.', 'error');
+            throw error;
         }
     };
 

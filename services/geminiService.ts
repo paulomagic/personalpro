@@ -2,6 +2,7 @@
 // API calls are proxied through Supabase Edge Function to protect the API key
 
 import { logAIAction } from './loggingService';
+import { supabase } from './supabaseClient';
 
 // Supabase URL for Edge Function
 const SUPABASE_URL = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SUPABASE_URL) || '';
@@ -77,6 +78,18 @@ function estimateTokens(text: string): number {
   return Math.ceil(text.length / 4);
 }
 
+async function getEdgeAuthHeaders(): Promise<Record<string, string> | null> {
+  if (!supabase) return null;
+  const { data: { session } } = await supabase.auth.getSession();
+  const accessToken = session?.access_token;
+  if (!accessToken) return null;
+
+  return {
+    'Authorization': `Bearer ${accessToken}`,
+    'apikey': (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SUPABASE_ANON_KEY) || ''
+  };
+}
+
 // Call Gemini via Edge Function
 async function callGeminiWithFallback(prompt: string, action?: string): Promise<{
   text: string | null;
@@ -95,11 +108,16 @@ async function callGeminiWithFallback(prompt: string, action?: string): Promise<
 
   try {
     if (isDev) console.log('🚀 Calling Gemini via Edge Function...');
+    const authHeaders = await getEdgeAuthHeaders();
+    if (!authHeaders) {
+      return { text: null, model: null, latencyMs: Date.now() - startTime, tokensInput, tokensOutput: 0 };
+    }
 
     const response = await fetch(GEMINI_PROXY_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        ...authHeaders
       },
       body: JSON.stringify({ prompt, action }),
     });

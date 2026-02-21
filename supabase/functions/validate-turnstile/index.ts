@@ -17,7 +17,7 @@ function getAllowedOrigins(): string[] {
 function buildCorsHeaders(req: Request): Record<string, string> | null {
     const origin = req.headers.get("origin");
     const allowedOrigins = getAllowedOrigins();
-    const allowOrigin = !origin || allowedOrigins.includes(origin);
+    const allowOrigin = !!origin && (allowedOrigins.length === 0 || allowedOrigins.includes(origin));
 
     if (!allowOrigin) return null;
 
@@ -60,6 +60,11 @@ interface TurnstileResponse {
     hostname?: string;
 }
 
+function getAllowedHostnames(): string[] {
+    const raw = Deno.env.get("TURNSTILE_ALLOWED_HOSTNAMES") || "";
+    return raw.split(",").map((h) => h.trim()).filter(Boolean);
+}
+
 serve(async (req: Request) => {
     const corsHeaders = buildCorsHeaders(req);
     if (!corsHeaders) {
@@ -95,9 +100,16 @@ serve(async (req: Request) => {
     try {
         const { token } = await req.json();
 
-        if (!token) {
+        if (!token || typeof token !== "string") {
             return new Response(
                 JSON.stringify({ success: false, error: "Missing CAPTCHA token" }),
+                { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
+        }
+
+        if (token.length > 4096) {
+            return new Response(
+                JSON.stringify({ success: false, error: "Invalid CAPTCHA token" }),
                 { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
             );
         }
@@ -133,6 +145,20 @@ serve(async (req: Request) => {
         const result: TurnstileResponse = await verifyResponse.json();
 
         if (result.success) {
+            const allowedHostnames = getAllowedHostnames();
+            if (allowedHostnames.length > 0 && (!result.hostname || !allowedHostnames.includes(result.hostname))) {
+                return new Response(
+                    JSON.stringify({
+                        success: false,
+                        error: "Invalid CAPTCHA hostname",
+                    }),
+                    {
+                        status: 400,
+                        headers: { ...corsHeaders, "Content-Type": "application/json" }
+                    }
+                );
+            }
+
             return new Response(
                 JSON.stringify({
                     success: true,

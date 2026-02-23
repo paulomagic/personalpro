@@ -39,6 +39,7 @@ export const EXERCISE_BLACKLISTS: ExerciseBlacklist[] = [
         ],
         blacklistedPatterns: [
             /^flexão\s+de\s+bra[çc]os/i,
+            /\bflex[aã]o\b/i,
             /push[\s-]?up/i
         ],
         reason: 'Em academia, há opções superiores com carga progressiva (supino, crucifixo, crossover, etc)'
@@ -146,6 +147,19 @@ export function filterByContext(
 
         if (isBlacklistedPattern) {
             debugLog(`[Blacklist] ❌ Removido "${ex.name}" (pattern match): ${blacklist.reason}`);
+            return false;
+        }
+
+        // Regra dinâmica: em academia, evitar exercícios exclusivamente de peso corporal
+        // para padrões de força (exceto CORE), pois há melhores opções com sobrecarga progressiva.
+        if (
+            context === 'academia' &&
+            ex.movement_pattern !== 'core' &&
+            Array.isArray(ex.equipment) &&
+            ex.equipment.length === 1 &&
+            ex.equipment[0] === 'peso_corporal'
+        ) {
+            debugLog(`[Blacklist] ❌ Removido "${ex.name}" (bodyweight-only em academia)`);
             return false;
         }
 

@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Workout, WorkoutExercise, Exercise } from '../types';
 import VideoPlayerModal from '../components/VideoPlayerModal';
 import { FeedbackForm } from '../components/FeedbackForm';
-import { saveSessionFeedback, getProgressionSuggestion } from '../services/ai/feedback';
+import { saveSessionFeedbackWithRetry, flushQueuedFeedback, getProgressionSuggestion } from '../services/ai/feedback';
+import { logFunnelEvent } from '../services/loggingService';
 import type { SessionFeedback } from '../services/ai/feedback/types';
 
 interface TrainingExecutionViewProps {
@@ -65,6 +66,24 @@ const TrainingExecutionView: React.FC<TrainingExecutionViewProps> = ({ workout, 
     return () => clearInterval(timer);
   }, []);
 
+  useEffect(() => {
+    void flushQueuedFeedback();
+    void logFunnelEvent('workout_execution_started', {
+      workoutId: workout.id,
+      coldStartMode: isColdStartWorkout,
+      exercises: exercises.length
+    });
+  }, [workout.id, isColdStartWorkout, exercises.length]);
+
+  const finishWorkout = () => {
+    void logFunnelEvent('workout_execution_finished', {
+      workoutId: workout.id,
+      coldStartMode: isColdStartWorkout,
+      completedExercises: completedExercises.size
+    });
+    onFinish();
+  };
+
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
@@ -99,17 +118,25 @@ const TrainingExecutionView: React.FC<TrainingExecutionViewProps> = ({ workout, 
 
   const handleFeedbackSubmit = async (feedback: Omit<SessionFeedback, 'session_date'>) => {
     try {
-      const result = await saveSessionFeedback(feedback);
+      const result = await saveSessionFeedbackWithRetry(feedback);
 
       if (result.success) {
+        void logFunnelEvent('feedback_submitted', {
+          workoutId: feedback.workout_id,
+          exerciseId: feedback.exercise_id,
+          queued: !!result.queued
+        });
+
         // Mark exercise as completed
         setCompletedExercises(prev => new Set(prev).add(feedbackExerciseIndex));
 
         // Get progression suggestion
-        const suggestion = await getProgressionSuggestion(
-          feedback.student_id,
-          feedback.exercise_id
-        );
+        const suggestion = result.queued
+          ? null
+          : await getProgressionSuggestion(
+            feedback.student_id,
+            feedback.exercise_id
+          );
 
         if (suggestion) {
           // Show suggestion (could use toast/notification)
@@ -125,10 +152,16 @@ const TrainingExecutionView: React.FC<TrainingExecutionViewProps> = ({ workout, 
           setShowFeedbackForm(false);
         } else {
           // All exercises completed
-          onFinish();
+          finishWorkout();
         }
       } else if (isColdStartWorkout) {
         alert('Não foi possível salvar o feedback. No modo inicial, o feedback é obrigatório para finalizar.');
+        void logFunnelEvent('feedback_failed', {
+          workoutId: feedback.workout_id,
+          exerciseId: feedback.exercise_id,
+          coldStartMode: true,
+          reason: result.error || 'unknown_error'
+        });
         return;
       } else if (currentExerciseIndex < exercises.length - 1) {
         setCurrentExerciseIndex(prev => prev + 1);
@@ -136,7 +169,7 @@ const TrainingExecutionView: React.FC<TrainingExecutionViewProps> = ({ workout, 
         setCurrentLoad(0);
         setShowFeedbackForm(false);
       } else {
-        onFinish();
+        finishWorkout();
       }
     } catch (error) {
       console.error('[Feedback] Error:', error);
@@ -154,7 +187,7 @@ const TrainingExecutionView: React.FC<TrainingExecutionViewProps> = ({ workout, 
         setCurrentLoad(0);
         setShowFeedbackForm(false);
       } else {
-        onFinish();
+        finishWorkout();
       }
     }
   };
@@ -172,7 +205,7 @@ const TrainingExecutionView: React.FC<TrainingExecutionViewProps> = ({ workout, 
       setCurrentLoad(0);
       setShowFeedbackForm(false);
     } else {
-      onFinish();
+      finishWorkout();
     }
   };
 

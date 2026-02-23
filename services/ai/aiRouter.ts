@@ -16,7 +16,7 @@ import { groqProvider } from './providers/groqProvider';
 import { geminiProvider } from './providers/geminiProvider';
 import { localProvider } from './providers/localProvider';
 import { supabase } from '../supabaseClient';
-import { resolveExercise, type Exercise } from '../exerciseService';
+import { resolveExercise, type Exercise, type Equipment } from '../exerciseService';
 
 // ============ PROVIDER REGISTRY ============
 const providers: Record<string, AIProvider> = {
@@ -185,6 +185,31 @@ export const aiRouter = new AIRouter();
 
 // ============ HIGH-LEVEL FUNCTIONS ============
 
+function mapEquipmentToResolver(equipment?: string[]): Equipment[] | undefined {
+    if (!equipment || equipment.length === 0) return undefined;
+
+    const normalized = equipment
+        .map(item => item.toLowerCase().trim())
+        .join(' ');
+
+    // "Academia completa" means all progressive load options are available.
+    if (normalized.includes('academia completa')) {
+        return ['maquina', 'cabo', 'halter', 'barra'];
+    }
+
+    const mapped = new Set<Equipment>();
+    equipment.forEach(item => {
+        const lower = item.toLowerCase();
+        if (lower.includes('maquin')) mapped.add('maquina');
+        if (lower.includes('cabo')) mapped.add('cabo');
+        if (lower.includes('halter')) mapped.add('halter');
+        if (lower.includes('barra')) mapped.add('barra');
+        if (lower.includes('peso') || lower.includes('corporal') || lower.includes('calisten')) mapped.add('peso_corporal');
+    });
+
+    return mapped.size > 0 ? Array.from(mapped) : undefined;
+}
+
 /**
  * Generate training intent
  * IA returns intentions → system resolves to exercises
@@ -236,6 +261,8 @@ EQUIPAMENTOS: ${equipment}
 ===== INSTRUÇÕES CRÍTICAS =====
 Você NÃO deve retornar nomes de exercícios.
 Retorne apenas INTENÇÕES BIOMECÂNICAS que o sistema vai resolver.
+Se houver academia completa/equipamentos completos, EVITE intenções que normalmente resultem em
+exercícios exclusivamente com peso corporal (ex: flexão), exceto para core, aquecimento ou reabilitação.
 
 Padrões de movimento disponíveis:
 - empurrar_horizontal (supino, flexão)
@@ -307,6 +334,7 @@ Crie ${clientData.days} splits com 5-7 intenções cada.`;
 
     try {
         const parsed = JSON.parse(cleanText);
+        const resolverEquipment = mapEquipmentToResolver(clientData.equipment);
 
         // Validate schema
         const validation = validateIntentResponse(parsed);
@@ -337,6 +365,7 @@ Crie ${clientData.days} splits com 5-7 intenções cada.`;
                         const exercises = await resolveExercise({
                             movement_pattern: intention.movement_pattern,
                             primary_muscle: intention.primary_muscle,
+                            equipment: resolverEquipment,
                             avoid_injuries: parsedInjuries,
                             prefer_compound: true
                         });

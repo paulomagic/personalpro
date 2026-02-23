@@ -12,6 +12,130 @@ const debugLog = (...args: unknown[]) => {
     if (isDev) console.log(...args);
 };
 
+const FEEDBACK_QUEUE_STORAGE_KEY = 'personalpro_feedback_queue_v1';
+
+interface QueuedFeedbackItem {
+    id: string;
+    feedback: Omit<SessionFeedback, 'session_date'>;
+    attempts: number;
+    queuedAt: string;
+    lastError?: string;
+}
+
+function canUseStorage(): boolean {
+    return typeof window !== 'undefined' && typeof window.localStorage !== 'undefined';
+}
+
+function readFeedbackQueue(): QueuedFeedbackItem[] {
+    if (!canUseStorage()) return [];
+    try {
+        const raw = window.localStorage.getItem(FEEDBACK_QUEUE_STORAGE_KEY);
+        if (!raw) return [];
+        const parsed = JSON.parse(raw);
+        return Array.isArray(parsed) ? parsed : [];
+    } catch (error) {
+        console.warn('[FeedbackService] Failed to read feedback queue:', error);
+        return [];
+    }
+}
+
+function writeFeedbackQueue(items: QueuedFeedbackItem[]): boolean {
+    if (!canUseStorage()) return false;
+    try {
+        window.localStorage.setItem(FEEDBACK_QUEUE_STORAGE_KEY, JSON.stringify(items));
+        return true;
+    } catch (error) {
+        console.warn('[FeedbackService] Failed to write feedback queue:', error);
+        return false;
+    }
+}
+
+function pushFeedbackToQueue(
+    feedback: Omit<SessionFeedback, 'session_date'>,
+    errorMessage?: string
+): { queued: boolean; queueSize: number } {
+    const queue = readFeedbackQueue();
+    queue.push({
+        id: `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
+        feedback,
+        attempts: 0,
+        queuedAt: new Date().toISOString(),
+        lastError: errorMessage
+    });
+    const queued = writeFeedbackQueue(queue);
+    return {
+        queued,
+        queueSize: queue.length
+    };
+}
+
+let flushScheduled = false;
+function scheduleQueuedFeedbackFlush(delayMs = 5000): void {
+    if (flushScheduled || typeof window === 'undefined') return;
+    flushScheduled = true;
+    window.setTimeout(async () => {
+        try {
+            await flushQueuedFeedback();
+        } finally {
+            flushScheduled = false;
+        }
+    }, delayMs);
+}
+
+export async function flushQueuedFeedback(maxItems = 20): Promise<{
+    processed: number;
+    success: number;
+    failed: number;
+    remaining: number;
+}> {
+    const queue = readFeedbackQueue();
+    if (queue.length === 0) {
+        return { processed: 0, success: 0, failed: 0, remaining: 0 };
+    }
+
+    if (!supabase) {
+        return { processed: 0, success: 0, failed: 0, remaining: queue.length };
+    }
+
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        return { processed: 0, success: 0, failed: 0, remaining: queue.length };
+    }
+
+    const processed = queue.slice(0, maxItems);
+    const kept: QueuedFeedbackItem[] = queue.slice(maxItems);
+
+    let success = 0;
+    let failed = 0;
+
+    for (const item of processed) {
+        const result = await saveSessionFeedback(item.feedback);
+        if (result.success) {
+            success++;
+            continue;
+        }
+
+        failed++;
+        kept.push({
+            ...item,
+            attempts: item.attempts + 1,
+            lastError: result.error || item.lastError
+        });
+    }
+
+    writeFeedbackQueue(kept);
+
+    if (kept.length > 0) {
+        scheduleQueuedFeedbackFlush(15000);
+    }
+
+    return {
+        processed: processed.length,
+        success,
+        failed,
+        remaining: kept.length
+    };
+}
+
 // ============ SAVE FEEDBACK ============
 
 /**
@@ -20,6 +144,10 @@ const debugLog = (...args: unknown[]) => {
 export async function saveSessionFeedback(
     feedback: Omit<SessionFeedback, 'session_date'>
 ): Promise<{ success: boolean; error?: string; id?: string }> {
+
+    if (!supabase) {
+        return { success: false, error: 'Supabase indisponível' };
+    }
 
     try {
         const { data, error } = await supabase
@@ -50,6 +178,40 @@ export async function saveSessionFeedback(
         console.error('[FeedbackService] Unexpected error:', error);
         return { success: false, error: error.message };
     }
+}
+
+/**
+ * Salva feedback com estratégia resiliente (queue local + retry)
+ */
+export async function saveSessionFeedbackWithRetry(
+    feedback: Omit<SessionFeedback, 'session_date'>
+): Promise<{ success: boolean; error?: string; id?: string; queued?: boolean; queueSize?: number }> {
+    const online = typeof navigator === 'undefined' ? true : navigator.onLine;
+
+    if (!online || !supabase) {
+        const queueResult = pushFeedbackToQueue(feedback, !supabase ? 'Supabase indisponível' : 'Offline');
+        return queueResult.queued
+            ? { success: true, queued: true, queueSize: queueResult.queueSize }
+            : { success: false, error: 'Falha ao enfileirar feedback offline' };
+    }
+
+    const result = await saveSessionFeedback(feedback);
+    if (result.success) {
+        void flushQueuedFeedback();
+        return result;
+    }
+
+    const queueResult = pushFeedbackToQueue(feedback, result.error);
+    if (queueResult.queued) {
+        scheduleQueuedFeedbackFlush();
+        return {
+            success: true,
+            queued: true,
+            queueSize: queueResult.queueSize
+        };
+    }
+
+    return result;
 }
 
 // ============ RETRIEVE FEEDBACK ============

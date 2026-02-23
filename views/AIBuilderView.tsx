@@ -1,6 +1,7 @@
 import React, { Suspense, lazy, useEffect, useState } from 'react';
 import { Client } from '../types';
 import { ThumbsUp, ThumbsDown, RefreshCw, Download } from 'lucide-react';
+import { logFunnelEvent } from '../services/loggingService';
 
 const DetectionFeedback = lazy(() => import('../components/DetectionFeedback'));
 
@@ -557,6 +558,13 @@ const AIBuilderView: React.FC<AIBuilderViewProps> = ({ user, onBack, onDone }) =
       .filter(Boolean)
       .join(' | ');
 
+    void logFunnelEvent('workout_generation_started', {
+      clientId: selectedClient.id,
+      goal: effectiveGoal,
+      daysPerWeek: selectedDays,
+      coldStartMode
+    });
+
     const clientExtendedData = {
       injuries: selectedClient.injuries,
       preferences: selectedClient.preferences,
@@ -624,6 +632,12 @@ const AIBuilderView: React.FC<AIBuilderViewProps> = ({ user, onBack, onDone }) =
 
           setWorkoutOptions([aiResult]);
           setResult(aiResult);
+          void logFunnelEvent('workout_generation_succeeded', {
+            provider: 'training_engine',
+            clientId: selectedClient.id,
+            optionsCount: 1,
+            coldStartMode
+          });
           setLoading(false);
           setActiveTabIndex(0);
           return;
@@ -680,6 +694,12 @@ const AIBuilderView: React.FC<AIBuilderViewProps> = ({ user, onBack, onDone }) =
       if (successfulResults.length > 0) {
         setWorkoutOptions(successfulResults);
         setResult(successfulResults[0]);
+        void logFunnelEvent('workout_generation_succeeded', {
+          provider: 'gemini',
+          clientId: selectedClient.id,
+          optionsCount: successfulResults.length,
+          coldStartMode
+        });
       } else {
         // Fallback to local generation
         const localExercisesForFallback = await ensureExerciseCatalog();
@@ -689,9 +709,18 @@ const AIBuilderView: React.FC<AIBuilderViewProps> = ({ user, onBack, onDone }) =
         }
         setWorkoutOptions([workout]);
         setResult(workout);
+        void logFunnelEvent('workout_generation_fallback_local', {
+          clientId: selectedClient.id,
+          coldStartMode
+        });
       }
     } catch (error) {
       console.error('Error generating workout:', error);
+      void logFunnelEvent('workout_generation_failed', {
+        clientId: selectedClient.id,
+        coldStartMode,
+        error: error instanceof Error ? error.message : 'unknown_error'
+      });
       const localExercisesForFallback = await ensureExerciseCatalog();
       let workout = generateSmartWorkout(selectedClient, observations, localExercisesForFallback);
       if (coldStartMode) {
@@ -699,6 +728,10 @@ const AIBuilderView: React.FC<AIBuilderViewProps> = ({ user, onBack, onDone }) =
       }
       setWorkoutOptions([workout]);
       setResult(workout);
+      void logFunnelEvent('workout_generation_fallback_local', {
+        clientId: selectedClient.id,
+        coldStartMode
+      });
     } finally {
       setLoading(false);
       setActiveTabIndex(0);
@@ -723,6 +756,11 @@ const AIBuilderView: React.FC<AIBuilderViewProps> = ({ user, onBack, onDone }) =
 
     try {
       if (selectedClient && result) {
+        void logFunnelEvent('workout_save_started', {
+          coachId: user.id,
+          clientId: selectedClient.id,
+          coldStartMode: !!result?.coldStartMode
+        });
         const { saveAIWorkout } = await loadSupabaseClient();
         // Prepare metadata
         const metadata = {
@@ -746,9 +784,19 @@ const AIBuilderView: React.FC<AIBuilderViewProps> = ({ user, onBack, onDone }) =
           result,
           metadata
         );
+        void logFunnelEvent('workout_save_succeeded', {
+          coachId: user.id,
+          clientId: selectedClient.id,
+          coldStartMode: !!result?.coldStartMode
+        });
       }
     } catch (error) {
       console.error('Error saving workout:', error);
+      void logFunnelEvent('workout_save_failed', {
+        coachId: user.id,
+        clientId: selectedClient?.id,
+        error: error instanceof Error ? error.message : 'unknown_error'
+      });
     } finally {
       setLoading(false);
       onDone();

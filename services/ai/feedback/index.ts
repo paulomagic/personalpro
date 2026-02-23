@@ -5,4 +5,13 @@ export { type SessionFeedback, type ProgressionAdjustment, type ProgressionConfi
 
 export { analyzeSessionFeedback, analyzeTrend, calculateLoadFromRPE } from './adaptiveProgression';
 
-export { saveSessionFeedback, getExerciseFeedbackHistory, getLatestFeedback, getProgressionSuggestion, getProgressionTrend, getAverageRIRByExercise } from './feedbackService';
+export {
+  saveSessionFeedback,
+  saveSessionFeedbackWithRetry,
+  flushQueuedFeedback,
+  getExerciseFeedbackHistory,
+  getLatestFeedback,
+  getProgressionSuggestion,
+  getProgressionTrend,
+  getAverageRIRByExercise
+} from './feedbackService';

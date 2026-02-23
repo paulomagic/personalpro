@@ -3,8 +3,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Check, Clock, Dumbbell, ChevronRight, Play, Pause, RotateCcw, Trophy, Flame, Timer as TimerIcon, ArrowLeft, Layers, AlertCircle } from 'lucide-react';
 import { WorkoutExercise, ExerciseSet, WorkoutSplit } from '../types';
 import { getClientCurrentWorkout, saveCompletedWorkout } from '../services/supabaseClient';
+import { saveSessionFeedbackWithRetry, flushQueuedFeedback } from '../services/ai/feedback';
+import type { SessionFeedback } from '../services/ai/feedback/types';
+import { logFunnelEvent } from '../services/loggingService';
 import { mockExercises } from '../mocks/demoData';
 import VideoPlayerModal from '../components/VideoPlayerModal';
+import { FeedbackForm } from '../components/FeedbackForm';
 
 interface StudentViewProps {
     clientId?: string;          // ID do cliente para buscar treinos reais
@@ -18,6 +22,18 @@ interface StudentViewProps {
 interface ExerciseCompletion {
     exerciseId: string;
     setCompletions: boolean[];
+}
+
+interface StudentWorkoutState {
+    id?: string;
+    title: string;
+    objective: string;
+    duration: string;
+    splits: WorkoutSplit[];
+    coldStartMode?: boolean;
+    ai_metadata?: {
+        coldStartMode?: boolean;
+    };
 }
 
 // Fallback workout para demo (quando não há treino no banco)
@@ -51,12 +67,7 @@ const StudentView: React.FC<StudentViewProps> = ({
 }) => {
     // States
     const [loading, setLoading] = useState(true);
-    const [workout, setWorkout] = useState<{
-        title: string;
-        objective: string;
-        duration: string;
-        splits: WorkoutSplit[];
-    } | null>(null);
+    const [workout, setWorkout] = useState<StudentWorkoutState | null>(null);
     const [selectedSplit, setSelectedSplit] = useState<WorkoutSplit | null>(null);
     const [completions, setCompletions] = useState<ExerciseCompletion[]>([]);
     const [activeExercise, setActiveExercise] = useState<number>(0);
@@ -66,6 +77,11 @@ const StudentView: React.FC<StudentViewProps> = ({
     const [showVideoModal, setShowVideoModal] = useState(false);
     const [activeVideo, setActiveVideo] = useState<{ url: string; name: string } | null>(null);
     const [workoutStartTime, setWorkoutStartTime] = useState<Date | null>(null);
+    const [showFeedbackForm, setShowFeedbackForm] = useState(false);
+    const [feedbackExerciseIndex, setFeedbackExerciseIndex] = useState(0);
+    const [feedbackCompletedExercises, setFeedbackCompletedExercises] = useState<Set<number>>(new Set());
+
+    const isColdStartWorkout = Boolean(workout?.coldStartMode || workout?.ai_metadata?.coldStartMode);
 
     // Fetch workout data on mount
     useEffect(() => {
@@ -78,10 +94,13 @@ const StudentView: React.FC<StudentViewProps> = ({
 
                     if (workoutData && workoutData.splits && Array.isArray(workoutData.splits) && workoutData.splits.length > 0) {
                         setWorkout({
+                            id: (workoutData as any).id,
                             title: workoutData.title,
                             objective: workoutData.objective,
                             duration: workoutData.duration,
-                            splits: workoutData.splits as WorkoutSplit[]
+                            splits: workoutData.splits as WorkoutSplit[],
+                            coldStartMode: Boolean((workoutData as any).coldStartMode || (workoutData as any).ai_metadata?.coldStartMode),
+                            ai_metadata: (workoutData as any).ai_metadata
                         });
                     } else {
                         // Fallback to demo workout
@@ -101,6 +120,10 @@ const StudentView: React.FC<StudentViewProps> = ({
 
         fetchWorkout();
     }, [clientId, studentName]);
+
+    useEffect(() => {
+        void flushQueuedFeedback();
+    }, []);
 
     // Helper to normalize exercises with default sets
     const normalizeExercises = (exercises: WorkoutExercise[]): WorkoutExercise[] => {
@@ -142,14 +165,23 @@ const StudentView: React.FC<StudentViewProps> = ({
                     setCompletions: ex.sets.map(() => false)
                 }))
             );
+            setFeedbackCompletedExercises(new Set());
             setActiveExercise(0);
+            setShowFeedbackForm(false);
 
             // Start timer if not already started
             if (!workoutStartTime) {
                 setWorkoutStartTime(new Date());
             }
+
+            void logFunnelEvent('workout_started', {
+                workoutId: workout?.id || 'unknown',
+                splitId: selectedSplit.id,
+                splitName: selectedSplit.name,
+                coldStartMode: isColdStartWorkout
+            });
         }
-    }, [selectedSplit, processedSplitId]);
+    }, [selectedSplit, processedSplitId, workoutStartTime, workout?.id, isColdStartWorkout]);
 
     // Calculate progress
     const totalSets = selectedSplit?.exercises?.reduce((acc, ex) => acc + (Array.isArray(ex.sets) ? ex.sets.length : 0), 0) || 0;
@@ -157,12 +189,35 @@ const StudentView: React.FC<StudentViewProps> = ({
         acc + comp.setCompletions.filter(Boolean).length, 0
     );
     const progress = totalSets > 0 ? (completedSets / totalSets) * 100 : 0;
+    const totalExercises = selectedSplit?.exercises?.length || 0;
+    const shouldCollectExerciseFeedback = Boolean(clientId);
+    const requiredFeedbackCount = isColdStartWorkout ? totalExercises : 0;
+    const hasAllRequiredFeedback = requiredFeedbackCount === 0 || feedbackCompletedExercises.size >= requiredFeedbackCount;
+    const canFinishWorkout = progress >= 100 && (!isColdStartWorkout || hasAllRequiredFeedback);
+
+    const getFirstMissingFeedbackExerciseIndex = () => {
+        if (!selectedSplit) return -1;
+        return selectedSplit.exercises.findIndex((_, idx) => !feedbackCompletedExercises.has(idx));
+    };
 
     // Toggle set completion
     const toggleSetComplete = (exerciseIndex: number, setIndex: number) => {
         const newCompletions = [...completions];
         newCompletions[exerciseIndex].setCompletions[setIndex] = !newCompletions[exerciseIndex].setCompletions[setIndex];
         setCompletions(newCompletions);
+
+        const isExerciseNowComplete = newCompletions[exerciseIndex].setCompletions.every(Boolean);
+        if (isExerciseNowComplete && shouldCollectExerciseFeedback && !feedbackCompletedExercises.has(exerciseIndex)) {
+            setFeedbackExerciseIndex(exerciseIndex);
+            setShowFeedbackForm(true);
+        }
+        if (!isExerciseNowComplete && feedbackCompletedExercises.has(exerciseIndex)) {
+            setFeedbackCompletedExercises(prev => {
+                const next = new Set(prev);
+                next.delete(exerciseIndex);
+                return next;
+            });
+        }
 
         // Auto-start rest timer if completing a set
         if (newCompletions[exerciseIndex].setCompletions[setIndex] && selectedSplit) {
@@ -205,8 +260,72 @@ const StudentView: React.FC<StudentViewProps> = ({
         return `${mins}:${secs.toString().padStart(2, '0')}`;
     };
 
+    const parseRepsFromSet = (value?: string): number => {
+        if (!value) return 0;
+        const match = value.match(/\d+/);
+        return match ? Number(match[0]) : 0;
+    };
+
+    const parseLoadFromSet = (value?: string): number => {
+        if (!value) return 0;
+        const match = value.replace(',', '.').match(/\d+(\.\d+)?/);
+        return match ? Number(match[0]) : 0;
+    };
+
+    const handleExerciseFeedbackSubmit = async (feedback: Omit<SessionFeedback, 'session_date'>) => {
+        const result = await saveSessionFeedbackWithRetry(feedback);
+
+        if (!result.success) {
+            alert('Erro ao salvar feedback. Tente novamente.');
+            void logFunnelEvent('feedback_failed', {
+                workoutId: feedback.workout_id,
+                exerciseId: feedback.exercise_id,
+                coldStartMode: isColdStartWorkout,
+                reason: result.error || 'unknown_error'
+            });
+            return;
+        }
+
+        void logFunnelEvent('feedback_submitted', {
+            workoutId: feedback.workout_id,
+            exerciseId: feedback.exercise_id,
+            coldStartMode: isColdStartWorkout,
+            queued: !!result.queued
+        });
+
+        setFeedbackCompletedExercises(prev => {
+            const next = new Set(prev);
+            next.add(feedbackExerciseIndex);
+            const completedAllRequired = !isColdStartWorkout || next.size >= totalExercises;
+            if (progress >= 100 && completedAllRequired) {
+                setTimeout(() => {
+                    void handleFinishWorkout();
+                }, 0);
+            }
+            return next;
+        });
+        setShowFeedbackForm(false);
+    };
+
+    const handleSkipExerciseFeedback = () => {
+        if (isColdStartWorkout) {
+            alert('No modo inicial, o feedback por exercício é obrigatório.');
+            return;
+        }
+        setShowFeedbackForm(false);
+    };
+
     // Handle workout completion
     const handleFinishWorkout = async () => {
+        if (isColdStartWorkout && !hasAllRequiredFeedback) {
+            const missingIndex = getFirstMissingFeedbackExerciseIndex();
+            if (missingIndex >= 0) {
+                setFeedbackExerciseIndex(missingIndex);
+                setShowFeedbackForm(true);
+            }
+            return;
+        }
+
         setShowCompleteModal(true);
 
         // Save to history if we have a real client
@@ -233,7 +352,7 @@ const StudentView: React.FC<StudentViewProps> = ({
 
                 await saveCompletedWorkout({
                     client_id: clientId,
-                    workout_id: undefined, // We don't have the parent workout ID easily accessible here, or we could pass it if needed
+                    workout_id: workout?.id,
                     title: `Treino ${selectedSplit.name}`,
                     duration: duration,
                     exercises_count: selectedSplit.exercises.length,
@@ -246,6 +365,14 @@ const StudentView: React.FC<StudentViewProps> = ({
                 console.error('Error saving workout history:', error);
             }
         }
+
+        void logFunnelEvent('workout_finished', {
+            workoutId: workout?.id || 'unknown',
+            splitId: selectedSplit.id,
+            coldStartMode: isColdStartWorkout,
+            feedbackCompleted: feedbackCompletedExercises.size,
+            feedbackRequired: requiredFeedbackCount
+        });
 
         if (onCompleteWorkout) {
             onCompleteWorkout();
@@ -393,7 +520,13 @@ const StudentView: React.FC<StudentViewProps> = ({
                         <div className="flex items-center gap-3">
 
                             <button
-                                onClick={() => { setSelectedSplit(null); setProcessedSplitId(null); setWorkoutStartTime(null); }}
+                                onClick={() => {
+                                    setSelectedSplit(null);
+                                    setProcessedSplitId(null);
+                                    setWorkoutStartTime(null);
+                                    setShowFeedbackForm(false);
+                                    setFeedbackCompletedExercises(new Set());
+                                }}
                                 className="size-10 rounded-full bg-white/10 backdrop-blur-md text-white border border-white/20 flex items-center justify-center active:scale-90 transition-all"
                             >
                                 <ArrowLeft size={20} />
@@ -425,6 +558,14 @@ const StudentView: React.FC<StudentViewProps> = ({
                         <span className="text-[10px] font-bold text-slate-500">{completedSets} de {totalSets} séries</span>
                         <span className="text-[10px] font-bold text-emerald-400">{Math.round(progress)}% concluído</span>
                     </div>
+                    {isColdStartWorkout && (
+                        <div className="flex justify-between items-center mt-1">
+                            <span className="text-[10px] font-black text-amber-400 uppercase tracking-widest">Modo Inicial Ativo</span>
+                            <span className="text-[10px] font-bold text-amber-300">
+                                Feedback: {feedbackCompletedExercises.size}/{requiredFeedbackCount}
+                            </span>
+                        </div>
+                    )}
                 </div>
             </header>
 
@@ -606,7 +747,12 @@ const StudentView: React.FC<StudentViewProps> = ({
                     {progress >= 100 ? (
                         <button
                             onClick={handleFinishWorkout}
-                            className="w-full py-4 px-5 rounded-[24px] font-bold text-lg flex items-center gap-4 bg-emerald-950/40 border-2 border-emerald-500/40 text-white shadow-[0_0_20px_rgba(16,185,129,0.15)] hover:bg-emerald-950/60 hover:border-emerald-400 active:scale-[0.98] transition-all"
+                            disabled={!canFinishWorkout}
+                            className={`w-full py-4 px-5 rounded-[24px] font-bold text-lg flex items-center gap-4 border-2 text-white transition-all ${
+                                canFinishWorkout
+                                    ? 'bg-emerald-950/40 border-emerald-500/40 shadow-[0_0_20px_rgba(16,185,129,0.15)] hover:bg-emerald-950/60 hover:border-emerald-400 active:scale-[0.98]'
+                                    : 'bg-slate-900/60 border-slate-700/60 opacity-80 cursor-not-allowed'
+                            }`}
                         >
                             <div className="size-12 rounded-xl bg-emerald-500/10 border-2 border-emerald-500/50 flex items-center justify-center flex-shrink-0">
                                 <Check size={24} className="text-emerald-400" strokeWidth={3} />
@@ -614,7 +760,9 @@ const StudentView: React.FC<StudentViewProps> = ({
                             <div className="flex flex-col items-start flex-1">
                                 <span className="text-white font-bold leading-tight">Encerrar sessão</span>
                                 <span className="text-sm text-slate-400 font-normal">
-                                    Ótimo trabalho hoje
+                                    {isColdStartWorkout && !hasAllRequiredFeedback
+                                        ? 'Envie feedback dos exercícios para concluir'
+                                        : 'Ótimo trabalho hoje'}
                                 </span>
                             </div>
                         </button>
@@ -629,6 +777,35 @@ const StudentView: React.FC<StudentViewProps> = ({
                     )}
                 </div>
             </div>
+
+            {/* Feedback Modal */}
+            <AnimatePresence>
+                {showFeedbackForm && selectedSplit && selectedSplit.exercises[feedbackExerciseIndex] && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
+                    >
+                        <div className="max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+                            <FeedbackForm
+                                workoutId={workout?.id || `split-${selectedSplit.id || 'unknown'}`}
+                                studentId={clientId || 'unknown'}
+                                exerciseId={selectedSplit.exercises[feedbackExerciseIndex].id || `ex-${feedbackExerciseIndex}`}
+                                exerciseName={selectedSplit.exercises[feedbackExerciseIndex].name || 'Exercício'}
+                                prescribedSets={Array.isArray(selectedSplit.exercises[feedbackExerciseIndex].sets) ? selectedSplit.exercises[feedbackExerciseIndex].sets.length : 0}
+                                prescribedReps={`${selectedSplit.exercises[feedbackExerciseIndex].sets?.[0]?.reps || '-'}`}
+                                prescribedLoad={parseLoadFromSet(selectedSplit.exercises[feedbackExerciseIndex].sets?.[0]?.load)}
+                                onSubmit={handleExerciseFeedbackSubmit}
+                                onCancel={handleSkipExerciseFeedback}
+                                allowCancel={!isColdStartWorkout}
+                                cancelLabel="Pular feedback"
+                                requirementNote={isColdStartWorkout ? 'Modo inicial: feedback por exercício é obrigatório para calibrar treino.' : undefined}
+                            />
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             {/* Completion Modal */}
             <AnimatePresence>
@@ -705,6 +882,8 @@ const StudentView: React.FC<StudentViewProps> = ({
                                     setSelectedSplit(null);
                                     setProcessedSplitId(null);
                                     setWorkoutStartTime(null);
+                                    setShowFeedbackForm(false);
+                                    setFeedbackCompletedExercises(new Set());
                                 }}
                                 className="px-8 py-4 bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-black rounded-2xl shadow-lg shadow-emerald-500/30 active:scale-95 transition-transform"
                             >

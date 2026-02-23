@@ -36,6 +36,7 @@ function redactSensitiveText(value?: string | null): string | null {
 // Log AI action with full details
 export async function logAIAction(entry: AILogEntry): Promise<void> {
     try {
+        if (!supabase) return;
         const { data: { user } } = await supabase.auth.getUser();
 
         const { error } = await supabase.from('ai_logs').insert({
@@ -63,6 +64,7 @@ export async function logAIAction(entry: AILogEntry): Promise<void> {
 // Log user activity
 export async function logActivity(entry: ActivityLogEntry): Promise<void> {
     try {
+        if (!supabase) return;
         const { data: { user } } = await supabase.auth.getUser();
 
         const { error } = await supabase.from('activity_logs').insert({
@@ -70,7 +72,7 @@ export async function logActivity(entry: ActivityLogEntry): Promise<void> {
             action: entry.action,
             resource_type: entry.resource_type,
             resource_id: entry.resource_id,
-            user_agent: navigator.userAgent,
+            user_agent: typeof navigator !== 'undefined' ? navigator.userAgent : 'unknown',
             metadata: entry.metadata
         });
 
@@ -80,6 +82,17 @@ export async function logActivity(entry: ActivityLogEntry): Promise<void> {
     } catch (e) {
         console.warn('Error in logActivity:', e);
     }
+}
+
+export async function logFunnelEvent(
+    stage: string,
+    metadata?: Record<string, any>
+): Promise<void> {
+    await logActivity({
+        action: `funnel:${stage}`,
+        resource_type: 'funnel',
+        metadata
+    });
 }
 
 // ============================================

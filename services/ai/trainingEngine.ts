@@ -608,6 +608,16 @@ function calculateScore(ex: Exercise, slot: TrainingSlot, injuries: Injury[], le
         if (slot.intensity === 'low' || slot.intensity === 'very_low') score += 10;
     }
 
+    // Contexto padrão do app: academia completa.
+    // Evita seleção de exercícios exclusivamente com peso corporal quando há alternativas melhores.
+    const equipment = ex.equipment || [];
+    const isBodyweightOnly = equipment.length === 1 && equipment[0] === 'peso_corporal';
+    if (slot.movement_pattern !== 'core' && isBodyweightOnly) {
+        score -= 35;
+    } else if (equipment.some(eq => eq === 'maquina' || eq === 'cabo' || eq === 'halter' || eq === 'barra')) {
+        score += 12;
+    }
+
     // Pesos livres EVITADOS para iniciantes
     if (!ex.is_machine && isBeginnerOrElderly) {
         score -= 20;

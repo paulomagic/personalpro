@@ -71,6 +71,58 @@ export interface ExerciseIntention {
     prefer_machine?: boolean;     // Opcional: preferir máquinas (menos estabilidade)
 }
 
+function hasGymEquipment(equipment?: Equipment[]): boolean {
+    if (!equipment || equipment.length === 0) return false;
+    return equipment.some(eq => eq === 'maquina' || eq === 'cabo' || eq === 'halter' || eq === 'barra');
+}
+
+function isBodyweightOnly(exercise: Exercise): boolean {
+    const equipment = exercise.equipment || [];
+    return equipment.length === 1 && equipment[0] === 'peso_corporal';
+}
+
+function isStrengthPattern(pattern: MovementPattern): boolean {
+    return pattern !== 'core';
+}
+
+function rankExercisesByIntention(
+    exercises: Exercise[],
+    intention: ExerciseIntention
+): Exercise[] {
+    const gymAvailable = hasGymEquipment(intention.equipment);
+
+    return [...exercises].sort((a, b) => {
+        const score = (exercise: Exercise) => {
+            let value = 0;
+
+            if (intention.prefer_compound && exercise.is_compound) value += 12;
+            if (intention.prefer_machine && exercise.is_machine) value += 10;
+
+            if (gymAvailable) {
+                const hasProgressiveEquipment = exercise.equipment.some(eq =>
+                    eq === 'maquina' || eq === 'cabo' || eq === 'halter' || eq === 'barra'
+                );
+                if (hasProgressiveEquipment) value += 20;
+
+                if (isStrengthPattern(intention.movement_pattern) && isBodyweightOnly(exercise)) {
+                    value -= 30;
+                }
+            }
+
+            if (intention.avoid_injuries && intention.avoid_injuries.length > 0) {
+                const cautionMatches = intention.avoid_injuries.filter(injury =>
+                    exercise.caution_for_injuries?.includes(injury)
+                ).length;
+                value -= cautionMatches * 8;
+            }
+
+            return value;
+        };
+
+        return score(b) - score(a);
+    });
+}
+
 // ============ CACHE & BATCH QUERY (PERFORMANCE OPTIMIZATION) ============
 
 interface ExerciseCache {
@@ -251,16 +303,6 @@ export async function resolveExercise(
         }
     }
 
-    // Preferir compostos
-    if (intention.prefer_compound !== undefined) {
-        query = query.order('is_compound', { ascending: !intention.prefer_compound });
-    }
-
-    // Preferir máquinas
-    if (intention.prefer_machine !== undefined) {
-        query = query.order('is_machine', { ascending: !intention.prefer_machine });
-    }
-
     const { data, error } = await query;
 
     if (error) {
@@ -270,7 +312,8 @@ export async function resolveExercise(
 
     // Se encontrou resultados, retorna
     if (data && data.length > 0) {
-        return data as Exercise[];
+        const ranked = rankExercisesByIntention(data as Exercise[], intention);
+        return ranked.slice(0, 10);
     }
 
     // FALLBACK: busca apenas por movement_pattern
@@ -288,9 +331,7 @@ export async function resolveExercise(
         }
     }
 
-    // Ordenar por compostos primeiro
-    fallbackQuery = fallbackQuery.order('is_compound', { ascending: false });
-    fallbackQuery = fallbackQuery.limit(1);
+    fallbackQuery = fallbackQuery.limit(30);
 
     const { data: fallbackData, error: fallbackError } = await fallbackQuery;
 
@@ -299,7 +340,8 @@ export async function resolveExercise(
         return [];
     }
 
-    return (fallbackData || []) as Exercise[];
+    const rankedFallback = rankExercisesByIntention((fallbackData || []) as Exercise[], intention);
+    return rankedFallback.slice(0, 10);
 }
 
 /**

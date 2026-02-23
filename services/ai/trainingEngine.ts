@@ -25,6 +25,16 @@ import { validateNoDuplicatesInDay, validateMuscleCoverage, removeDuplicatesFrom
 // v3.2: Exercise Blacklist - Contexto de treino (academia vs. casa)
 import { filterByContext, prioritizeByContext } from './knowledge/exerciseBlacklist';
 
+const isDev = import.meta.env.DEV;
+const debugLog = (...args: unknown[]) => {
+    if (isDev) console.log(...args);
+};
+const debugTime = (label: string) => {
+    if (isDev) console.time(label);
+};
+const debugTimeEnd = (label: string) => {
+    if (isDev) console.timeEnd(label);
+};
 
 // ============ TIPOS ============
 
@@ -165,7 +175,7 @@ export async function generateWorkout(params: {
 
     const { name, goal, level, daysPerWeek, injuries, observations, birthDate, useAI = true, onProgress } = params;
 
-    console.time('[TrainingEngine] TOTAL Generation Time');
+    debugTime('[TrainingEngine] TOTAL Generation Time');
 
     // 1. OBTER IDADE (de birthDate OU campo age direto)
     let clientAge: number | undefined;
@@ -177,10 +187,10 @@ export async function generateWorkout(params: {
         if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
             clientAge--;
         }
-        console.log(`[TrainingEngine] Calculated age from birthDate: ${clientAge}`);
+        debugLog(`[TrainingEngine] Calculated age from birthDate: ${clientAge}`);
     } else if (params.age !== undefined) {
         clientAge = params.age;
-        console.log(`[TrainingEngine] Using provided age: ${clientAge}`);
+        debugLog(`[TrainingEngine] Using provided age: ${clientAge}`);
     }
 
     // 2. NOVO v2.2: DETECÇÃO EXPANDIDA (usa keywords robustas)
@@ -193,7 +203,7 @@ export async function generateWorkout(params: {
         params.height
     );
 
-    console.log('[TrainingEngine] Enhanced detection result:', {
+    debugLog('[TrainingEngine] Enhanced detection result:', {
         conditions: enhancedDetection.conditions.map(c => `${c.type}${c.location ? `_${c.location}` : ''}`),
         blockedExercises: enhancedDetection.blockedExercises.length,
         parsedInjuries: enhancedDetection.parsedInjuries
@@ -219,10 +229,10 @@ export async function generateWorkout(params: {
     // 6. COMPILAR PERFIL BIOMECÂNICO (agora com dados enriquecidos)
     const biomechProfile = compileBiomechanicalProfile(specialConditions, parsedInjuries, clientAge, observations);
 
-    console.log('[TrainingEngine] Special conditions detected:', specialConditions);
-    console.log('[TrainingEngine] Modifiers:', conditionModifiers);
-    console.log('[TrainingEngine] BiomechanicalProfile:', biomechProfile);
-    console.log('[TrainingEngine] Total blocked exercises:', allBlockedExercises.length);
+    debugLog('[TrainingEngine] Special conditions detected:', specialConditions);
+    debugLog('[TrainingEngine] Modifiers:', conditionModifiers);
+    debugLog('[TrainingEngine] BiomechanicalProfile:', biomechProfile);
+    debugLog('[TrainingEngine] Total blocked exercises:', allBlockedExercises.length);
 
     // v3.0: Setar contexto completo para o sistema neuro-simbólico
 
@@ -252,15 +262,15 @@ export async function generateWorkout(params: {
     // v3.1: INICIALIZAR CONTADOR DE VOLUME EM TEMPO REAL
     const levelNorm = normalizeLevel(level);
     const volumeCounter = initializeVolumeCounter(levelNorm);
-    console.log('[TrainingEngine] Volume counter initialized for level:', levelNorm);
+    debugLog('[TrainingEngine] Volume counter initialized for level:', levelNorm);
 
     // 6. OTIMIZAÇÃO #1: Batch DB Query (96% faster)
-    console.time('[TrainingEngine] DB Fetch');
+    debugTime('[TrainingEngine] DB Fetch');
     onProgress?.({ stage: 'database', current: 2, total: 4, message: 'Carregando exercícios...' });
 
     const allExercisesDB = await fetchAllExercises();
-    console.timeEnd('[TrainingEngine] DB Fetch');
-    console.log(`[TrainingEngine] Loaded ${allExercisesDB.length} exercises from cache/DB`);
+    debugTimeEnd('[TrainingEngine] DB Fetch');
+    debugLog(`[TrainingEngine] Loaded ${allExercisesDB.length} exercises from cache/DB`);
 
     // 5. PREPARAR LISTA PLANA DE SLOTS PARA PROCESSAMENTO PARALELO
     interface SlotTask {
@@ -278,10 +288,10 @@ export async function generateWorkout(params: {
     });
 
     const totalSlots = allSlotTasks.length;
-    console.log(`[TrainingEngine] Processing ${totalSlots} slots in parallel...`);
+    debugLog(`[TrainingEngine] Processing ${totalSlots} slots in parallel...`);
 
     // 6. OTIMIZAÇÃO #2: Processamento Paralelo com Concorrência Controlada
-    console.time('[TrainingEngine] AI Processing');
+    debugTime('[TrainingEngine] AI Processing');
     onProgress?.({ stage: 'ai_processing', current: 3, total: 4, message: `Gerando treino... (0/${totalSlots})` });
 
     // Config p-queue: 5 concurrent para não estourar Groq rate limit (30 req/min)
@@ -324,7 +334,7 @@ export async function generateWorkout(params: {
                     filteredCandidates = filteredCandidates.filter(ex => {
                         const compatibility = isExerciseCompatible(ex, biomechProfile);
                         if (!compatibility.compatible) {
-                            console.log(`[TrainingEngine] Blocked ${ex.name}: ${compatibility.reason}`);
+                            debugLog(`[TrainingEngine] Blocked ${ex.name}: ${compatibility.reason}`);
                         }
                         return compatibility.compatible;
                     });
@@ -357,7 +367,7 @@ export async function generateWorkout(params: {
                         // Ajustar séries para caber no MRV
                         const adjustedSets = adjustSetsToFitMRV(volumeCounter, targetMuscle, config.sets);
                         console.warn(`[VolumeCounter] ${volumeCheck.reason}`);
-                        console.log(`[VolumeCounter] Ajustando ${task.slot.id} de ${config.sets} para ${adjustedSets} séries`);
+                        debugLog(`[VolumeCounter] Ajustando ${task.slot.id} de ${config.sets} para ${adjustedSets} séries`);
 
                         config = { ...config, sets: adjustedSets };
 
@@ -426,10 +436,10 @@ export async function generateWorkout(params: {
         )
     );
 
-    console.timeEnd('[TrainingEngine] AI Processing');
+    debugTimeEnd('[TrainingEngine] AI Processing');
 
     // 7. REIDRATAÇÃO: Reconstruir estrutura de dias
-    console.time('[TrainingEngine] Rehydration');
+    debugTime('[TrainingEngine] Rehydration');
 
     const resolvedDays: ResolvedDay[] = template.days.map((day, dIndex) => {
         const daySlots = processedSlots
@@ -444,21 +454,21 @@ export async function generateWorkout(params: {
         };
     });
 
-    console.timeEnd('[TrainingEngine] Rehydration');
+    debugTimeEnd('[TrainingEngine] Rehydration');
 
     // v3.1: VALIDAÇÃO FINAL DO VOLUME
     const volumeValidation = validateFinalVolume(volumeCounter);
-    console.log('\n' + volumeValidation.summary);
+    debugLog('\n' + volumeValidation.summary);
 
     if (volumeValidation.warnings.length > 0) {
         console.warn('[VolumeCounter] Warnings detected:');
         volumeValidation.warnings.forEach(w => console.warn(w));
     } else {
-        console.log('[VolumeCounter] ✅ All muscle groups within optimal volume ranges');
+        debugLog('[VolumeCounter] ✅ All muscle groups within optimal volume ranges');
     }
 
     // v3.2: VALIDAÇÃO DE DUPLICATAS E COBERTURA MUSCULAR
-    console.log('\n🔍 [Validation] Validando treino gerado...\n');
+    debugLog('\n🔍 [Validation] Validando treino gerado...\n');
 
     // Validar e corrigir duplicatas em cada dia
     let totalDuplicatesRemoved = 0;
@@ -474,9 +484,9 @@ export async function generateWorkout(params: {
             day.slots = cleaned;
             totalDuplicatesRemoved += removed.length;
 
-            console.log(`   🔧 Correção automática: ${removed.length} duplicata(s) removida(s)`);
+            debugLog(`   🔧 Correção automática: ${removed.length} duplicata(s) removida(s)`);
         } else {
-            console.log(`✅ ${day.label}: Sem duplicatas`);
+            debugLog(`✅ ${day.label}: Sem duplicatas`);
         }
     });
 
@@ -493,21 +503,21 @@ export async function generateWorkout(params: {
             console.warn(`   - ${m}`)
         );
     } else {
-        console.log('\n✅ Todos os grupos musculares obrigatórios foram cobertos');
+        debugLog('\n✅ Todos os grupos musculares obrigatórios foram cobertos');
     }
 
     // Exibir cobertura detalhada
-    console.log('\n📊 Cobertura muscular:');
+    debugLog('\n📊 Cobertura muscular:');
     muscleCoverageResult.covered
         .filter(c => c.covered)
         .forEach(c => {
-            console.log(`   ✅ ${c.muscleGroup}: ${c.count} exercício(s)`);
+            debugLog(`   ✅ ${c.muscleGroup}: ${c.count} exercício(s)`);
         });
 
 
     onProgress?.({ stage: 'complete', current: 4, total: 4, message: 'Treino gerado!' });
 
-    console.timeEnd('[TrainingEngine] TOTAL Generation Time');
+    debugTimeEnd('[TrainingEngine] TOTAL Generation Time');
 
     // v3.1.2: VALIDAÇÃO DE PADRÕES CONSECUTIVOS
     const workout: GeneratedWorkout = {
@@ -526,7 +536,7 @@ export async function generateWorkout(params: {
     const patternsData = extractPatternsFromWorkout(workout);
     const patternValidation = validateConsecutivePatterns(patternsData);
 
-    console.log('\n' + formatValidationResult(patternValidation));
+    debugLog('\n' + formatValidationResult(patternValidation));
 
     // Adicionar warnings e validações ao metadata
     workout.metadata = {
@@ -791,9 +801,9 @@ async function selectWithAI(
 
                 if (validation.valid && validation.selectedExercise) {
                     // ✅ Resposta válida!
-                    console.log(`[AI v3.0] ✅ Selected ${validation.selectedExercise.name}: ${validation.response?.reasoning || 'No reason'}`);
+                    debugLog(`[AI v3.0] ✅ Selected ${validation.selectedExercise.name}: ${validation.response?.reasoning || 'No reason'}`);
                     if (validation.warnings.length > 0) {
-                        console.log(`[AI v3.0] ⚠️ Warnings: ${validation.warnings.join(', ')}`);
+                        debugLog(`[AI v3.0] ⚠️ Warnings: ${validation.warnings.join(', ')}`);
                     }
                     aiRetryCount = 0;
                     return validation.selectedExercise;
@@ -804,7 +814,7 @@ async function selectWithAI(
 
                     // Se é última tentativa, buscar alternativa segura
                     if (attempt === MAX_AI_RETRIES) {
-                        console.log('[AI v3.0] 🔄 Finding safe alternative...');
+                        debugLog('[AI v3.0] 🔄 Finding safe alternative...');
                         const safeAlternative = findSafeAlternative(
                             candidates.map(c => c.exercise),
                             {
@@ -816,7 +826,7 @@ async function selectWithAI(
                             }
                         );
                         if (safeAlternative) {
-                            console.log(`[AI v3.0] ✅ Safe alternative found: ${safeAlternative.name}`);
+                            debugLog(`[AI v3.0] ✅ Safe alternative found: ${safeAlternative.name}`);
                             return safeAlternative;
                         }
                     }
@@ -828,7 +838,7 @@ async function selectWithAI(
     }
 
     // Fallback final: melhor do ranking determinístico
-    console.log('[AI v3.0] 🔙 Using deterministic fallback (top candidate)');
+    debugLog('[AI v3.0] 🔙 Using deterministic fallback (top candidate)');
     return candidates[0].exercise;
 }
 

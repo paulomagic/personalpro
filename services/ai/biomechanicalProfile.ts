@@ -5,6 +5,11 @@
 import { SpecialCondition, SPECIAL_CONDITION_RULES } from './knowledge/specialConditions';
 import type { Injury } from '../exerciseService';
 
+const isDev = import.meta.env.DEV;
+const debugLog = (...args: unknown[]) => {
+    if (isDev) console.log(...args);
+};
+
 // ============ TIPOS BIOMECÂNICOS PRECISOS ============
 
 export type LoadTolerance = 'allowed' | 'limited' | 'forbidden';
@@ -214,30 +219,30 @@ export function compileBiomechanicalProfile(
 
         // Artrose de quadril
         if (obsLower.includes('artrose') && (obsLower.includes('quadril') || obsLower.includes('hip'))) {
-            console.log('[BiomechanicalProfile] Detected: artrose_quadril');
+            debugLog('[BiomechanicalProfile] Detected: artrose_quadril');
             applyRestrictions(profile, CONDITION_BIOMECHANICS['artrose_quadril']);
         }
         // Artrose geral (joelho, etc.)
         else if (obsLower.includes('artrose') || obsLower.includes('osteoartrite')) {
-            console.log('[BiomechanicalProfile] Detected: artrose');
+            debugLog('[BiomechanicalProfile] Detected: artrose');
             applyRestrictions(profile, CONDITION_BIOMECHANICS['artrose']);
         }
 
         // Condromalácia
         if (obsLower.includes('condromalacia') || obsLower.includes('condromalácia')) {
-            console.log('[BiomechanicalProfile] Detected: condromalacia');
+            debugLog('[BiomechanicalProfile] Detected: condromalacia');
             applyRestrictions(profile, CONDITION_BIOMECHANICS['condromalacia']);
         }
 
         // Problemas de quadril genéricos
         if (obsLower.includes('quadril') && !obsLower.includes('artrose')) {
-            console.log('[BiomechanicalProfile] Detected: quadril issue');
+            debugLog('[BiomechanicalProfile] Detected: quadril issue');
             applyRestrictions(profile, CONDITION_BIOMECHANICS['quadril']);
         }
 
         // Rigidez matinal (indicativo de condição reumática)
         if (obsLower.includes('rigidez') || obsLower.includes('rigidity')) {
-            console.log('[BiomechanicalProfile] Detected: rigidez (reducing instability tolerance)');
+            debugLog('[BiomechanicalProfile] Detected: rigidez (reducing instability tolerance)');
             profile.instability_tolerance = 'low';
         }
     }
@@ -257,7 +262,7 @@ export function compileBiomechanicalProfile(
     profile.volume_multiplier = minVolume;
     profile.intensity_multiplier = minIntensity;
 
-    console.log('[BiomechanicalProfile] Compiled:', {
+    debugLog('[BiomechanicalProfile] Compiled:', {
         conditions,
         injuries,
         age,

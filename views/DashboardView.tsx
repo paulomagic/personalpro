@@ -14,6 +14,7 @@ import {
 import { mockClients } from '../mocks/demoData';
 import { ClientCardSkeleton } from '../components/Skeleton';
 import EmptyState from '../components/EmptyState';
+import { getClients, getAppointments, getPayments } from '../services/supabaseClient';
 
 
 interface DashboardViewProps {
@@ -36,7 +37,6 @@ const DashboardView: React.FC<DashboardViewProps> = ({ user, onSelectClient, onO
       if (user?.id) {
         setLoadingClients(true);
         try {
-          const { getClients, getAppointments, getPayments } = await import('../services/supabaseClient');
           const today = new Date().toISOString().split('T')[0];
 
           // Fetch clients

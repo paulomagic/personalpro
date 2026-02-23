@@ -4,6 +4,16 @@
 
 import { supabase } from './supabaseClient';
 
+const isDev = import.meta.env.DEV;
+const debugLog = (...args: unknown[]) => {
+    if (isDev) console.log(...args);
+};
+const debugTime = (label: string) => {
+    if (isDev) console.time(label);
+};
+const debugTimeEnd = (label: string) => {
+    if (isDev) console.timeEnd(label);
+};
 
 export type MovementPattern =
     | 'empurrar_horizontal'
@@ -79,7 +89,7 @@ const CACHE_TTL = 5 * 60 * 1000; // 5 minutos
 export async function fetchAllExercises(): Promise<Exercise[]> {
     // Check cache first
     if (exerciseCache && (Date.now() - exerciseCache.timestamp < CACHE_TTL)) {
-        console.log('[ExerciseService] Cache hit - returning cached exercises');
+        debugLog('[ExerciseService] Cache hit - returning cached exercises');
         return exerciseCache.data;
     }
 
@@ -88,14 +98,14 @@ export async function fetchAllExercises(): Promise<Exercise[]> {
         return [];
     }
 
-    console.time('[ExerciseService] fetchAllExercises');
+    debugTime('[ExerciseService] fetchAllExercises');
 
     const { data, error } = await supabase
         .from('exercises')
         .select('*')
         .order('name');
 
-    console.timeEnd('[ExerciseService] fetchAllExercises');
+    debugTimeEnd('[ExerciseService] fetchAllExercises');
 
     if (error) {
         console.error('Error fetching all exercises:', error);
@@ -108,7 +118,7 @@ export async function fetchAllExercises(): Promise<Exercise[]> {
         timestamp: Date.now()
     };
 
-    console.log(`[ExerciseService] Fetched ${data?.length || 0} exercises`);
+    debugLog(`[ExerciseService] Fetched ${data?.length || 0} exercises`);
     return data || [];
 }
 
@@ -120,7 +130,7 @@ export async function fetchAllExercises(): Promise<Exercise[]> {
 export async function fetchExercisesByPatterns(patterns: MovementPattern[]): Promise<Exercise[]> {
     if (!supabase) return [];
 
-    console.time('[ExerciseService] fetchExercisesByPatterns');
+    debugTime('[ExerciseService] fetchExercisesByPatterns');
 
     const { data, error } = await supabase
         .from('exercises')
@@ -128,14 +138,14 @@ export async function fetchExercisesByPatterns(patterns: MovementPattern[]): Pro
         .in('movement_pattern', patterns)
         .order('name');
 
-    console.timeEnd('[ExerciseService] fetchExercisesByPatterns');
+    debugTimeEnd('[ExerciseService] fetchExercisesByPatterns');
 
     if (error) {
         console.error('Error fetching exercises by patterns:', error);
         return [];
     }
 
-    console.log(`[ExerciseService] Fetched ${data?.length || 0} exercises for ${patterns.length} patterns`);
+    debugLog(`[ExerciseService] Fetched ${data?.length || 0} exercises for ${patterns.length} patterns`);
     return data || [];
 }
 
@@ -154,7 +164,7 @@ export function filterExercisesInMemory(
         prefer_machine?: boolean;
     }
 ): Exercise[] {
-    console.time('[ExerciseService] filterExercisesInMemory');
+    debugTime('[ExerciseService] filterExercisesInMemory');
 
     const filtered = allExercises.filter(ex => {
         // 1. Movement pattern MUST match
@@ -194,7 +204,7 @@ export function filterExercisesInMemory(
         return scoreB - scoreA;
     });
 
-    console.timeEnd('[ExerciseService] filterExercisesInMemory');
+    debugTimeEnd('[ExerciseService] filterExercisesInMemory');
 
     return sorted.slice(0, 10); // Limit to top 10
 }
@@ -264,7 +274,7 @@ export async function resolveExercise(
     }
 
     // FALLBACK: busca apenas por movement_pattern
-    console.log(`[resolveExercise] Fallback: no match for ${intention.movement_pattern}+${normalizedMuscle}, trying pattern only`);
+    debugLog(`[resolveExercise] Fallback: no match for ${intention.movement_pattern}+${normalizedMuscle}, trying pattern only`);
 
     let fallbackQuery = supabase
         .from('exercises')
@@ -571,11 +581,11 @@ export async function hydrateWorkoutWithVideos(workout: any): Promise<any> {
             .not('video_url', 'is', null); // Só o que tem vídeo
 
         if (error || !dbExercises || dbExercises.length === 0) {
-            console.log('[Hydration] Nenhum exercício com vídeo encontrado no banco');
+            debugLog('[Hydration] Nenhum exercício com vídeo encontrado no banco');
             return workout;
         }
 
-        console.log(`[Hydration] Encontrados ${dbExercises.length} exercícios com vídeo no banco`);
+        debugLog(`[Hydration] Encontrados ${dbExercises.length} exercícios com vídeo no banco`);
 
         // Helper para normalizar strings para comparação
         const normalize = (str: string) => {
@@ -609,7 +619,7 @@ export async function hydrateWorkoutWithVideos(workout: any): Promise<any> {
 
                     if (url) {
                         ex.videoUrl = url;
-                        console.log(`[Hydration] Vídeo injetado para: ${ex.name} -> ${url}`);
+                        debugLog(`[Hydration] Vídeo injetado para: ${ex.name} -> ${url}`);
                     }
                 }
             });

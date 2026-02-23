@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Settings, Play, Pause, AlertTriangle, CheckCircle, Calendar, FileText, TrendingUp, Camera, Dumbbell, Clock, Phone, Mail, Edit, Save, X, PlusCircle, User, Zap, Sparkles, UserPlus, Trash2 } from 'lucide-react';
 import { Client, MissedClass } from '../types';
 import { analyzeClientProgress } from '../services/geminiService';
-import { updateClient, deleteClient, supabase } from '../services/supabaseClient';
+import { updateClient, deleteClient, supabase, getAssessments, getWorkouts, getClient } from '../services/supabaseClient';
 import InviteStudentModal from '../components/InviteStudentModal';
 import ClientFinanceSection from '../components/ClientFinanceSection';
 import { ClientPhysicalDataForm } from '../components/ClientPhysicalDataForm';
@@ -43,8 +43,6 @@ const ClientProfileView: React.FC<ClientProfileViewProps> = ({ client: initialCl
   useEffect(() => {
     const loadFullData = async () => {
       try {
-        const { getAssessments, getWorkouts, getClient } = await import('../services/supabaseClient');
-
         const [clientData, assessmentsData, workoutsData] = await Promise.all([
           getClient(client.id),
           getAssessments(client.id),
@@ -70,8 +68,6 @@ const ClientProfileView: React.FC<ClientProfileViewProps> = ({ client: initialCl
           assessments: mappedAssessments as any[], // Force type
           workouts: workoutsData
         }));
-
-        console.log('📥 Dados do cliente carregados:', { bodyFat: clientData?.body_fat });
 
       } catch (error) {
         console.error("Error loading client details:", error);
@@ -817,8 +813,6 @@ const ClientProfileView: React.FC<ClientProfileViewProps> = ({ client: initialCl
                 compact={false}
                 readOnly={false}
                 onUpdate={async (data) => {
-                  console.log('🔵 onUpdate chamado com:', data);
-
                   // Atualiza estado local
                   setClient(prev => ({ ...prev, ...data }));
 
@@ -836,8 +830,6 @@ const ClientProfileView: React.FC<ClientProfileViewProps> = ({ client: initialCl
                     if (data.height !== undefined) updateData.height = data.height ?? null;
                     if (data.bodyFat !== undefined) updateData.body_fat = data.bodyFat ?? null;
 
-                    console.log('🟢 Enviando para Supabase:', updateData);
-
                     // Só atualiza se houver dados para atualizar
                     if (Object.keys(updateData).length === 0) return;
 
@@ -848,8 +840,6 @@ const ClientProfileView: React.FC<ClientProfileViewProps> = ({ client: initialCl
 
                     if (error) {
                       console.error('🔴 Erro ao atualizar dados físicos:', error);
-                    } else {
-                      console.log('✅ Dados salvos com sucesso!');
                     }
                   } catch (err) {
                     console.error('🔴 Erro ao salvar dados físicos:', err);

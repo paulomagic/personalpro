@@ -5,15 +5,30 @@ const { execSync } = require('child_process');
 console.log('\x1b[36m%s\x1b[0m', '🛡️  Iniciando Verificação de Segurança PersonalPro...');
 
 let hasErrors = false;
+const OPTIONAL_ENV_KEYS = new Set(['VITE_TURNSTILE_SITE_KEY']);
 
 // 1. Verificar vulnerabilidades npm
 console.log('\n📦 Verificando dependências (npm audit)...');
 try {
-    execSync('npm audit --audit-level=high', { stdio: 'inherit' });
+    const auditOutput = execSync('npm audit --audit-level=high', {
+        stdio: 'pipe',
+        encoding: 'utf-8'
+    });
+    const cleanAuditOutput = String(auditOutput || '').replace(/^\s*undefined\s*$/gm, '').trim();
+    if (cleanAuditOutput) process.stdout.write(`${cleanAuditOutput}\n`);
     console.log('\x1b[32m%s\x1b[0m', '✅ Nenhuma vulnerabilidade crítica encontrada.');
 } catch (error) {
-    console.error('\x1b[31m%s\x1b[0m', '❌ Vulnerabilidades encontradas! Execute "npm audit fix" imediatamente.');
-    hasErrors = true;
+    const combinedOutput = `${error?.stdout || ''}\n${error?.stderr || ''}\n${error?.message || ''}`;
+    const cleanCombinedOutput = combinedOutput.replace(/^\s*undefined\s*$/gm, '').trim();
+    if (cleanCombinedOutput) process.stdout.write(`${cleanCombinedOutput}\n`);
+
+    const isNetworkFailure = /(ENOTFOUND|EAI_AGAIN|ECONNRESET|ETIMEDOUT|network)/i.test(cleanCombinedOutput);
+    if (isNetworkFailure) {
+        console.warn('\x1b[33m%s\x1b[0m', '⚠️ npm audit indisponível por falha de rede. Pulando esta etapa sem bloquear.');
+    } else {
+        console.error('\x1b[31m%s\x1b[0m', '❌ Vulnerabilidades encontradas! Execute "npm audit fix" imediatamente.');
+        hasErrors = true;
+    }
 }
 
 // 2. Verificar Variáveis de Ambiente
@@ -41,11 +56,22 @@ if (fs.existsSync(envExamplePath) && fs.existsSync(envLocalPath)) {
     // Filtrar chaves que estão no exemplo mas não no local
     const missingKeys = exampleKeys.filter(key => !localKeys.includes(key));
 
-    if (missingKeys.length > 0) {
-        console.error('\x1b[31m%s\x1b[0m', `❌ Variáveis faltando em .env.local: ${missingKeys.join(', ')}`);
+    const missingRequiredKeys = missingKeys.filter((key) => !OPTIONAL_ENV_KEYS.has(key));
+    const missingOptionalKeys = missingKeys.filter((key) => OPTIONAL_ENV_KEYS.has(key));
+
+    if (missingRequiredKeys.length > 0) {
+        console.error('\x1b[31m%s\x1b[0m', `❌ Variáveis obrigatórias faltando em .env.local: ${missingRequiredKeys.join(', ')}`);
         hasErrors = true;
-    } else {
+    }
+
+    if (missingOptionalKeys.length > 0) {
+        console.warn('\x1b[33m%s\x1b[0m', `⚠️ Variáveis opcionais ausentes em .env.local: ${missingOptionalKeys.join(', ')}`);
+    }
+
+    if (missingRequiredKeys.length === 0 && missingOptionalKeys.length === 0) {
         console.log('\x1b[32m%s\x1b[0m', '✅ Todas as variáveis de ambiente necessárias estão presentes.');
+    } else {
+        console.log('\x1b[32m%s\x1b[0m', '✅ Nenhuma variável obrigatória está faltando.');
     }
 } else {
     // Apenas aviso se não encontrar os arquivos, não falha o script (pois pode ser CI/CD)

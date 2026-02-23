@@ -4,6 +4,11 @@
 
 import type { MovementPattern } from './types';
 
+const isDev = import.meta.env.DEV;
+const debugLog = (...args: unknown[]) => {
+    if (isDev) console.log(...args);
+};
+
 // ============ TIPOS FUNDAMENTAIS ============
 
 export type IntensityLevel = 'very_low' | 'low' | 'moderate' | 'high' | 'very_high';
@@ -630,54 +635,54 @@ export function selectTemplate(
         level.toLowerCase().includes('idoso') ||
         level.toLowerCase().includes('senior');
 
-    console.log(`🔍 [TemplateSelector] INÍCIO DA SELEÇÃO`);
-    console.log(`   Age: ${age}, Level: ${level}, Goal: ${goal}`);
-    console.log(`   isElderly: ${isElderly}, daysPerWeek: ${daysPerWeek}`);
+    debugLog(`🔍 [TemplateSelector] INÍCIO DA SELEÇÃO`);
+    debugLog(`   Age: ${age}, Level: ${level}, Goal: ${goal}`);
+    debugLog(`   isElderly: ${isElderly}, daysPerWeek: ${daysPerWeek}`);
 
     // PRIORIDADE 1: Longevidade/Saúde EXPLÍCITO para idoso → Template Senior
     if (isElderly) {
-        console.log(`   ✅ Cliente é IDOSO (${age} anos)`);
+        debugLog(`   ✅ Cliente é IDOSO (${age} anos)`);
 
         const hasSaudeGoal = goalLower.includes('saúde') || goalLower.includes('saude') ||
             goalLower.includes('longevidade') || goalLower.includes('qualidade') ||
             goalLower.includes('mobilidade');
 
-        console.log(`   Goal inclui saúde/mobilidade? ${hasSaudeGoal}`);
+        debugLog(`   Goal inclui saúde/mobilidade? ${hasSaudeGoal}`);
 
         if (hasSaudeGoal) {
             const senior = WORKOUT_TEMPLATES.find(t => t.template_id === 'senior_longevity_2');
             if (senior) {
-                console.log(`   🎯 SELECIONADO: Senior Longevity 2x`);
+                debugLog(`   🎯 SELECIONADO: Senior Longevity 2x`);
                 return senior;
             } else {
-                console.log(`   ⚠️  Template senior_longevity_2 NÃO ENCONTRADO!`);
+                debugLog(`   ⚠️  Template senior_longevity_2 NÃO ENCONTRADO!`);
             }
         } else {
-            console.log(`   ℹ️  Goal não é saúde, tentando Full Body 3x...`);
+            debugLog(`   ℹ️  Goal não é saúde, tentando Full Body 3x...`);
             const fullBody = WORKOUT_TEMPLATES.find(t => t.template_id === 'full_body_3');
             if (fullBody) {
-                console.log(`   🎯 SELECIONADO: Full Body 3x (idoso genérico)`);
+                debugLog(`   🎯 SELECIONADO: Full Body 3x (idoso genérico)`);
                 return fullBody;
             } else {
-                console.log(`   ⚠️  Template full_body_3 NÃO ENCONTRADO!`);
+                debugLog(`   ⚠️  Template full_body_3 NÃO ENCONTRADO!`);
             }
         }
     } else {
-        console.log(`   ❌ Cliente NÃO é idoso`);
+        debugLog(`   ❌ Cliente NÃO é idoso`);
     }
 
     // PRIORIDADE 2: Força explícita → Powerbuilding (mesmo para idosos se avançados)
     if (goalLower.includes('força') || goalLower.includes('forca') || goalLower.includes('powerlifting')) {
         const powerbuilding = WORKOUT_TEMPLATES.find(t => t.template_id === 'powerbuilding_4');
         if (powerbuilding && ['intermediario', 'avancado', 'atleta'].includes(levelNorm)) {
-            console.log('   🎯 SELECIONADO: Powerbuilding (força detectada)');
+            debugLog('   🎯 SELECIONADO: Powerbuilding (força detectada)');
             return powerbuilding;
         } else {
-            console.log('   ℹ️  Powerbuilding não compatível com nível ou não encontrado.');
+            debugLog('   ℹ️  Powerbuilding não compatível com nível ou não encontrado.');
         }
     }
 
-    console.log('   ℹ️  Usando lógica genérica de seleção...');
+    debugLog('   ℹ️  Usando lógica genérica de seleção...');
 
     // Filtra compatíveis (lógica original)
     const compatible = WORKOUT_TEMPLATES.filter(t => {
@@ -687,7 +692,7 @@ export function selectTemplate(
     });
 
     if (compatible.length === 0) {
-        console.log('   ⚠️  Nenhum template compatível, usando Full Body 3x fallback');
+        debugLog('   ⚠️  Nenhum template compatível, usando Full Body 3x fallback');
         return WORKOUT_TEMPLATES.find(t => t.template_id === 'full_body_3') || null;
     }
 
@@ -700,14 +705,14 @@ export function selectTemplate(
         const selected = byGoal.reduce((best, curr) =>
             Math.abs(curr.frequency - daysPerWeek) < Math.abs(best.frequency - daysPerWeek) ? curr : best
         );
-        console.log(`   🎯 SELECIONADO: ${selected.name} (por goal + frequency)`);
+        debugLog(`   🎯 SELECIONADO: ${selected.name} (por goal + frequency)`);
         return selected;
     }
 
     const selected = compatible.reduce((best, curr) =>
         Math.abs(curr.frequency - daysPerWeek) < Math.abs(best.frequency - daysPerWeek) ? curr : best
     );
-    console.log(`   🎯 SELECIONADO: ${selected.name} (por frequency)`);
+    debugLog(`   🎯 SELECIONADO: ${selected.name} (por frequency)`);
     return selected;
 }
 

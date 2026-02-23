@@ -3,6 +3,7 @@
 
 import { logAIAction } from './loggingService';
 import { supabase } from './supabaseClient';
+import { buildEdgeAuthHeaders } from './ai/providers/edgeHeaders';
 
 // Supabase URL for Edge Function
 const SUPABASE_URL = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SUPABASE_URL) || '';
@@ -81,13 +82,10 @@ function estimateTokens(text: string): number {
 async function getEdgeAuthHeaders(): Promise<Record<string, string> | null> {
   if (!supabase) return null;
   const { data: { session } } = await supabase.auth.getSession();
-  const accessToken = session?.access_token;
-  if (!accessToken) return null;
-
-  return {
-    'Authorization': `Bearer ${accessToken}`,
-    'apikey': (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SUPABASE_ANON_KEY) || ''
-  };
+  return buildEdgeAuthHeaders(
+    session?.access_token,
+    (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SUPABASE_ANON_KEY) || ''
+  );
 }
 
 // Call Gemini via Edge Function

@@ -7,6 +7,11 @@ import type { SessionFeedback, ProgressionHistory } from './types';
 import { analyzeSessionFeedback, analyzeTrend, DEFAULT_PROGRESSION_CONFIG } from './adaptiveProgression';
 import type { ProgressionAdjustment } from './types';
 
+const isDev = import.meta.env.DEV;
+const debugLog = (...args: unknown[]) => {
+    if (isDev) console.log(...args);
+};
+
 // ============ SAVE FEEDBACK ============
 
 /**
@@ -38,7 +43,7 @@ export async function saveSessionFeedback(
             return { success: false, error: error.message };
         }
 
-        console.log('[FeedbackService] Feedback saved successfully:', data.id);
+        debugLog('[FeedbackService] Feedback saved successfully:', data.id);
         return { success: true, id: data.id };
 
     } catch (error: any) {
@@ -124,7 +129,7 @@ export async function getProgressionSuggestion(
         const feedbacks = await getExerciseFeedbackHistory(studentId, exerciseId, 1);
 
         if (feedbacks.length === 0) {
-            console.log('[FeedbackService] No feedback found for progression analysis');
+            debugLog('[FeedbackService] No feedback found for progression analysis');
             return null;
         }
 
@@ -133,7 +138,7 @@ export async function getProgressionSuggestion(
         // Analisar e retornar sugestão
         const adjustment = analyzeSessionFeedback(latestFeedback, DEFAULT_PROGRESSION_CONFIG);
 
-        console.log('[FeedbackService] Progression suggestion:', adjustment);
+        debugLog('[FeedbackService] Progression suggestion:', adjustment);
         return adjustment;
 
     } catch (error) {
@@ -168,7 +173,7 @@ export async function getProgressionTrend(
 
         const trend = analyzeTrend(feedbacks, DEFAULT_PROGRESSION_CONFIG);
 
-        console.log('[FeedbackService] Trend analysis:', trend);
+        debugLog('[FeedbackService] Trend analysis:', trend);
         return trend;
 
     } catch (error) {

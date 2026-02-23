@@ -4,6 +4,11 @@
 
 import { getVolumeForMuscle, type TrainingLevel } from './knowledge/volume';
 
+const isDev = import.meta.env.DEV;
+const debugLog = (...args: unknown[]) => {
+    if (isDev) console.log(...args);
+};
+
 // ============ TIPOS ============
 
 export interface MuscleVolumeState {
@@ -60,7 +65,7 @@ export function initializeVolumeCounter(level: TrainingLevel): VolumeCounter {
         }
     }
 
-    console.log(`[VolumeCounter] Initialized for level ${level}:`,
+    debugLog(`[VolumeCounter] Initialized for level ${level}:`,
         Object.keys(counter).length, 'muscle groups tracked');
 
     return counter;
@@ -80,7 +85,7 @@ export function addSetsToCounter(
 
     // Músculo não rastreado (ex: exercício genérico)
     if (!counter[muscle]) {
-        console.log(`[VolumeCounter] Muscle "${muscle}" not tracked, allowing ${sets} sets`);
+        debugLog(`[VolumeCounter] Muscle "${muscle}" not tracked, allowing ${sets} sets`);
         return { success: true };
     }
 
@@ -99,7 +104,7 @@ export function addSetsToCounter(
     // Sucesso: adicionar ao contador
     counter[muscle].current = newTotal;
 
-    console.log(`[VolumeCounter] ${muscle}: ${state.current}/${state.mrv} sets (added ${sets})`);
+    debugLog(`[VolumeCounter] ${muscle}: ${state.current}/${state.mrv} sets (added ${sets})`);
 
     return { success: true };
 }

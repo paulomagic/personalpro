@@ -4,6 +4,7 @@ import { ArrowLeft, Settings, Play, Pause, AlertTriangle, CheckCircle, Calendar,
 import { Client, MissedClass } from '../types';
 import { analyzeClientProgress } from '../services/geminiService';
 import { updateClient, deleteClient, supabase, getAssessments, getWorkouts, getClient } from '../services/supabaseClient';
+import { mapAssessmentsToClientShape, buildClientPhysicalUpdatePayload } from '../services/clientProfileUtils';
 import InviteStudentModal from '../components/InviteStudentModal';
 import ClientFinanceSection from '../components/ClientFinanceSection';
 import { ClientPhysicalDataForm } from '../components/ClientPhysicalDataForm';
@@ -50,12 +51,7 @@ const ClientProfileView: React.FC<ClientProfileViewProps> = ({ client: initialCl
         ]);
 
         // Map backend snake_case to frontend camelCase
-        const mappedAssessments = assessmentsData.map(a => ({
-          ...a,
-          bodyFat: a.body_fat, // Map body_fat -> bodyFat
-          muscleMass: a.muscle_mass, // Map muscle_mass -> muscleMass
-          visceralFat: a.visceral_fat // Map visceral_fat -> visceralFat
-        }));
+        const mappedAssessments = mapAssessmentsToClientShape(assessmentsData);
 
         // Update client with fresh data from database
         setClient(prev => ({
@@ -824,11 +820,7 @@ const ClientProfileView: React.FC<ClientProfileViewProps> = ({ client: initialCl
 
                   try {
                     // Converte undefined para null (Supabase não aceita undefined)
-                    const updateData: Record<string, number | null> = {};
-                    if (data.age !== undefined) updateData.age = data.age ?? null;
-                    if (data.weight !== undefined) updateData.weight = data.weight ?? null;
-                    if (data.height !== undefined) updateData.height = data.height ?? null;
-                    if (data.bodyFat !== undefined) updateData.body_fat = data.bodyFat ?? null;
+                    const updateData = buildClientPhysicalUpdatePayload(data);
 
                     // Só atualiza se houver dados para atualizar
                     if (Object.keys(updateData).length === 0) return;

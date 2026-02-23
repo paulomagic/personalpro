@@ -1,5 +1,10 @@
 import type { MovementPattern } from '../types';
 
+const isDev = import.meta.env.DEV;
+const debugLog = (...args: unknown[]) => {
+    if (isDev) console.log(...args);
+};
+
 // ============ TYPES ============
 
 export interface DayWithPatterns {
@@ -128,7 +133,7 @@ export function validateConsecutivePatterns(
                     );
                 } else {
                     // Low severity - apenas log, não warning
-                    console.log(
+                    debugLog(
                         `[PatternValidator] ℹ️ Padrão "${pattern}" repetido em ${currentDay.label} e ${nextDay.label} (baixa severidade - OK).`
                     );
                 }

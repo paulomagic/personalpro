@@ -14,16 +14,35 @@ import {
 import { mockClients } from '../mocks/demoData';
 import { ClientCardSkeleton } from '../components/Skeleton';
 import EmptyState from '../components/EmptyState';
-import { getClients, getAppointments, getPayments } from '../services/supabaseClient';
+import { getClients, getAppointments, getPayments, mapDBClientToClient, type Appointment, type DBClient, type Payment } from '../services/supabaseClient';
+import type { AppSessionUser } from '../services/auth/authFlow';
 
 
 interface DashboardViewProps {
-  user: any;
+  user: AppSessionUser | null;
   onSelectClient: (client: Client) => void;
   onOpenAI: () => void;
   onOpenBrandHub?: () => void;
   onNavigate?: (view: string) => void;
 }
+
+interface DashboardAppointment {
+  id: string;
+  time: string;
+  clientName: string;
+}
+
+type AppointmentWithClient = Appointment & {
+  clients?: {
+    name?: string;
+  } | null;
+};
+
+const DEMO_APPOINTMENTS: DashboardAppointment[] = [
+  { id: '1', time: '08:00', clientName: 'Júlia Costa' },
+  { id: '2', time: '10:30', clientName: 'Pedro Souza' },
+  { id: '3', time: '16:00', clientName: 'Ana Silva' }
+];
 
 const DashboardView: React.FC<DashboardViewProps> = ({ user, onSelectClient, onOpenAI, onNavigate }) => {
   // Mock Data for Demo
@@ -50,17 +69,14 @@ const DashboardView: React.FC<DashboardViewProps> = ({ user, onSelectClient, onO
               getPayments(user.id)
             ]);
 
-            const data = clientsData;
-            const mappedData = data.map((c: any) => ({
-              ...c,
-              startDate: c.created_at,
-              avatar: c.avatar || c.avatar_url
-            }));
+            const mappedData = clientsData.map((c) =>
+              mapDBClientToClient(c as DBClient & { avatar?: string }) as Client
+            );
             setClients(mappedData.slice(0, 3));
 
             // Fetch today's appointments
             if (todayAppointments.length > 0) {
-              setAppointments(todayAppointments.map((a: any) => ({
+              setAppointments((todayAppointments as AppointmentWithClient[]).map((a) => ({
                 id: a.id,
                 time: a.time?.slice(0, 5) || '08:00',
                 clientName: a.clients?.name || 'Cliente'
@@ -69,8 +85,8 @@ const DashboardView: React.FC<DashboardViewProps> = ({ user, onSelectClient, onO
 
             // Fetch monthly revenue from paid payments
             const paidTotal = payments
-              .filter((p: any) => p.status === 'paid')
-              .reduce((sum: number, p: any) => sum + (p.amount || 0), 0);
+              .filter((p: Payment) => p.status === 'paid')
+              .reduce((sum: number, p: Payment) => sum + (p.amount || 0), 0);
             if (paidTotal > 0) {
               setRevenue(paidTotal);
             }
@@ -94,21 +110,13 @@ const DashboardView: React.FC<DashboardViewProps> = ({ user, onSelectClient, onO
 
     // Helper to set appointments (reusing current state default, so actually no-op needed if we just don't overwrite it)
     const setAppointmentData = () => {
-      setAppointments([
-        { id: '1', time: '08:00', clientName: 'Júlia Costa' },
-        { id: '2', time: '10:30', clientName: 'Pedro Souza' },
-        { id: '3', time: '16:00', clientName: 'Ana Silva' }
-      ]);
+      setAppointments(DEMO_APPOINTMENTS);
     };
 
     loadData();
   }, [user]);
 
-  const [appointments, setAppointments] = useState([
-    { id: '1', time: '08:00', clientName: 'Júlia Costa' },
-    { id: '2', time: '10:30', clientName: 'Pedro Souza' },
-    { id: '3', time: '16:00', clientName: 'Ana Silva' }
-  ]);
+  const [appointments, setAppointments] = useState<DashboardAppointment[]>(DEMO_APPOINTMENTS);
 
   const [revenue, setRevenue] = useState(12450);
   const revenueMonth = new Date().toLocaleDateString('pt-BR', { month: 'long' });

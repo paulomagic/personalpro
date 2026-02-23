@@ -3,6 +3,11 @@
 
 import type { Exercise } from '../../exerciseService';
 
+const isDev = import.meta.env.DEV;
+const debugLog = (...args: unknown[]) => {
+    if (isDev) console.log(...args);
+};
+
 export type TrainingContext = 'academia' | 'casa' | 'parque' | 'ginastica';
 
 export interface ExerciseBlacklist {
@@ -130,7 +135,7 @@ export function filterByContext(
         );
 
         if (isBlacklistedName) {
-            console.log(`[Blacklist] ❌ Removido "${ex.name}": ${blacklist.reason}`);
+            debugLog(`[Blacklist] ❌ Removido "${ex.name}": ${blacklist.reason}`);
             return false;
         }
 
@@ -140,14 +145,14 @@ export function filterByContext(
         );
 
         if (isBlacklistedPattern) {
-            console.log(`[Blacklist] ❌ Removido "${ex.name}" (pattern match): ${blacklist.reason}`);
+            debugLog(`[Blacklist] ❌ Removido "${ex.name}" (pattern match): ${blacklist.reason}`);
             return false;
         }
 
         return true;
     });
 
-    console.log(`[Blacklist] ${exercises.length - filtered.length} exercícios removidos para contexto "${context}"`);
+    debugLog(`[Blacklist] ${exercises.length - filtered.length} exercícios removidos para contexto "${context}"`);
     return filtered;
 }
 

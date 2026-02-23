@@ -1,6 +1,6 @@
 import React, { useState, useEffect, Suspense, lazy } from 'react';
-import { View, Client, Workout, AppUser, isAdmin, isStudent } from './types';
-import { supabase, getUserProfile, countPendingRescheduleRequests } from './services/supabaseClient';
+import { View, Client, Workout } from './types';
+import { supabase, getUserProfile, countPendingRescheduleRequests, type DBUserProfile } from './services/supabaseClient';
 import LoginView from './views/LoginView';
 import DashboardView from './views/DashboardView';
 import ClientProfileView from './views/ClientProfileView';
@@ -10,6 +10,15 @@ import SettingsView from './views/SettingsView';
 import CalendarView from './views/CalendarView';
 import Layout from './components/Layout';
 import UpdateBanner from './components/UpdateBanner';
+import {
+  canAccessAdminArea,
+  createDemoUser,
+  resolveNavigationView,
+  resolvePostLoginView,
+  resolveUserRole,
+  type AppSessionUser,
+  type NavigationIntent
+} from './services/auth/authFlow';
 
 // Lazy load heavy views to reduce initial bundle size
 const AIBuilderView = lazy(() => import('./views/AIBuilderView'));
@@ -43,8 +52,8 @@ function App() {
   const [currentView, setCurrentView] = useState<View>(View.LOGIN);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [activeWorkout, setActiveWorkout] = useState<Workout | null>(null);
-  const [user, setUser] = useState<any>(null);
-  const [userProfile, setUserProfile] = useState<any>(null);
+  const [user, setUser] = useState<AppSessionUser | null>(null);
+  const [userProfile, setUserProfile] = useState<DBUserProfile | null>(null);
   const [loading, setLoading] = useState(false);
   const [pendingRequests, setPendingRequests] = useState(0);  // Reschedule requests count
   const [updateAvailable, setUpdateAvailable] = useState(false);
@@ -61,11 +70,12 @@ function App() {
           setUserProfile(null);
           setCurrentView(View.LOGIN);
         } else if (event === 'SIGNED_IN' && session?.user) {
-          setUser(session.user);
+          const signedInUser = session.user as AppSessionUser;
+          setUser(signedInUser);
           getUserProfile(session.user.id).then((profile) => {
             if (profile) {
               setUserProfile(profile);
-              setUser({ ...session.user, profile });
+              setUser({ ...signedInUser, profile });
             }
           }).catch((error) => {
             console.error('Error loading profile on SIGNED_IN:', error);
@@ -140,63 +150,42 @@ function App() {
     }
   };
 
-  const navigateTo = (view: View, data?: any) => {
+  const navigateTo = (view: View, data?: Client | Workout) => {
     if (view === View.CLIENT_PROFILE && data) {
-      setSelectedClient(data);
+      setSelectedClient(data as Client);
     }
     if (view === View.TRAINING_EXECUTION && data) {
-      setActiveWorkout(data);
+      setActiveWorkout(data as Workout);
     }
     setCurrentView(view);
   };
 
+  const navigationIntents: NavigationIntent[] = [
+    'home',
+    'student_home',
+    'clients',
+    'metrics',
+    'settings',
+    'calendar',
+    'finance',
+    'WORKOUT_BUILDER',
+    'student',
+    'student_workouts',
+    'sport_training',
+    'student_profile',
+    'admin'
+  ];
+
+  const isNavigationIntent = (value: string): value is NavigationIntent => {
+    return navigationIntents.includes(value as NavigationIntent);
+  };
+
   const handleNavigation = (nav: string) => {
-    switch (nav) {
-      case 'home':
-        // If user is a student, go to student dashboard
-        if (userProfile?.role === 'student') {
-          navigateTo(View.STUDENT);
-        } else {
-          navigateTo(View.DASHBOARD);
-        }
-        break;
-      case 'student_home':
-        navigateTo(View.STUDENT);
-        break;
-      case 'clients':
-        navigateTo(View.CLIENTS);
-        break;
-      case 'metrics':
-        navigateTo(View.METRICS);
-        break;
-      case 'settings':
-        navigateTo(View.SETTINGS);
-        break;
-      case 'calendar':
-        navigateTo(View.CALENDAR);
-        break;
-      case 'finance':
-        navigateTo(View.FINANCE);
-        break;
-      case 'WORKOUT_BUILDER':
-        navigateTo(View.WORKOUT_BUILDER);
-        break;
-      case 'student':
-        navigateTo(View.STUDENT);
-        break;
-      case 'student_workouts':
-        // Navega para StudentView que mostra lista de treinos
-        navigateTo(View.STUDENT_WORKOUTS);
-        break;
-      case 'sport_training':
-        navigateTo(View.SPORT_TRAINING);
-        break;
-      case 'student_profile':
-        navigateTo(View.STUDENT_PROFILE);
-        break;
-      case 'admin':
-        navigateTo(View.ADMIN);
-        break;
+    if (!isNavigationIntent(nav)) return;
+    const role = resolveUserRole(userProfile, user);
+    const targetView = resolveNavigationView(nav, role);
+    if (targetView) {
+      navigateTo(targetView);
     }
   };
 
@@ -206,47 +195,41 @@ function App() {
       await supabase.auth.signOut();
     }
     setUser(null);
+    setUserProfile(null);
     setCurrentView(View.LOGIN);
   };
 
-  const handleLoginSuccess = async (loggedUser: any) => {
+  const handleLoginSuccess = async (loggedUser: AppSessionUser | null) => {
     if (loggedUser) {
       setUser(loggedUser);
+      let resolvedProfile: DBUserProfile | null = null;
 
       // Load user profile to check role
       try {
         const profile = await getUserProfile(loggedUser.id);
         if (profile) {
+          resolvedProfile = profile;
           setUserProfile(profile);
           setUser({ ...loggedUser, profile });
-
-          // Redirect based on role
-          if (profile.role === 'student') {
-            navigateTo(View.STUDENT);
-            return;
-          }
         } else if (loggedUser?.user_metadata?.role === 'student') {
-          setUserProfile({ id: loggedUser.id, role: 'student' } as any);
-          navigateTo(View.STUDENT);
+          const fallbackStudentProfile: DBUserProfile = {
+            id: loggedUser.id,
+            role: 'student',
+            created_at: '',
+            updated_at: ''
+          };
+          setUserProfile(fallbackStudentProfile);
+          navigateTo(resolvePostLoginView(fallbackStudentProfile, loggedUser));
           return;
         }
       } catch (error) {
         console.error('Error loading user profile:', error);
       }
 
-      // Default: go to coach dashboard
-      navigateTo(View.DASHBOARD);
+      navigateTo(resolvePostLoginView(resolvedProfile, loggedUser));
     } else {
       // Fallback or explicit demo (should trigger restricted mode)
-      const demoUser = {
-        id: 'demo-user-id',
-        email: 'demo@apex.com',
-        user_metadata: {
-          name: 'Modo Demonstração',
-          avatar_url: ''
-        },
-        isDemo: true
-      };
+      const demoUser = createDemoUser();
       setUser(demoUser);
       navigateTo(View.DASHBOARD);
     }
@@ -393,7 +376,6 @@ function App() {
             clientName={selectedClient?.name}
             onBack={() => navigateTo(View.DASHBOARD)}
             onSave={(workout) => {
-              console.log('Sport workout saved:', workout);
               navigateTo(View.DASHBOARD);
             }}
           />
@@ -406,7 +388,7 @@ function App() {
       case View.ADMIN_ACTIVITY_LOGS:
       case View.ADMIN_SETTINGS:
         // Security: Verify admin permission before rendering any admin view
-        if (!isAdmin(user)) {
+        if (!canAccessAdminArea(user)) {
           console.warn('🔒 Acesso negado: usuário não é admin');
           // Redirect to dashboard for non-admin users
           return (

@@ -3,6 +3,7 @@
 
 import type { AIProvider, ProviderRequest, ProviderResponse } from '../types';
 import { supabase } from '../../supabaseClient';
+import { buildEdgeAuthHeaders } from './edgeHeaders';
 
 // Supabase URL for Edge Function
 const SUPABASE_URL = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SUPABASE_URL) || '';
@@ -18,13 +19,7 @@ function estimateTokens(text: string): number {
 async function getAuthHeaders(): Promise<Record<string, string> | null> {
     if (!supabase) return null;
     const { data: { session } } = await supabase.auth.getSession();
-    const accessToken = session?.access_token;
-    if (!accessToken) return null;
-
-    return {
-        'Authorization': `Bearer ${accessToken}`,
-        'apikey': SUPABASE_ANON_KEY
-    };
+    return buildEdgeAuthHeaders(session?.access_token, SUPABASE_ANON_KEY);
 }
 
 export const groqProvider: AIProvider = {

@@ -2,12 +2,21 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Turnstile } from '@marsidev/react-turnstile';
 import { supabase, getInvitationByToken, acceptInvitation } from '../services/supabaseClient';
 import { DBInvitation } from '../services/supabaseClient';
+import type { AppSessionUser } from '../services/auth/authFlow';
+import { calculateLockDurationMs, getRemainingLockSeconds, isLockedOut } from '../services/auth/authFlow';
 
 interface LoginViewProps {
-  onLogin: (user: any) => void;
+  onLogin: (user: AppSessionUser | null) => void;
 }
 
-const InputField = ({ type, placeholder, value, onChange }: any) => (
+interface InputFieldProps {
+  type: React.HTMLInputTypeAttribute;
+  placeholder: string;
+  value: string;
+  onChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
+}
+
+const InputField: React.FC<InputFieldProps> = ({ type, placeholder, value, onChange }) => (
   <input
     type={type}
     placeholder={placeholder}
@@ -31,7 +40,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const [captchaValidating, setCaptchaValidating] = useState(false);
-  const turnstileRef = useRef<any>(null);
+  const turnstileRef = useRef<{ reset?: () => void } | null>(null);
 
   // Rate limiting states
   const [loginAttempts, setLoginAttempts] = useState(0);
@@ -122,8 +131,8 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
 
   const handleLogin = async () => {
     // Check if user is locked out
-    if (lockUntil && Date.now() < lockUntil) {
-      const remainingSeconds = Math.ceil((lockUntil - Date.now()) / 1000);
+    if (isLockedOut(lockUntil)) {
+      const remainingSeconds = getRemainingLockSeconds(lockUntil);
       setError(`Muitas tentativas. Aguarde ${remainingSeconds}s`);
       return;
     }
@@ -141,7 +150,12 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
 
     try {
       if (!supabase) {
-        onLogin({ email, demo: true });
+        onLogin({
+          id: 'local-demo-login',
+          email,
+          user_metadata: { name: 'Demo Local', role: 'coach' },
+          isDemo: true
+        });
         return;
       }
 
@@ -156,8 +170,8 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
         setLoginAttempts(newAttempts);
 
         // Lock after 5 failed attempts with exponential backoff
-        if (newAttempts >= 5) {
-          const lockDuration = 30000 * Math.pow(2, newAttempts - 5); // 30s, 60s, 120s...
+        const lockDuration = calculateLockDurationMs(newAttempts);
+        if (lockDuration) {
           setLockUntil(Date.now() + lockDuration);
           setError(`Conta bloqueada por ${lockDuration / 1000}s após ${newAttempts} tentativas`);
         } else {
@@ -172,8 +186,8 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
       // Reset on successful login
       setLoginAttempts(0);
       setLockUntil(null);
-      if (data.user) onLogin(data.user);
-    } catch (err: any) {
+      if (data.user) onLogin(data.user as AppSessionUser);
+    } catch {
       setError('Erro ao fazer login. Tente novamente.');
       resetCaptcha();
     } finally {
@@ -195,12 +209,17 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
 
     try {
       if (!supabase) {
-        onLogin({ email, name, demo: true });
+        onLogin({
+          id: 'local-demo-register',
+          email,
+          user_metadata: { name, role: isInviteMode ? 'student' : 'coach' },
+          isDemo: true
+        });
         return;
       }
 
       // If in invite mode, set role as student in user metadata
-      const signUpOptions: any = {
+      const signUpOptions = {
         data: {
           name,
           role: isInviteMode ? 'student' : 'coach'
@@ -236,9 +255,9 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
           window.history.replaceState({}, document.title, window.location.pathname);
         }
 
-        onLogin(data.user);
+        onLogin(data.user as AppSessionUser);
       }
-    } catch (err: any) {
+    } catch {
       setError('Erro ao criar conta. Tente novamente.');
       resetCaptcha();
     } finally {
@@ -272,7 +291,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
         setError(error.message);
         setLoading(false);
       }
-    } catch (err: any) {
+    } catch {
       setError('Erro ao conectar com Google');
       setLoading(false);
     }
@@ -336,11 +355,11 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
 
         <div className="space-y-4 mb-4 animate-slide-up">
           {isRegister && (
-            <InputField type="text" placeholder="Nome completo" value={name} onChange={(e: any) => setName(e.target.value)} />
+            <InputField type="text" placeholder="Nome completo" value={name} onChange={(e) => setName(e.target.value)} />
           )}
-          <InputField type="email" placeholder="Email" value={email} onChange={(e: any) => setEmail(e.target.value)} />
+          <InputField type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
           <div className="relative">
-            <InputField type={showPassword ? "text" : "password"} placeholder="Senha" value={password} onChange={(e: any) => setPassword(e.target.value)} />
+            <InputField type={showPassword ? "text" : "password"} placeholder="Senha" value={password} onChange={(e) => setPassword(e.target.value)} />
             <button
               onClick={() => setShowPassword(!showPassword)}
               className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300"

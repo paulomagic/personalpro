@@ -33,6 +33,19 @@ const TrainingExecutionView: React.FC<TrainingExecutionViewProps> = ({ workout, 
   const [showFeedbackForm, setShowFeedbackForm] = useState(false);
   const [feedbackExerciseIndex, setFeedbackExerciseIndex] = useState(0);
   const [completedExercises, setCompletedExercises] = useState<Set<number>>(new Set());
+  const isColdStartWorkout = Boolean((workout as any)?.coldStartMode || (workout as any)?.ai_metadata?.coldStartMode);
+
+  const parseRestSeconds = (value: string | number | undefined): number => {
+    if (typeof value === 'number') return value;
+    if (!value) return 90;
+    const normalized = String(value).trim().toLowerCase();
+    const mmss = normalized.match(/^(\d+):(\d{1,2})$/);
+    if (mmss) return Number(mmss[1]) * 60 + Number(mmss[2]);
+    const minutes = normalized.match(/(\d+)\s*min/);
+    if (minutes) return Number(minutes[1]) * 60;
+    const seconds = normalized.match(/(\d+)/);
+    return seconds ? Number(seconds[1]) : 90;
+  };
 
   const currentExercise = exercises[currentExerciseIndex] as WorkoutExercise;
 
@@ -41,7 +54,7 @@ const TrainingExecutionView: React.FC<TrainingExecutionViewProps> = ({ workout, 
   const totalSets = currentExercise?.sets?.length || 4;
   const targetReps = currentExercise?.sets?.[currentSet - 1]?.reps || 12;
   const targetMuscle = currentExercise?.targetMuscle || currentExercise?.category || 'Músculo';
-  const restSeconds = currentExercise?.sets?.[currentSet - 1]?.rest || 90;
+  const restSeconds = parseRestSeconds(currentExercise?.sets?.[currentSet - 1]?.rest as any);
   const videoUrl = currentExercise?.videoUrl || '';
 
   // Timer effect
@@ -104,8 +117,9 @@ const TrainingExecutionView: React.FC<TrainingExecutionViewProps> = ({ workout, 
         }
 
         // Move to next exercise or finish
-        if (currentExerciseIndex < exercises.length - 1) {
-          setCurrentExerciseIndex(prev => prev + 1);
+        const isLastExercise = feedbackExerciseIndex >= exercises.length - 1;
+        if (!isLastExercise) {
+          setCurrentExerciseIndex(feedbackExerciseIndex + 1);
           setCurrentSet(1);
           setCurrentLoad(0);
           setShowFeedbackForm(false);
@@ -113,9 +127,24 @@ const TrainingExecutionView: React.FC<TrainingExecutionViewProps> = ({ workout, 
           // All exercises completed
           onFinish();
         }
+      } else if (isColdStartWorkout) {
+        alert('Não foi possível salvar o feedback. No modo inicial, o feedback é obrigatório para finalizar.');
+        return;
+      } else if (currentExerciseIndex < exercises.length - 1) {
+        setCurrentExerciseIndex(prev => prev + 1);
+        setCurrentSet(1);
+        setCurrentLoad(0);
+        setShowFeedbackForm(false);
+      } else {
+        onFinish();
       }
     } catch (error) {
       console.error('[Feedback] Error:', error);
+      if (isColdStartWorkout) {
+        alert('Erro ao salvar feedback. No modo inicial, tente novamente para concluir.');
+        return;
+      }
+
       alert('Erro ao salvar feedback. Continuando...');
 
       // Continue anyway
@@ -131,6 +160,11 @@ const TrainingExecutionView: React.FC<TrainingExecutionViewProps> = ({ workout, 
   };
 
   const handleSkipFeedback = () => {
+    if (isColdStartWorkout) {
+      alert('No modo inicial, o feedback de cada exercício é obrigatório.');
+      return;
+    }
+
     // Move to next exercise or finish without feedback
     if (currentExerciseIndex < exercises.length - 1) {
       setCurrentExerciseIndex(prev => prev + 1);
@@ -193,6 +227,9 @@ const TrainingExecutionView: React.FC<TrainingExecutionViewProps> = ({ workout, 
         <div className="text-center">
           <h2 className="text-2xl font-black text-white tracking-tighter tabular-nums">{formatTime(elapsedTime)}</h2>
           <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest">{workout.title || 'Treino'}</p>
+          {isColdStartWorkout && (
+            <p className="text-[10px] font-black text-amber-400 uppercase tracking-widest mt-1">Modo Inicial Ativo</p>
+          )}
         </div>
 
         <div className="size-12 rounded-2xl glass-card flex items-center justify-center">
@@ -308,6 +345,9 @@ const TrainingExecutionView: React.FC<TrainingExecutionViewProps> = ({ workout, 
               prescribedLoad={currentLoad}
               onSubmit={handleFeedbackSubmit}
               onCancel={handleSkipFeedback}
+              allowCancel={!isColdStartWorkout}
+              cancelLabel="Pular feedback"
+              requirementNote={isColdStartWorkout ? 'Modo inicial: feedback obrigatório para calibrar treino e progressão.' : undefined}
             />
           </div>
         </div>

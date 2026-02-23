@@ -13,6 +13,9 @@ export interface FeedbackFormProps {
     prescribedLoad?: number;
     onSubmit: (feedback: Omit<SessionFeedback, 'session_date'>) => Promise<void>;
     onCancel: () => void;
+    allowCancel?: boolean;
+    cancelLabel?: string;
+    requirementNote?: string;
 }
 
 // ============ COMPONENT ============
@@ -26,7 +29,10 @@ export function FeedbackForm({
     prescribedReps,
     prescribedLoad,
     onSubmit,
-    onCancel
+    onCancel,
+    allowCancel = true,
+    cancelLabel = 'Cancelar',
+    requirementNote
 }: FeedbackFormProps) {
 
     // ============ STATE ============
@@ -105,6 +111,11 @@ export function FeedbackForm({
                     Prescrito: {prescribedSets} séries x {prescribedReps} reps
                     {prescribedLoad && ` @ ${prescribedLoad}kg`}
                 </p>
+                {requirementNote && (
+                    <p className="text-xs text-amber-600 mt-2 font-medium">
+                        {requirementNote}
+                    </p>
+                )}
             </div>
 
             <div className="space-y-6">
@@ -226,17 +237,19 @@ export function FeedbackForm({
 
             {/* Actions */}
             <div className="flex gap-3 mt-6 pt-6 border-t">
-                <button
-                    onClick={onCancel}
-                    disabled={isSubmitting}
-                    className="flex-1 px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 disabled:opacity-50"
-                >
-                    Cancelar
-                </button>
+                {allowCancel && (
+                    <button
+                        onClick={onCancel}
+                        disabled={isSubmitting}
+                        className="flex-1 px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                    >
+                        {cancelLabel}
+                    </button>
+                )}
                 <button
                     onClick={handleSubmit}
                     disabled={isSubmitting}
-                    className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+                    className={`${allowCancel ? 'flex-1' : 'w-full'} px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50`}
                 >
                     {isSubmitting ? 'Salvando...' : 'Salvar Feedback'}
                 </button>

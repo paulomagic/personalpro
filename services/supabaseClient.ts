@@ -123,6 +123,7 @@ export interface Workout {
     objective: string;
     duration: string;
     splits: any; // JSON
+    ai_metadata?: AIWorkoutMetadata;
     created_at: string;
 }
 
@@ -555,6 +556,11 @@ export interface AIWorkoutMetadata {
     model: string;
     optionSelected?: string;
     generatedAt: string;
+    coldStartMode?: boolean;
+    calibrationPlan?: {
+        sessions: number;
+        objectives?: string[];
+    } | null;
     clientData?: {
         injuries?: string;
         preferences?: string;

@@ -323,6 +323,7 @@ export interface Exercise {
 export interface Workout {
   id: string;
   clientId: string;
+  studentId?: string;
   title: string;
   exercises: WorkoutExercise[] | Exercise[];
   objective: string;
@@ -332,6 +333,26 @@ export interface Workout {
   isTemplate?: boolean;
   templateId?: string;
   sportParams?: SportTrainingParams;  // Premium: Para treinos esportivos
+  coldStartMode?: boolean;
+  calibrationPlan?: {
+    sessions: number;
+    objectives?: string[];
+  };
+  ai_metadata?: {
+    model?: string;
+    optionSelected?: string;
+    generatedAt?: string;
+    coldStartMode?: boolean;
+    calibrationPlan?: {
+      sessions: number;
+      objectives?: string[];
+    } | null;
+    clientData?: {
+      injuries?: string;
+      preferences?: string;
+      adherence?: number;
+    };
+  };
 }
 
 // ============ MONTHLY SCHEDULING ============
@@ -408,4 +429,3 @@ export interface CompletedWorkout {
   feedback_notes?: string;
   created_at: string;
 }
-

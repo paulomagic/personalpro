@@ -1,12 +1,13 @@
-import React, { useState, useEffect } from 'react';
-import { AreaChart, Area, XAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import React, { Suspense, lazy, useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowLeft, TrendingUp, Download, CheckCircle, AlertCircle, Clock } from 'lucide-react';
 import { getPayments, updatePayment, getClients } from '../services/supabaseClient';
 import { mockClients } from '../mocks/demoData';
 import { PaymentCardSkeleton } from '../components/Skeleton';
 import EmptyState from '../components/EmptyState';
-import PaymentStatusModal from '../components/PaymentStatusModal';
+
+const FinanceOverviewChart = lazy(() => import('../components/FinanceOverviewChart'));
+const PaymentStatusModal = lazy(() => import('../components/PaymentStatusModal'));
 
 interface FinanceViewProps {
     user: any;
@@ -33,6 +34,12 @@ const FinanceView: React.FC<FinanceViewProps> = ({ user, onBack }) => {
     const [showSuccessToast, setShowSuccessToast] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
     const [payments, setPayments] = useState<Payment[]>([]);
+    const [enableHeavyUI, setEnableHeavyUI] = useState(false);
+
+    useEffect(() => {
+        const timer = window.setTimeout(() => setEnableHeavyUI(true), 0);
+        return () => window.clearTimeout(timer);
+    }, []);
 
     // Fetch payments from Supabase
     useEffect(() => {
@@ -260,23 +267,13 @@ const FinanceView: React.FC<FinanceViewProps> = ({ user, onBack }) => {
                         </div>
 
                         <div className="h-40 w-full -ml-4">
-                            <ResponsiveContainer width="110%" height="100%">
-                                <AreaChart data={financeData}>
-                                    <defs>
-                                        <linearGradient id="colorFin" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor="#10B981" stopOpacity={0.5} />
-                                            <stop offset="95%" stopColor="#10B981" stopOpacity={0} />
-                                        </linearGradient>
-                                    </defs>
-                                    <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 10 }} />
-                                    <Tooltip
-                                        cursor={{ stroke: 'rgba(255,255,255,0.1)' }}
-                                        contentStyle={{ backgroundColor: 'rgba(15, 23, 42, 0.9)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)', color: '#fff' }}
-                                        itemStyle={{ color: '#10B981' }}
-                                    />
-                                    <Area type="monotone" dataKey="amount" stroke="#10B981" strokeWidth={3} fillOpacity={1} fill="url(#colorFin)" />
-                                </AreaChart>
-                            </ResponsiveContainer>
+                            {enableHeavyUI ? (
+                                <Suspense fallback={<div className="h-full w-full rounded-2xl bg-slate-800/50 animate-pulse" />}>
+                                    <FinanceOverviewChart data={financeData} />
+                                </Suspense>
+                            ) : (
+                                <div className="h-full w-full rounded-2xl bg-slate-800/50 animate-pulse" />
+                            )}
                         </div>
                     </motion.div>
 
@@ -412,11 +409,13 @@ const FinanceView: React.FC<FinanceViewProps> = ({ user, onBack }) => {
 
             {/* Payment Status Edit Modal */}
             {showStatusModal && (
-                <PaymentStatusModal
-                    payment={showStatusModal}
-                    onClose={() => setShowStatusModal(null)}
-                    onUpdateStatus={handleUpdateStatus}
-                />
+                <Suspense fallback={null}>
+                    <PaymentStatusModal
+                        payment={showStatusModal}
+                        onClose={() => setShowStatusModal(null)}
+                        onUpdateStatus={handleUpdateStatus}
+                    />
+                </Suspense>
             )}
         </motion.div>
     );

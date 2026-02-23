@@ -2,12 +2,6 @@ import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { View, Client, Workout } from './types';
 import { supabase, getUserProfile, countPendingRescheduleRequests, type DBUserProfile } from './services/supabaseClient';
 import LoginView from './views/LoginView';
-import DashboardView from './views/DashboardView';
-import ClientProfileView from './views/ClientProfileView';
-import TrainingExecutionView from './views/TrainingExecutionView';
-import ClientsView from './views/ClientsView';
-import SettingsView from './views/SettingsView';
-import CalendarView from './views/CalendarView';
 import Layout from './components/Layout';
 import UpdateBanner from './components/UpdateBanner';
 import {
@@ -22,6 +16,12 @@ import {
 
 // Lazy load heavy views to reduce initial bundle size
 const AIBuilderView = lazy(() => import('./views/AIBuilderView'));
+const DashboardView = lazy(() => import('./views/DashboardView'));
+const ClientProfileView = lazy(() => import('./views/ClientProfileView'));
+const TrainingExecutionView = lazy(() => import('./views/TrainingExecutionView'));
+const ClientsView = lazy(() => import('./views/ClientsView'));
+const SettingsView = lazy(() => import('./views/SettingsView'));
+const CalendarView = lazy(() => import('./views/CalendarView'));
 const MetricsView = lazy(() => import('./views/MetricsView'));
 const FinanceView = lazy(() => import('./views/FinanceView'));
 const WorkoutBuilderView = lazy(() => import('./views/WorkoutBuilderView'));

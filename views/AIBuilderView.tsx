@@ -1,13 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { Suspense, lazy, useEffect, useState } from 'react';
 import { Client } from '../types';
-import { mockClients } from '../mocks/demoData';
-import { generateWorkoutWithAI, isAIAvailable, regenerateExerciseWithAI, refineWorkoutWithAI, handleAIError } from '../services/geminiService';
-import { generateWorkout as generateWithEngine } from '../services/ai/trainingEngine';
-import { isAIAvailable as isNewAIAvailable } from '../services/ai/aiRouter';
-import { saveAIWorkout, getClients, mapDBClientToClient, supabase } from '../services/supabaseClient';
 import { ThumbsUp, ThumbsDown, RefreshCw, Download } from 'lucide-react';
-import DetectionFeedback from '../components/DetectionFeedback';
 
+const DetectionFeedback = lazy(() => import('../components/DetectionFeedback'));
 
 // Feature flag: use new AI Router (Groq + intention-based)
 const USE_NEW_AI_ROUTER = true;
@@ -18,16 +13,113 @@ interface AIBuilderViewProps {
   onDone: () => void;
 }
 
-// Smart workout generator using mockExercises DB
-import { mockExercises } from '../mocks/demoData';
+interface MockExercise {
+  id?: string;
+  name: string;
+  targetMuscle?: string;
+  category?: string;
+  sets?: Array<{ reps?: string }>;
+}
+
+const loadDemoData = () => import('../mocks/demoData');
+const loadGeminiService = () => import('../services/geminiService');
+const loadTrainingEngine = () => import('../services/ai/trainingEngine');
+const loadAIRouter = () => import('../services/ai/aiRouter');
+const loadSupabaseClient = () => import('../services/supabaseClient');
+
+const hasMeaningfulLastTraining = (value?: string): boolean => {
+  if (!value) return false;
+  const normalized = value.trim().toLowerCase();
+  if (!normalized) return false;
+  return !normalized.includes('não registrado') && !normalized.includes('iniciando');
+};
+
+const isColdStartClient = (client: Client): boolean => {
+  const hasAssessments = Array.isArray(client.assessments) && client.assessments.length > 0;
+  const hasCompletedClasses = (client.completedClasses || 0) > 0;
+  const hasTrainingHistory = hasMeaningfulLastTraining(client.lastTraining);
+  return !hasAssessments && !hasCompletedClasses && !hasTrainingHistory;
+};
+
+const parseRestToSeconds = (rest: string | number | undefined): number => {
+  if (typeof rest === 'number') return rest;
+  if (!rest) return 90;
+  const asText = String(rest).trim().toLowerCase();
+
+  const mmss = asText.match(/^(\d+):(\d{1,2})$/);
+  if (mmss) {
+    return Number(mmss[1]) * 60 + Number(mmss[2]);
+  }
+
+  if (asText.includes('min')) {
+    const match = asText.match(/(\d+)/);
+    if (match) return Number(match[1]) * 60;
+  }
+
+  const match = String(rest).match(/(\d+)/);
+  return match ? Number(match[1]) : 90;
+};
+
+const formatRestSeconds = (seconds: number): string => `${Math.max(45, Math.round(seconds))}s`;
+
+const applyColdStartProtocol = (workout: any) => {
+  if (!workout?.splits) return workout;
+
+  const tunedSplits = workout.splits.map((split: any) => ({
+    ...split,
+    exercises: (split.exercises || []).map((exercise: any) => {
+      const tuneRest = (value: string | number | undefined) => formatRestSeconds(parseRestToSeconds(value) + 15);
+
+      let tunedSets: any = Math.max(2, Number(exercise.sets || 3) - 1);
+      if (Array.isArray(exercise.sets)) {
+        const targetCount = Math.max(2, exercise.sets.length - 1);
+        tunedSets = exercise.sets.slice(0, targetCount).map((setItem: any) => ({
+          ...setItem,
+          rest: tuneRest(setItem?.rest ?? exercise.rest)
+        }));
+      }
+
+      const tunedRest = tuneRest(exercise.rest);
+      return {
+        ...exercise,
+        sets: tunedSets,
+        rest: tunedRest
+      };
+    })
+  }));
+
+  const existingNotes: string[] = Array.isArray(workout.personalNotes) ? workout.personalNotes : [];
+  const coldStartNotes = [
+    '🧭 Cold Start ativo: volume inicial reduzido para calibrar resposta individual.',
+    '📈 Sessão 1: validar técnica, dor e tolerância de carga.',
+    '📈 Sessão 2: manter carga e ajustar reps com base no RPE/RIR.',
+    '📈 Sessão 3: iniciar progressão de carga se execução estiver estável.',
+    '📝 Obrigatório coletar feedback pós-treino (RPE, dor, dificuldade, conclusão).'
+  ];
+
+  return {
+    ...workout,
+    splits: tunedSplits,
+    coldStartMode: true,
+    calibrationPlan: {
+      sessions: 3,
+      objectives: [
+        'Baseline técnico',
+        'Calibração de esforço percebido',
+        'Início de progressão segura'
+      ]
+    },
+    personalNotes: [...existingNotes, ...coldStartNotes]
+  };
+};
 
 // ============ PERSONALIZED AI WORKOUT GENERATOR ============
-const generateSmartWorkout = (client: Client, observations: string) => {
+const generateSmartWorkout = (client: Client, observations: string, exerciseCatalog: MockExercise[]) => {
   const { name, goal, level, adherence, injuries, preferences } = client;
 
   // 1. FILTER EXERCISES BY INJURIES
   const injuryKeywords = extractKeywords(injuries || '');
-  const filteredExercises = mockExercises.filter(ex => {
+  const filteredExercises = exerciseCatalog.filter(ex => {
     const exName = ex.name.toLowerCase();
     const exMuscle = (ex.targetMuscle || '').toLowerCase();
 
@@ -202,10 +294,30 @@ const AIBuilderView: React.FC<AIBuilderViewProps> = ({ user, onBack, onDone }) =
   const [selectedOptionIndex, setSelectedOptionIndex] = useState(0);
   const [feedback, setFeedback] = useState<'positive' | 'negative' | null>(null);
   const [activeTabIndex, setActiveTabIndex] = useState(0);
+  const [exerciseCatalog, setExerciseCatalog] = useState<MockExercise[]>([]);
+  const [loadingExerciseCatalog, setLoadingExerciseCatalog] = useState(false);
+
+  const ensureExerciseCatalog = async (): Promise<MockExercise[]> => {
+    if (exerciseCatalog.length > 0) return exerciseCatalog;
+
+    setLoadingExerciseCatalog(true);
+    try {
+      const { mockExercises } = await loadDemoData();
+      const catalog = mockExercises as MockExercise[];
+      setExerciseCatalog(catalog);
+      return catalog;
+    } finally {
+      setLoadingExerciseCatalog(false);
+    }
+  };
+
+  const loadFallbackClients = async (): Promise<Client[]> => {
+    const { mockClients } = await loadDemoData();
+    return mockClients as Client[];
+  };
 
   const handleFeedback = (type: 'positive' | 'negative') => {
     setFeedback(type);
-    console.log(`Feedback received: ${type}`);
     // Here we would ideally save this to Supabase for RLHF
   };
   const [editingExercise, setEditingExercise] = useState<{ splitIdx: number, exIdx: number } | null>(null);
@@ -228,6 +340,7 @@ const AIBuilderView: React.FC<AIBuilderViewProps> = ({ user, onBack, onDone }) =
     setRegeneratingId(id);
 
     try {
+      const { regenerateExerciseWithAI } = await loadGeminiService();
       const newExercise = await regenerateExerciseWithAI(
         currentExercise.name,
         currentExercise.targetMuscle,
@@ -276,8 +389,13 @@ const AIBuilderView: React.FC<AIBuilderViewProps> = ({ user, onBack, onDone }) =
     setExerciseSearch('');
   };
 
+  const openAddExerciseModal = async () => {
+    await ensureExerciseCatalog();
+    setShowAddExercise(true);
+  };
+
   // Filtered exercises for search
-  const filteredExercisesForAdd = mockExercises.filter(ex =>
+  const filteredExercisesForAdd = exerciseCatalog.filter(ex =>
     ex.name.toLowerCase().includes(exerciseSearch.toLowerCase()) ||
     (ex.targetMuscle || '').toLowerCase().includes(exerciseSearch.toLowerCase())
   ).slice(0, 20);
@@ -302,26 +420,31 @@ const AIBuilderView: React.FC<AIBuilderViewProps> = ({ user, onBack, onDone }) =
     const fetchClients = async () => {
       setFetchingClients(true);
       try {
+        const { getClients, mapDBClientToClient } = await loadSupabaseClient();
+
         // Buscar clientes reais do banco de dados
         if (user?.id) {
           const dbClients = await getClients(user.id);
           if (dbClients && dbClients.length > 0) {
-            const mappedClients = dbClients.map(mapDBClientToClient);
+            const mappedClients = dbClients.map(mapDBClientToClient) as Client[];
             setClients(mappedClients);
             setSelectedClient(mappedClients[0]);
           } else {
             // Fallback para mockClients se não houver clientes no banco
+            const mockClients = await loadFallbackClients();
             setClients(mockClients);
             setSelectedClient(mockClients[0]);
           }
         } else {
           // Sem user logado - usar mockClients
+          const mockClients = await loadFallbackClients();
           setClients(mockClients);
           setSelectedClient(mockClients[0]);
         }
       } catch (error) {
         console.error('Error fetching clients:', error);
         // Fallback para mockClients em caso de erro
+        const mockClients = await loadFallbackClients();
         setClients(mockClients);
         setSelectedClient(mockClients[0]);
       } finally {
@@ -350,11 +473,13 @@ const AIBuilderView: React.FC<AIBuilderViewProps> = ({ user, onBack, onDone }) =
     setErrorToast(null);
 
     try {
+      const { refineWorkoutWithAI, handleAIError } = await loadGeminiService();
       const refinedResult = await refineWorkoutWithAI(result, refinementInput);
 
       if (refinedResult) {
+        const localExercises = await ensureExerciseCatalog();
         // Re-apply local verification
-        const mappedResult = mapToLocalExercises(refinedResult);
+        const mappedResult = mapToLocalExercises(refinedResult, localExercises);
 
         // Preserve or add notes
         const currentNotes = result.personalNotes || [];
@@ -366,6 +491,7 @@ const AIBuilderView: React.FC<AIBuilderViewProps> = ({ user, onBack, onDone }) =
         setErrorToast('🤖 Não foi possível refinar. Tente novamente.');
       }
     } catch (error: any) {
+      const { handleAIError } = await loadGeminiService();
       const aiError = handleAIError(error);
       setErrorToast(aiError.userMessage);
       console.error('Error refining workout:', aiError.message);
@@ -375,28 +501,30 @@ const AIBuilderView: React.FC<AIBuilderViewProps> = ({ user, onBack, onDone }) =
   };
 
   useEffect(() => {
-    let interval: any;
+    let interval: ReturnType<typeof setInterval> | undefined;
     if (loading) {
       interval = setInterval(() => {
         setLoadingMessageIndex((prev) => (prev < messages.length - 1 ? prev + 1 : prev));
       }, 800);
     }
-    return () => clearInterval(interval);
+    return () => {
+      if (interval) clearInterval(interval);
+    };
   }, [loading]);
 
   // Check if exercise exists in local DB
-  const mapToLocalExercises = (aiResult: any) => {
+  const mapToLocalExercises = (aiResult: any, localExercises: MockExercise[]) => {
     if (!aiResult || !aiResult.splits) return aiResult;
 
     const mappedSplits = aiResult.splits.map((split: any) => ({
       ...split,
       exercises: split.exercises.map((ex: any) => {
         // Try strict match first
-        let localMatch = mockExercises.find(me => me.name.toLowerCase() === ex.name.toLowerCase());
+        let localMatch = localExercises.find(me => me.name.toLowerCase() === ex.name.toLowerCase());
 
         // Try fuzzy match
         if (!localMatch) {
-          localMatch = mockExercises.find(me =>
+          localMatch = localExercises.find(me =>
             me.name.toLowerCase().includes(ex.name.toLowerCase()) ||
             ex.name.toLowerCase().includes(me.name.toLowerCase())
           );
@@ -423,37 +551,49 @@ const AIBuilderView: React.FC<AIBuilderViewProps> = ({ user, onBack, onDone }) =
     setLoadingMessageIndex(0);
     setWorkoutOptions([]);
     setSelectedOptionIndex(0);
+    const coldStartMode = isColdStartClient(selectedClient);
+    const effectiveGoal = selectedGoal || selectedClient.goal;
+    const combinedObservations = [selectedClient.observations, observations]
+      .filter(Boolean)
+      .join(' | ');
 
     const clientExtendedData = {
       injuries: selectedClient.injuries,
       preferences: selectedClient.preferences,
       adherence: selectedClient.adherence,
       equipment: ['Academia completa', 'Halteres', 'Barras', 'Máquinas'],
-      sessionDuration: 60,
+      sessionDuration: coldStartMode ? 50 : 60,
       previousWorkouts: [],
-      recentProgress: ''
+      recentProgress: observations || ''
     };
 
     try {
       // NEW: Deterministic Training Engine with slot-based templates
       if (USE_NEW_AI_ROUTER) {
+        const [{ generateWorkout: generateWithEngine }, { isAIAvailable: isNewAIAvailable }] = await Promise.all([
+          loadTrainingEngine(),
+          loadAIRouter()
+        ]);
+
         const engineResult = await generateWithEngine({
           name: selectedClient.name,
-          goal: selectedClient.goal,
+          goal: effectiveGoal,
           level: selectedClient.level,
           daysPerWeek: selectedDays,
           injuries: selectedClient.injuries,
-          observations: selectedClient.observations,  // NOVO: detecta condições especiais
-          birthDate: selectedClient.birth_date,       // NOVO: calcula idade para idoso/adolescente
+          observations: combinedObservations,          // Usa observações do cliente + input do coach
+          birthDate: selectedClient.birthDate,        // NOVO: calcula idade para idoso/adolescente
           age: selectedClient.age,                     // NOVO: ou usa idade direta se disponível
+          weight: selectedClient.weight,
+          height: selectedClient.height,
           useAI: isNewAIAvailable() // Reativado: bug de age mapeado corrigido
         });
 
         if (engineResult && engineResult.days.length > 0) {
           // Convert engine result to existing UI format
-          const aiResult = {
+          let aiResult = {
             title: `${engineResult.template_name} - ${selectedClient.name}`,
-            objective: `Template ${engineResult.template_id} otimizado para ${selectedClient.goal}`,
+            objective: `Template ${engineResult.template_id} otimizado para ${effectiveGoal}`,
             splits: engineResult.days.map(day => ({
               name: day.label,
               focus: day.label,
@@ -478,6 +618,9 @@ const AIBuilderView: React.FC<AIBuilderViewProps> = ({ user, onBack, onDone }) =
             ].filter(Boolean),
             optionLabel: 'Engine'
           };
+          if (coldStartMode) {
+            aiResult = applyColdStartProtocol(aiResult);
+          }
 
           setWorkoutOptions([aiResult]);
           setResult(aiResult);
@@ -489,18 +632,19 @@ const AIBuilderView: React.FC<AIBuilderViewProps> = ({ user, onBack, onDone }) =
 
       // FALLBACK: Old generation method (Gemini)
       const variationPrompts = [
-        observations, // Original
-        `${observations}. Foco em métodos avançados como drop sets e supersets.`, // Variation 2
-        `${observations}. Priorize exercícios funcionais e compostos.` // Variation 3
+        combinedObservations || observations, // Original
+        `${combinedObservations}. Foco em métodos avançados como drop sets e supersets.`, // Variation 2
+        `${combinedObservations}. Priorize exercícios funcionais e compostos.` // Variation 3
       ];
+      const { generateWorkoutWithAI } = await loadGeminiService();
 
       const results = await Promise.all(
         variationPrompts.map(obs =>
           generateWorkoutWithAI(
             selectedClient.name,
-            selectedClient.goal,
+            effectiveGoal,
             selectedClient.level,
-            3,
+            selectedDays,
             obs,
             clientExtendedData
           ).catch(() => null)
@@ -508,15 +652,17 @@ const AIBuilderView: React.FC<AIBuilderViewProps> = ({ user, onBack, onDone }) =
       );
 
       // Filter successful results and add metadata
+      const localExercises = await ensureExerciseCatalog();
+      const successfulCount = results.filter(r => r).length;
       const successfulResults = results
         .filter(r => r !== null)
         .map((aiResult, idx) => {
           // Map to local DB for hybrid validation
-          const mappedResult = mapToLocalExercises(aiResult);
+          const mappedResult = mapToLocalExercises(aiResult, localExercises);
 
           const personalNotes = [
             '🤖 Treino gerado por Gemini 2.5 Flash',
-            `📋 Opção ${idx + 1} de ${results.filter(r => r).length}`
+            `📋 Opção ${idx + 1} de ${successfulCount}`
           ];
           if (selectedClient.injuries && selectedClient.injuries.toLowerCase() !== 'nenhuma') {
             personalNotes.push(`⚠️ Considerando: ${selectedClient.injuries.split('-')[0].trim()}`);
@@ -527,7 +673,8 @@ const AIBuilderView: React.FC<AIBuilderViewProps> = ({ user, onBack, onDone }) =
           if (selectedClient.preferences) {
             personalNotes.push(`❤️ Preferências: ${selectedClient.preferences.split('.')[0]}`);
           }
-          return { ...mappedResult, personalNotes, optionLabel: idx === 0 ? 'Clássico' : idx === 1 ? 'Avançado' : 'Funcional' };
+          const resultWithNotes = { ...mappedResult, personalNotes, optionLabel: idx === 0 ? 'Clássico' : idx === 1 ? 'Avançado' : 'Funcional' };
+          return coldStartMode ? applyColdStartProtocol(resultWithNotes) : resultWithNotes;
         });
 
       if (successfulResults.length > 0) {
@@ -535,13 +682,21 @@ const AIBuilderView: React.FC<AIBuilderViewProps> = ({ user, onBack, onDone }) =
         setResult(successfulResults[0]);
       } else {
         // Fallback to local generation
-        const workout = generateSmartWorkout(selectedClient, observations);
+        const localExercisesForFallback = await ensureExerciseCatalog();
+        let workout = generateSmartWorkout(selectedClient, observations, localExercisesForFallback);
+        if (coldStartMode) {
+          workout = applyColdStartProtocol(workout);
+        }
         setWorkoutOptions([workout]);
         setResult(workout);
       }
     } catch (error) {
       console.error('Error generating workout:', error);
-      const workout = generateSmartWorkout(selectedClient, observations);
+      const localExercisesForFallback = await ensureExerciseCatalog();
+      let workout = generateSmartWorkout(selectedClient, observations, localExercisesForFallback);
+      if (coldStartMode) {
+        workout = applyColdStartProtocol(workout);
+      }
       setWorkoutOptions([workout]);
       setResult(workout);
     } finally {
@@ -568,11 +723,14 @@ const AIBuilderView: React.FC<AIBuilderViewProps> = ({ user, onBack, onDone }) =
 
     try {
       if (selectedClient && result) {
+        const { saveAIWorkout } = await loadSupabaseClient();
         // Prepare metadata
         const metadata = {
           model: 'gemini-2.5-flash',
           optionSelected: workoutOptions[selectedOptionIndex]?.optionLabel || 'default',
           generatedAt: new Date().toISOString(),
+          coldStartMode: !!result?.coldStartMode,
+          calibrationPlan: result?.calibrationPlan || null,
           clientData: {
             injuries: selectedClient.injuries,
             preferences: selectedClient.preferences,
@@ -588,8 +746,6 @@ const AIBuilderView: React.FC<AIBuilderViewProps> = ({ user, onBack, onDone }) =
           result,
           metadata
         );
-
-        console.log('✅ Workout saved to Supabase with AI metadata');
       }
     } catch (error) {
       console.error('Error saving workout:', error);
@@ -819,14 +975,16 @@ const AIBuilderView: React.FC<AIBuilderViewProps> = ({ user, onBack, onDone }) =
           {/* NOVO: Feedback de condições detectadas */}
           {selectedClient && (observations || selectedClient.injuries || selectedClient.observations) && (
             <div className="mt-4">
-              <DetectionFeedback
-                observations={`${observations} ${selectedClient.observations || ''}`}
-                injuries={selectedClient.injuries}
-                age={selectedClient.age}
-                weight={selectedClient.weight}
-                height={selectedClient.height}
-                compact={false}
-              />
+              <Suspense fallback={<div className="h-24 glass-card rounded-2xl animate-pulse bg-white/5" />}>
+                <DetectionFeedback
+                  observations={`${observations} ${selectedClient.observations || ''}`}
+                  injuries={selectedClient.injuries}
+                  age={selectedClient.age}
+                  weight={selectedClient.weight}
+                  height={selectedClient.height}
+                  compact={false}
+                />
+              </Suspense>
             </div>
           )}
         </section>
@@ -1082,7 +1240,7 @@ const AIBuilderView: React.FC<AIBuilderViewProps> = ({ user, onBack, onDone }) =
 
                 {/* Add Exercise Button */}
                 <button
-                  onClick={() => setShowAddExercise(true)}
+                  onClick={openAddExerciseModal}
                   className="w-full py-4 rounded-2xl border-2 border-dashed border-white/20 text-slate-400 font-bold flex items-center justify-center gap-2 hover:border-blue-500/50 hover:text-blue-400 transition-all active:scale-98"
                 >
                   <span className="material-symbols-outlined">add_circle</span>
@@ -1146,6 +1304,13 @@ const AIBuilderView: React.FC<AIBuilderViewProps> = ({ user, onBack, onDone }) =
 
                 <div className="flex-1 overflow-y-auto px-6 pb-6">
                   <div className="space-y-3">
+                    {loadingExerciseCatalog && (
+                      <div className="space-y-3">
+                        <div className="h-20 rounded-2xl bg-white/5 animate-pulse" />
+                        <div className="h-20 rounded-2xl bg-white/5 animate-pulse" />
+                        <div className="h-20 rounded-2xl bg-white/5 animate-pulse" />
+                      </div>
+                    )}
                     {filteredExercisesForAdd.map((ex, idx) => (
                       <button
                         key={idx}
@@ -1159,7 +1324,7 @@ const AIBuilderView: React.FC<AIBuilderViewProps> = ({ user, onBack, onDone }) =
                         <span className="material-symbols-outlined text-blue-500">add</span>
                       </button>
                     ))}
-                    {filteredExercisesForAdd.length === 0 && (
+                    {!loadingExerciseCatalog && filteredExercisesForAdd.length === 0 && (
                       <p className="text-center text-slate-500 py-8">Nenhum exercício encontrado</p>
                     )}
                   </div>

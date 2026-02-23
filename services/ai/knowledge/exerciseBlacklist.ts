@@ -23,6 +23,18 @@ export interface ExercisePriority {
     avoidExercises: string[];
 }
 
+export interface ContextFilterOptions {
+    goal?: string;
+    explicitExceptions?: string[];           // Ex.: ["flexao", "burpee"] para liberar pontualmente
+    allowBodyweightForPatterns?: string[];   // Ex.: ["core"]
+}
+
+interface AntiPatternRule {
+    context: TrainingContext;
+    keywords: string[];
+    reason: string;
+}
+
 // BLACKLIST PRINCIPAL
 export const EXERCISE_BLACKLISTS: ExerciseBlacklist[] = [
     {
@@ -116,13 +128,43 @@ export const EXERCISE_PRIORITIES: ExercisePriority[] = [
     }
 ];
 
+const CONTEXT_ANTI_PATTERNS: AntiPatternRule[] = [
+    {
+        context: 'academia',
+        keywords: [
+            'polichinelo',
+            'corrida no lugar',
+            'jumping jack',
+            'mountain climber',
+            'burpee',
+            'high knees'
+        ],
+        reason: 'Anti-padrão para academia: exercício genérico de casa sem sobrecarga progressiva'
+    }
+];
+
+function normalize(value: string): string {
+    return value
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .trim();
+}
+
+function isExplicitException(exerciseName: string, options?: ContextFilterOptions): boolean {
+    if (!options?.explicitExceptions || options.explicitExceptions.length === 0) return false;
+    const target = normalize(exerciseName);
+    return options.explicitExceptions.some(exception => target.includes(normalize(exception)));
+}
+
 /**
  * FUNÇÃO PRINCIPAL: Filtrar exercícios por contexto (academia/casa)
  * Remove exercícios inadequados da lista de candidatos
  */
 export function filterByContext(
     exercises: Exercise[],
-    context: TrainingContext
+    context: TrainingContext,
+    options?: ContextFilterOptions
 ): Exercise[] {
     const blacklist = EXERCISE_BLACKLISTS.find(bl => bl.context === context);
     if (!blacklist) return exercises;
@@ -152,14 +194,28 @@ export function filterByContext(
 
         // Regra dinâmica: em academia, evitar exercícios exclusivamente de peso corporal
         // para padrões de força (exceto CORE), pois há melhores opções com sobrecarga progressiva.
+        const allowBodyweightPattern = (options?.allowBodyweightForPatterns || []).includes(ex.movement_pattern);
         if (
             context === 'academia' &&
             ex.movement_pattern !== 'core' &&
+            !allowBodyweightPattern &&
+            !isExplicitException(ex.name, options) &&
             Array.isArray(ex.equipment) &&
             ex.equipment.length === 1 &&
             ex.equipment[0] === 'peso_corporal'
         ) {
             debugLog(`[Blacklist] ❌ Removido "${ex.name}" (bodyweight-only em academia)`);
+            return false;
+        }
+
+        const antiPattern = CONTEXT_ANTI_PATTERNS.find(rule => {
+            if (rule.context !== context) return false;
+            const normalizedName = normalize(ex.name);
+            return rule.keywords.some(keyword => normalizedName.includes(normalize(keyword)));
+        });
+
+        if (antiPattern && !isExplicitException(ex.name, options)) {
+            debugLog(`[Blacklist] ❌ Removido "${ex.name}" (anti-padrão): ${antiPattern.reason}`);
             return false;
         }
 

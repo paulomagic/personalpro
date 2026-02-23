@@ -3,6 +3,7 @@
 // Nunca por nome de exercício
 
 import { supabase } from './supabaseClient';
+import { evaluateExerciseTier } from './ai/knowledge/exerciseTiering';
 
 const isDev = import.meta.env.DEV;
 const debugLog = (...args: unknown[]) => {
@@ -65,6 +66,7 @@ export interface Exercise {
 export interface ExerciseIntention {
     movement_pattern: MovementPattern;
     primary_muscle: string;
+    goal?: string;              // Opcional: melhora ranking por objetivo
     equipment?: Equipment[];      // Opcional: filtrar por equipamento disponível
     avoid_injuries?: Injury[];    // Opcional: evitar por lesão do aluno
     prefer_compound?: boolean;    // Opcional: preferir compostos
@@ -115,6 +117,14 @@ function rankExercisesByIntention(
                 ).length;
                 value -= cautionMatches * 8;
             }
+
+            // Tier A/B/C por padrão + objetivo
+            const tierEval = evaluateExerciseTier(
+                exercise.name,
+                intention.movement_pattern,
+                intention.goal
+            );
+            value += tierEval.score;
 
             return value;
         };

@@ -365,6 +365,7 @@ Crie ${clientData.days} splits com 5-7 intenções cada.`;
                         const exercises = await resolveExercise({
                             movement_pattern: intention.movement_pattern,
                             primary_muscle: intention.primary_muscle,
+                            goal: clientData.goal,
                             equipment: resolverEquipment,
                             avoid_injuries: parsedInjuries,
                             prefer_compound: true

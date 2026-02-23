@@ -23,7 +23,8 @@ import { validateConsecutivePatterns, extractPatternsFromWorkout, formatValidati
 // v3.2: Workout Validator - Duplicatas e cobertura muscular
 import { validateNoDuplicatesInDay, validateMuscleCoverage, removeDuplicatesFromDay, type MuscleCoverageResult } from './validation/workoutValidator';
 // v3.2: Exercise Blacklist - Contexto de treino (academia vs. casa)
-import { filterByContext, prioritizeByContext } from './knowledge/exerciseBlacklist';
+import { filterByContext, prioritizeByContext, type ContextFilterOptions } from './knowledge/exerciseBlacklist';
+import { evaluateExerciseTier } from './knowledge/exerciseTiering';
 
 const isDev = import.meta.env.DEV;
 const debugLog = (...args: unknown[]) => {
@@ -123,6 +124,32 @@ const BASE_INTENSITY_CONFIG: Record<IntensityLevel, { sets: number; reps: string
 };
 
 const CANDIDATES_PER_SLOT = 5;
+
+function normalizeText(value: string): string {
+    return value
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
+function extractContextExceptions(goal: string, observations?: string): string[] {
+    const text = normalizeText(`${goal || ''} ${observations || ''}`);
+    const exceptions: string[] = [];
+
+    // Exceções explícitas por intenção do personal/aluno
+    if (
+        text.includes('permitir peso corporal') ||
+        text.includes('permitir calistenia') ||
+        text.includes('calistenia') ||
+        text.includes('funcional')
+    ) {
+        exceptions.push('flexao', 'push up', 'burpee', 'mountain climber', 'polichinelo');
+    }
+
+    return exceptions;
+}
 
 // ============ HELPERS DE PERSONALIZAÇÃO ============
 
@@ -272,6 +299,15 @@ export async function generateWorkout(params: {
     debugTimeEnd('[TrainingEngine] DB Fetch');
     debugLog(`[TrainingEngine] Loaded ${allExercisesDB.length} exercises from cache/DB`);
 
+    const contextFilterOptions: ContextFilterOptions = {
+        goal,
+        explicitExceptions: extractContextExceptions(goal, observations),
+        allowBodyweightForPatterns: ['core']
+    };
+    if (contextFilterOptions.explicitExceptions && contextFilterOptions.explicitExceptions.length > 0) {
+        debugLog('[TrainingEngine] Context exceptions enabled:', contextFilterOptions.explicitExceptions);
+    }
+
     // 5. PREPARAR LISTA PLANA DE SLOTS PARA PROCESSAMENTO PARALELO
     interface SlotTask {
         dayIndex: number;
@@ -316,7 +352,7 @@ export async function generateWorkout(params: {
                     });
 
                     // v3.2: FILTRO BLACKLIST - Contexto de academia (remove Flexão de Braços, etc)
-                    candidates = filterByContext(candidates, 'academia');
+                    candidates = filterByContext(candidates, 'academia', contextFilterOptions);
 
                     // v3.2: PRIORIZAÇÃO - Exercícios de academia preferidos
                     candidates = prioritizeByContext(candidates, 'academia');
@@ -342,7 +378,7 @@ export async function generateWorkout(params: {
                     // B. Calcular score determinístico
                     const scoredCandidates: SlotCandidate[] = filteredCandidates.map(ex => ({
                         exercise: ex,
-                        score: calculateScore(ex, task.slot, parsedInjuries, level)
+                        score: calculateScore(ex, task.slot, parsedInjuries, level, goal)
                     }));
 
                     // Ordenar por score
@@ -454,6 +490,12 @@ export async function generateWorkout(params: {
         };
     });
 
+    const variationResult = applyIntelligentVariation(resolvedDays, Math.min(3, resolvedDays.length));
+    const variedResolvedDays = variationResult.days;
+    if (variationResult.replacements > 0) {
+        debugLog(`[TrainingEngine] Intelligent variation replacements: ${variationResult.replacements}`);
+    }
+
     debugTimeEnd('[TrainingEngine] Rehydration');
 
     // v3.1: VALIDAÇÃO FINAL DO VOLUME
@@ -472,7 +514,7 @@ export async function generateWorkout(params: {
 
     // Validar e corrigir duplicatas em cada dia
     let totalDuplicatesRemoved = 0;
-    resolvedDays.forEach(day => {
+    variedResolvedDays.forEach(day => {
         const duplicateCheck = validateNoDuplicatesInDay(day.slots, day.label);
 
         if (!duplicateCheck.valid) {
@@ -495,7 +537,7 @@ export async function generateWorkout(params: {
     }
 
     // Validar cobertura muscular
-    const muscleCoverageResult = validateMuscleCoverage(template, resolvedDays);
+    const muscleCoverageResult = validateMuscleCoverage(template, variedResolvedDays);
 
     if (!muscleCoverageResult.valid) {
         console.warn('\n⚠️  GRUPOS MUSCULARES NÃO COBERTOS:');
@@ -524,12 +566,13 @@ export async function generateWorkout(params: {
         template_id: template.template_id,
         template_name: template.name,
         client_name: name,
-        days: resolvedDays,
+        days: variedResolvedDays,
         metadata: {
             goal,
             level,
             injuries: parsedInjuries,
-            generated_at: new Date().toISOString()
+            generated_at: new Date().toISOString(),
+            variation_replacements: variationResult.replacements
         }
     };
 
@@ -560,6 +603,7 @@ async function getCandidatesForSlot(
     slot: TrainingSlot,
     injuries: Injury[],
     level: string,
+    goal: string,
     blockedExercises: string[] = []  // NOVO: exercícios bloqueados por condições
 ): Promise<SlotCandidate[]> {
     // Busca exercícios pelo pattern
@@ -581,7 +625,7 @@ async function getCandidatesForSlot(
     // Score determinístico considerando nível
     const scored = filteredExercises.map(ex => ({
         exercise: ex,
-        score: calculateScore(ex, slot, injuries, level)
+        score: calculateScore(ex, slot, injuries, level, goal)
     }));
 
     // Ordena por score e pega top N
@@ -590,7 +634,7 @@ async function getCandidatesForSlot(
         .slice(0, CANDIDATES_PER_SLOT);
 }
 
-function calculateScore(ex: Exercise, slot: TrainingSlot, injuries: Injury[], level: string): number {
+function calculateScore(ex: Exercise, slot: TrainingSlot, injuries: Injury[], level: string, goal: string): number {
     let score = 50;  // Base
 
     const isBeginnerOrElderly = level.toLowerCase() === 'iniciante' || level.toLowerCase() === 'idoso';
@@ -648,6 +692,10 @@ function calculateScore(ex: Exercise, slot: TrainingSlot, injuries: Injury[], le
         score += 15;
     }
 
+    // Tier list por padrão de movimento + objetivo
+    const tierEval = evaluateExerciseTier(ex.name, slot.movement_pattern, goal);
+    score += tierEval.score;
+
     return score;
 }
 
@@ -667,6 +715,78 @@ function getDefaultMuscle(pattern: MovementPattern): string {
         'isolar_antebraco': 'antebraco'
     };
     return defaults[pattern] || 'core';
+}
+
+function normalizeExerciseName(name: string): string {
+    return normalizeText(name);
+}
+
+function applyIntelligentVariation(
+    days: ResolvedDay[],
+    initialSessions: number = 3
+): { days: ResolvedDay[]; replacements: number } {
+    const usedByPattern = new Map<string, Set<string>>();
+    const usedInInitialWindow = new Set<string>();
+    let replacements = 0;
+
+    const variedDays = days.map((day, dayIndex) => {
+        const inInitialWindow = dayIndex < initialSessions;
+
+        const variedSlots = day.slots.map(slot => {
+            if (!slot.selected || !inInitialWindow) {
+                if (slot.selected && inInitialWindow) {
+                    const selectedName = normalizeExerciseName(slot.selected.name);
+                    const patternSet = usedByPattern.get(slot.movement_pattern) || new Set<string>();
+                    patternSet.add(selectedName);
+                    usedByPattern.set(slot.movement_pattern, patternSet);
+                    usedInInitialWindow.add(selectedName);
+                }
+                return slot;
+            }
+
+            const currentName = normalizeExerciseName(slot.selected.name);
+            const patternSet = usedByPattern.get(slot.movement_pattern) || new Set<string>();
+            const repeatedByPattern = patternSet.has(currentName);
+            const repeatedInWindow = usedInInitialWindow.has(currentName);
+
+            let selected = slot.selected;
+            if (repeatedByPattern || repeatedInWindow) {
+                const candidates = slot.candidates.map(c => c.exercise);
+                const strictAlternative = candidates.find(candidate => {
+                    const candidateName = normalizeExerciseName(candidate.name);
+                    if (candidateName === currentName) return false;
+                    if (patternSet.has(candidateName)) return false;
+                    return !usedInInitialWindow.has(candidateName);
+                });
+
+                const fallbackAlternative = candidates.find(candidate =>
+                    normalizeExerciseName(candidate.name) !== currentName
+                );
+
+                if (strictAlternative || fallbackAlternative) {
+                    selected = strictAlternative || fallbackAlternative!;
+                    replacements++;
+                }
+            }
+
+            const finalName = normalizeExerciseName(selected.name);
+            patternSet.add(finalName);
+            usedByPattern.set(slot.movement_pattern, patternSet);
+            usedInInitialWindow.add(finalName);
+
+            return {
+                ...slot,
+                selected
+            };
+        });
+
+        return {
+            ...day,
+            slots: variedSlots
+        };
+    });
+
+    return { days: variedDays, replacements };
 }
 
 // ============ SELEÇÃO COM IA (NEURO-SIMBÓLICA v3.0) ============

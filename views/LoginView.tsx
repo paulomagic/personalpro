@@ -100,7 +100,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
     if (!TURNSTILE_SITE_KEY) return true;
     if (!supabase) return true;
     if (!captchaToken) {
-      setError('Confirme que você não é robô na caixa abaixo');
+      setError('Confirme se você é humano. Se o quadrado anti-robô não apareceu abaixo, seu AdBlock (bloqueador de anúncios) ou Antivírus impediu o carregamento. Desative-o e atualize a página.');
       return false;
     }
 
@@ -424,6 +424,14 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
               onError={() => {
                 setCaptchaToken(null);
                 setError('Falha na validação anti-bot');
+              }}
+              onLoadScript={() => {
+                console.log('Turnstile loaded');
+              }}
+              scriptOptions={{
+                onError: () => {
+                  setError('Erro grave: O seu navegador impediu o carregamento da segurança. Desative todas as extensões de AdBlock/Antivírus.');
+                }
               }}
               onExpire={() => setCaptchaToken(null)}
             />

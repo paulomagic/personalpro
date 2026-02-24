@@ -32,3 +32,4 @@ dist-ssr
 supabase/.temp/
 .DS_Store
 organizacao-alteracoes-20260215/
+.tmp-tests/

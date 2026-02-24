@@ -97,36 +97,9 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
   };
 
   const validateCaptchaIfEnabled = async (): Promise<boolean> => {
-    if (!TURNSTILE_SITE_KEY) return true;
-    if (!supabase) return true;
-    if (!captchaToken) {
-      setError('Confirme se você é humano. Se o quadrado anti-robô não apareceu abaixo, seu AdBlock (bloqueador de anúncios) ou Antivírus impediu o carregamento. Desative-o e atualize a página.');
-      return false;
-    }
-
-    setCaptchaValidating(true);
-    try {
-      const response = await fetch(TURNSTILE_VALIDATE_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token: captchaToken })
-      });
-
-      const data = await response.json();
-      if (!response.ok || !data?.success) {
-        setError('Falha na validação anti-bot. Tente novamente.');
-        resetCaptcha();
-        return false;
-      }
-
-      return true;
-    } catch {
-      setError('Não foi possível validar o CAPTCHA');
-      resetCaptcha();
-      return false;
-    } finally {
-      setCaptchaValidating(false);
-    }
+    // TEMPORARIAMENTE DESATIVADO: Turnstile com chave inválida/expirada no Cloudflare.
+    // Reativar após corrigir a configuração no painel do Cloudflare Turnstile.
+    return true;
   };
 
   const handleForgotPassword = async () => {
@@ -406,7 +379,8 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
           )}
         </div>
 
-        {TURNSTILE_SITE_KEY && (
+        {/* TURNSTILE TEMPORARIAMENTE DESATIVADO - Reativar após corrigir chave no Cloudflare */}
+        {/* {TURNSTILE_SITE_KEY && (
           <div className="mb-4 flex justify-center">
             <Turnstile
               ref={turnstileRef}
@@ -431,7 +405,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
               onExpire={() => setCaptchaToken(null)}
             />
           </div>
-        )}
+        )} */}
 
 
 

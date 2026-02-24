@@ -123,7 +123,7 @@ const BASE_INTENSITY_CONFIG: Record<IntensityLevel, { sets: number; reps: string
     'very_low': { sets: 2, reps: '15-20', rest: '45s' }
 };
 
-const CANDIDATES_PER_SLOT = 5;
+const CANDIDATES_PER_SLOT = 8;
 
 function normalizeText(value: string): string {
     return value
@@ -132,6 +132,18 @@ function normalizeText(value: string): string {
         .replace(/[\u0300-\u036f]/g, '')
         .replace(/\s+/g, ' ')
         .trim();
+}
+
+function isAdvancedLevel(level: string): boolean {
+    const normalized = normalizeText(level);
+    return normalized.includes('avanc') || normalized.includes('atleta');
+}
+
+function inferDayFocus(label?: string): 'forca' | 'volume' | 'neutral' {
+    const text = normalizeText(label || '');
+    if (text.includes('forca')) return 'forca';
+    if (text.includes('volume') || text.includes('hipertrofia')) return 'volume';
+    return 'neutral';
 }
 
 function extractContextExceptions(goal: string, observations?: string): string[] {
@@ -378,12 +390,19 @@ export async function generateWorkout(params: {
                     // B. Calcular score determinístico
                     const scoredCandidates: SlotCandidate[] = filteredCandidates.map(ex => ({
                         exercise: ex,
-                        score: calculateScore(ex, task.slot, parsedInjuries, level, goal)
+                        score: calculateScore(
+                            ex,
+                            task.slot,
+                            parsedInjuries,
+                            level,
+                            goal,
+                            task.day.label
+                        )
                     }));
 
                     // Ordenar por score
                     scoredCandidates.sort((a, b) => b.score - a.score);
-                    const topCandidates = scoredCandidates.slice(0, 5);
+                    const topCandidates = scoredCandidates.slice(0, CANDIDATES_PER_SLOT);
 
                     // C. Configuração personalizada
                     let config = getPersonalizedConfig(
@@ -490,10 +509,16 @@ export async function generateWorkout(params: {
         };
     });
 
-    const variationResult = applyIntelligentVariation(resolvedDays, Math.min(3, resolvedDays.length));
-    const variedResolvedDays = variationResult.days;
+    const variationWindow = isAdvancedLevel(level) ? resolvedDays.length : Math.min(3, resolvedDays.length);
+    const variationResult = applyIntelligentVariation(resolvedDays, variationWindow);
     if (variationResult.replacements > 0) {
         debugLog(`[TrainingEngine] Intelligent variation replacements: ${variationResult.replacements}`);
+    }
+
+    const uniquenessResult = enforceCrossDayUniqueness(variationResult.days);
+    const variedResolvedDays = uniquenessResult.days;
+    if (uniquenessResult.replacements > 0) {
+        debugLog(`[TrainingEngine] Cross-day uniqueness replacements: ${uniquenessResult.replacements}`);
     }
 
     debugTimeEnd('[TrainingEngine] Rehydration');
@@ -572,7 +597,8 @@ export async function generateWorkout(params: {
             level,
             injuries: parsedInjuries,
             generated_at: new Date().toISOString(),
-            variation_replacements: variationResult.replacements
+            variation_replacements: variationResult.replacements + uniquenessResult.replacements,
+            variation_window_days: variationWindow
         }
     };
 
@@ -604,6 +630,7 @@ async function getCandidatesForSlot(
     injuries: Injury[],
     level: string,
     goal: string,
+    dayLabel?: string,
     blockedExercises: string[] = []  // NOVO: exercícios bloqueados por condições
 ): Promise<SlotCandidate[]> {
     // Busca exercícios pelo pattern
@@ -625,7 +652,7 @@ async function getCandidatesForSlot(
     // Score determinístico considerando nível
     const scored = filteredExercises.map(ex => ({
         exercise: ex,
-        score: calculateScore(ex, slot, injuries, level, goal)
+        score: calculateScore(ex, slot, injuries, level, goal, dayLabel)
     }));
 
     // Ordena por score e pega top N
@@ -634,7 +661,14 @@ async function getCandidatesForSlot(
         .slice(0, CANDIDATES_PER_SLOT);
 }
 
-function calculateScore(ex: Exercise, slot: TrainingSlot, injuries: Injury[], level: string, goal: string): number {
+function calculateScore(
+    ex: Exercise,
+    slot: TrainingSlot,
+    injuries: Injury[],
+    level: string,
+    goal: string,
+    dayLabel?: string
+): number {
     let score = 50;  // Base
 
     const isBeginnerOrElderly = level.toLowerCase() === 'iniciante' || level.toLowerCase() === 'idoso';
@@ -690,6 +724,18 @@ function calculateScore(ex: Exercise, slot: TrainingSlot, injuries: Injury[], le
     }
     if (ex.stability_demand === 'baixo' && isBeginnerOrElderly) {
         score += 15;
+    }
+
+    const dayFocus = inferDayFocus(dayLabel);
+    if (dayFocus === 'forca') {
+        if (ex.is_compound) score += 14;
+        if (equipment.includes('barra')) score += 10;
+        if (ex.is_machine && !ex.is_compound) score -= 6;
+    } else if (dayFocus === 'volume') {
+        if (ex.is_machine) score += 12;
+        if (equipment.includes('cabo')) score += 10;
+        if (!ex.is_compound && ex.stability_demand !== 'alto') score += 6;
+        if (ex.is_compound && equipment.includes('barra')) score -= 6;
     }
 
     // Tier list por padrão de movimento + objetivo
@@ -787,6 +833,62 @@ function applyIntelligentVariation(
     });
 
     return { days: variedDays, replacements };
+}
+
+function shouldEnforceUniqueName(slot: ResolvedSlot): boolean {
+    // Permite repetição para CORE e panturrilha, mas bloqueia repetição de compostos/isoladores principais.
+    return slot.movement_pattern !== 'core' && slot.movement_pattern !== 'isolar_panturrilha';
+}
+
+function enforceCrossDayUniqueness(
+    days: ResolvedDay[]
+): { days: ResolvedDay[]; replacements: number } {
+    const usedNames = new Set<string>();
+    let replacements = 0;
+
+    const updatedDays = days.map(day => {
+        const updatedSlots = day.slots.map(slot => {
+            if (!slot.selected) return slot;
+
+            const currentName = normalizeExerciseName(slot.selected.name);
+
+            const shouldEnforce = shouldEnforceUniqueName(slot);
+            const alreadyUsed = usedNames.has(currentName);
+
+            if (!shouldEnforce || !alreadyUsed) {
+                if (shouldEnforce) usedNames.add(currentName);
+                return slot;
+            }
+
+            const alternative = slot.candidates
+                .map(c => c.exercise)
+                .find(candidate => {
+                    const candidateName = normalizeExerciseName(candidate.name);
+                    return candidateName !== currentName && !usedNames.has(candidateName);
+                });
+
+            if (alternative) {
+                const altName = normalizeExerciseName(alternative.name);
+                usedNames.add(altName);
+                replacements++;
+                return {
+                    ...slot,
+                    selected: alternative
+                };
+            }
+
+            // Sem alternativa viável: mantém exercício atual para não quebrar o slot.
+            usedNames.add(currentName);
+            return slot;
+        });
+
+        return {
+            ...day,
+            slots: updatedSlots
+        };
+    });
+
+    return { days: updatedDays, replacements };
 }
 
 // ============ SELEÇÃO COM IA (NEURO-SIMBÓLICA v3.0) ============

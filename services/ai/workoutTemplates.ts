@@ -223,7 +223,7 @@ export const WORKOUT_TEMPLATES: WorkoutTemplate[] = [
                     { id: 'lower_b_1', movement_pattern: 'hinge', intensity: 'high', target_muscles: ['gluteos'], priority: 1 },
                     { id: 'lower_b_2', movement_pattern: 'agachar', intensity: 'moderate', target_muscles: ['quadriceps'], allow_unilateral: true, priority: 2 },
                     { id: 'lower_b_3', movement_pattern: 'hinge', intensity: 'moderate', target_muscles: ['posterior_coxa'], priority: 3 },
-                    { id: 'lower_b_4', movement_pattern: 'hinge', intensity: 'moderate', target_muscles: ['gluteos'], priority: 4 },
+                    { id: 'lower_b_4', movement_pattern: 'agachar', intensity: 'low', target_muscles: ['quadriceps'], allow_unilateral: true, priority: 4 },
                     { id: 'lower_b_5', movement_pattern: 'isolar_panturrilha', intensity: 'low', priority: 5 },
                     { id: 'lower_b_6', movement_pattern: 'core', intensity: 'low', priority: 6 }
                 ]
@@ -679,6 +679,26 @@ export function selectTemplate(
             return powerbuilding;
         } else {
             debugLog('   ℹ️  Powerbuilding não compatível com nível ou não encontrado.');
+        }
+    }
+
+    // PRIORIDADE 3: 4x no dia a dia -> preferir ABCD por padrão prático
+    // (Upper/Lower pode ser válido em contexto específico, mas ABCD tende a reduzir repetição entre sessões)
+    const explicitUpperLower =
+        goalLower.includes('upper lower') ||
+        goalLower.includes('superior inferior') ||
+        goalLower.includes('upper/lower');
+
+    const explicitStrengthGoal =
+        goalLower.includes('força') ||
+        goalLower.includes('forca') ||
+        goalLower.includes('powerlifting');
+
+    if (daysPerWeek === 4 && !explicitUpperLower && !explicitStrengthGoal) {
+        const abcd = WORKOUT_TEMPLATES.find(t => t.template_id === 'abcd_4');
+        if (abcd && abcd.suitable_levels.includes(levelNorm)) {
+            debugLog('   🎯 SELECIONADO: ABCD 4x (preferência prática para rotina)');
+            return abcd;
         }
     }
 

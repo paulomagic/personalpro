@@ -109,8 +109,8 @@ const TIER_MATRIX: PatternTierMap = {
     },
     forca: {
       A: ['agachamento livre barra', 'agachamento frontal', 'leg press'],
-      B: ['agachamento smith'],
-      C: ['agachamento sem carga']
+      B: ['agachamento smith', 'afundo com barra'],
+      C: ['agachamento sem carga', 'agachamento goblet', 'afundo (lunge)']
     },
     emagrecimento: {
       A: ['leg press', 'agachamento goblet', 'afundo com halter'],

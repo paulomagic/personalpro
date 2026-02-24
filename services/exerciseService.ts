@@ -227,13 +227,17 @@ export function filterExercisesInMemory(
     }
 ): Exercise[] {
     debugTime('[ExerciseService] filterExercisesInMemory');
+    const targetMuscle = criteria.primary_muscle.toLowerCase().trim();
 
     const filtered = allExercises.filter(ex => {
         // 1. Movement pattern MUST match
         if (ex.movement_pattern !== criteria.movement_pattern) return false;
 
-        // 2. Primary muscle MUST match
-        if (ex.primary_muscle !== criteria.primary_muscle) return false;
+        // 2. Muscle match (primary preferred, secondary accepted for variety)
+        const primaryMatch = ex.primary_muscle.toLowerCase().trim() === targetMuscle;
+        const secondaryMatch = Array.isArray(ex.secondary_muscles) &&
+            ex.secondary_muscles.some(sm => sm.toLowerCase().trim() === targetMuscle);
+        if (!primaryMatch && !secondaryMatch) return false;
 
         // 3. Avoid exercises that are contraindicated for injuries
         if (criteria.avoid_injuries && criteria.avoid_injuries.length > 0) {
@@ -250,6 +254,13 @@ export function filterExercisesInMemory(
     const sorted = filtered.sort((a, b) => {
         let scoreA = 0;
         let scoreB = 0;
+
+        // Prioritize direct primary muscle match, but keep secondary matches available
+        if (a.primary_muscle.toLowerCase().trim() === targetMuscle) scoreA += 8;
+        else if (Array.isArray(a.secondary_muscles) && a.secondary_muscles.some(sm => sm.toLowerCase().trim() === targetMuscle)) scoreA += 3;
+
+        if (b.primary_muscle.toLowerCase().trim() === targetMuscle) scoreB += 8;
+        else if (Array.isArray(b.secondary_muscles) && b.secondary_muscles.some(sm => sm.toLowerCase().trim() === targetMuscle)) scoreB += 3;
 
         // Prefer compound if requested
         if (criteria.prefer_compound) {

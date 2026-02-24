@@ -9,7 +9,11 @@ import {
   TrendingUp,
   Users,
   Wallet,
-  Shield
+  Shield,
+  User,
+  ShieldAlert,
+  ChevronRight,
+  MessageCircle
 } from 'lucide-react';
 import { mockClients } from '../mocks/demoData';
 import { ClientCardSkeleton } from '../components/Skeleton';
@@ -173,7 +177,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ user, onSelectClient, onO
             {user?.user_metadata?.avatar_url ? (
               <img src={user.user_metadata.avatar_url} alt="Profile" className="w-full h-full object-cover" />
             ) : (
-              <span className="material-symbols-outlined text-slate-400">person</span>
+              <User size={24} className="text-slate-400" />
             )}
           </button>
         </div>
@@ -195,7 +199,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ user, onSelectClient, onO
             <div className={`p-2.5 rounded-xl ${item.bg} ${item.color}`}>
               <item.icon size={20} />
             </div>
-            <span className="text-[10px] font-bold text-slate-400">{item.label}</span>
+            <span className="text-xs font-bold text-slate-400">{item.label}</span>
           </button>
         ))}
       </motion.div>
@@ -211,9 +215,9 @@ const DashboardView: React.FC<DashboardViewProps> = ({ user, onSelectClient, onO
             </div>
             {nextAppointment && (
               <div className="bg-slate-950/20 backdrop-blur-md rounded-xl p-3 border border-white/10 text-center min-w-[80px]">
-                <p className="text-[10px] text-blue-200 font-bold uppercase tracking-wider mb-1">Próximo</p>
+                <p className="text-xs text-blue-200 font-bold uppercase tracking-wider mb-1">Próximo</p>
                 <p className="text-xl font-bold text-white">{nextAppointment.time}</p>
-                <p className="text-[10px] text-blue-200 truncate max-w-[80px]">{nextAppointment.clientName}</p>
+                <p className="text-xs text-blue-200 truncate max-w-[80px]">{nextAppointment.clientName}</p>
               </div>
             )}
           </div>
@@ -253,23 +257,35 @@ const DashboardView: React.FC<DashboardViewProps> = ({ user, onSelectClient, onO
           onClick={() => onSelectClient(atRiskClient)}
           className="bg-slate-900/50 border border-amber-500/20 p-4 rounded-2xl flex items-center justify-between group active:scale-[0.99] transition-all cursor-pointer hover:border-amber-500/40"
         >
-          <div className="flex items-center gap-4">
-            <div className="size-10 rounded-xl bg-amber-500/20 flex items-center justify-center text-amber-500">
-              <span className="material-symbols-outlined">warning</span>
-            </div>
-            <div>
-              <div className="flex items-center gap-2 mb-0.5">
-                <p className="text-xs font-bold text-white">Alerta Inteligente</p>
-                <span className="px-1.5 py-0.5 bg-amber-500 text-slate-950 text-[9px] font-black rounded uppercase">IA</span>
+          <div className="w-full flex justify-between items-center">
+            <div className="flex items-center gap-4">
+              <div className="size-10 rounded-xl bg-amber-500/20 flex items-center justify-center text-amber-500 shrink-0">
+                <ShieldAlert size={20} />
               </div>
-              <p className="text-[10px] text-slate-400 font-medium">
-                <span className="text-white font-bold">{atRiskClient.name}</span> {(atRiskClient.status === 'at-risk' || atRiskClient.adherence < 50) ? 'não treina há dias' : 'precisa de atenção'}.
-              </p>
-              <p className="text-[10px] text-slate-500 mt-0.5">Considere entrar em contato.</p>
+              <div>
+                <div className="flex items-center gap-2 mb-0.5">
+                  <p className="text-xs font-bold text-white">Alerta Inteligente</p>
+                  <span className="px-1.5 py-0.5 bg-amber-500 text-slate-950 text-[10px] font-black rounded uppercase">IA</span>
+                </div>
+                <p className="text-xs text-slate-400 font-medium my-1">
+                  <span className="text-white font-bold">{atRiskClient.name}</span> {(atRiskClient.status === 'at-risk' || atRiskClient.adherence < 50) ? 'não treina há dias' : 'precisa de atenção'}.
+                </p>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const phone = atRiskClient.phone?.replace(/\D/g, '');
+                    if (phone) window.open(`https://wa.me/55${phone}`, '_blank');
+                  }}
+                  className="mt-2 bg-[#25D366]/10 hover:bg-[#25D366]/20 text-[#25D366] border border-[#25D366]/20 font-bold py-1.5 px-3 rounded-lg flex items-center gap-2 transition-colors text-xs"
+                >
+                  <MessageCircle size={14} />
+                  Enviar WhatsApp
+                </button>
+              </div>
             </div>
-          </div>
-          <div className="size-8 rounded-full bg-white/5 flex items-center justify-center text-slate-400 group-hover:text-white group-hover:bg-white/10 transition-colors">
-            <span className="material-symbols-outlined text-sm">chevron_right</span>
+            <div className="size-8 rounded-full bg-white/5 flex items-center justify-center text-slate-400 group-hover:text-white group-hover:bg-white/10 transition-colors shrink-0">
+              <ChevronRight size={16} />
+            </div>
           </div>
         </motion.div>
       )}
@@ -301,7 +317,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ user, onSelectClient, onO
                     <img src={client.avatar} alt={client.name} className="size-12 rounded-full object-cover border-2 border-slate-700" />
                   ) : (
                     <div className="size-12 rounded-full bg-slate-800 flex items-center justify-center border-2 border-slate-700 text-slate-400">
-                      <span className="material-symbols-outlined text-sm">person</span>
+                      <User size={20} />
                     </div>
                   )}
                   {client.status === 'active' && <div className="absolute bottom-0 right-0 size-3 bg-emerald-500 rounded-full border-2 border-slate-900"></div>}

@@ -100,7 +100,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
     if (!TURNSTILE_SITE_KEY) return true;
     if (!supabase) return true;
     if (!captchaToken) {
-      setError('Confirme que você não é robô');
+      setError('Confirme que você não é robô na caixa abaixo');
       return false;
     }
 
@@ -126,6 +126,39 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
       return false;
     } finally {
       setCaptchaValidating(false);
+    }
+  };
+
+  const handleForgotPassword = async () => {
+    if (!email) {
+      setError('Preencha seu email no campo acima para recuperar a senha');
+      return;
+    }
+
+    // Validate captcha before sending recovery email
+    const captchaOk = await validateCaptchaIfEnabled();
+    if (!captchaOk) return;
+
+    setLoading(true);
+    setError(null);
+    try {
+      if (supabase) {
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: window.location.origin + '/?reset=true'
+        });
+        if (error) {
+          setError(error.message);
+        } else {
+          setError('Email de recuperação enviado! Verifique sua caixa de entrada.');
+        }
+      } else {
+        setError('Supabase não configurado');
+      }
+    } catch {
+      setError('Erro ao solicitar recuperação. Tente novamente.');
+    } finally {
+      setLoading(false);
+      resetCaptcha(); // Reset captcha after use
     }
   };
 
@@ -322,8 +355,8 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
 
         <div className="pt-12 pb-8 flex flex-col items-center">
           <div className={`size-12 rounded-xl flex items-center justify-center shadow-lg ${isInviteMode
-              ? 'bg-emerald-600 shadow-emerald-600/20'
-              : 'bg-blue-600 shadow-blue-600/20'
+            ? 'bg-emerald-600 shadow-emerald-600/20'
+            : 'bg-blue-600 shadow-blue-600/20'
             }`}>
             <span className="material-symbols-outlined text-white text-2xl">
               {isInviteMode ? 'person_add' : 'fitness_center'}
@@ -369,6 +402,13 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
               </span>
             </button>
           </div>
+          {!isRegister && (
+            <div className="flex justify-end mt-1">
+              <button onClick={handleForgotPassword} className="text-sm text-blue-500 font-bold hover:underline">
+                Esqueceu a senha?
+              </button>
+            </div>
+          )}
         </div>
 
         {TURNSTILE_SITE_KEY && (
@@ -376,7 +416,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
             <Turnstile
               ref={turnstileRef}
               siteKey={TURNSTILE_SITE_KEY}
-              options={{ theme: 'dark', size: 'flexible' }}
+              options={{ theme: 'dark', size: 'normal' }}
               onSuccess={(token) => {
                 setCaptchaToken(token);
                 setError(null);

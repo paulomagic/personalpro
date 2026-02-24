@@ -135,10 +135,6 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
       return;
     }
 
-    // Validate captcha before sending recovery email
-    const captchaOk = await validateCaptchaIfEnabled();
-    if (!captchaOk) return;
-
     setLoading(true);
     setError(null);
     try {
@@ -158,7 +154,6 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
       setError('Erro ao solicitar recuperação. Tente novamente.');
     } finally {
       setLoading(false);
-      resetCaptcha(); // Reset captcha after use
     }
   };
 

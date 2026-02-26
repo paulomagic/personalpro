@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Plus, Filter, Users, AlertTriangle, Pause, CheckCircle } from 'lucide-react';
+import { Search, Plus, Users, AlertTriangle, Pause, CheckCircle, ChevronRight, User } from 'lucide-react';
 import { Client } from '../types';
 import { getClients, createClient, DBClient } from '../services/supabaseClient';
 import { mockClients } from '../mocks/demoData';
 import AddClientModal from '../components/AddClientModal';
 import { ClientCardSkeleton } from '../components/Skeleton';
+import PageHeader from '../components/PageHeader';
 
 interface ClientsViewProps {
     user: any;
@@ -156,7 +157,7 @@ const ClientsView: React.FC<ClientsViewProps> = ({ user, onBack, onSelectClient 
     const StatusBadge: React.FC<{ status: Client['status'] }> = ({ status }) => {
         const config = {
             'active': { color: 'bg-emerald-500', glow: 'shadow-[0_0_10px_rgba(16,185,129,0.5)]', icon: CheckCircle },
-            'at-risk': { color: 'bg-amber-500', glow: 'shadow-[0_0_10px_rgba(245,158,11,0.5)]', icon: AlertTriangle },
+            'at-risk': { color: 'bg-blue-500', glow: 'shadow-[0_0_10px_rgba(245,158,11,0.5)]', icon: AlertTriangle },
             'paused': { color: 'bg-slate-500', glow: '', icon: Pause },
             'inactive': { color: 'bg-slate-400', glow: '', icon: null },
         };
@@ -182,81 +183,81 @@ const ClientsView: React.FC<ClientsViewProps> = ({ user, onBack, onSelectClient 
             initial="hidden"
             animate="visible"
             variants={containerVariants}
-            className="max-w-md mx-auto min-h-screen bg-slate-950 text-white selection:bg-blue-500/30 pb-12"
+            className="max-w-md mx-auto min-h-screen text-white selection:bg-cyan-500/20 pb-12"
+            style={{ background: 'var(--bg-void)' }}
         >
             {/* Toast */}
             {toast && (
                 <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[60] animate-slide-down w-max max-w-[90%]">
-                    <div className={`glass-card ${toast.type === 'error' ? 'bg-red-900/90 border-red-500/20' : 'bg-emerald-900/90 border-emerald-500/20'} px-6 py-3 rounded-full shadow-glow border flex items-center gap-3`}>
-                        <span className={`material-symbols-outlined ${toast.type === 'error' ? 'text-red-400' : 'text-emerald-400'} text-sm`}>{toast.type === 'error' ? 'error' : 'check_circle'}</span>
+                    <div
+                        className="px-6 py-3 rounded-full flex items-center gap-3"
+                        style={{
+                            background: toast.type === 'error' ? 'rgba(255,51,102,0.12)' : 'rgba(59, 130, 246,0.1)',
+                            border: `1px solid ${toast.type === 'error' ? 'rgba(255,51,102,0.2)' : 'rgba(59, 130, 246,0.15)'}`,
+                            backdropFilter: 'blur(20px)',
+                        }}
+                    >
+                        <div className="size-3 rounded-full" style={{ background: toast.type === 'error' ? '#FF3366' : '#3B82F6' }} />
                         <span className="text-[10px] font-black uppercase tracking-widest text-white">{toast.message}</span>
                     </div>
                 </div>
             )}
 
-            {/* Header */}
-            <motion.header variants={itemVariants} className="px-6 pt-14 pb-6 flex items-center gap-4">
-                <button onClick={onBack} className="size-12 rounded-2xl glass-card flex items-center justify-center active:scale-90 transition-all">
-                    <span className="material-symbols-outlined text-white">arrow_back</span>
-                </button>
-                <div className="flex-1">
-                    <h1 className="text-xl font-black text-white tracking-tight">Alunos</h1>
-                    <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest">Base de Elite • {stats.total} protocolos</p>
-                </div>
-                <button
-                    onClick={() => setShowAddModal(true)}
-                    className="size-12 rounded-2xl bg-blue-600 flex items-center justify-center text-white shadow-glow active:scale-95 transition-all"
-                >
-                    <Plus size={24} />
-                </button>
-            </motion.header>
+            {/* AI Header */}
+            <PageHeader
+                title="Alunos"
+                subtitle={`Base de Elite • ${stats.total} protocolos`}
+                onBack={onBack}
+                accentColor="cyan"
+                rightSlot={
+                    <button
+                        onClick={() => setShowAddModal(true)}
+                        className="size-10 rounded-2xl flex items-center justify-center active:scale-90 transition-all"
+                        style={{ background: 'linear-gradient(135deg,#1E3A8A,#3B82F6)', boxShadow: '0 4px 16px rgba(30, 58, 138,0.35)' }}
+                    >
+                        <Plus size={18} color="white" />
+                    </button>
+                }
+            />
 
             {/* Stats Row */}
-            <motion.div variants={itemVariants} className="px-6 grid grid-cols-4 gap-2 mb-6">
-                <button
-                    onClick={() => setStatusFilter('all')}
-                    className={`glass-card rounded-2xl p-3 text-center transition-all ${statusFilter === 'all' ? 'border-blue-500/50 bg-blue-500/10' : ''}`}
-                >
-                    <Users size={16} className="mx-auto mb-1 text-slate-400" />
-                    <p className="text-lg font-black text-white">{stats.total}</p>
-                    <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Total</p>
-                </button>
-                <button
-                    onClick={() => setStatusFilter('active')}
-                    className={`glass-card rounded-2xl p-3 text-center transition-all ${statusFilter === 'active' ? 'border-emerald-500/50 bg-emerald-500/10' : ''}`}
-                >
-                    <CheckCircle size={16} className="mx-auto mb-1 text-emerald-400" />
-                    <p className="text-lg font-black text-emerald-400">{stats.active}</p>
-                    <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Ativos</p>
-                </button>
-                <button
-                    onClick={() => setStatusFilter('at-risk')}
-                    className={`glass-card rounded-2xl p-3 text-center transition-all ${statusFilter === 'at-risk' ? 'border-amber-500/50 bg-amber-500/10' : ''}`}
-                >
-                    <AlertTriangle size={16} className="mx-auto mb-1 text-amber-400" />
-                    <p className="text-lg font-black text-amber-400">{stats.atRisk}</p>
-                    <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Alerta</p>
-                </button>
-                <button
-                    onClick={() => setStatusFilter('paused')}
-                    className={`glass-card rounded-2xl p-3 text-center transition-all ${statusFilter === 'paused' ? 'border-slate-500/50 bg-slate-500/10' : ''}`}
-                >
-                    <Pause size={16} className="mx-auto mb-1 text-slate-400" />
-                    <p className="text-lg font-black text-slate-300">{stats.paused}</p>
-                    <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Pausados</p>
-                </button>
+            <motion.div variants={itemVariants} className="px-5 grid grid-cols-4 gap-2 mb-5">
+                {[
+                    { tab: 'all', label: 'Total', value: stats.total, icon: Users, color: '#3B82F6', activeBg: 'rgba(59, 130, 246,0.1)', activeBorder: 'rgba(59, 130, 246,0.25)' },
+                    { tab: 'active', label: 'Ativos', value: stats.active, icon: CheckCircle, color: '#00FF88', activeBg: 'rgba(0,255,136,0.1)', activeBorder: 'rgba(0,255,136,0.25)' },
+                    { tab: 'at-risk', label: 'Alerta', value: stats.atRisk, icon: AlertTriangle, color: '#FFB800', activeBg: 'rgba(255,184,0,0.1)', activeBorder: 'rgba(255,184,0,0.25)' },
+                    { tab: 'paused', label: 'Pausa', value: stats.paused, icon: Pause, color: '#3D5A80', activeBg: 'rgba(61,90,128,0.15)', activeBorder: 'rgba(61,90,128,0.3)' },
+                ].map(({ tab, label, value, icon: Icon, color, activeBg, activeBorder }) => {
+                    const isActive = statusFilter === tab;
+                    return (
+                        <button
+                            key={tab}
+                            onClick={() => setStatusFilter(tab as any)}
+                            className="rounded-2xl p-3 text-center transition-all"
+                            style={isActive
+                                ? { background: activeBg, border: `1px solid ${activeBorder}` }
+                                : { background: 'rgba(59, 130, 246,0.03)', border: '1px solid rgba(59, 130, 246,0.06)' }
+                            }
+                        >
+                            <Icon size={15} className="mx-auto mb-1" style={{ color: isActive ? color : '#3D5A80' }} />
+                            <p className="text-base font-black" style={{ color: isActive ? color : '#7A9FCC' }}>{value}</p>
+                            <p className="text-[8px] font-black uppercase tracking-widest" style={{ color: '#3D5A80' }}>{label}</p>
+                        </button>
+                    );
+                })}
             </motion.div>
 
             {/* Search */}
-            <motion.div variants={itemVariants} className="px-6 mb-6">
-                <div className="relative group">
-                    <Search size={18} className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-blue-400 transition-colors" />
+            <motion.div variants={itemVariants} className="px-5 mb-5">
+                <div className="relative">
+                    <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2" style={{ color: '#3D5A80' }} />
                     <input
                         type="text"
-                        placeholder="Buscar Aluno..."
+                        placeholder="Buscar aluno..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full h-14 pl-14 pr-6 rounded-2xl glass-card bg-white/5 border-white/5 text-white placeholder:text-slate-600 outline-none focus:border-blue-500/50 focus:bg-white/10 transition-all font-bold text-sm"
+                        className="w-full h-12 pl-11 pr-5 rounded-2xl text-sm font-bold text-white placeholder:text-[#3D5A80] outline-none"
+                        style={{ background: 'rgba(59, 130, 246,0.04)', border: '1px solid rgba(59, 130, 246,0.1)' }}
                     />
                 </div>
             </motion.div>
@@ -271,7 +272,7 @@ const ClientsView: React.FC<ClientsViewProps> = ({ user, onBack, onSelectClient 
                     <div className="flex items-center gap-2">
                         <span className="text-xs text-slate-500">Filtrado por:</span>
                         <span className={`text-xs font-bold px-2 py-1 rounded-full ${statusFilter === 'active' ? 'bg-emerald-500/20 text-emerald-400' :
-                            statusFilter === 'at-risk' ? 'bg-amber-500/20 text-amber-400' :
+                            statusFilter === 'at-risk' ? 'bg-blue-500/20 text-blue-400' :
                                 'bg-slate-500/20 text-slate-400'
                             }`}>
                             {statusFilter === 'active' ? 'Ativos' : statusFilter === 'at-risk' ? 'Em Alerta' : 'Pausados'}
@@ -287,9 +288,9 @@ const ClientsView: React.FC<ClientsViewProps> = ({ user, onBack, onSelectClient 
             )}
 
             {/* Clients List */}
-            <motion.div variants={itemVariants} className="px-6 space-y-3">
+            <motion.div variants={itemVariants} className="px-5 space-y-2.5">
                 {loading ? (
-                    <div className="space-y-3">
+                    <div className="space-y-2.5">
                         <ClientCardSkeleton />
                         <ClientCardSkeleton />
                         <ClientCardSkeleton />
@@ -300,67 +301,54 @@ const ClientsView: React.FC<ClientsViewProps> = ({ user, onBack, onSelectClient 
                         {filteredClients.map((client, index) => (
                             <motion.button
                                 key={client.id}
-                                initial={{ opacity: 0, y: 20 }}
+                                initial={{ opacity: 0, y: 16 }}
                                 animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: index * 0.05 }}
+                                transition={{ delay: index * 0.04 }}
                                 onClick={() => onSelectClient(client)}
-                                className="w-full glass-card rounded-[24px] p-4 flex items-center gap-4 active:scale-[0.99] transition-all group text-left hover:border-blue-500/30"
+                                className="w-full rounded-2xl p-4 flex items-center gap-3.5 active:scale-[0.99] transition-all group text-left"
+                                style={{ background: 'rgba(59, 130, 246,0.03)', border: '1px solid rgba(59, 130, 246,0.06)' }}
                             >
-                                <div className="relative">
+                                {/* Avatar */}
+                                <div className="relative shrink-0">
                                     {client.avatar ? (
                                         <div
-                                            className="size-14 rounded-2xl bg-cover bg-center border-2 border-white/10 group-hover:border-blue-500/30 transition-colors shadow-xl"
-                                            style={{ backgroundImage: `url(${client.avatar})` }}
+                                            className="size-13 rounded-2xl bg-cover bg-center"
+                                            style={{ width: 52, height: 52, backgroundImage: `url(${client.avatar})`, border: '1.5px solid rgba(59, 130, 246,0.1)' }}
                                         />
                                     ) : (
-                                        <div className="size-14 rounded-2xl bg-slate-800 flex items-center justify-center border-2 border-white/5">
-                                            <span className="material-symbols-outlined text-slate-600">person</span>
+                                        <div
+                                            className="flex items-center justify-center"
+                                            style={{ width: 52, height: 52, borderRadius: 16, background: 'rgba(59, 130, 246,0.07)', border: '1px solid rgba(59, 130, 246,0.1)' }}
+                                        >
+                                            <User size={20} style={{ color: '#3D5A80' }} />
                                         </div>
                                     )}
-                                    <span className="absolute -bottom-1 -right-1">
-                                        <StatusBadge status={client.status} />
-                                    </span>
+                                    <StatusBadge status={client.status} />
                                 </div>
 
+                                {/* Info */}
                                 <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2 mb-1">
-                                        <h4 className="font-black text-white text-sm tracking-tight">{client.name}</h4>
-                                        <span className="px-2 py-0.5 rounded-md bg-white/5 text-[8px] font-black text-slate-500 uppercase tracking-widest">{client.level}</span>
+                                    <div className="flex items-center gap-2 mb-0.5">
+                                        <h4 className="font-black text-white text-sm tracking-tight truncate">{client.name}</h4>
+                                        <span className="px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-widest shrink-0" style={{ background: 'rgba(59, 130, 246,0.07)', color: '#3D5A80' }}>{client.level}</span>
                                     </div>
-                                    <div className="flex items-center gap-3 mb-1.5">
-                                        <p className="text-[10px] text-blue-400 font-black uppercase tracking-widest">{client.goal}</p>
-                                        {client.paymentStatus === 'overdue' && (
-                                            <span className="text-[8px] bg-red-500/20 text-red-400 px-1.5 py-0.5 rounded font-bold">
-                                                Pagamento Atrasado
-                                            </span>
-                                        )}
-                                        {client.suspensionReason && (
-                                            <span className="text-[8px] bg-slate-500/20 text-slate-400 px-1.5 py-0.5 rounded font-bold">
-                                                {client.suspensionReason === 'travel' ? 'Viagem' : client.suspensionReason === 'sick' ? 'Doença' : 'Pausado'}
-                                            </span>
-                                        )}
-                                    </div>
+                                    <p className="text-[10px] font-black uppercase tracking-wider truncate mb-1.5" style={{ color: '#3B82F6', opacity: 0.7 }}>{client.goal}</p>
+                                    {/* Progress */}
                                     <div className="flex items-center gap-2">
-                                        <div className="h-1.5 flex-1 bg-white/5 rounded-full overflow-hidden max-w-[100px]">
+                                        <div className="h-1 flex-1 rounded-full overflow-hidden" style={{ background: 'rgba(59, 130, 246,0.06)', maxWidth: 80 }}>
                                             <div
-                                                className={`h-full ${client.adherence < 50 ? 'bg-amber-500' : 'bg-blue-500'}`}
-                                                style={{ width: `${client.adherence}%` }}
-                                            ></div>
+                                                className="h-full rounded-full"
+                                                style={{
+                                                    width: `${client.adherence}%`,
+                                                    background: client.adherence < 50 ? '#FFB800' : 'linear-gradient(90deg,#0099FF,#00FF88)',
+                                                }}
+                                            />
                                         </div>
-                                        <span className="text-[10px] text-slate-500 font-bold">{client.adherence}%</span>
-                                        <span className="text-slate-600">•</span>
-                                        <p className="text-[9px] text-slate-500 font-bold uppercase tracking-wide">
-                                            {client.lastTraining}
-                                        </p>
+                                        <span className="text-[10px] font-black" style={{ color: client.adherence < 50 ? '#FFB800' : '#00FF88' }}>{client.adherence}%</span>
                                     </div>
-                                    {client.observations && (
-                                        <p className="text-[9px] text-slate-600 mt-1 truncate max-w-[200px]">
-                                            📝 {client.observations}
-                                        </p>
-                                    )}
                                 </div>
 
-                                <span className="material-symbols-outlined text-slate-700 group-hover:text-blue-500 transition-colors">chevron_right</span>
+                                <ChevronRight size={13} style={{ color: '#3D5A80', flexShrink: 0 }} />
                             </motion.button>
                         ))}
                     </AnimatePresence>

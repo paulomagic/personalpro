@@ -1,10 +1,11 @@
 import React, { Suspense, lazy, useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowLeft, TrendingUp, Download, CheckCircle, AlertCircle, Clock } from 'lucide-react';
+import { TrendingUp, Download, CheckCircle, AlertCircle, Clock, ChevronRight } from 'lucide-react';
 import { getPayments, updatePayment, getClients } from '../services/supabaseClient';
 import { mockClients } from '../mocks/demoData';
 import { PaymentCardSkeleton } from '../components/Skeleton';
 import EmptyState from '../components/EmptyState';
+import PageHeader from '../components/PageHeader';
 
 const FinanceOverviewChart = lazy(() => import('../components/FinanceOverviewChart'));
 const PaymentStatusModal = lazy(() => import('../components/PaymentStatusModal'));
@@ -44,7 +45,22 @@ const FinanceView: React.FC<FinanceViewProps> = ({ user, onBack }) => {
     // Fetch payments from Supabase
     useEffect(() => {
         const fetchPayments = async () => {
-            if (!user?.id) return;
+            if (!user?.id) {
+                // Demo fallback sem user.id
+                const demoPayments = mockClients.slice(0, 5).map((c: any, i: number) => ({
+                    id: `demo-${i}`,
+                    clientName: c.name,
+                    clientAvatar: c.avatar || c.avatar_url || '',
+                    amount: 350 + i * 50,
+                    dueDate: new Date(new Date().setDate(10 + i)).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }),
+                    status: i % 3 === 0 ? 'paid' : i % 3 === 1 ? 'pending' : 'overdue' as any,
+                    plan: 'Premium',
+                    phone: c.phone || '',
+                }));
+                setPayments(demoPayments);
+                setLoading(false);
+                return;
+            }
             setLoading(true);
 
             try {
@@ -223,126 +239,183 @@ const FinanceView: React.FC<FinanceViewProps> = ({ user, onBack }) => {
             initial="hidden"
             animate="visible"
             variants={containerVariants}
-            className="max-w-md mx-auto min-h-screen text-white p-6 pb-32"
+            className="max-w-md mx-auto min-h-screen text-white pb-32"
+            style={{ background: 'var(--bg-void)' }}
         >
             {showSuccessToast && (
                 <div className="fixed top-4 left-4 right-4 max-w-md mx-auto z-50 animate-slide-down">
-                    <div className="glass-card bg-emerald-500/10 border-emerald-500/20 text-emerald-400 px-4 py-3 rounded-2xl shadow-glow flex items-center gap-3">
-                        <CheckCircle size={20} />
-                        <span className="font-black text-xs uppercase tracking-widest">{showSuccessToast}</span>
+                    <div
+                        className="px-5 py-3 rounded-2xl flex items-center gap-3"
+                        style={{ background: 'rgba(0,255,136,0.08)', border: '1px solid rgba(0,255,136,0.15)', backdropFilter: 'blur(20px)' }}
+                    >
+                        <CheckCircle size={16} style={{ color: '#00FF88' }} />
+                        <span className="font-black text-xs uppercase tracking-widest text-white">{showSuccessToast}</span>
                     </div>
                 </div>
             )}
 
-            <motion.header variants={itemVariants} className="flex items-center gap-4 mb-8 pt-4">
-                <button onClick={onBack} className="p-2 rounded-xl hover:bg-white/10 transition-colors">
-                    <ArrowLeft size={24} />
-                </button>
-                <div>
-                    <h1 className="text-2xl font-black tracking-tight">Financeiro</h1>
-                    <p className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">Fluxo de Caixa Elite</p>
-                </div>
-            </motion.header>
+            {/* AI Header */}
+            <PageHeader
+                title="Financeiro"
+                subtitle="Fluxo de Caixa Elite"
+                onBack={onBack}
+                accentColor="green"
+                rightSlot={
+                    <button
+                        onClick={handleGenerateReport}
+                        className="size-10 rounded-2xl flex items-center justify-center active:scale-90 transition-all"
+                        style={{ background: 'rgba(0,255,136,0.07)', border: '1px solid rgba(0,255,136,0.12)' }}
+                    >
+                        <Download size={15} style={{ color: '#00FF88' }} />
+                    </button>
+                }
+            />
 
             {loading ? (
-                <div className="space-y-4">
-                    <div className="h-48 rounded-[32px] bg-slate-800/50 animate-pulse" />
+                <div className="px-5 space-y-4">
+                    <div className="h-44 rounded-3xl animate-pulse" style={{ background: 'rgba(255,255,255,0.04)' }} />
                     <PaymentCardSkeleton />
                     <PaymentCardSkeleton />
                     <PaymentCardSkeleton />
+                </div>
+            ) : payments.length === 0 ? (
+                <div className="px-5 py-20 flex flex-col items-center text-center">
+                    <div className="size-16 rounded-2xl flex items-center justify-center mb-4" style={{ background: 'rgba(0,255,136,0.07)', border: '1px solid rgba(0,255,136,0.12)' }}>
+                        <span className="material-symbols-outlined text-2xl" style={{ color: '#00FF88' }}>receipt_long</span>
+                    </div>
+                    <p className="font-black text-white mb-1">Nenhuma transação</p>
+                    <p className="text-xs" style={{ color: '#3D5A80' }}>Adicione pagamentos para acompanhar o fluxo de caixa.</p>
                 </div>
             ) : (
                 <>
-                    <motion.div variants={itemVariants} className="bg-slate-900 rounded-[32px] border border-white/5 p-6 relative overflow-hidden shadow-2xl mb-8">
-                        <div className="absolute top-0 right-0 w-40 h-40 bg-emerald-500/10 rounded-full blur-3xl -mr-20 -mt-20"></div>
+                    {/* Revenue Hero Card */}
+                    <motion.div
+                        variants={itemVariants}
+                        className="mx-5 relative overflow-hidden rounded-3xl p-6 mb-5"
+                        style={{
+                            background: 'rgba(0,255,136,0.04)',
+                            border: '1px solid rgba(0,255,136,0.12)',
+                            boxShadow: '0 0 60px -20px rgba(0,255,136,0.15)',
+                        }}
+                    >
+                        {/* Glow orb */}
+                        <div className="absolute -top-10 -right-10 size-40 rounded-full pointer-events-none" style={{ background: 'radial-gradient(circle, rgba(0,255,136,0.1) 0%, transparent 70%)', filter: 'blur(30px)' }} />
 
-                        <div className="relative z-10 mb-6">
-                            <p className="text-emerald-400 text-xs font-bold uppercase tracking-widest mb-1">Receita Confirmada</p>
-                            <div className="flex items-end gap-3">
-                                <h2 className="text-4xl font-black text-white">R$ {stats.monthlyRevenue.toLocaleString('pt-BR')}</h2>
-                                <span className="mb-1 text-[10px] font-black text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded flex items-center gap-1 uppercase">
-                                    <TrendingUp size={12} /> Live
+                        <div className="relative z-10">
+                            <p className="text-[10px] font-black uppercase tracking-[0.2em] mb-1" style={{ color: '#00FF88' }}>Receita Confirmada</p>
+                            <div className="flex items-end gap-3 mb-1">
+                                <h2 className="text-4xl font-black text-white leading-none">
+                                    R$ {stats.monthlyRevenue.toLocaleString('pt-BR')}
+                                </h2>
+                                <span
+                                    className="mb-1 text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full flex items-center gap-1"
+                                    style={{ background: 'rgba(0,255,136,0.1)', color: '#00FF88', border: '1px solid rgba(0,255,136,0.15)' }}
+                                >
+                                    <TrendingUp size={10} /> Live
                                 </span>
                             </div>
-                        </div>
 
-                        <div className="h-40 w-full -ml-4">
-                            {enableHeavyUI ? (
-                                <Suspense fallback={<div className="h-full w-full rounded-2xl bg-slate-800/50 animate-pulse" />}>
-                                    <FinanceOverviewChart data={financeData} />
-                                </Suspense>
-                            ) : (
-                                <div className="h-full w-full rounded-2xl bg-slate-800/50 animate-pulse" />
-                            )}
+                            {/* Mini stats */}
+                            <div className="flex gap-4 mt-4">
+                                <div>
+                                    <p className="text-[9px] font-black uppercase tracking-widest" style={{ color: '#3D5A80' }}>Pendente</p>
+                                    <p className="text-sm font-black" style={{ color: '#FFB800' }}>R$ {stats.pending.toLocaleString('pt-BR')}</p>
+                                </div>
+                                <div
+                                    className="w-px"
+                                    style={{ background: 'rgba(59, 130, 246,0.08)' }}
+                                />
+                                <div>
+                                    <p className="text-[9px] font-black uppercase tracking-widest" style={{ color: '#3D5A80' }}>Atrasado</p>
+                                    <p className="text-sm font-black" style={{ color: '#FF3366' }}>R$ {stats.overdue.toLocaleString('pt-BR')}</p>
+                                </div>
+                            </div>
+
+                            <div className="h-36 -ml-3 mt-2">
+                                {enableHeavyUI ? (
+                                    <Suspense fallback={<div className="h-full rounded-2xl animate-pulse" style={{ background: 'rgba(0,255,136,0.04)' }} />}>
+                                        <FinanceOverviewChart data={financeData} />
+                                    </Suspense>
+                                ) : (
+                                    <div className="h-full rounded-2xl animate-pulse" style={{ background: 'rgba(0,255,136,0.04)' }} />
+                                )}
+                            </div>
                         </div>
                     </motion.div>
 
-                    <motion.div variants={itemVariants} className="flex items-center justify-between mb-4">
-                        <h3 className="font-bold text-lg text-white">Transações</h3>
-                        <button onClick={handleGenerateReport} className="p-2 rounded-full bg-slate-800 text-slate-400 hover:text-white transition-colors">
-                            <Download size={18} />
-                        </button>
+                    {/* Tab Bar */}
+                    <motion.div variants={itemVariants} className="px-5 flex justify-between items-center mb-3">
+                        <h3 className="text-[15px] font-black text-white tracking-tight">Transações</h3>
                     </motion.div>
-
-                    <motion.div variants={itemVariants} className="bg-slate-900/50 p-1 rounded-2xl flex relative mb-6">
-                        {['overview', 'pending', 'history'].map((tab) => (
-                            <button
-                                key={tab}
-                                onClick={() => setActiveTab(tab as any)}
-                                className={`flex-1 py-3 text-[10px] font-black uppercase tracking-wider rounded-xl transition-all relative z-10 ${activeTab === tab ? 'text-white' : 'text-slate-500'}`}
-                            >
-                                {tab === 'overview' ? 'Geral' : tab === 'pending' ? 'Cobranças' : 'Histórico'}
-                            </button>
-                        ))}
+                    <motion.div variants={itemVariants} className="px-5 mb-5">
                         <div
-                            className="absolute top-1 bottom-1 bg-slate-800 rounded-xl transition-all duration-300"
-                            style={{
-                                left: activeTab === 'overview' ? '4px' : activeTab === 'pending' ? 'calc(33.33% + 2px)' : 'calc(66.66% + 1px)',
-                                width: 'calc(33.33% - 4px)'
-                            }}
-                        ></div>
+                            className="flex rounded-2xl p-1 relative"
+                            style={{ background: 'rgba(59, 130, 246,0.04)', border: '1px solid rgba(59, 130, 246,0.08)' }}
+                        >
+                            {['overview', 'pending', 'history'].map((tab) => (
+                                <button
+                                    key={tab}
+                                    onClick={() => setActiveTab(tab as any)}
+                                    className="flex-1 py-2.5 text-[10px] font-black uppercase tracking-wider rounded-xl transition-all"
+                                    style={activeTab === tab
+                                        ? { background: 'linear-gradient(135deg,#1E3A8A,#3B82F6)', color: 'white' }
+                                        : { color: '#3D5A80' }
+                                    }
+                                >
+                                    {tab === 'overview' ? 'Geral' : tab === 'pending' ? 'Cobranças' : 'Histórico'}
+                                </button>
+                            ))}
+                        </div>
                     </motion.div>
 
-                    <motion.div variants={itemVariants} className="space-y-3">
+                    {/* Payment Cards */}
+                    <motion.div variants={itemVariants} className="px-5 space-y-2.5">
                         {displayPayments.length > 0 ? (
                             displayPayments.map((payment) => (
                                 <div
                                     key={payment.id}
-                                    className="glass-card rounded-[24px] p-4 flex items-center gap-4 group active:scale-[0.98] transition-all cursor-pointer"
+                                    className="rounded-2xl p-4 flex items-center gap-3.5 active:scale-[0.98] transition-all cursor-pointer"
+                                    style={{ background: 'rgba(59, 130, 246,0.03)', border: '1px solid rgba(59, 130, 246,0.06)' }}
                                     onClick={() => setShowPaymentModal(payment)}
                                 >
-                                    <div className="relative">
+                                    <div className="relative shrink-0">
                                         {payment.clientAvatar ? (
-                                            <div className="size-12 rounded-xl bg-cover bg-center border border-white/10" style={{ backgroundImage: `url(${payment.clientAvatar})` }} />
+                                            <div className="size-12 rounded-xl bg-cover bg-center" style={{ backgroundImage: `url(${payment.clientAvatar})`, border: '1px solid rgba(59, 130, 246,0.1)' }} />
                                         ) : (
-                                            <div className="size-12 rounded-xl bg-slate-800 flex items-center justify-center border border-white/5 text-slate-500">
-                                                <span className="material-symbols-outlined text-sm">person</span>
+                                            <div className="size-12 rounded-xl flex items-center justify-center" style={{ background: 'rgba(59, 130, 246,0.07)', border: '1px solid rgba(59, 130, 246,0.1)' }}>
+                                                <span className="material-symbols-outlined text-sm" style={{ color: '#3D5A80' }}>person</span>
                                             </div>
                                         )}
-                                        <div className={`absolute -bottom-1 -right-1 size-5 rounded-full flex items-center justify-center border-2 border-slate-950 
-                                            ${payment.status === 'paid' ? 'bg-emerald-500' : payment.status === 'overdue' ? 'bg-red-500' : 'bg-amber-500'}`}
+                                        <div
+                                            className="absolute -bottom-1 -right-1 size-4 rounded-full flex items-center justify-center"
+                                            style={{
+                                                background: payment.status === 'paid' ? '#00FF88' : payment.status === 'overdue' ? '#FF3366' : '#FFB800',
+                                                border: '2px solid var(--bg-void)',
+                                            }}
                                         >
-                                            {payment.status === 'paid' ? <CheckCircle size={10} className="text-slate-950" /> :
-                                                payment.status === 'overdue' ? <AlertCircle size={10} className="text-white" /> :
-                                                    <Clock size={10} className="text-slate-950" />}
+                                            {payment.status === 'paid'
+                                                ? <CheckCircle size={8} style={{ color: '#030712' }} />
+                                                : payment.status === 'overdue'
+                                                    ? <AlertCircle size={8} style={{ color: 'white' }} />
+                                                    : <Clock size={8} style={{ color: '#030712' }} />
+                                            }
                                         </div>
                                     </div>
 
-                                    <div className="flex-1">
-                                        <h4 className="font-bold text-white text-sm">{payment.clientName}</h4>
-                                        <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">{payment.plan} • {payment.dueDate}</p>
+                                    <div className="flex-1 min-w-0">
+                                        <h4 className="font-black text-white text-sm truncate">{payment.clientName}</h4>
+                                        <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: '#3D5A80' }}>{payment.plan} • {payment.dueDate}</p>
                                     </div>
 
-                                    <div className="text-right">
+                                    <div className="text-right shrink-0">
                                         <p className="font-black text-white text-sm">R$ {payment.amount}</p>
                                         <button
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                setShowStatusModal(payment);
+                                            onClick={(e) => { e.stopPropagation(); setShowStatusModal(payment); }}
+                                            className="text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full"
+                                            style={{
+                                                background: payment.status === 'paid' ? 'rgba(0,255,136,0.1)' : payment.status === 'overdue' ? 'rgba(255,51,102,0.1)' : 'rgba(255,184,0,0.1)',
+                                                color: payment.status === 'paid' ? '#00FF88' : payment.status === 'overdue' ? '#FF3366' : '#FFB800',
                                             }}
-                                            className={`text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full hover:opacity-80 transition-opacity ${payment.status === 'paid' ? 'text-emerald-400 bg-emerald-500/10' :
-                                                payment.status === 'overdue' ? 'text-red-400 bg-red-500/10' : 'text-amber-400 bg-amber-500/10'
-                                                }`}
                                         >
                                             {payment.status === 'paid' ? 'Pago' : payment.status === 'overdue' ? 'Atrasado' : 'Pendente'}
                                         </button>
@@ -350,12 +423,7 @@ const FinanceView: React.FC<FinanceViewProps> = ({ user, onBack }) => {
                                 </div>
                             ))
                         ) : (
-                            <EmptyState
-                                icon="receipt_long"
-                                title="Nenhuma transação"
-                                description="Cadastre pagamentos dos seus alunos para acompanhar o fluxo de caixa"
-                                variant="minimal"
-                            />
+                            <EmptyState icon="receipt_long" title="Nenhuma transação" description="Cadastre pagamentos dos seus alunos para acompanhar o fluxo de caixa" variant="minimal" />
                         )}
                     </motion.div>
                 </>

@@ -243,7 +243,7 @@ const ClientProfileView: React.FC<ClientProfileViewProps> = ({ client: initialCl
   const getStatusColor = (status: Client['status']) => {
     const colors = {
       'active': 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
-      'at-risk': 'bg-amber-500/20 text-amber-400 border-amber-500/30',
+      'at-risk': 'bg-blue-500/20 text-blue-400 border-blue-500/30',
       'paused': 'bg-slate-500/20 text-slate-400 border-slate-500/30',
       'inactive': 'bg-red-500/20 text-red-400 border-red-500/30'
     };
@@ -268,7 +268,7 @@ const ClientProfileView: React.FC<ClientProfileViewProps> = ({ client: initialCl
   const StatusIcon = getStatusIcon(client.status);
 
   return (
-    <div className="max-w-md mx-auto min-h-screen bg-slate-950 text-white selection:bg-blue-500/30">
+    <div className="max-w-md mx-auto min-h-screen text-white selection:bg-cyan-500/20" style={{ background: 'var(--bg-void)' }}>
       {/* Hero Header */}
       <header className="relative h-72 w-full overflow-hidden">
         <div className="absolute inset-0 z-0">
@@ -354,7 +354,8 @@ const ClientProfileView: React.FC<ClientProfileViewProps> = ({ client: initialCl
               {activeTab === tab && (
                 <motion.div
                   layoutId="tabIndicator"
-                  className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-500 rounded-full"
+                  className="absolute bottom-0 left-0 right-0 h-0.5 rounded-full"
+                  style={{ background: '#3B82F6' }}
                 />
               )}
             </button>
@@ -365,14 +366,14 @@ const ClientProfileView: React.FC<ClientProfileViewProps> = ({ client: initialCl
       <main className="px-6 space-y-6 pb-28 pt-6">
         {/* Stats Cards */}
         <div className="grid grid-cols-2 gap-3">
-          <div className="glass-card rounded-2xl p-4 border-l-4 border-blue-500">
+          <div className="p-4 rounded-2xl border-l-4 border-cyan-400" style={{ background: 'rgba(59, 130, 246,0.05)' }}>
             <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mb-1">Aderência</p>
             <div className="flex items-end gap-2">
               <span className="text-3xl font-black text-white">{client.adherence}%</span>
-              {client.adherence >= 80 && <span className="text-emerald-400 text-xs font-bold mb-1">Excelente!</span>}
+              {client.adherence >= 80 && <span className="text-xs font-bold mb-1" style={{ color: '#00FF88' }}>Excelente!</span>}
             </div>
           </div>
-          <div className="glass-card rounded-2xl p-4 border-l-4 border-purple-500">
+          <div className="p-4 rounded-2xl border-l-4 border-blue-400" style={{ background: 'rgba(30, 58, 138,0.05)' }}>
             <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mb-1">Treinos</p>
             <div className="flex items-end gap-1">
               <span className="text-3xl font-black text-white">{client.completedClasses || 0}</span>
@@ -394,9 +395,9 @@ const ClientProfileView: React.FC<ClientProfileViewProps> = ({ client: initialCl
             >
               {/* AI Progress Analysis */}
               {!progressAnalysis && client.assessments && client.assessments.length > 0 && (
-                <div className="glass-card rounded-[24px] p-5 border border-purple-500/20 bg-purple-500/5">
+                <div className="rounded-2xl p-5" style={{ background: 'rgba(59, 130, 246,0.04)', border: '1px solid rgba(59, 130, 246,0.1)' }}>
                   <div className="flex items-center gap-2 mb-4">
-                    <Sparkles size={18} className="text-purple-400" />
+                    <Sparkles size={18} style={{ color: '#3B82F6' }} />
                     <h3 className="font-black text-white tracking-tight">Análise de IA</h3>
                   </div>
                   <p className="text-sm text-slate-400 mb-4">
@@ -405,7 +406,8 @@ const ClientProfileView: React.FC<ClientProfileViewProps> = ({ client: initialCl
                   <button
                     onClick={handleAnalyzeProgress}
                     disabled={loadingAnalysis}
-                    className="w-full py-3 bg-purple-600 hover:bg-purple-700 disabled:bg-purple-600/50 text-white font-bold rounded-xl transition-colors flex items-center justify-center gap-2"
+                    className="w-full py-3 text-white font-bold rounded-xl transition-all flex items-center justify-center gap-2"
+                    style={{ background: 'linear-gradient(135deg,#1E3A8A,#3B82F6)', opacity: loadingAnalysis ? 0.5 : 1 }}
                   >
                     {loadingAnalysis ? (
                       <>
@@ -423,11 +425,11 @@ const ClientProfileView: React.FC<ClientProfileViewProps> = ({ client: initialCl
               )}
 
               {progressAnalysis && (
-                <div className="glass-card rounded-[24px] p-5 border border-purple-500/20 bg-purple-500/5">
+                <div className="rounded-2xl p-5" style={{ background: 'rgba(59, 130, 246,0.04)', border: '1px solid rgba(59, 130, 246,0.1)' }}>
                   <div className="flex items-center gap-2 mb-4">
-                    <Sparkles size={18} className="text-purple-400" />
+                    <Sparkles size={18} style={{ color: '#3B82F6' }} />
                     <h3 className="font-black text-white tracking-tight">Análise de IA</h3>
-                    <span className="px-2 py-0.5 bg-purple-500 text-[9px] font-black text-white rounded-full uppercase">Gemini</span>
+                    <span className="px-2 py-0.5 text-[9px] font-black text-white rounded-full uppercase" style={{ background: 'linear-gradient(135deg,#1E3A8A,#3B82F6)' }}>Gemini</span>
                   </div>
                   <p className="text-sm text-slate-300 mb-4">{progressAnalysis.summary}</p>
 
@@ -444,10 +446,10 @@ const ClientProfileView: React.FC<ClientProfileViewProps> = ({ client: initialCl
 
                   {progressAnalysis.concerns.length > 0 && (
                     <div className="mb-3">
-                      <p className="text-[10px] font-black text-amber-400 uppercase tracking-widest mb-2">⚠️ Atenção</p>
+                      <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-2">⚠️ Atenção</p>
                       <ul className="space-y-1">
                         {progressAnalysis.concerns.map((item, i) => (
-                          <li key={i} className="text-xs text-slate-400 pl-3 border-l-2 border-amber-500/30">{item}</li>
+                          <li key={i} className="text-xs text-slate-400 pl-3 border-l-2 border-blue-500/30">{item}</li>
                         ))}
                       </ul>
                     </div>
@@ -467,9 +469,9 @@ const ClientProfileView: React.FC<ClientProfileViewProps> = ({ client: initialCl
               )}
 
               {loadingAnalysis && (
-                <div className="glass-card rounded-[24px] p-5 border border-purple-500/20 bg-purple-500/5 animate-pulse">
+                <div className="rounded-2xl p-5 animate-pulse" style={{ background: 'rgba(59, 130, 246,0.04)', border: '1px solid rgba(59, 130, 246,0.1)' }}>
                   <div className="flex items-center gap-2">
-                    <Sparkles size={18} className="text-purple-400 animate-spin" />
+                    <Sparkles size={18} style={{ color: '#3B82F6' }} className="animate-spin" />
                     <p className="text-sm text-slate-400">Analisando progresso com IA...</p>
                   </div>
                 </div>
@@ -494,7 +496,7 @@ const ClientProfileView: React.FC<ClientProfileViewProps> = ({ client: initialCl
                     <button
                       onClick={() => setChartMode('fat')}
                       className={`px-3 py-1 text-[10px] font-black rounded-full uppercase transition-all ${chartMode === 'fat'
-                        ? 'bg-amber-500 text-white'
+                        ? 'bg-blue-500 text-white'
                         : 'bg-white/5 text-slate-500 hover:bg-white/10'
                         }`}
                     >
@@ -663,7 +665,8 @@ const ClientProfileView: React.FC<ClientProfileViewProps> = ({ client: initialCl
             >
               <button
                 onClick={() => onCreateWorkout ? onCreateWorkout() : onStartWorkout({ title: 'Novo Treino', exercises: [] })}
-                className="w-full py-4 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-black uppercase tracking-widest shadow-lg flex items-center justify-center gap-2 active:scale-[0.98] transition-all"
+                className="w-full py-4 rounded-2xl text-white font-black uppercase tracking-widest flex items-center justify-center gap-2 active:scale-[0.98] transition-all"
+                style={{ background: 'linear-gradient(135deg,#1E3A8A,#3B82F6)', boxShadow: '0 8px 32px rgba(30, 58, 138,0.3)' }}
               >
                 <Dumbbell size={20} />
                 Criar Novo Treino
@@ -683,7 +686,8 @@ const ClientProfileView: React.FC<ClientProfileViewProps> = ({ client: initialCl
                 {onSportTraining && (
                   <button
                     onClick={onSportTraining}
-                    className="py-3 rounded-xl bg-purple-500/10 border border-purple-500/30 text-purple-400 font-bold text-xs uppercase tracking-widest flex items-center justify-center gap-2 active:scale-[0.98] transition-all"
+                    className="py-3 rounded-xl font-bold text-xs uppercase tracking-widest flex items-center justify-center gap-2 active:scale-[0.98] transition-all"
+                    style={{ background: 'rgba(59, 130, 246,0.07)', border: '1px solid rgba(59, 130, 246,0.15)', color: '#3B82F6' }}
                   >
                     <Zap size={16} />
                     Esportivo ⭐
@@ -692,15 +696,15 @@ const ClientProfileView: React.FC<ClientProfileViewProps> = ({ client: initialCl
               </div>
 
               {/* Missed Classes Section */}
-              <div className="glass-card rounded-2xl p-4 border border-amber-500/20">
+              <div className="glass-card rounded-2xl p-4 border border-blue-500/20">
                 <div className="flex justify-between items-center mb-4">
                   <h3 className="font-bold text-white flex items-center gap-2">
-                    <Clock size={16} className="text-amber-400" />
+                    <Clock size={16} className="text-blue-400" />
                     Aulas Perdidas
                   </h3>
                   <button
                     onClick={() => setShowMissedClassModal(true)}
-                    className="text-xs font-bold text-amber-400 uppercase tracking-widest"
+                    className="text-xs font-bold text-blue-400 uppercase tracking-widest"
                   >
                     + Registrar
                   </button>
@@ -879,14 +883,14 @@ const ClientProfileView: React.FC<ClientProfileViewProps> = ({ client: initialCl
 
                 {/* Injuries */}
                 <div>
-                  <label className="text-[9px] font-black text-amber-400 uppercase tracking-widest block mb-1">
+                  <label className="text-[9px] font-black text-blue-400 uppercase tracking-widest block mb-1">
                     ⚠️ Lesões / Restrições
                   </label>
                   {isEditing ? (
                     <textarea
                       value={editedInjuries}
                       onChange={(e) => setEditedInjuries(e.target.value)}
-                      className="w-full bg-amber-500/5 border border-amber-500/20 rounded-xl p-3 text-sm text-white outline-none focus:border-amber-500/50 resize-none"
+                      className="w-full bg-blue-500/5 border border-blue-500/20 rounded-xl p-3 text-sm text-white outline-none focus:border-blue-500/50 resize-none"
                       rows={2}
                       placeholder="Lesões e restrições de movimento..."
                     />
@@ -1012,9 +1016,9 @@ const ClientProfileView: React.FC<ClientProfileViewProps> = ({ client: initialCl
 
                 <button
                   onClick={() => handleToggleStatus('paused', 'sick')}
-                  className={`w-full p-4 rounded-2xl flex items-center gap-3 transition-all ${client.status === 'paused' && client.suspensionReason === 'sick' ? 'bg-amber-500/20 border border-amber-500/50' : 'bg-white/5 hover:bg-white/10'}`}
+                  className={`w-full p-4 rounded-2xl flex items-center gap-3 transition-all ${client.status === 'paused' && client.suspensionReason === 'sick' ? 'bg-blue-500/20 border border-blue-500/50' : 'bg-white/5 hover:bg-white/10'}`}
                 >
-                  <AlertTriangle size={20} className="text-amber-400" />
+                  <AlertTriangle size={20} className="text-blue-400" />
                   <span className="font-bold text-white">Pausado - Doença</span>
                 </button>
 

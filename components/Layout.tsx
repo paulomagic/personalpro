@@ -4,7 +4,7 @@ import {
     Home,
     CalendarDays,
     Users,
-    User
+    User,
 } from 'lucide-react';
 
 interface LayoutProps {
@@ -22,7 +22,13 @@ interface NavItem {
     action: string;
 }
 
-const Layout: React.FC<LayoutProps> = ({ children, activeTab, onNavigate, isStudent = false, pendingRequests = 0 }) => {
+const Layout: React.FC<LayoutProps> = ({
+    children,
+    activeTab,
+    onNavigate,
+    isStudent = false,
+    pendingRequests = 0,
+}) => {
     const coachNavItems: NavItem[] = [
         { icon: Home, label: 'Home', tab: 'home', action: 'home' },
         { icon: CalendarDays, label: 'Agenda', tab: 'calendar', action: 'calendar' },
@@ -31,7 +37,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, onNavigate, isStud
     ];
 
     const studentNavItems: NavItem[] = [
-        { icon: Home, label: 'Home', tab: 'student_home', action: 'student_home' },
+        { icon: Home, label: 'Home', tab: 'home', action: 'student_home' },
         { icon: CalendarDays, label: 'Agenda', tab: 'calendar', action: 'calendar' },
         { icon: User, label: 'Perfil', tab: 'settings', action: 'student_profile' },
     ];
@@ -39,26 +45,26 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, onNavigate, isStud
     const navItems = isStudent ? studentNavItems : coachNavItems;
 
     return (
-        <div className="relative min-h-screen bg-slate-950 text-white font-sans selection:bg-blue-500/30">
-            <div className="pb-28 min-h-screen">
+        <div className="relative min-h-screen text-white font-sans" style={{ background: 'var(--bg-void)' }}>
+            {/* Content */}
+            <div className="pb-32 min-h-screen relative z-10">
                 {children}
             </div>
 
-            {/* Bottom Navigation - Floating Pill Design */}
-            <div className="fixed bottom-0 left-0 right-0 z-50 flex justify-center pb-6 px-4">
+            {/* Floating Pill Navigation */}
+            <div className="fixed bottom-0 left-0 right-0 z-50 flex justify-center pb-7 px-6">
                 <div
-                    className="flex items-center gap-1 px-3 py-2.5 rounded-[28px] max-w-xs w-full"
+                    className="flex items-stretch w-full max-w-[320px] rounded-[28px] p-1.5 relative"
                     style={{
-                        background: 'rgba(15, 23, 42, 0.92)',
-                        backdropFilter: 'blur(24px)',
-                        WebkitBackdropFilter: 'blur(24px)',
-                        border: '1px solid rgba(255,255,255,0.08)',
-                        boxShadow: '0 -4px 60px rgba(0,0,0,0.5), 0 8px 40px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05)',
+                        background: 'rgba(6, 13, 31, 0.96)',
+                        backdropFilter: 'blur(32px)',
+                        WebkitBackdropFilter: 'blur(32px)',
+                        border: '1px solid rgba(59, 130, 246, 0.08)',
+                        boxShadow: '0 -2px 40px rgba(0,0,0,0.6), 0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(59, 130, 246,0.05)',
                     }}
                 >
                     {navItems.map((item) => {
-                        const isActive = activeTab === item.tab ||
-                            (item.tab === 'student_home' && activeTab === 'home');
+                        const isActive = activeTab === item.tab;
                         const showBadge = item.tab === 'calendar' && !isStudent && pendingRequests > 0;
 
                         return (
@@ -86,52 +92,56 @@ interface NavButtonProps {
     badge?: number;
 }
 
-const NavButton: React.FC<NavButtonProps> = ({ icon: Icon, label, isActive, onClick, badge = 0 }) => (
+const NavButton: React.FC<NavButtonProps> = ({
+    icon: Icon,
+    label,
+    isActive,
+    onClick,
+    badge = 0,
+}) => (
     <button
         onClick={onClick}
         aria-label={label}
         aria-current={isActive ? 'page' : undefined}
-        className="relative flex-1 flex flex-col items-center justify-center gap-1 py-1 rounded-2xl transition-all duration-300 group"
+        className="relative flex-1 flex flex-col items-center justify-center gap-1 py-2 rounded-[22px] transition-all duration-300"
     >
-        {/* Active background pill */}
+        {/* Active pill highlight */}
         <AnimatePresence>
             {isActive && (
                 <motion.div
-                    layoutId="nav-active-bg"
-                    className="absolute inset-0 rounded-2xl"
+                    layoutId="nav-pill"
+                    className="absolute inset-0 rounded-[22px]"
                     style={{
-                        background: 'linear-gradient(135deg, rgba(59,130,246,0.25) 0%, rgba(99,102,241,0.15) 100%)',
-                        border: '1px solid rgba(59,130,246,0.2)',
+                        background: 'linear-gradient(135deg, rgba(30, 58, 138,0.2) 0%, rgba(59, 130, 246,0.12) 100%)',
+                        border: '1px solid rgba(59, 130, 246,0.18)',
                     }}
-                    initial={{ opacity: 0, scale: 0.8 }}
+                    initial={{ opacity: 0, scale: 0.85 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.8 }}
-                    transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                    exit={{ opacity: 0, scale: 0.85 }}
+                    transition={{ type: 'spring', stiffness: 450, damping: 32 }}
                 />
             )}
         </AnimatePresence>
 
-        {/* Icon container */}
+        {/* Icon */}
         <div className="relative z-10">
             <motion.div
-                animate={{
-                    scale: isActive ? 1.1 : 1,
-                    y: isActive ? -1 : 0,
-                }}
-                transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                animate={{ scale: isActive ? 1.08 : 1, y: isActive ? -1 : 0 }}
+                transition={{ type: 'spring', stiffness: 500, damping: 28 }}
             >
                 <Icon
-                    size={22}
-                    strokeWidth={isActive ? 2.5 : 1.75}
-                    className={`transition-colors duration-300 ${isActive ? 'text-blue-400' : 'text-slate-500 group-hover:text-slate-400'}`}
+                    size={21}
+                    strokeWidth={isActive ? 2.5 : 1.8}
+                    style={{ color: isActive ? '#3B82F6' : '#3D5A80', transition: 'color 0.25s' }}
                 />
             </motion.div>
 
-            {/* Notification Badge */}
+            {/* Badge */}
             {badge > 0 && (
                 <span
-                    className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-1 bg-red-500 rounded-full text-[9px] font-black text-white flex items-center justify-center shadow-lg shadow-red-500/40 animate-pulse"
                     aria-hidden="true"
+                    className="absolute -top-1.5 -right-1.5 min-w-[15px] h-[15px] px-0.5 rounded-full text-[8px] font-black text-white flex items-center justify-center"
+                    style={{ background: '#FF3366', boxShadow: '0 0 8px rgba(255,51,102,0.5)' }}
                 >
                     {badge > 9 ? '9+' : badge}
                 </span>
@@ -140,19 +150,22 @@ const NavButton: React.FC<NavButtonProps> = ({ icon: Icon, label, isActive, onCl
 
         {/* Label */}
         <motion.span
-            animate={{ opacity: isActive ? 1 : 0.5 }}
-            className={`relative z-10 text-[10px] font-bold tracking-wide transition-colors duration-300 ${isActive ? 'text-blue-400' : 'text-slate-500'}`}
+            animate={{ opacity: isActive ? 1 : 0.45 }}
+            transition={{ duration: 0.2 }}
+            className="relative z-10 text-[10px] font-bold tracking-wide"
+            style={{ color: isActive ? '#3B82F6' : '#3D5A80' }}
         >
             {label}
         </motion.span>
 
-        {/* Active dot indicator */}
+        {/* Active dot */}
         {isActive && (
             <motion.div
                 layoutId="nav-dot"
-                className="absolute -bottom-0.5 w-1 h-1 rounded-full bg-blue-400"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
+                className="absolute -bottom-0.5 w-1 h-1 rounded-full"
+                style={{ background: '#3B82F6', boxShadow: '0 0 6px #3B82F6' }}
+                initial={{ opacity: 0, scale: 0 }}
+                animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: 0.1 }}
             />
         )}

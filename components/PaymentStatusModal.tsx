@@ -26,7 +26,7 @@ const PaymentStatusModal: React.FC<PaymentStatusModalProps> = ({
 
     const statusOptions = [
         { value: 'paid', label: 'Pago', icon: Check, color: 'emerald', bg: 'bg-emerald-500' },
-        { value: 'pending', label: 'Pendente', icon: Clock, color: 'amber', bg: 'bg-amber-500' },
+        { value: 'pending', label: 'Pendente', icon: Clock, color: 'amber', bg: 'bg-blue-500' },
         { value: 'overdue', label: 'Atrasado', icon: AlertTriangle, color: 'red', bg: 'bg-red-500' }
     ] as const;
 
@@ -48,7 +48,7 @@ const PaymentStatusModal: React.FC<PaymentStatusModalProps> = ({
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
+                className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4"
                 onClick={onClose}
             >
                 <motion.div

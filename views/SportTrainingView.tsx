@@ -53,7 +53,7 @@ const effortZoneColors: Record<number, { bg: string; text: string; label: string
     1: { bg: 'bg-slate-500/20', text: 'text-slate-300', label: 'Recuperação' },
     2: { bg: 'bg-blue-500/20', text: 'text-blue-400', label: 'Aeróbico Leve' },
     3: { bg: 'bg-green-500/20', text: 'text-green-400', label: 'Aeróbico' },
-    4: { bg: 'bg-amber-500/20', text: 'text-amber-400', label: 'Limiar' },
+    4: { bg: 'bg-blue-500/20', text: 'text-blue-400', label: 'Limiar' },
     5: { bg: 'bg-red-500/20', text: 'text-red-400', label: 'Máximo' }
 };
 
@@ -128,7 +128,7 @@ const SportTrainingView: React.FC<SportTrainingViewProps> = ({ clientName = 'Alu
                     <div className="text-center">
                         <h1 className="font-black text-sm uppercase tracking-widest text-slate-400">Treino Esportivo</h1>
                         <p className="font-bold text-white text-xs flex items-center gap-1">
-                            <Zap size={12} className="text-amber-400" />
+                            <Zap size={12} className="text-blue-400" />
                             Premium
                         </p>
                     </div>

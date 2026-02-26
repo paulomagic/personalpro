@@ -234,7 +234,7 @@ const AssessmentView: React.FC<AssessmentViewProps> = ({ user, client, onBack, o
                         {/* Skinfolds Section */}
                         <section>
                             <div className="flex items-center gap-2 mb-3">
-                                <div className="size-4 rounded-full border-2 border-amber-500"></div>
+                                <div className="size-4 rounded-full border-2 border-blue-500"></div>
                                 <h3 className="text-sm font-black text-white uppercase tracking-wide">Dobras Cutâneas (mm)</h3>
                             </div>
                             <div className="grid grid-cols-2 gap-3">
@@ -311,7 +311,7 @@ const AssessmentView: React.FC<AssessmentViewProps> = ({ user, client, onBack, o
                                         <Trash2 size={14} className="text-white" />
                                     </button>
                                     {/* Photo number */}
-                                    <div className="absolute bottom-2 left-2 px-2 py-1 bg-black/60 rounded-lg">
+                                    <div className="absolute bottom-2 left-2 px-2 py-1 bg-slate-950/60 rounded-lg">
                                         <span className="text-[10px] font-black text-white uppercase">Foto {idx + 1}</span>
                                     </div>
                                 </div>

@@ -154,10 +154,10 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack, onNavigate }) => {
                         className="glass-card rounded-2xl p-4"
                     >
                         <div className="flex items-center gap-2 mb-2">
-                            <AlertTriangle size={16} className="text-amber-400" />
+                            <AlertTriangle size={16} className="text-blue-400" />
                             <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Erros Hoje</span>
                         </div>
-                        <p className="text-2xl font-black text-amber-400">
+                        <p className="text-2xl font-black text-blue-400">
                             {loading ? '...' : aiMetrics?.errorsToday || 0}
                         </p>
                         <p className="text-[10px] text-slate-500">falhas de IA</p>
@@ -200,16 +200,16 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack, onNavigate }) => {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.45 }}
-                    className="glass-card rounded-2xl p-4 border border-amber-500/20 bg-amber-500/5"
+                    className="glass-card rounded-2xl p-4 border border-blue-500/20 bg-blue-500/5"
                 >
                     <div className="flex items-center gap-2 mb-4">
-                        <Coins size={16} className="text-amber-400" />
+                        <Coins size={16} className="text-blue-400" />
                         <span className="text-sm font-black text-white">Tokens Consumidos</span>
-                        <span className="text-[9px] bg-amber-500/20 text-amber-400 px-2 py-0.5 rounded-full">~estimado</span>
+                        <span className="text-[9px] bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded-full">~estimado</span>
                     </div>
                     <div className="grid grid-cols-3 gap-4">
                         <div>
-                            <p className="text-lg font-black text-amber-400">
+                            <p className="text-lg font-black text-blue-400">
                                 {loading ? '...' : (aiMetrics?.totalTokens || 0).toLocaleString('pt-BR')}
                             </p>
                             <p className="text-[10px] text-slate-500">Total</p>

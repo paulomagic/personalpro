@@ -261,7 +261,7 @@ const TrainingExecutionView: React.FC<TrainingExecutionViewProps> = ({ workout, 
           <h2 className="text-2xl font-black text-white tracking-tighter tabular-nums">{formatTime(elapsedTime)}</h2>
           <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest">{workout.title || 'Treino'}</p>
           {isColdStartWorkout && (
-            <p className="text-[10px] font-black text-amber-400 uppercase tracking-widest mt-1">Modo Inicial Ativo</p>
+            <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest mt-1">Modo Inicial Ativo</p>
           )}
         </div>
 
@@ -366,7 +366,7 @@ const TrainingExecutionView: React.FC<TrainingExecutionViewProps> = ({ workout, 
 
       {/* Feedback Modal */}
       {showFeedbackForm && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
           <div className="max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <FeedbackForm
               workoutId={workout.id || 'unknown'}

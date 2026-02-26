@@ -81,7 +81,7 @@ const AdminSettingsView: React.FC<AdminSettingsViewProps> = ({ onBack }) => {
                     <div className="space-y-4">
                         <div className="flex justify-between items-center py-2 border-b border-white/5">
                             <span className="text-sm text-slate-400">Tipo de Conta</span>
-                            <span className="text-sm bg-amber-500/20 text-amber-400 px-3 py-1 rounded-lg">Admin</span>
+                            <span className="text-sm bg-blue-500/20 text-blue-400 px-3 py-1 rounded-lg">Admin</span>
                         </div>
                         <div className="flex justify-between items-center py-2 border-b border-white/5">
                             <span className="text-sm text-slate-400">Autenticação</span>

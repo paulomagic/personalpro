@@ -107,7 +107,8 @@ const StudentDashboardView: React.FC<StudentDashboardViewProps> = ({
             initial="hidden"
             animate="visible"
             variants={containerVariants}
-            className="min-h-screen bg-slate-950 p-6 pb-32"
+            className="min-h-screen pb-32 p-6"
+            style={{ background: 'var(--bg-void)' }}
         >
             {/* Header */}
             <motion.header variants={itemVariants} className="flex justify-between items-start pt-4 mb-8">
@@ -115,7 +116,7 @@ const StudentDashboardView: React.FC<StudentDashboardViewProps> = ({
                     <p className="text-xs text-blue-400 font-bold uppercase tracking-widest">
                         {getGreeting()} 👋
                     </p>
-                    <h1 className="text-2xl font-black text-white mt-1">
+                    <h1 className="text-3xl font-display font-black text-white mt-1 tracking-tight">
                         {studentName.split(' ')[0]}
                     </h1>
                     <p className="text-xs text-slate-500 mt-1">
@@ -143,12 +144,12 @@ const StudentDashboardView: React.FC<StudentDashboardViewProps> = ({
                     <div className="absolute inset-0 bg-gradient-to-br from-blue-600 to-indigo-900 opacity-90 z-0" />
                     <div className="relative z-10">
                         <div className="flex items-center gap-2 mb-2">
-                            <Flame size={16} className="text-amber-400" />
+                            <Flame size={16} className="text-blue-400" />
                             <span className="text-[10px] font-bold text-blue-200 uppercase tracking-widest">
                                 Treino do Dia
                             </span>
                         </div>
-                        <h2 className="text-2xl font-black text-white mb-2">
+                        <h2 className="text-3xl font-display font-black text-white mb-2 tracking-tight">
                             {currentWorkout.title || 'Treino A'}
                         </h2>
                         <p className="text-sm text-blue-200/80 mb-4">
@@ -172,8 +173,11 @@ const StudentDashboardView: React.FC<StudentDashboardViewProps> = ({
                         </div>
 
                         <button
-                            onClick={() => onNavigate('student_workouts')}
-                            className="w-full py-4 rounded-xl bg-white/20 hover:bg-white/30 backdrop-blur-sm border border-white/10 text-white font-bold flex items-center justify-center gap-2 transition-colors"
+                            onClick={() => {
+                                if ('vibrate' in navigator) navigator.vibrate(50);
+                                onNavigate('student_workouts');
+                            }}
+                            className="w-full py-4 rounded-xl glass-pure text-white font-bold flex items-center justify-center gap-2"
                         >
                             <Play size={20} fill="currentColor" />
                             Iniciar Treino
@@ -182,7 +186,7 @@ const StudentDashboardView: React.FC<StudentDashboardViewProps> = ({
 
                     {/* Decorative blurs */}
                     <div className="absolute top-0 right-0 w-64 h-64 bg-blue-400/20 rounded-full blur-3xl -mr-16 -mt-32" />
-                    <div className="absolute bottom-0 left-0 w-64 h-64 bg-purple-500/20 rounded-full blur-3xl -ml-16 -mb-32" />
+                    <div className="absolute bottom-0 left-0 w-64 h-64 bg-cyan-500/10 rounded-full blur-3xl -ml-16 -mb-32" />
                 </motion.div>
             )}
 
@@ -211,7 +215,7 @@ const StudentDashboardView: React.FC<StudentDashboardViewProps> = ({
                         </div>
                         <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Meta</span>
                     </div>
-                    <p className="text-lg font-black text-white">
+                    <p className="text-2xl font-display font-black text-white">
                         {clientData?.goal || 'Definir meta'}
                     </p>
                 </div>
@@ -223,7 +227,7 @@ const StudentDashboardView: React.FC<StudentDashboardViewProps> = ({
                         </div>
                         <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Adesão</span>
                     </div>
-                    <p className="text-lg font-black text-white">
+                    <p className="text-2xl font-display font-black text-white">
                         {clientData?.adherence || 0}%
                     </p>
                 </div>
@@ -240,8 +244,8 @@ const StudentDashboardView: React.FC<StudentDashboardViewProps> = ({
                     className={`w-full card-dark p-4 flex items-center gap-4 active:scale-[0.99] transition-all group ${!currentWorkout ? 'opacity-50' : ''}`}
                     disabled={!currentWorkout}
                 >
-                    <div className="size-12 rounded-xl bg-purple-500/20 flex items-center justify-center group-hover:scale-110 transition-transform">
-                        <Dumbbell size={24} className="text-purple-400" />
+                    <div className="size-12 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform" style={{ background: 'rgba(59, 130, 246,0.1)' }}>
+                        <Dumbbell size={24} style={{ color: '#3B82F6' }} />
                     </div>
                     <div className="flex-1 text-left">
                         <p className="font-bold text-white">Meus Treinos</p>

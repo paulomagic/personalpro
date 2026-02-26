@@ -127,7 +127,7 @@ const MonthlyScheduleModal: React.FC<MonthlyScheduleModalProps> = ({
 
     if (isCreating) {
         return (
-            <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
+            <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center z-50">
                 <div className="bg-[#0A0E27] rounded-2xl p-8 max-w-md w-full border border-[#1E293B] shadow-2xl text-center">
                     <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-600 border-t-transparent mx-auto mb-4"></div>
                     <h3 className="text-white text-xl font-bold mb-2">
@@ -149,7 +149,7 @@ const MonthlyScheduleModal: React.FC<MonthlyScheduleModalProps> = ({
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-end z-50"
+                    className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm flex items-end z-50"
                 >
                     <motion.div
                         initial={{ y: '100%' }}

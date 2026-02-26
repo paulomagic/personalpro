@@ -339,13 +339,13 @@ const AddClientModal: React.FC<AddClientModalProps> = ({ isOpen, onClose, onSave
                             {/* Injuries */}
                             <div>
                                 <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide block mb-2">
-                                    <AlertTriangle size={12} className="inline mr-1 text-amber-500" />
+                                    <AlertTriangle size={12} className="inline mr-1 text-blue-500" />
                                     Lesões / Restrições
                                 </label>
                                 <textarea
                                     value={injuries}
                                     onChange={(e) => setInjuries(e.target.value)}
-                                    className="w-full bg-amber-500/5 border border-amber-500/20 rounded-xl py-3 px-4 text-white font-medium outline-none focus:border-amber-500/50 transition-colors resize-none"
+                                    className="w-full bg-blue-500/5 border border-blue-500/20 rounded-xl py-3 px-4 text-white font-medium outline-none focus:border-blue-500/50 transition-colors resize-none"
                                     placeholder="Ex: Hérnia de disco L4-L5, evitar impacto no joelho esquerdo..."
                                     rows={2}
                                 />

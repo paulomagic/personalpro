@@ -103,7 +103,7 @@ BEGIN
   );
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 -- Trigger to run function on new user
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
@@ -147,26 +147,7 @@ BEGIN
     'client_id', inv.client_id
   );
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-
--- ============ HELPER VIEWS ============
-
--- View for coaches to see their students
-CREATE OR REPLACE VIEW coach_students AS
-SELECT 
-  up.id as student_user_id,
-  up.full_name as student_name,
-  up.avatar_url as student_avatar,
-  up.created_at as joined_at,
-  c.id as client_id,
-  c.name as client_name,
-  c.goal,
-  c.level,
-  c.adherence,
-  c.status as client_status
-FROM user_profiles up
-LEFT JOIN clients c ON up.client_id = c.id
-WHERE up.role = 'student';
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 COMMENT ON TABLE user_profiles IS 'Stores user role (coach/student/admin) and relationships';
 COMMENT ON TABLE invitations IS 'Stores pending/accepted invitations from coaches to students';

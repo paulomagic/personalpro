@@ -883,29 +883,29 @@ const AIBuilderView: React.FC<AIBuilderViewProps> = ({ user, onBack, onDone }) =
 
   if (loading) {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-white">
-        <div className="w-full max-w-md h-full bg-slate-950 flex flex-col items-center justify-center p-8 overflow-hidden relative">
+      <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'var(--bg-void)' }}>
+        <div className="w-full max-w-md h-full flex flex-col items-center justify-center p-8 overflow-hidden relative" style={{ background: 'var(--bg-void)' }}>
           <div className="absolute inset-0 opacity-40">
-            <div className="absolute top-1/4 left-1/4 size-64 bg-blue-600 rounded-full blur-[100px] animate-pulse"></div>
-            <div className="absolute bottom-1/4 right-1/4 size-64 bg-purple-600 rounded-full blur-[100px] animate-pulse delay-1000"></div>
+            <div className="absolute top-1/4 left-1/4 size-64 rounded-full blur-[100px] animate-pulse" style={{ background: '#1E3A8A' }}></div>
+            <div className="absolute bottom-1/4 right-1/4 size-64 rounded-full blur-[100px] animate-pulse delay-1000" style={{ background: '#3B82F6' }}></div>
           </div>
 
           <div className="relative z-10 text-center flex flex-col items-center">
-            <div className="size-24 rounded-[32px] bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center mb-10 shadow-glow animate-bounce">
+            <div className="size-24 rounded-[32px] flex items-center justify-center mb-10 animate-bounce" style={{ background: 'linear-gradient(135deg,#1E3A8A,#3B82F6)', boxShadow: '0 0 60px rgba(30, 58, 138,0.5)' }}>
               <span className="material-symbols-outlined text-white text-[48px]">psychology</span>
             </div>
 
             <h2 className="text-2xl font-black text-white mb-4 tracking-tight">PersonalPro IA</h2>
             <div className="h-6 overflow-hidden">
-              <p className="text-blue-400 text-xs font-black uppercase tracking-[0.2em]">
+              <p className="text-xs font-black uppercase tracking-[0.2em]" style={{ color: '#3B82F6' }}>
                 {messages[loadingMessageIndex]}
               </p>
             </div>
 
-            <div className="mt-12 w-64 h-1.5 bg-white/5 rounded-full overflow-hidden">
+            <div className="mt-12 w-64 h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(59, 130, 246,0.1)' }}>
               <div
-                className="h-full bg-gradient-to-r from-blue-600 to-indigo-600 transition-all duration-500"
-                style={{ width: `${(loadingMessageIndex + 1) * 20}%` }}
+                className="h-full transition-all duration-500 rounded-full"
+                style={{ width: `${(loadingMessageIndex + 1) * 20}%`, background: 'linear-gradient(90deg,#1E3A8A,#3B82F6)' }}
               ></div>
             </div>
           </div>
@@ -995,7 +995,7 @@ const AIBuilderView: React.FC<AIBuilderViewProps> = ({ user, onBack, onDone }) =
 
         <section>
           <div className="flex items-center gap-2 mb-4 px-1">
-            <span className="material-symbols-outlined text-amber-400 text-xl">notes</span>
+            <span className="material-symbols-outlined text-blue-400 text-xl">notes</span>
             <h3 className="font-black text-white tracking-tight">Observações</h3>
           </div>
 
@@ -1051,11 +1051,11 @@ const AIBuilderView: React.FC<AIBuilderViewProps> = ({ user, onBack, onDone }) =
 
       {/* Result Modal */}
       {result && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-white">
-          <div className="w-full max-w-md h-full bg-slate-950 flex flex-col animate-fade-in relative">
-            <div className="absolute inset-0 z-0 opacity-20">
-              <div className="absolute top-0 right-0 size-96 bg-blue-600 rounded-full blur-[120px]"></div>
-              <div className="absolute bottom-0 left-0 size-96 bg-purple-600 rounded-full blur-[120px]"></div>
+        <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'var(--bg-void)' }}>
+          <div className="w-full max-w-md h-full flex flex-col animate-fade-in relative" style={{ background: 'var(--bg-void)' }}>
+            <div className="absolute inset-0 z-0 opacity-15">
+              <div className="absolute top-0 right-0 size-96 rounded-full blur-[120px]" style={{ background: '#1E3A8A' }}></div>
+              <div className="absolute bottom-0 left-0 size-96 rounded-full blur-[120px]" style={{ background: '#3B82F6' }}></div>
             </div>
 
             {/* Error Toast */}
@@ -1162,8 +1162,8 @@ const AIBuilderView: React.FC<AIBuilderViewProps> = ({ user, onBack, onDone }) =
 
               {/* Personal Notes - IA Insights */}
               {result.personalNotes && result.personalNotes.length > 0 && (
-                <div className="glass-card rounded-[32px] p-4 mb-8 border border-amber-500/20 bg-amber-500/5">
-                  <p className="text-[10px] font-black text-amber-400 uppercase tracking-widest mb-3">🤖 Personalização Aplicada</p>
+                <div className="glass-card rounded-[32px] p-4 mb-8 border border-blue-500/20 bg-blue-500/5">
+                  <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-3">🤖 Personalização Aplicada</p>
                   <div className="space-y-2">
                     {result.personalNotes.map((note: string, idx: number) => (
                       <p key={idx} className="text-sm text-slate-300">{note}</p>
@@ -1383,7 +1383,8 @@ const AIBuilderView: React.FC<AIBuilderViewProps> = ({ user, onBack, onDone }) =
             <footer className="fixed bottom-20 left-0 right-0 p-4 px-6 max-w-md mx-auto z-20">
               <button
                 onClick={handleSaveWorkout}
-                className="w-full h-14 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-black rounded-2xl flex items-center justify-center gap-3 uppercase tracking-widest shadow-xl shadow-blue-900/40 active:scale-95 transition-all"
+                className="w-full h-14 text-white font-black rounded-2xl flex items-center justify-center gap-3 uppercase tracking-widest active:scale-95 transition-all"
+                style={{ background: 'linear-gradient(135deg,#1E3A8A,#3B82F6)', boxShadow: '0 8px 32px rgba(30, 58, 138,0.35)' }}
               >
                 <span className="material-symbols-outlined">check_circle</span>
                 Salvar Protocolo

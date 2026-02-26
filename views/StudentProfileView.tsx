@@ -106,7 +106,7 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({
         { id: 1, icon: Dumbbell, label: 'Treino', target: 1, current: 1, unit: 'sessão', color: 'blue' },
         { id: 2, icon: Droplets, label: 'Água', target: 3, current: 2, unit: 'L', color: 'cyan' },
         { id: 3, icon: Activity, label: 'Passos', target: 8000, current: 5420, unit: '', color: 'emerald' },
-        { id: 4, icon: Clock, label: 'Sono', target: 8, current: 7, unit: 'h', color: 'purple' },
+        { id: 4, icon: Clock, label: 'Sono', target: 8, current: 7, unit: 'h', color: 'blue' },
     ];
 
     // Weekly stats
@@ -133,16 +133,18 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({
             initial="hidden"
             animate="visible"
             variants={containerVariants}
-            className="min-h-screen bg-slate-950 pb-32"
+            className="min-h-screen pb-32"
+            style={{ background: 'var(--bg-void)' }}
         >
             {/* Header with Avatar */}
             <motion.div
                 variants={itemVariants}
-                className="relative h-64 bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-900 overflow-hidden"
+                className="relative h-64 overflow-hidden"
+                style={{ background: 'linear-gradient(135deg, #030712 0%, #0a1628 50%, #001a3d 100%)' }}
             >
                 {/* Decorative elements */}
-                <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -mr-32 -mt-32" />
-                <div className="absolute bottom-0 left-0 w-48 h-48 bg-blue-400/20 rounded-full blur-2xl -ml-24 -mb-24" />
+                <div className="absolute top-0 right-0 w-64 h-64 rounded-full blur-3xl -mr-32 -mt-32" style={{ background: 'rgba(30, 58, 138,0.15)' }} />
+                <div className="absolute bottom-0 left-0 w-48 h-48 rounded-full blur-2xl -ml-24 -mb-24" style={{ background: 'rgba(59, 130, 246,0.1)' }} />
 
                 {/* Top bar - with safe area padding */}
                 <div className="absolute top-0 left-0 right-0 pt-14 px-6 flex justify-between items-center z-10">
@@ -166,7 +168,7 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({
                         {user?.user_metadata?.avatar_url ? (
                             <img src={user.user_metadata.avatar_url} alt="Profile" className="w-full h-full object-cover" />
                         ) : (
-                            <div className="size-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
+                            <div className="size-full flex items-center justify-center" style={{ background: 'linear-gradient(135deg,#1E3A8A,#3B82F6)' }}>
                                 <span className="text-4xl font-black text-white">
                                     {studentName.charAt(0).toUpperCase()}
                                 </span>
@@ -182,9 +184,9 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({
                 <p className="text-sm text-slate-500 mt-1">{clientData?.goal || 'Definir objetivo'}</p>
 
                 {/* Streak Badge */}
-                <div className="inline-flex items-center gap-2 mt-3 px-4 py-2 bg-amber-500/10 border border-amber-500/20 rounded-full">
-                    <Flame size={16} className="text-amber-400" />
-                    <span className="text-xs font-bold text-amber-400">{weeklyStats.streak} dias seguidos</span>
+                <div className="inline-flex items-center gap-2 mt-3 px-4 py-2 bg-blue-500/10 border border-blue-500/20 rounded-full">
+                    <Flame size={16} className="text-blue-400" />
+                    <span className="text-xs font-bold text-blue-400">{weeklyStats.streak} dias seguidos</span>
                 </div>
             </motion.div>
 
@@ -242,8 +244,8 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({
                                 </div>
 
                                 <div className="card-dark p-4 text-center">
-                                    <div className="size-12 rounded-xl bg-purple-500/20 flex items-center justify-center mx-auto mb-3">
-                                        <TrendingUp size={24} className="text-purple-400" />
+                                    <div className="size-12 rounded-xl flex items-center justify-center mx-auto mb-3" style={{ background: 'rgba(59, 130, 246,0.1)' }}>
+                                        <TrendingUp size={24} style={{ color: '#3B82F6' }} />
                                     </div>
                                     <p className="text-2xl font-black text-white">{biometrics.bmi}</p>
                                     <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">IMC</p>
@@ -299,7 +301,7 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({
                                 <div className="absolute inset-0 bg-gradient-to-br from-blue-600 to-indigo-800 opacity-90" />
                                 <div className="relative z-10">
                                     <div className="flex items-center gap-2 mb-3">
-                                        <Award size={18} className="text-amber-400" />
+                                        <Award size={18} className="text-blue-400" />
                                         <span className="text-xs font-bold text-blue-200 uppercase tracking-widest">Progresso Semanal</span>
                                     </div>
                                     <div className="flex items-end gap-4">
@@ -330,7 +332,7 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({
                                         blue: { bg: 'bg-blue-500/20', text: 'text-blue-400', progress: 'from-blue-500 to-blue-400' },
                                         cyan: { bg: 'bg-cyan-500/20', text: 'text-cyan-400', progress: 'from-cyan-500 to-cyan-400' },
                                         emerald: { bg: 'bg-emerald-500/20', text: 'text-emerald-400', progress: 'from-emerald-500 to-emerald-400' },
-                                        purple: { bg: 'bg-purple-500/20', text: 'text-purple-400', progress: 'from-purple-500 to-purple-400' },
+                                        purple: { bg: 'bg-blue-500/20', text: 'text-blue-400', progress: 'from-blue-500 to-cyan-500' },
                                     };
                                     const colors = colorClasses[goal.color];
 

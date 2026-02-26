@@ -1,11 +1,13 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Plus, Trash2 } from 'lucide-react';
 import { getAppointments, createAppointment, updateAppointment, deleteAppointment, deleteAppointmentsBulk, getAllAppointmentsForCoach, getClients, DBClient, Appointment as DBAppointment } from '../services/supabaseClient';
 import { mockClients } from '../mocks/demoData';
 import PendingRequestsPanel from '../components/PendingRequestsPanel';
 import MonthlyScheduleModal from '../components/MonthlyScheduleModal';
 import { getAllBatchesForCoach } from '../services/monthlyScheduleService';
+import PageHeader from '../components/PageHeader';
 
 
 interface CalendarViewProps {
@@ -337,114 +339,113 @@ const CalendarView: React.FC<CalendarViewProps> = ({ user, onBack, onSelectClien
     };
 
     return (
-        <div className="max-w-md mx-auto min-h-screen bg-slate-950 text-white selection:bg-blue-500/30 pb-12">
-            {/* Header */}
-            <header className="px-6 pt-14 pb-4 animate-fade-in relative z-30">
-                <div className="flex items-center justify-between mb-6">
-                    <button onClick={onBack} className="size-12 rounded-2xl glass-card flex items-center justify-center active:scale-90 transition-all">
-                        <span className="material-symbols-outlined text-white">arrow_back</span>
-                    </button>
-                    <div className="text-center">
-                        <h1 className="text-xl font-black text-white tracking-tight">Agenda</h1>
-                        <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest">Sincronização Elite</p>
-                    </div>
+        <div className="max-w-md mx-auto min-h-screen text-white selection:bg-cyan-500/20 pb-12" style={{ background: 'var(--bg-void)' }}>
+
+            {/* AI Header */}
+            <PageHeader
+                title="Agenda"
+                subtitle="Sincronização Elite"
+                onBack={onBack}
+                accentColor="cyan"
+                rightSlot={
                     <div className="flex gap-2">
                         {!isDemo && (
                             <button
-                                onClick={() => setShowMonthlyModal(true)}
-                                className="relative size-12 rounded-2xl bg-blue-600/20 border border-blue-500/30 flex items-center justify-center text-blue-400 hover:bg-blue-600 hover:text-white transition-all active:scale-95"
-                                title="Agendamento Mensal"
-                            >
-                                <span className="text-sm">📅</span>
-                                {monthlyBatchesCount > 0 && (
-                                    <span className="absolute -top-1 -right-1 bg-blue-600 text-white text-[8px] font-bold size-4 rounded-full flex items-center justify-center">
-                                        {monthlyBatchesCount}
-                                    </span>
-                                )}
-                            </button>
-                        )}
-                        {!isDemo && (
-                            <button
                                 onClick={handleCleanupDuplicates}
-                                className="size-12 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400 hover:bg-red-500 hover:text-white transition-all active:scale-95"
-                                title="Limpar Todos Agendamentos"
+                                className="size-10 rounded-2xl flex items-center justify-center active:scale-90 transition-all"
+                                style={{ background: 'rgba(255,51,102,0.08)', border: '1px solid rgba(255,51,102,0.15)' }}
+                                title="Limpar Agendamentos"
                             >
-                                <span className="material-symbols-outlined text-lg">delete_sweep</span>
+                                <Trash2 size={15} style={{ color: '#FF3366' }} />
                             </button>
                         )}
                         <button
                             onClick={() => setShowNewModal(true)}
-                            className="size-12 rounded-2xl bg-blue-600 flex items-center justify-center text-white shadow-glow active:scale-95 transition-all"
+                            className="size-10 rounded-2xl flex items-center justify-center active:scale-90 transition-all"
+                            style={{ background: 'linear-gradient(135deg, #1E3A8A, #3B82F6)', boxShadow: '0 4px 16px rgba(30, 58, 138,0.35)' }}
                         >
-                            <span className="material-symbols-outlined">add</span>
+                            <Plus size={18} color="white" />
                         </button>
                     </div>
-                </div>
+                }
+            />
 
-                {/* Month & View Toggle */}
-                <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-lg font-black text-white tracking-tight">
-                        {monthNames[selectedDate.getMonth()]} {selectedDate.getFullYear()}
-                    </h2>
-                    <div className="flex bg-white/5 rounded-xl p-1 border border-white/5">
+            {/* Month & View Toggle */}
+            <div className="px-5 flex items-center justify-between mb-4">
+                <h2 className="text-base font-black text-white tracking-tight">
+                    {monthNames[selectedDate.getMonth()]} {selectedDate.getFullYear()}
+                </h2>
+                <div
+                    className="flex rounded-xl p-1"
+                    style={{ background: 'rgba(59, 130, 246,0.05)', border: '1px solid rgba(59, 130, 246,0.1)' }}
+                >
+                    {(['day', 'week'] as const).map((mode) => (
                         <button
-                            onClick={() => setViewMode('day')}
-                            className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === 'day' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-500'}`}
+                            key={mode}
+                            onClick={() => setViewMode(mode)}
+                            className="px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all"
+                            style={viewMode === mode
+                                ? { background: 'linear-gradient(135deg,#1E3A8A,#3B82F6)', color: 'white' }
+                                : { color: '#3D5A80' }
+                            }
                         >
-                            Dia
-                        </button>
-                        <button
-                            onClick={() => setViewMode('week')}
-                            className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === 'week' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-500'}`}
-                        >
-                            Semana
-                        </button>
-                    </div>
-                </div>
-
-                {/* Week Days */}
-                <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-slate-700">
-                    {weekDays.map((day, i) => (
-                        <button
-                            key={i}
-                            onClick={() => setSelectedDate(day)}
-                            className={`flex flex-col items-center min-w-[54px] py-4 rounded-[20px] transition-all duration-300 ${isSelected(day)
-                                ? 'bg-blue-600 text-white shadow-glow scale-105'
-                                : isToday(day)
-                                    ? 'glass-card border-blue-500/30 text-blue-400'
-                                    : 'glass-card text-slate-500'
-                                }`}
-                        >
-                            <span className="text-[9px] font-black uppercase tracking-widest mb-1">
-                                {dayNames[i]}
-                            </span>
-                            <span className="text-lg font-black">{day.getDate()}</span>
+                            {mode === 'day' ? 'Dia' : 'Semana'}
                         </button>
                     ))}
                 </div>
-            </header>
+            </div>
 
-            <main className="px-6 space-y-6">
-                {/* Pending Reschedule Requests - Only for coaches with real data */}
+            {/* Week Days */}
+            <div className="flex gap-2 overflow-x-auto px-5 pb-4">
+                {weekDays.map((day, i) => (
+                    <button
+                        key={i}
+                        onClick={() => setSelectedDate(day)}
+                        className="flex flex-col items-center min-w-[52px] py-3.5 rounded-2xl transition-all duration-300"
+                        style={isSelected(day)
+                            ? { background: 'linear-gradient(135deg,#1E3A8A,#3B82F6)', boxShadow: '0 6px 20px rgba(30, 58, 138,0.35)', transform: 'scale(1.05)' }
+                            : isToday(day)
+                                ? { background: 'rgba(59, 130, 246,0.08)', border: '1px solid rgba(59, 130, 246,0.2)' }
+                                : { background: 'rgba(59, 130, 246,0.03)', border: '1px solid rgba(59, 130, 246,0.06)' }
+                        }
+                    >
+                        <span className="text-[9px] font-black uppercase tracking-widest mb-1"
+                            style={{ color: isSelected(day) ? 'rgba(255,255,255,0.8)' : '#3D5A80' }}
+                        >
+                            {dayNames[i]}
+                        </span>
+                        <span className="text-base font-black"
+                            style={{ color: isSelected(day) ? 'white' : isToday(day) ? '#3B82F6' : '#7A9FCC' }}
+                        >
+                            {day.getDate()}
+                        </span>
+                    </button>
+                ))}
+            </div>
+
+            <main className="px-5 space-y-4">
+                {/* Pending Reschedule Requests */}
                 {!isDemo && user?.id && (
                     <PendingRequestsPanel coachId={user.id} />
                 )}
 
                 {/* Stats Row */}
-                <div className="grid grid-cols-2 gap-3 animate-slide-up">
-                    <div className="glass-card rounded-[24px] p-4 border-l-4 border-blue-500">
-                        <div className="flex items-center gap-2 mb-1">
-                            <span className="material-symbols-outlined text-blue-400 text-lg">event</span>
-                            <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Hoje</span>
-                        </div>
-                        <p className="text-2xl font-black text-white">{appointments.length}</p>
+                <div className="grid grid-cols-2 gap-3">
+                    <div
+                        className="p-4 rounded-2xl"
+                        style={{ background: 'rgba(59, 130, 246,0.04)', border: '1px solid rgba(59, 130, 246,0.1)' }}
+                    >
+                        <p className="text-[10px] font-black uppercase tracking-widest mb-1" style={{ color: '#3D5A80' }}>Hoje</p>
+                        <p className="text-3xl font-black text-white">{appointments.length}</p>
+                        <p className="text-[10px] font-semibold mt-0.5" style={{ color: '#7A9FCC' }}>sessões</p>
                     </div>
-                    <div className="glass-card rounded-[24px] p-4 border-l-4 border-emerald-500">
-                        <div className="flex items-center gap-2 mb-1">
-                            <span className="material-symbols-outlined text-emerald-400 text-lg">schedule</span>
-                            <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Próximo</span>
-                        </div>
-                        <p className="text-xl font-black text-white truncate">{appointments[0]?.time || '--:--'}</p>
+                    <div
+                        className="p-4 rounded-2xl"
+                        style={{ background: 'rgba(0,255,136,0.04)', border: '1px solid rgba(0,255,136,0.1)' }}
+                    >
+                        <p className="text-[10px] font-black uppercase tracking-widest mb-1" style={{ color: '#3D5A80' }}>Próximo</p>
+                        <p className="text-2xl font-black text-white">{appointments[0]?.time || '--:--'}</p>
+                        <p className="text-[10px] font-semibold mt-0.5" style={{ color: '#00FF88' }}>{appointments[0]?.clientName?.split(' ')[0] || 'Livre'}</p>
                     </div>
                 </div>
 
@@ -457,8 +458,8 @@ const CalendarView: React.FC<CalendarViewProps> = ({ user, onBack, onSelectClien
 
                 {/* Appointments List */}
                 {!loading && (
-                    <div className="animate-slide-up stagger-1">
-                        <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-4">Fluxo de Protocolos</h3>
+                    <div>
+                        <h3 className="text-[10px] font-black uppercase tracking-[0.2em] mb-3" style={{ color: '#3D5A80' }}>Fluxo de Protocolos</h3>
 
                         {appointments.length === 0 ? (
                             <div className="glass-card rounded-[28px] p-8 text-center">
@@ -472,7 +473,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({ user, onBack, onSelectClien
                                 </button>
                             </div>
                         ) : (
-                            <div className="space-y-3">
+                            <div className="space-y-2.5">
                                 <AnimatePresence>
                                     {appointments.map((apt) => (
                                         <motion.button
@@ -481,7 +482,8 @@ const CalendarView: React.FC<CalendarViewProps> = ({ user, onBack, onSelectClien
                                             animate={{ opacity: 1, y: 0 }}
                                             exit={{ opacity: 0, x: -100 }}
                                             onClick={() => setShowDetailModal(apt)}
-                                            className="w-full glass-card rounded-[28px] p-4 flex items-center gap-4 active:scale-[0.99] transition-all text-left group hover:border-blue-500/30"
+                                            className="w-full rounded-2xl p-4 flex items-center gap-4 active:scale-[0.99] transition-all text-left group"
+                                            style={{ background: 'rgba(59, 130, 246,0.03)', border: '1px solid rgba(59, 130, 246,0.07)' }}
                                         >
                                             {/* Time */}
                                             <div className="text-center w-14 border-r border-white/5 pr-4 mr-1">
@@ -508,7 +510,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({ user, onBack, onSelectClien
 
                                             {/* Status */}
                                             <div className={`px-2 py-1 rounded-lg text-[8px] font-black uppercase tracking-widest ${apt.status === 'confirmed' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
-                                                apt.status === 'pending' ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' :
+                                                apt.status === 'pending' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' :
                                                     'bg-white/5 text-slate-500 border border-white/5'
                                                 }`}>
                                                 {apt.status === 'confirmed' ? '✓' : apt.status === 'pending' ? '⋯' : '●'}
@@ -537,9 +539,8 @@ const CalendarView: React.FC<CalendarViewProps> = ({ user, onBack, onSelectClien
 
                 {/* Available Slots */}
                 {!loading && freeSlots.length > 0 && (
-                    <div className="animate-slide-up stagger-2 pb-8">
-                        <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-4">Janelas Disponíveis</h3>
-
+                    <div className="pb-8">
+                        <h3 className="text-[10px] font-black uppercase tracking-[0.2em] mb-3" style={{ color: '#3D5A80' }}>Janelas Disponíveis</h3>
                         <div className="grid grid-cols-4 gap-2">
                             {freeSlots.map((time) => (
                                 <button
@@ -548,7 +549,8 @@ const CalendarView: React.FC<CalendarViewProps> = ({ user, onBack, onSelectClien
                                         setNewAppointment(prev => ({ ...prev, time }));
                                         setShowNewModal(true);
                                     }}
-                                    className="py-3 glass-card rounded-xl text-[10px] font-black text-slate-400 uppercase tracking-widest hover:border-blue-500/50 hover:text-blue-400 active:scale-95 transition-all"
+                                    className="py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95"
+                                    style={{ background: 'rgba(59, 130, 246,0.04)', border: '1px solid rgba(59, 130, 246,0.08)', color: '#7A9FCC' }}
                                 >
                                     {time}
                                 </button>

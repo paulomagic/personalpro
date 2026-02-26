@@ -382,9 +382,9 @@ const StudentView: React.FC<StudentViewProps> = ({
     // Loading state
     if (loading) {
         return (
-            <div className="min-h-screen bg-slate-950 text-white flex items-center justify-center">
+            <div className="min-h-screen text-white flex items-center justify-center" style={{ background: 'var(--bg-void)' }}>
                 <div className="text-center">
-                    <div className="size-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+                    <div className="size-16 border-4 border-t-transparent rounded-full animate-spin mx-auto mb-4" style={{ borderColor: '#3B82F6', borderTopColor: 'transparent' }} />
                     <p className="text-slate-400 text-sm font-medium">Carregando treino...</p>
                 </div>
             </div>
@@ -419,9 +419,9 @@ const StudentView: React.FC<StudentViewProps> = ({
     // Split Selection View
     if (!selectedSplit) {
         return (
-            <div className="min-h-screen bg-slate-950 text-white">
+            <div className="min-h-screen text-white" style={{ background: 'var(--bg-void)' }}>
                 {/* Header */}
-                <header className="sticky top-0 z-40 bg-slate-950/90 backdrop-blur-md border-b border-white/5 px-4 py-4 safe-area-top">
+                <header className="sticky top-0 z-40 backdrop-blur-md border-b border-white/5 px-4 py-4 safe-area-top" style={{ background: 'rgba(2,8,23,0.95)' }}>
                     <div className="max-w-md mx-auto">
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-3">
@@ -435,7 +435,7 @@ const StudentView: React.FC<StudentViewProps> = ({
                                 )}
                                 <div>
                                     <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Olá, {studentName.split(' ')[0]}! 👋</p>
-                                    <h1 className="text-lg font-black text-white">{workout.title}</h1>
+                                    <h1 className="text-xl font-display font-black text-white">{workout.title}</h1>
                                 </div>
                             </div>
                             {coachLogo ? (
@@ -453,7 +453,7 @@ const StudentView: React.FC<StudentViewProps> = ({
                 {/* Split Selection */}
                 <main className="max-w-md mx-auto px-4 py-6 pb-32">
                     <div className="mb-6">
-                        <h2 className="text-xl font-black text-white mb-2">Escolha seu Treino</h2>
+                        <h2 className="text-2xl font-display font-black text-white mb-2">Escolha seu Treino</h2>
                         <p className="text-sm text-slate-400">Selecione qual treino você vai fazer hoje</p>
                     </div>
 
@@ -470,11 +470,14 @@ const StudentView: React.FC<StudentViewProps> = ({
                                     initial={{ opacity: 0, y: 20 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     transition={{ delay: index * 0.1 }}
-                                    onClick={() => setSelectedSplit(split)}
+                                    onClick={() => {
+                                        if ('vibrate' in navigator) navigator.vibrate(20);
+                                        setSelectedSplit(split);
+                                    }}
                                     className="w-full glass-card p-5 rounded-[24px] text-left border border-white/5 hover:border-blue-500/50 active:scale-[0.98] transition-all group"
                                 >
                                     <div className="flex items-center gap-4">
-                                        <div className="size-16 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/20 flex-shrink-0">
+                                        <div className="size-16 rounded-2xl flex items-center justify-center shadow-lg flex-shrink-0" style={{ background: 'linear-gradient(135deg,#1E3A8A,#3B82F6)', boxShadow: '0 8px 24px rgba(30, 58, 138,0.3)' }}>
                                             <span className="text-2xl font-black text-white">{splitLetter}</span>
                                         </div>
                                         <div className="flex-1 min-w-0">
@@ -499,8 +502,8 @@ const StudentView: React.FC<StudentViewProps> = ({
 
                     {/* Demo Indicator */}
                     {!clientId && (
-                        <div className="mt-6 p-4 bg-amber-500/10 border border-amber-500/20 rounded-2xl">
-                            <p className="text-xs text-amber-400 text-center">
+                        <div className="mt-6 p-4 bg-blue-500/10 border border-blue-500/20 rounded-2xl">
+                            <p className="text-xs text-blue-400 text-center">
                                 ⚠️ Modo demonstração - Treinos de exemplo
                             </p>
                         </div>
@@ -512,9 +515,9 @@ const StudentView: React.FC<StudentViewProps> = ({
 
     // Workout Execution View (existing functionality)
     return (
-        <div className="min-h-screen bg-slate-950 text-white">
+        <div className="min-h-screen text-white" style={{ background: 'var(--bg-void)' }}>
             {/* Header */}
-            <header className="sticky top-0 z-40 bg-slate-950/90 backdrop-blur-md border-b border-white/5 px-4 py-4 safe-area-top">
+            <header className="sticky top-0 z-40 backdrop-blur-md border-b border-white/5 px-4 py-4 safe-area-top" style={{ background: 'rgba(2,8,23,0.95)' }}>
                 <div className="max-w-md mx-auto">
                     <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center gap-3">
@@ -560,7 +563,7 @@ const StudentView: React.FC<StudentViewProps> = ({
                     </div>
                     {isColdStartWorkout && (
                         <div className="flex justify-between items-center mt-1">
-                            <span className="text-[10px] font-black text-amber-400 uppercase tracking-widest">Modo Inicial Ativo</span>
+                            <span className="text-[10px] font-black text-blue-400 uppercase tracking-widest">Modo Inicial Ativo</span>
                             <span className="text-[10px] font-bold text-amber-300">
                                 Feedback: {feedbackCompletedExercises.size}/{requiredFeedbackCount}
                             </span>
@@ -578,7 +581,7 @@ const StudentView: React.FC<StudentViewProps> = ({
                         exit={{ opacity: 0, y: 50 }}
                         className="fixed bottom-20 left-4 right-4 z-50 max-w-md mx-auto"
                     >
-                        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-[24px] p-6 shadow-2xl shadow-blue-500/30">
+                        <div className="rounded-[24px] p-6 shadow-2xl" style={{ background: 'linear-gradient(135deg,#1E3A8A,#3B82F6)', boxShadow: '0 16px 48px rgba(30, 58, 138,0.3)' }}>
                             <div className="flex items-center justify-between mb-4">
                                 <div className="flex items-center gap-3">
                                     <div className="size-12 rounded-full bg-white/20 flex items-center justify-center">
@@ -622,7 +625,10 @@ const StudentView: React.FC<StudentViewProps> = ({
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: exerciseIndex * 0.1 }}
-                            onClick={() => setActiveExercise(exerciseIndex)}
+                            onClick={() => {
+                                if ('vibrate' in navigator) navigator.vibrate(15);
+                                setActiveExercise(exerciseIndex);
+                            }}
                             className={`rounded-[24px] overflow-hidden transition-all ${isComplete
                                 ? 'bg-emerald-500/10 border border-emerald-500/30'
                                 : isActive
@@ -712,7 +718,11 @@ const StudentView: React.FC<StudentViewProps> = ({
                                                     </div>
                                                     <div className="flex justify-center">
                                                         <button
-                                                            onClick={(e) => { e.stopPropagation(); toggleSetComplete(exerciseIndex, setIndex); }}
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                if ('vibrate' in navigator) navigator.vibrate([15, 30, 15]);
+                                                                toggleSetComplete(exerciseIndex, setIndex);
+                                                            }}
                                                             className={`size-10 rounded-full border-2 flex items-center justify-center transition-all active:scale-90 ${isSetComplete
                                                                 ? 'bg-emerald-500 border-emerald-400 text-white'
                                                                 : 'border-slate-600 text-slate-600 hover:border-blue-500 hover:text-blue-500'
@@ -746,13 +756,15 @@ const StudentView: React.FC<StudentViewProps> = ({
                 <div className="max-w-md mx-auto px-4">
                     {progress >= 100 ? (
                         <button
-                            onClick={handleFinishWorkout}
+                            onClick={() => {
+                                if ('vibrate' in navigator) navigator.vibrate(100);
+                                handleFinishWorkout();
+                            }}
                             disabled={!canFinishWorkout}
-                            className={`w-full py-4 px-5 rounded-[24px] font-bold text-lg flex items-center gap-4 border-2 text-white transition-all ${
-                                canFinishWorkout
-                                    ? 'bg-emerald-950/40 border-emerald-500/40 shadow-[0_0_20px_rgba(16,185,129,0.15)] hover:bg-emerald-950/60 hover:border-emerald-400 active:scale-[0.98]'
-                                    : 'bg-slate-900/60 border-slate-700/60 opacity-80 cursor-not-allowed'
-                            }`}
+                            className={`w-full py-4 px-5 rounded-[24px] font-bold text-lg flex items-center gap-4 border-2 text-white transition-all ${canFinishWorkout
+                                ? 'bg-emerald-950/40 border-emerald-500/40 shadow-[0_0_20px_rgba(16,185,129,0.15)] hover:bg-emerald-950/60 hover:border-emerald-400 active:scale-[0.98]'
+                                : 'bg-slate-900/60 border-slate-700/60 opacity-80 cursor-not-allowed'
+                                }`}
                         >
                             <div className="size-12 rounded-xl bg-emerald-500/10 border-2 border-emerald-500/50 flex items-center justify-center flex-shrink-0">
                                 <Check size={24} className="text-emerald-400" strokeWidth={3} />
@@ -785,7 +797,7 @@ const StudentView: React.FC<StudentViewProps> = ({
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
+                        className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4"
                     >
                         <div className="max-w-2xl w-full max-h-[90vh] overflow-y-auto">
                             <FeedbackForm

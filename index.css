@@ -3,55 +3,63 @@
 @tailwind utilities;
 
 /* ================================================
-   APEX PREMIUM DESIGN SYSTEM - DARK MODE RESTORED
+   APEX AI — DESIGN SYSTEM v2.0
+   Identidade: Inteligência Artificial Premium
+   Paleta: Deep Space + Electric Cyan + Neon Blue
    ================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
 
 :root {
-  /* Base Colors - Deep & Elegant */
-  --apex-bg: #020617;
-  /* Slate 950 */
-  --apex-surface: #0f172a;
-  /* Slate 900 */
-  --apex-surface-highlight: #1e293b;
-  /* Slate 800 */
+  /* ── Backgrounds ── */
+  --bg-void: #030712;
+  /* deep space black */
+  --bg-surface: #0B0F19;
+  /* card surface */
+  --bg-raised: #111827;
+  /* elevated element */
+  --bg-highlight: #111e38;
+  /* hover / pressed */
 
-  --apex-text-primary: #F8FAFC;
-  /* Slate 50 */
-  --apex-text-secondary: #94A3B8;
-  /* Slate 400 */
-  --apex-text-tertiary: #64748B;
-  /* Slate 500 */
+  /* ── AI Accent System ── */
+  --cyan: #3B82F6;
+  /* primary AI glow */
+  --cyan-dim: rgba(59, 130, 246, 0.15);
+  --cyan-glow: rgba(59, 130, 246, 0.35);
+  --blue-el: #1E3A8A;
+  /* electric blue */
+  --blue-el-dim: rgba(30, 58, 138, 0.15);
+  --green-neo: #00FF88;
+  /* neon green — success */
+  --green-dim: rgba(0, 255, 136, 0.12);
+  --amber-el: #FFB800;
+  /* electric amber — warning */
+  --amber-dim: rgba(255, 184, 0, 0.12);
+  --red-neo: #FF3366;
+  /* neon red — danger */
 
-  /* Accent Colors - Vibrant Neon */
-  --apex-blue: #3B82F6;
-  --apex-blue-glow: rgba(59, 130, 246, 0.5);
-  --apex-violet: #8B5CF6;
-  --apex-emerald: #10B981;
-  --apex-amber: #F59E0B;
-  --apex-rose: #F43F5E;
+  /* ── Text ── */
+  --text-primary: #F0F6FF;
+  --text-secondary: #7A9FCC;
+  --text-muted: #3D5A80;
 
-  /* Gradients */
-  --gradient-main: linear-gradient(135deg, #0f172a 0%, #020617 100%);
-  --gradient-card: linear-gradient(145deg, rgba(30, 41, 59, 0.7) 0%, rgba(15, 23, 42, 0.6) 100%);
-  --gradient-blue: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%);
+  /* ── Borders ── */
+  --border-dim: rgba(59, 130, 246, 0.06);
+  --border-mid: rgba(59, 130, 246, 0.12);
+  --border-lit: rgba(59, 130, 246, 0.25);
 
-  /* Glassmorphism */
-  --glass-bg: rgba(15, 23, 42, 0.6);
-  --glass-border: rgba(255, 255, 255, 0.08);
+  /* ── Gradients ── */
+  --grad-hero: linear-gradient(135deg, #1E3A8A 0%, #2563EB 50%, #3B82F6 100%);
+  --grad-card: linear-gradient(145deg, rgba(12, 22, 41, 0.9) 0%, rgba(6, 13, 31, 0.95) 100%);
+  --grad-ai: linear-gradient(135deg, #1E3A8A 0%, #1E40AF 50%, #3B82F6 100%);
 
-  /* Shadows */
-  --shadow-lg: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
-  --shadow-glow: 0 0 20px rgba(59, 130, 246, 0.25);
-
-  /* Radius */
-  --radius-lg: 16px;
-  --radius-xl: 24px;
-  --radius-2xl: 32px;
+  /* ── Shadows ── */
+  --shadow-cyan: 0 0 30px rgba(59, 130, 246, 0.2);
+  --shadow-blue: 0 0 30px rgba(30, 58, 138, 0.3);
+  --shadow-card: 0 8px 40px rgba(0, 0, 0, 0.5);
 }
 
-/* ================================================
-   BASE STYLES
-   ================================================ */
+/* ── Base ── */
 * {
   box-sizing: border-box;
 }
@@ -59,46 +67,130 @@
 body {
   margin: 0;
   padding: 0;
-  background-color: var(--apex-bg);
-  color: var(--apex-text-primary);
+  background-color: var(--bg-void);
+  color: var(--text-primary);
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  overflow-x: hidden;
+}
+
+/* ── Dot Grid Background (AI aesthetic) ── */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: radial-gradient(circle, rgba(59, 130, 246, 0.04) 1px, transparent 1px);
+  background-size: 32px 32px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar {
+  width: 0;
+  background: transparent;
 }
 
 /* ================================================
-   COMPONENT UTILITIES
+   GLASS CARD SYSTEM
    ================================================ */
+.glass-card {
+  background: var(--grad-card);
+  border: 1px solid var(--border-dim);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
 
-/* Cards */
+.glass-card-cyan {
+  background: rgba(59, 130, 246, 0.04);
+  border: 1px solid var(--border-mid);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+/* ── True Frosted Glass (Premium Touch) ── */
+.glass-pure {
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.glass-pure:active {
+  background: rgba(255, 255, 255, 0.12);
+  transform: scale(0.97);
+}
+
+/* ── Nav Bar ── */
+.nav-bar-dark {
+  background: rgba(2, 8, 23, 0.92);
+  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(28px);
+  border-top: 1px solid rgba(59, 130, 246, 0.06);
+}
+
+/* ── Inputs ── */
+.input-dark {
+  background: rgba(59, 130, 246, 0.04);
+  border: 1px solid var(--border-mid);
+  color: var(--text-primary);
+  transition: all 0.2s;
+}
+
+.input-dark:focus {
+  background: rgba(59, 130, 246, 0.07);
+  border-color: var(--cyan);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.08);
+  outline: none;
+}
+
+.input-dark::placeholder {
+  color: var(--text-muted);
+}
+
+/* ── Cards ── */
 .card-dark {
-  background: var(--gradient-card);
+  background: var(--grad-card);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius-2xl);
-  box-shadow: var(--shadow-lg);
+  border: 1px solid var(--border-dim);
+  border-radius: 20px;
 }
 
 .card-dark:active {
   transform: scale(0.98);
-  transition: transform 0.2s;
+  transition: transform 0.15s;
 }
 
-.card-blue {
-  background: var(--gradient-blue);
-  border-radius: var(--radius-2xl);
-  box-shadow: var(--shadow-glow);
-  color: white;
+/* ── AI Hero Card ── */
+.card-ai {
+  background: var(--grad-ai);
   border: 1px solid rgba(255, 255, 255, 0.1);
   position: relative;
   overflow: hidden;
+  box-shadow: var(--shadow-blue), 0 0 80px rgba(59, 130, 246, 0.15);
 }
 
-/* Pills / Quick Actions */
+/* ── Cyan glow text ── */
+.text-cyan {
+  color: var(--cyan);
+}
+
+.text-cyan-dim {
+  color: rgba(59, 130, 246, 0.6);
+}
+
+.text-blue-el {
+  color: var(--blue-el);
+}
+
+/* ── Pill Action (Quick Actions) ── */
 .pill-action {
-  background: rgba(30, 41, 59, 0.4);
-  border-radius: var(--radius-xl);
-  border: 1px solid var(--glass-border);
+  background: rgba(59, 130, 246, 0.04);
+  border: 1px solid var(--border-dim);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -108,70 +200,39 @@ body {
 }
 
 .pill-action:active {
-  transform: scale(0.95);
-  background: rgba(30, 41, 59, 0.6);
-  border-color: rgba(255, 255, 255, 0.15);
+  transform: scale(0.94);
+  background: var(--cyan-dim);
+  border-color: var(--border-lit);
 }
 
-/* Typography */
-.text-label {
+/* ── Typography Labels ── */
+.label-ai {
   font-size: 10px;
+  font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.15em;
+  color: var(--cyan);
+}
+
+.label-muted {
+  font-size: 10px;
   font-weight: 700;
-  color: var(--apex-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--text-muted);
 }
 
-/* Navigation - Bottom Bar */
-.nav-bar-dark {
-  background: rgba(2, 6, 23, 0.85);
-  /* Slate 950 with opacity */
-  backdrop-filter: blur(20px);
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
-}
-
-/* Floating Action Button */
-.fab-main {
-  background: var(--apex-blue);
-  box-shadow: 0 0 15px rgba(59, 130, 246, 0.4);
-  color: white;
-  border: 4px solid var(--apex-bg);
-}
-
-/* Inputs */
-.input-dark {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: white;
-  transition: all 0.2s;
-}
-
-.input-dark:focus {
-  background: rgba(255, 255, 255, 0.05);
-  border-color: var(--apex-blue);
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
-  outline: none;
-}
-
-.input-dark::placeholder {
-  color: rgba(255, 255, 255, 0.2);
-}
-
-/* Scrollbar */
-::-webkit-scrollbar {
-  width: 0;
-  background: transparent;
-}
-
-/* Animations */
+/* ================================================
+   ANIMATIONS
+   ================================================ */
 .animate-slide-up {
-  animation: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: slideUp 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 @keyframes slideUp {
   from {
     opacity: 0;
-    transform: translateY(20px);
+    transform: translateY(18px);
   }
 
   to {
@@ -181,7 +242,7 @@ body {
 }
 
 .animate-fade-in {
-  animation: fadeIn 0.4s ease-out forwards;
+  animation: fadeIn 0.35s ease-out forwards;
 }
 
 @keyframes fadeIn {
@@ -207,5 +268,46 @@ body {
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+/* Stagger helpers */
+.stagger-1 {
+  animation-delay: 0.08s;
+}
+
+.stagger-2 {
+  animation-delay: 0.16s;
+}
+
+.stagger-3 {
+  animation-delay: 0.24s;
+}
+
+/* Pulse glow for active elements */
+@keyframes glowPulse {
+
+  0%,
+  100% {
+    box-shadow: 0 0 8px rgba(59, 130, 246, 0.3);
+  }
+
+  50% {
+    box-shadow: 0 0 20px rgba(59, 130, 246, 0.6);
+  }
+}
+
+.glow-pulse {
+  animation: glowPulse 2s ease-in-out infinite;
+}
+
+/* Scan line (AI feel) */
+@keyframes scan {
+  0% {
+    transform: translateY(-100%);
+  }
+
+  100% {
+    transform: translateY(100vh);
   }
 }

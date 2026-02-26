@@ -619,7 +619,7 @@ const WorkoutBuilderView: React.FC<WorkoutBuilderViewProps> = ({ user, client, o
                                         </div>
                                         <p className="text-xs text-slate-400 mb-2">{method.description}</p>
                                         {method.structure.specialInstructions && (
-                                            <p className="text-[10px] text-amber-400 italic">💡 {method.structure.specialInstructions}</p>
+                                            <p className="text-[10px] text-blue-400 italic">💡 {method.structure.specialInstructions}</p>
                                         )}
                                     </div>
                                 ))}

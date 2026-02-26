@@ -254,9 +254,12 @@ function App() {
     switch (currentView) {
       case View.DASHBOARD: return 'home';
       case View.CLIENTS: return 'clients';
+      case View.CLIENT_PROFILE: return 'clients';
       case View.METRICS: return 'metrics';
       case View.CALENDAR: return 'calendar';
       case View.FINANCE: return 'finance';
+      case View.SETTINGS: return 'settings';
+      case View.STUDENT_PROFILE: return 'settings';
       default: return 'home';
     }
   };

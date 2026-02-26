@@ -117,7 +117,7 @@ const ClientFinanceSection: React.FC<ClientFinanceSectionProps> = ({ client, coa
             case 'overdue':
                 return { icon: AlertTriangle, color: 'text-red-400', bg: 'bg-red-500/10', label: 'Atrasado' };
             default:
-                return { icon: Clock, color: 'text-amber-400', bg: 'bg-amber-500/10', label: 'Pendente' };
+                return { icon: Clock, color: 'text-blue-400', bg: 'bg-blue-500/10', label: 'Pendente' };
         }
     };
 

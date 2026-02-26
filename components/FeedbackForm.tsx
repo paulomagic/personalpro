@@ -112,7 +112,7 @@ export function FeedbackForm({
                     {prescribedLoad && ` @ ${prescribedLoad}kg`}
                 </p>
                 {requirementNote && (
-                    <p className="text-xs text-amber-600 mt-2 font-medium">
+                    <p className="text-xs text-blue-600 mt-2 font-medium">
                         {requirementNote}
                     </p>
                 )}

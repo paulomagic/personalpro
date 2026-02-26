@@ -58,10 +58,10 @@ export const DetectionFeedback: React.FC<DetectionFeedbackProps> = ({
     // Modo compacto - apenas lista de badges
     if (compact) {
         return (
-            <div className={`rounded-2xl bg-amber-500/10 border border-amber-500/20 p-3 ${className}`}>
+            <div className={`rounded-2xl bg-blue-500/10 border border-blue-500/20 p-3 ${className}`}>
                 <div className="flex items-center gap-2 mb-2">
-                    <span className="material-symbols-outlined text-amber-400 text-sm">warning</span>
-                    <span className="text-xs text-amber-400 font-bold uppercase tracking-wider">
+                    <span className="material-symbols-outlined text-blue-400 text-sm">warning</span>
+                    <span className="text-xs text-blue-400 font-bold uppercase tracking-wider">
                         {conditions.length} condição{conditions.length !== 1 ? 'ões' : ''} detectada{conditions.length !== 1 ? 's' : ''}
                     </span>
                 </div>
@@ -69,7 +69,7 @@ export const DetectionFeedback: React.FC<DetectionFeedbackProps> = ({
                     {conditions.map((cond, idx) => (
                         <span
                             key={idx}
-                            className="px-2 py-0.5 bg-amber-500/20 text-amber-300 rounded-full text-xs font-medium"
+                            className="px-2 py-0.5 bg-blue-500/20 text-amber-300 rounded-full text-xs font-medium"
                         >
                             {formatConditionName(cond.type)}
                             {cond.location && ` (${cond.location})`}
@@ -82,10 +82,10 @@ export const DetectionFeedback: React.FC<DetectionFeedbackProps> = ({
 
     // Modo completo
     return (
-        <div className={`rounded-2xl bg-slate-800/50 border border-amber-500/30 overflow-hidden ${className}`}>
+        <div className={`rounded-2xl bg-slate-800/50 border border-blue-500/30 overflow-hidden ${className}`}>
             {/* Header */}
-            <div className="bg-amber-500/20 px-4 py-3 flex items-center gap-2">
-                <span className="material-symbols-outlined text-amber-400">health_and_safety</span>
+            <div className="bg-blue-500/20 px-4 py-3 flex items-center gap-2">
+                <span className="material-symbols-outlined text-blue-400">health_and_safety</span>
                 <h3 className="font-bold text-amber-300 text-sm tracking-wide">
                     🔍 CONDIÇÕES DETECTADAS
                 </h3>
@@ -150,7 +150,7 @@ export const DetectionFeedback: React.FC<DetectionFeedbackProps> = ({
                         <div className="flex items-center gap-3">
                             {restrictions.volume_modifier < 1.0 && (
                                 <div className="text-center">
-                                    <div className="text-lg font-bold text-amber-400">
+                                    <div className="text-lg font-bold text-blue-400">
                                         {Math.round(restrictions.volume_modifier * 100)}%
                                     </div>
                                     <div className="text-xs text-slate-500 uppercase">Volume</div>
@@ -191,7 +191,7 @@ const ConditionBadge: React.FC<{ condition: { type: string; location?: string; s
         if (['obesidade', 'hipertensao', 'diabetes'].includes(type)) {
             return 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30'; // Metabólico
         }
-        return 'bg-amber-500/20 text-amber-300 border-amber-500/30'; // Padrão
+        return 'bg-blue-500/20 text-amber-300 border-blue-500/30'; // Padrão
     };
 
     const getIcon = (type: string): string => {

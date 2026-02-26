@@ -136,7 +136,7 @@ export function WorkoutHistoryPage() {
 
             {/* Modal de Feedback */}
             {showFeedbackModal && selectedExercise && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+                <div className="fixed inset-0 bg-slate-950 bg-opacity-50 flex items-center justify-center p-4 z-50">
                     <div className="max-w-2xl w-full">
                         <FeedbackForm
                             workoutId={workoutId}

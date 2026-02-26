@@ -135,16 +135,16 @@ const AdminAIDashboardView: React.FC<AdminAIDashboardViewProps> = ({ onBack }) =
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.2 }}
-                    className="glass-card rounded-2xl p-5 border border-amber-500/20 bg-gradient-to-br from-amber-500/10 to-transparent"
+                    className="glass-card rounded-2xl p-5 border border-blue-500/20 bg-gradient-to-br from-amber-500/10 to-transparent"
                 >
                     <div className="flex items-center gap-2 mb-4">
-                        <Coins size={16} className="text-amber-400" />
+                        <Coins size={16} className="text-blue-400" />
                         <span className="text-sm font-black text-white">Tokens Acumulados</span>
-                        <span className="text-[9px] bg-amber-500/20 text-amber-400 px-2 py-0.5 rounded-full">~estimado</span>
+                        <span className="text-[9px] bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded-full">~estimado</span>
                     </div>
                     <div className="grid grid-cols-3 gap-4">
                         <div>
-                            <p className="text-2xl font-black text-amber-400">
+                            <p className="text-2xl font-black text-blue-400">
                                 {loading ? '...' : formatNumber(metrics?.totalTokens || 0)}
                             </p>
                             <p className="text-[10px] text-slate-500">Total</p>
@@ -299,11 +299,11 @@ const AdminAIDashboardView: React.FC<AdminAIDashboardViewProps> = ({ onBack }) =
                                         <div className="flex items-center gap-2">
                                             <div className="h-2 bg-slate-700 rounded-full w-20">
                                                 <div
-                                                    className={`h-full rounded-full transition-all ${rate >= 70 ? 'bg-emerald-500' : rate >= 40 ? 'bg-amber-500' : 'bg-red-500'}`}
+                                                    className={`h-full rounded-full transition-all ${rate >= 70 ? 'bg-emerald-500' : rate >= 40 ? 'bg-blue-500' : 'bg-red-500'}`}
                                                     style={{ width: `${rate}%` }}
                                                 />
                                             </div>
-                                            <span className={`text-xs font-bold w-10 text-right ${rate >= 70 ? 'text-emerald-400' : rate >= 40 ? 'text-amber-400' : 'text-red-400'}`}>
+                                            <span className={`text-xs font-bold w-10 text-right ${rate >= 70 ? 'text-emerald-400' : rate >= 40 ? 'text-blue-400' : 'text-red-400'}`}>
                                                 {rate}%
                                             </span>
                                         </div>
@@ -336,7 +336,7 @@ const AdminAIDashboardView: React.FC<AdminAIDashboardViewProps> = ({ onBack }) =
                                 .map(([action, ms]: [string, any]) => (
                                     <div key={action} className="flex justify-between items-center text-xs">
                                         <span className="text-slate-400 capitalize">{action.replace(/_/g, ' ')}</span>
-                                        <span className={`font-mono font-bold ${ms > 5000 ? 'text-red-400' : ms > 2000 ? 'text-amber-400' : 'text-blue-400'}`}>
+                                        <span className={`font-mono font-bold ${ms > 5000 ? 'text-red-400' : ms > 2000 ? 'text-blue-400' : 'text-blue-400'}`}>
                                             {formatNumber(ms)}ms
                                         </span>
                                     </div>

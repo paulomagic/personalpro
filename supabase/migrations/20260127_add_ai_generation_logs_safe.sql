@@ -110,7 +110,7 @@ BEGIN
     FROM public.ai_generation_logs
     WHERE created_at >= NOW() - (time_range_hours || ' hours')::INTERVAL;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 -- Grant execute permission
 GRANT EXECUTE ON FUNCTION public.get_ai_generation_metrics(INTEGER) TO authenticated;

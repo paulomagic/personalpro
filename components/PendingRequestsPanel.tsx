@@ -88,11 +88,11 @@ const PendingRequestsPanel: React.FC<PendingRequestsPanelProps> = ({ coachId, on
             {/* Header */}
             <button
                 onClick={() => setExpanded(!expanded)}
-                className="w-full flex items-center justify-between p-4 bg-gradient-to-r from-amber-500/20 to-orange-500/20 border border-amber-500/30 rounded-2xl"
+                className="w-full flex items-center justify-between p-4 bg-gradient-to-r from-amber-500/20 to-orange-500/20 border border-blue-500/30 rounded-2xl"
             >
                 <div className="flex items-center gap-3">
-                    <div className="size-10 rounded-xl bg-amber-500/20 flex items-center justify-center">
-                        <RefreshCw size={20} className="text-amber-400" />
+                    <div className="size-10 rounded-xl bg-blue-500/20 flex items-center justify-center">
+                        <RefreshCw size={20} className="text-blue-400" />
                     </div>
                     <div className="text-left">
                         <p className="font-bold text-white">
@@ -104,9 +104,9 @@ const PendingRequestsPanel: React.FC<PendingRequestsPanelProps> = ({ coachId, on
                     </div>
                 </div>
                 {expanded ? (
-                    <ChevronUp size={20} className="text-amber-400" />
+                    <ChevronUp size={20} className="text-blue-400" />
                 ) : (
-                    <ChevronDown size={20} className="text-amber-400" />
+                    <ChevronDown size={20} className="text-blue-400" />
                 )}
             </button>
 
@@ -134,7 +134,7 @@ const PendingRequestsPanel: React.FC<PendingRequestsPanelProps> = ({ coachId, on
                                         <p className="font-bold text-white text-lg">
                                             {request.client_name || 'Aluno'}
                                         </p>
-                                        <span className="text-xs font-medium text-amber-400 bg-amber-500/10 px-2 py-1 rounded-full">
+                                        <span className="text-xs font-medium text-blue-400 bg-blue-500/10 px-2 py-1 rounded-full">
                                             Pendente
                                         </span>
                                     </div>

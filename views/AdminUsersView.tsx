@@ -84,7 +84,7 @@ const AdminUsersView: React.FC<AdminUsersViewProps> = ({ onBack }) => {
                                     <div className="flex items-center gap-2">
                                         <h3 className="font-bold">{user.name}</h3>
                                         {user.role === 'admin' && (
-                                            <span className="flex items-center gap-1 text-[10px] bg-amber-500/20 text-amber-400 px-2 py-0.5 rounded-full">
+                                            <span className="flex items-center gap-1 text-[10px] bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded-full">
                                                 <Shield size={10} />
                                                 Admin
                                             </span>

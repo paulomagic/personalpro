@@ -246,24 +246,33 @@ const ClientProfileView: React.FC<ClientProfileViewProps> = ({ client: initialCl
 
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || !coachId) return;
+    if (!file || !coachId) {
+      console.warn('[handleAvatarChange] Sem arquivo ou coachId:', { file: !!file, coachId });
+      return;
+    }
 
+    console.log('[handleAvatarChange] Iniciando upload:', file.name, 'tamanho:', file.size);
     setIsUploadingAvatar(true);
     try {
       const publicUrl = await uploadAvatar(file, coachId, client.id);
+      console.log('[handleAvatarChange] URL retornada:', publicUrl);
       if (publicUrl) {
         // Atualizar no banco
-        await updateClient(client.id, { avatar_url: publicUrl });
+        const updateResult = await updateClient(client.id, { avatar_url: publicUrl });
+        console.log('[handleAvatarChange] updateClient result:', updateResult);
         // ✅ Atualizar ambos os campos localmente para consistência
         setClient(prev => ({ ...prev, avatar: publicUrl, avatar_url: publicUrl }));
+        console.log('[handleAvatarChange] Estado atualizado com nova foto');
       } else {
         alert('Erro ao fazer upload da imagem. Verifique se o bucket "avatars" existe e está configurado como público no Supabase.');
       }
     } catch (error) {
-      console.error('Error changing avatar:', error);
+      console.error('[handleAvatarChange] Erro inesperado:', error);
       alert('Erro inesperado ao alterar foto.');
     } finally {
       setIsUploadingAvatar(false);
+      // Reset input so same file can be selected again
+      e.target.value = '';
     }
   };
 
@@ -356,35 +365,59 @@ const ClientProfileView: React.FC<ClientProfileViewProps> = ({ client: initialCl
           </div>
         </div>
 
-        {/* Profile Info */}
-        <div className="absolute bottom-6 left-0 right-0 px-6 z-10">
-          <h1 className="text-white text-[28px] font-bold leading-tight">{client.name}</h1>
-          <div className="flex items-center gap-2 mt-1 flex-wrap">
-            <p className="text-white/90 text-base font-medium">{client.goal}</p>
-            <span className="text-white/40">•</span>
-            <span className="text-white/70 text-sm">{client.level}</span>
-            <span className="text-white/40">•</span>
+        {/* Profile Info with visible Avatar */}
+        <div className="absolute bottom-4 left-0 right-0 px-6 z-10 flex items-end gap-4">
 
-            {/* Status Badge */}
-            <button
-              onClick={() => setShowStatusModal(true)}
-              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full border backdrop-blur-md transition-colors ${getStatusColor(client.status)}`}
-            >
-              <StatusIcon size={12} />
-              <span className="text-xs font-bold uppercase">
-                {client.status === 'active' ? 'Ativo' :
-                  client.status === 'paused' ? 'Pausado' :
-                    client.status === 'at-risk' ? 'Risco' : 'Inativo'}
-              </span>
-            </button>
+          {/* Avatar circular VISÍVEL */}
+          <div className="flex-shrink-0 relative">
+            <div className="size-[76px] rounded-2xl border-[3px] border-white/20 overflow-hidden shadow-2xl bg-slate-800">
+              {client.avatar_url || client.avatar ? (
+                <img
+                  src={client.avatar_url || client.avatar}
+                  alt={client.name}
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).style.display = 'none';
+                  }}
+                />
+              ) : (
+                <div className="size-full flex items-center justify-center" style={{ background: 'linear-gradient(135deg,#1E3A8A,#3B82F6)' }}>
+                  <span className="text-2xl font-black text-white">{client.name.charAt(0)}</span>
+                </div>
+              )}
+            </div>
           </div>
-          {client.suspensionReason && client.status === 'paused' && (
-            <p className="text-xs text-slate-400 mt-1">
-              ⏸️ Pausado por: {client.suspensionReason === 'travel' ? 'Viagem' :
-                client.suspensionReason === 'sick' ? 'Doença' :
-                  client.suspensionReason === 'financial' ? 'Financeiro' : 'Outro'}
-            </p>
-          )}
+
+          {/* Name + Info */}
+          <div className="flex-1 min-w-0 pb-1">
+            <h1 className="text-white text-[22px] font-bold leading-tight truncate">{client.name}</h1>
+            <div className="flex items-center gap-2 mt-1 flex-wrap">
+              <p className="text-white/80 text-sm font-medium truncate max-w-[120px]">{client.goal}</p>
+              <span className="text-white/40">•</span>
+              <span className="text-white/70 text-xs">{client.level}</span>
+              <span className="text-white/40">•</span>
+
+              {/* Status Badge */}
+              <button
+                onClick={() => setShowStatusModal(true)}
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full border backdrop-blur-md transition-colors ${getStatusColor(client.status)}`}
+              >
+                <StatusIcon size={12} />
+                <span className="text-xs font-bold uppercase">
+                  {client.status === 'active' ? 'Ativo' :
+                    client.status === 'paused' ? 'Pausado' :
+                      client.status === 'at-risk' ? 'Risco' : 'Inativo'}
+                </span>
+              </button>
+            </div>
+            {client.suspensionReason && client.status === 'paused' && (
+              <p className="text-xs text-slate-400 mt-1">
+                ⏸️ Pausado por: {client.suspensionReason === 'travel' ? 'Viagem' :
+                  client.suspensionReason === 'sick' ? 'Doença' :
+                    client.suspensionReason === 'financial' ? 'Financeiro' : 'Outro'}
+              </p>
+            )}
+          </div>
         </div>
       </header>
 

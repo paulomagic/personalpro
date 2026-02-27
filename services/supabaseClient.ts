@@ -712,26 +712,34 @@ export async function uploadAvatar(
         const extension = file.name.split('.').pop() || 'jpg';
         const filePath = `${coachId}/${clientId}/${timestamp}.${extension}`;
 
+        console.log('[uploadAvatar] Iniciando upload para bucket:', AVATARS_BUCKET);
+        console.log('[uploadAvatar] File path:', filePath);
+        console.log('[uploadAvatar] File size:', file.size, 'bytes');
+
         const { data, error } = await supabase.storage
             .from(AVATARS_BUCKET)
             .upload(filePath, file, {
                 cacheControl: '3600',
-                upsert: false
+                upsert: true  // allow re-upload of same file
             });
 
         if (error) {
-            console.error('Error uploading avatar:', error.message);
+            console.error('[uploadAvatar] ERRO ao fazer upload:', error);
             return null;
         }
 
-        // Get the public URL. NOTE: The "avatars" bucket must be set as PUBLIC in Supabase
+        console.log('[uploadAvatar] Upload OK, path:', data.path);
+
+        // Get the public URL
         const { data: publicData } = supabase.storage
             .from(AVATARS_BUCKET)
             .getPublicUrl(data.path);
 
+        console.log('[uploadAvatar] URL pública gerada:', publicData.publicUrl);
+
         return publicData.publicUrl;
     } catch (error) {
-        console.error('Error in uploadAvatar:', error);
+        console.error('[uploadAvatar] Exceção inesperada:', error);
         return null;
     }
 }

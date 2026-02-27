@@ -340,45 +340,55 @@ const ClientProfileView: React.FC<ClientProfileViewProps> = ({ client: initialCl
         </div>
       </header>
 
-      {/* Tabs */}
-      <div className="px-6 pt-4 border-b border-white/5">
-        <div className="flex gap-6">
-          {tabs.map(tab => (
+      {/* Premium Segmented Control (Tabs) */}
+      <div className="px-5 mt-6 mb-2">
+        <div className="flex bg-slate-900/60 rounded-[18px] backdrop-blur-md p-1 border border-white/5 relative">
+          {tabs.map((tab, idx) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`pb-3 text-sm font-bold transition-all relative ${activeTab === tab ? 'text-white' : 'text-slate-500 hover:text-slate-300'
+              className={`relative z-10 flex-1 py-3 px-2 rounded-[14px] flex items-center justify-center transition-all ${activeTab === tab
+                ? 'text-white'
+                : 'text-slate-500 hover:text-slate-300'
                 }`}
             >
-              {tab}
-              {activeTab === tab && (
-                <motion.div
-                  layoutId="tabIndicator"
-                  className="absolute bottom-0 left-0 right-0 h-0.5 rounded-full"
-                  style={{ background: '#3B82F6' }}
-                />
-              )}
+              <span className="text-[11px] font-black uppercase tracking-wider">{tab}</span>
             </button>
           ))}
+          {/* Active Background Pill */}
+          <motion.div
+            className="absolute top-1 bottom-1 bg-blue-600 rounded-[14px] shadow-glow z-0"
+            style={{ width: `${100 / tabs.length}%` }}
+            animate={{
+              left: `calc(${(tabs.indexOf(activeTab) * (100 / tabs.length))}%)`
+            }}
+            transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+          />
         </div>
       </div>
 
       <main className="px-6 space-y-6 pb-28 pt-6">
         {/* Stats Cards */}
-        <div className="grid grid-cols-2 gap-3">
-          <div className="p-4 rounded-2xl border-l-4 border-cyan-400" style={{ background: 'rgba(59, 130, 246,0.05)' }}>
-            <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mb-1">Aderência</p>
-            <div className="flex items-end gap-2">
-              <span className="text-3xl font-black text-white">{client.adherence}%</span>
-              {client.adherence >= 80 && <span className="text-xs font-bold mb-1" style={{ color: '#00FF88' }}>Excelente!</span>}
+        <div className="grid grid-cols-2 gap-3 mb-6">
+          <div className="glass-card p-5 text-center rounded-3xl relative overflow-hidden group">
+            <div className="absolute top-0 right-0 w-16 h-16 bg-cyan-500/10 rounded-full blur-2xl group-hover:bg-cyan-500/20 transition-all" />
+            <div className="size-10 rounded-[12px] bg-cyan-500/10 flex items-center justify-center mx-auto mb-3 border border-cyan-500/20">
+              <CheckCircle size={18} className="text-cyan-400" />
             </div>
+            <p className="text-3xl font-black text-white tracking-tight">{client.adherence}<span className="text-sm text-slate-500 ml-1">%</span></p>
+            <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mt-1">Aderência</p>
+            {client.adherence >= 80 && (
+              <div className="absolute bottom-0 left-0 right-0 bg-emerald-500/10 text-emerald-400 text-[9px] py-1 font-black tracking-widest uppercase">Excelente</div>
+            )}
           </div>
-          <div className="p-4 rounded-2xl border-l-4 border-blue-400" style={{ background: 'rgba(30, 58, 138,0.05)' }}>
-            <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mb-1">Treinos</p>
-            <div className="flex items-end gap-1">
-              <span className="text-3xl font-black text-white">{client.completedClasses || 0}</span>
-              <span className="text-slate-500 text-sm font-bold mb-1">/{client.totalClasses || 0}</span>
+
+          <div className="glass-card p-5 text-center rounded-3xl relative overflow-hidden group">
+            <div className="absolute top-0 right-0 w-16 h-16 bg-blue-500/10 rounded-full blur-2xl group-hover:bg-blue-500/20 transition-all" />
+            <div className="size-10 rounded-[12px] bg-blue-500/10 flex items-center justify-center mx-auto mb-3 border border-blue-500/20">
+              <Dumbbell size={18} className="text-blue-400" />
             </div>
+            <p className="text-3xl font-black text-white tracking-tight">{client.completedClasses || 0}<span className="text-sm font-black text-slate-500 ml-1">/{client.totalClasses || 0}</span></p>
+            <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mt-1">Treinos</p>
           </div>
         </div>
 

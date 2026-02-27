@@ -6,12 +6,12 @@
 //   supabase secrets set GEMINI_API_KEY=your-key
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { buildRateLimitHeaders, checkRateLimit } from "../_shared/rateLimit.ts";
 
 const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models";
 
 // Model
 const MODEL = "gemini-2.5-flash";
-const requestsByKey = new Map<string, { count: number; resetAt: number }>();
 
 function getAllowedOrigins(): string[] {
     const raw = Deno.env.get("ALLOWED_ORIGINS") || "";
@@ -45,23 +45,6 @@ function getClientIp(req: Request): string {
     return req.headers.get("cf-connecting-ip")
         || req.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
         || "unknown";
-}
-
-function isRateLimited(rateKey: string): boolean {
-    const max = Number(Deno.env.get("RATE_LIMIT_MAX") || "20");
-    const windowMs = Number(Deno.env.get("RATE_LIMIT_WINDOW_MS") || "60000");
-    const now = Date.now();
-    const slot = requestsByKey.get(rateKey);
-
-    if (!slot || now >= slot.resetAt) {
-        requestsByKey.set(rateKey, { count: 1, resetAt: now + windowMs });
-        return false;
-    }
-
-    if (slot.count >= max) return true;
-    slot.count += 1;
-    requestsByKey.set(rateKey, slot);
-    return false;
 }
 
 async function getAuthenticatedUserId(req: Request): Promise<string | null> {
@@ -178,13 +161,20 @@ serve(async (req: Request) => {
         );
     }
 
-    const rateKey = `${userId}:${getClientIp(req)}`;
-    if (isRateLimited(rateKey)) {
+    const rateKey = `gemini-proxy:${userId}:${getClientIp(req)}`;
+    const rateResult = await checkRateLimit(rateKey);
+    const rateLimitHeaders = buildRateLimitHeaders(rateResult);
+    if (!rateResult.allowed) {
         return new Response(
             JSON.stringify({ success: false, error: "Rate limit exceeded" }),
-            { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            {
+                status: 429,
+                headers: { ...corsHeaders, ...rateLimitHeaders, "Content-Type": "application/json" }
+            }
         );
     }
+
+    const jsonHeaders = { ...corsHeaders, ...rateLimitHeaders, "Content-Type": "application/json" };
 
     try {
         const startTime = Date.now();
@@ -193,7 +183,7 @@ serve(async (req: Request) => {
         if (!prompt || typeof prompt !== "string") {
             return new Response(
                 JSON.stringify({ success: false, error: "Missing or invalid prompt" }),
-                { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+                { status: 400, headers: jsonHeaders }
             );
         }
 
@@ -201,7 +191,7 @@ serve(async (req: Request) => {
         if (prompt.length > 50000) {
             return new Response(
                 JSON.stringify({ success: false, error: "Prompt too long (max 50000 chars)" }),
-                { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+                { status: 400, headers: jsonHeaders }
             );
         }
 
@@ -212,7 +202,7 @@ serve(async (req: Request) => {
             console.error("No Gemini API key configured");
             return new Response(
                 JSON.stringify({ success: false, error: "AI service not configured" }),
-                { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+                { status: 500, headers: jsonHeaders }
             );
         }
 
@@ -230,7 +220,7 @@ serve(async (req: Request) => {
                     model: MODEL,
                     latencyMs,
                 }),
-                { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+                { status: 200, headers: jsonHeaders }
             );
         } else {
             console.error(`[gemini-proxy] Failed: ${result.error}`);
@@ -239,14 +229,14 @@ serve(async (req: Request) => {
                     success: false,
                     error: "AI generation failed",
                 }),
-                { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+                { status: 500, headers: jsonHeaders }
             );
         }
     } catch (error) {
         console.error("[gemini-proxy] Unexpected error:", error);
         return new Response(
             JSON.stringify({ success: false, error: "Internal server error" }),
-            { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            { status: 500, headers: jsonHeaders }
         );
     }
 });

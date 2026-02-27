@@ -62,6 +62,9 @@ const ClientProfileView: React.FC<ClientProfileViewProps> = ({ client: initialCl
           age: clientData?.age ?? prev.age,
           weight: clientData?.weight ?? prev.weight,
           height: clientData?.height ?? prev.height,
+          // ✅ Sync avatar from DB to avoid stale state on re-mounts
+          avatar: (clientData as any)?.avatar || clientData?.avatar_url || prev.avatar,
+          avatar_url: clientData?.avatar_url || prev.avatar_url,
           assessments: mappedAssessments as any[], // Force type
           workouts: workoutsData
         }));
@@ -251,10 +254,10 @@ const ClientProfileView: React.FC<ClientProfileViewProps> = ({ client: initialCl
       if (publicUrl) {
         // Atualizar no banco
         await updateClient(client.id, { avatar_url: publicUrl });
-        // Atualizar localmente
-        setClient(prev => ({ ...prev, avatar: publicUrl }));
+        // ✅ Atualizar ambos os campos localmente para consistência
+        setClient(prev => ({ ...prev, avatar: publicUrl, avatar_url: publicUrl }));
       } else {
-        alert('Erro ao fazer upload da imagem. Talvez o bucket "avatars" não exista ou precise ser configurado como público.');
+        alert('Erro ao fazer upload da imagem. Verifique se o bucket "avatars" existe e está configurado como público no Supabase.');
       }
     } catch (error) {
       console.error('Error changing avatar:', error);

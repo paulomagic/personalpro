@@ -47,7 +47,7 @@ const ClientsView: React.FC<ClientsViewProps> = ({ user, onBack, onSelectClient 
             const mappedClients: Client[] = data.map(dbClient => ({
                 id: dbClient.id,
                 name: dbClient.name,
-                avatar: dbClient.avatar_url || '',
+                avatar: dbClient.avatar_url || undefined,
                 goal: dbClient.goal,
                 level: dbClient.level as any,
                 age: dbClient.age,  // ✅ Incluído

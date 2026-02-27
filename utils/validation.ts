@@ -7,9 +7,11 @@ const ALLOWED_AVATAR_DOMAINS = [
     'ui-avatars.com',
     'lh3.googleusercontent.com',
     'googleusercontent.com',
-    'supabase.co',
-    'supabase.com',
+    'supabase.co',       // covers *.supabase.co subdomains via endsWith check
+    'supabase.com',      // covers *.supabase.com subdomains
+    'storage.googleapis.com',
     'avatars.githubusercontent.com',
+    'images.unsplash.com',
 ];
 
 /**

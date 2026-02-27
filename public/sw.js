@@ -1,14 +1,12 @@
-const CACHE_NAME = 'personalpro-v18';
-const STATIC_CACHE = 'personalpro-static-v18';
-const DYNAMIC_CACHE = 'personalpro-dynamic-v18';
+const CACHE_NAME = 'personalpro-v19';
+const STATIC_CACHE = 'personalpro-static-v19';
+const DYNAMIC_CACHE = 'personalpro-dynamic-v19';
 
 // Bypass cache em desenvolvimento (localhost)
 const IS_DEV = self.location.hostname === 'localhost' || self.location.hostname === '127.0.0.1';
 
 // Assets estáticos para cachear imediatamente
 const STATIC_ASSETS = [
-    '/',
-    '/index.html',
     '/offline.html',
     '/hero.png',
     '/icons/icon-192.png',
@@ -148,6 +146,28 @@ async function staleWhileRevalidate(request) {
     return cachedResponse || fetchPromise;
 }
 
+// Estratégia: Network First para navegação (evita index.html antigo após deploy)
+async function networkFirstNavigation(request) {
+    try {
+        const networkResponse = await fetch(request);
+        if (networkResponse.ok) {
+            const cache = await caches.open(DYNAMIC_CACHE);
+            cache.put(request, networkResponse.clone());
+        }
+        return networkResponse;
+    } catch (error) {
+        const cachedResponse = await caches.match(request);
+        if (cachedResponse) {
+            return cachedResponse;
+        }
+        const offlinePage = await caches.match('/offline.html');
+        if (offlinePage) {
+            return offlinePage;
+        }
+        throw error;
+    }
+}
+
 // Fetch event - aplicar estratégias de cache
 self.addEventListener('fetch', (event) => {
     const { request } = event;
@@ -169,6 +189,11 @@ self.addEventListener('fetch', (event) => {
                 // Em desenvolvimento: bypass total para JS/CSS (HMR)
                 if (IS_DEV && isDevAsset(url)) {
                     return await fetch(request);
+                }
+
+                // Navegação principal do app: sempre tentar rede primeiro
+                if (request.mode === 'navigate') {
+                    return await networkFirstNavigation(request);
                 }
 
                 // APIs: Network First

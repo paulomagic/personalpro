@@ -115,7 +115,8 @@ export function sanitizeText(text: string): string {
 /**
  * Conditional logger - only logs in development
  */
-const isDev = import.meta.env?.DEV ?? false;
+const isDev = typeof window !== 'undefined'
+    && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
 
 export const logger = {
     log: (...args: any[]) => isDev && console.log(...args),

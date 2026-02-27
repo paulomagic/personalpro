@@ -1,5 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Turnstile } from '@marsidev/react-turnstile';
+import React, { useState, useEffect } from 'react';
 import { supabase, getInvitationByToken, acceptInvitation } from '../services/supabaseClient';
 import type { AppSessionUser } from '../services/auth/authFlow';
 import { calculateLockDurationMs, getRemainingLockSeconds, isLockedOut } from '../services/auth/authFlow';
@@ -9,25 +8,34 @@ interface LoginViewProps {
 }
 
 interface InputFieldProps {
+  id: string;
+  label: string;
   type: React.HTMLInputTypeAttribute;
   placeholder: string;
   value: string;
   onChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  autoComplete?: string;
 }
 
-const InputField: React.FC<InputFieldProps> = ({ type, placeholder, value, onChange }) => (
-  <input
-    type={type}
-    placeholder={placeholder}
-    value={value}
-    onChange={onChange}
-    className="w-full h-14 px-6 rounded-2xl border border-white/10 bg-white/5 text-white placeholder:text-slate-500 focus:border-blue-500/50 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all font-medium"
-  />
+const InputField: React.FC<InputFieldProps> = ({ id, label, type, placeholder, value, onChange, autoComplete }) => (
+  <div>
+    <label htmlFor={id} className="sr-only">{label}</label>
+    <input
+      id={id}
+      type={type}
+      placeholder={placeholder}
+      value={value}
+      onChange={onChange}
+      autoComplete={autoComplete}
+      className="w-full h-14 px-6 rounded-2xl border border-white/10 bg-white/5 text-white placeholder:text-slate-500 focus:border-blue-500/50 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all font-medium"
+    />
+  </div>
 );
 
+const LOGIN_ATTEMPTS_KEY = 'personalpro:auth:loginAttempts';
+const LOCK_UNTIL_KEY = 'personalpro:auth:lockUntil';
+
 const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
-  const TURNSTILE_SITE_KEY = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_TURNSTILE_SITE_KEY) || '';
-  const TURNSTILE_VALIDATE_URL = `${(typeof import.meta !== 'undefined' && import.meta.env?.VITE_SUPABASE_URL) || ''}/functions/v1/validate-turnstile`;
   const [currentSlide, setCurrentSlide] = useState(0);
   const [showRegister, setShowRegister] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
@@ -37,9 +45,6 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
-  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
-  const [captchaValidating, setCaptchaValidating] = useState(false);
-  const turnstileRef = useRef<{ reset?: () => void } | null>(null);
 
   // Rate limiting states
   const [loginAttempts, setLoginAttempts] = useState(0);
@@ -71,6 +76,43 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
     }
   }, []);
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const storedAttempts = Number(window.localStorage.getItem(LOGIN_ATTEMPTS_KEY) || '0');
+      const storedLockUntil = Number(window.localStorage.getItem(LOCK_UNTIL_KEY) || '0');
+      if (!Number.isNaN(storedAttempts) && storedAttempts > 0) {
+        setLoginAttempts(storedAttempts);
+      }
+      if (!Number.isNaN(storedLockUntil) && storedLockUntil > Date.now()) {
+        setLockUntil(storedLockUntil);
+      } else {
+        window.localStorage.removeItem(LOCK_UNTIL_KEY);
+      }
+    } catch {
+      // localStorage can be blocked by browser privacy settings
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      if (loginAttempts > 0) {
+        window.localStorage.setItem(LOGIN_ATTEMPTS_KEY, String(loginAttempts));
+      } else {
+        window.localStorage.removeItem(LOGIN_ATTEMPTS_KEY);
+      }
+
+      if (lockUntil && lockUntil > Date.now()) {
+        window.localStorage.setItem(LOCK_UNTIL_KEY, String(lockUntil));
+      } else {
+        window.localStorage.removeItem(LOCK_UNTIL_KEY);
+      }
+    } catch {
+      // Ignore storage errors
+    }
+  }, [loginAttempts, lockUntil]);
+
   const slides = [
     {
       title: "Performance de Elite",
@@ -85,19 +127,6 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
       subtitle: "Organize sua agenda, financeiro e métricas em um único lugar."
     }
   ];
-
-  const resetCaptcha = () => {
-    setCaptchaToken(null);
-    if (turnstileRef.current?.reset) {
-      turnstileRef.current.reset();
-    }
-  };
-
-  const validateCaptchaIfEnabled = async (): Promise<boolean> => {
-    // TEMPORARIAMENTE DESATIVADO: Turnstile com chave inválida/expirada no Cloudflare.
-    // Reativar após corrigir a configuração no painel do Cloudflare Turnstile.
-    return true;
-  };
 
   const handleForgotPassword = async () => {
     if (!email) {
@@ -140,9 +169,6 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
       return;
     }
 
-    const captchaOk = await validateCaptchaIfEnabled();
-    if (!captchaOk) return;
-
     setLoading(true);
     setError(null);
 
@@ -177,7 +203,6 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
             ? `Email ou senha incorretos (${5 - newAttempts} tentativas restantes)`
             : authError.message);
         }
-        resetCaptcha();
         return;
       }
 
@@ -187,7 +212,6 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
       if (data.user) onLogin(data.user as AppSessionUser);
     } catch {
       setError('Erro ao fazer login. Tente novamente.');
-      resetCaptcha();
     } finally {
       setLoading(false);
     }
@@ -198,9 +222,6 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
       setError('Preencha todos os campos');
       return;
     }
-
-    const captchaOk = await validateCaptchaIfEnabled();
-    if (!captchaOk) return;
 
     setLoading(true);
     setError(null);
@@ -232,7 +253,6 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
 
       if (authError) {
         setError(authError.message);
-        resetCaptcha();
         return;
       }
 
@@ -257,7 +277,6 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
       }
     } catch {
       setError('Erro ao criar conta. Tente novamente.');
-      resetCaptcha();
     } finally {
       setLoading(false);
     }
@@ -312,10 +331,11 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
     return (
       <div className="flex flex-col min-h-screen bg-slate-950 px-8 py-12">
         <button
-          onClick={() => { setShowLogin(false); setShowRegister(false); setError(null); resetCaptcha(); }}
+          onClick={() => { setShowLogin(false); setShowRegister(false); setError(null); }}
+          aria-label="Voltar para tela inicial"
           className="absolute top-12 left-6 size-10 rounded-full bg-slate-900 border border-white/10 flex items-center justify-center text-slate-400 hover:text-white transition-colors"
         >
-          <span className="material-symbols-outlined">arrow_back</span>
+          <span className="material-symbols-outlined" aria-hidden="true">arrow_back</span>
         </button>
 
         <div className="pt-12 pb-8 flex flex-col items-center">
@@ -353,16 +373,42 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
 
         <div className="space-y-4 mb-4 animate-slide-up">
           {isRegister && (
-            <InputField type="text" placeholder="Nome completo" value={name} onChange={(e) => setName(e.target.value)} />
+            <InputField
+              id="register-name"
+              label="Nome completo"
+              type="text"
+              placeholder="Nome completo"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              autoComplete="name"
+            />
           )}
-          <InputField type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
+          <InputField
+            id="auth-email"
+            label="Email"
+            type="email"
+            placeholder="Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            autoComplete="email"
+          />
           <div className="relative">
-            <InputField type={showPassword ? "text" : "password"} placeholder="Senha" value={password} onChange={(e) => setPassword(e.target.value)} />
+            <InputField
+              id="auth-password"
+              label="Senha"
+              type={showPassword ? "text" : "password"}
+              placeholder="Senha"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              autoComplete={isRegister ? 'new-password' : 'current-password'}
+            />
             <button
+              type="button"
               onClick={() => setShowPassword(!showPassword)}
+              aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
               className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300"
             >
-              <span className="material-symbols-outlined text-xl">
+              <span className="material-symbols-outlined text-xl" aria-hidden="true">
                 {showPassword ? 'visibility' : 'visibility_off'}
               </span>
             </button>
@@ -375,40 +421,9 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
             </div>
           )}
         </div>
-
-        {/* TURNSTILE TEMPORARIAMENTE DESATIVADO - Reativar após corrigir chave no Cloudflare */}
-        {/* {TURNSTILE_SITE_KEY && (
-          <div className="mb-4 flex justify-center">
-            <Turnstile
-              ref={turnstileRef}
-              siteKey={TURNSTILE_SITE_KEY}
-              options={{ theme: 'dark', size: 'normal' }}
-              onSuccess={(token) => {
-                setCaptchaToken(token);
-                setError(null);
-              }}
-              onError={() => {
-                setCaptchaToken(null);
-                setError('Falha na validação anti-bot');
-              }}
-              onLoadScript={() => {
-                console.log('Turnstile loaded');
-              }}
-              scriptOptions={{
-                onError: () => {
-                  setError('Erro grave: O seu navegador impediu o carregamento da segurança. Desative todas as extensões de AdBlock/Antivírus.');
-                }
-              }}
-              onExpire={() => setCaptchaToken(null)}
-            />
-          </div>
-        )} */}
-
-
-
         <button
           onClick={isRegister ? handleRegister : handleLogin}
-          disabled={loading || captchaValidating}
+          disabled={loading}
           className="w-full h-14 bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white font-bold rounded-2xl text-base transition-all shadow-xl shadow-blue-600/20 disabled:opacity-50 flex items-center justify-center border border-white/5 mb-4"
         >
           {loading ? (
@@ -430,7 +445,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
 
         <p className="text-center mt-6 text-sm text-slate-500">
           {isRegister ? 'Já tem uma conta?' : 'Não tem conta?'}
-          <button onClick={() => { setShowLogin(!isRegister); setShowRegister(!showRegister); setError(null); resetCaptcha(); }} className="text-blue-500 font-bold ml-1 hover:underline">
+          <button onClick={() => { setShowLogin(!isRegister); setShowRegister(!showRegister); setError(null); }} className="text-blue-500 font-bold ml-1 hover:underline">
             {isRegister ? 'Entrar' : 'Criar conta'}
           </button>
         </p>
@@ -476,6 +491,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
             <button
               key={index}
               onClick={() => setCurrentSlide(index)}
+              aria-label={`Ir para destaque ${index + 1}`}
               className={`h-1.5 rounded-full transition-all duration-300 ${index === currentSlide
                 ? 'w-8 bg-blue-600 shadow-glow'
                 : 'w-2 bg-slate-800'

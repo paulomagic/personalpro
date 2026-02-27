@@ -249,6 +249,7 @@ const TrainingExecutionView: React.FC<TrainingExecutionViewProps> = ({ workout, 
         <div className="max-w-md mx-auto w-full">
           <button
             onClick={onFinish}
+            aria-label="Voltar para treinos"
             className="mb-6 text-sm text-slate-400 hover:text-white transition-colors"
           >
             ← Voltar
@@ -318,9 +319,10 @@ const TrainingExecutionView: React.FC<TrainingExecutionViewProps> = ({ workout, 
       <header className="relative z-10 pt-14 px-6 flex justify-between items-center animate-fade-in">
         <button
           onClick={onFinish}
+          aria-label="Encerrar treino e voltar"
           className="size-12 rounded-2xl glass-card flex items-center justify-center active:scale-90 transition-all"
         >
-          <span className="material-symbols-outlined text-white">arrow_back</span>
+          <span className="material-symbols-outlined text-white" aria-hidden="true">arrow_back</span>
         </button>
 
         <div className="text-center">
@@ -397,14 +399,22 @@ const TrainingExecutionView: React.FC<TrainingExecutionViewProps> = ({ workout, 
 
               <div className="flex flex-col justify-end">
                 <p className="text-blue-400 text-[10px] font-black uppercase tracking-widest mb-4 flex items-center gap-2">
-                  <span className="material-symbols-outlined text-sm">edit</span>
+                  <span className="material-symbols-outlined text-sm" aria-hidden="true">edit</span>
                   Carga (KG)
                 </p>
+                <label htmlFor="current-load-input" className="sr-only">
+                  Carga atual em quilos para {exerciseName}
+                </label>
                 <input
+                  id="current-load-input"
                   type="number"
                   value={currentLoad || ''}
                   placeholder="0"
                   onChange={(e) => setCurrentLoad(Number(e.target.value))}
+                  inputMode="decimal"
+                  min={0}
+                  step="0.5"
+                  aria-label={`Carga atual em quilos para ${exerciseName}`}
                   className="w-full bg-transparent border-none text-white text-7xl font-black outline-none p-0 tabular-nums focus:text-blue-400 transition-colors placeholder:text-slate-700"
                 />
               </div>
@@ -413,9 +423,14 @@ const TrainingExecutionView: React.FC<TrainingExecutionViewProps> = ({ workout, 
             {/* Main Action */}
             <button
               onClick={handleCompleteSet}
+              aria-label={currentSet === totalSets && currentExerciseIndex === exercises.length - 1
+                ? 'Finalizar treino'
+                : currentSet === totalSets
+                  ? 'Ir para próximo exercício'
+                  : 'Concluir série atual'}
               className="w-full h-20 bg-blue-600 hover:bg-blue-500 text-white rounded-[32px] font-black text-lg uppercase tracking-[0.2em] flex items-center justify-center gap-4 shadow-2xl shadow-blue-900/40 active:scale-95 transition-all animate-slide-up stagger-2"
             >
-              <span className="material-symbols-outlined text-3xl font-bold">check</span>
+              <span className="material-symbols-outlined text-3xl font-bold" aria-hidden="true">check</span>
               {currentSet === totalSets && currentExerciseIndex === exercises.length - 1
                 ? 'Finalizar Treino'
                 : currentSet === totalSets

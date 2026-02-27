@@ -14,6 +14,7 @@
     "services/auth/**/*.ts",
     "services/clientProfileUtils.ts",
     "services/ai/providers/edgeHeaders.ts",
+    "utils/**/*.ts",
     "types.ts"
   ],
   "exclude": [

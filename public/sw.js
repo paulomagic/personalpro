@@ -1,6 +1,6 @@
-const CACHE_NAME = 'personalpro-v17';
-const STATIC_CACHE = 'personalpro-static-v17';
-const DYNAMIC_CACHE = 'personalpro-dynamic-v17';
+const CACHE_NAME = 'personalpro-v18';
+const STATIC_CACHE = 'personalpro-static-v18';
+const DYNAMIC_CACHE = 'personalpro-dynamic-v18';
 
 // Bypass cache em desenvolvimento (localhost)
 const IS_DEV = self.location.hostname === 'localhost' || self.location.hostname === '127.0.0.1';

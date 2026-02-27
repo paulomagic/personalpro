@@ -20,6 +20,7 @@ const AddClientModal: React.FC<AddClientModalProps> = ({ isOpen, onClose, onSave
     const [phone, setPhone] = useState('');
     const [birthDate, setBirthDate] = useState('');
     const [avatar, setAvatar] = useState('');
+    const [avatarFile, setAvatarFile] = useState<File | null>(null);
 
     // Details
     const [goal, setGoal] = useState('Hipertrofia');
@@ -88,7 +89,8 @@ const AddClientModal: React.FC<AddClientModalProps> = ({ isOpen, onClose, onSave
             assessments: [],
             totalClasses: 0,
             completedClasses: 0,
-        };
+            avatarFile: avatarFile, // Pass the File object for upload
+        } as any;
 
         try {
             await onSave(newClient);
@@ -115,6 +117,7 @@ const AddClientModal: React.FC<AddClientModalProps> = ({ isOpen, onClose, onSave
         setPreferences('');
         setActiveTab('basic');
         setFormError(null);
+        setAvatarFile(null);
     };
 
     if (!isOpen) return null;
@@ -173,6 +176,35 @@ const AddClientModal: React.FC<AddClientModalProps> = ({ isOpen, onClose, onSave
                             animate={{ opacity: 1, x: 0 }}
                             className="space-y-4"
                         >
+                            {/* Avatar Upload */}
+                            <div className="flex justify-center mb-6">
+                                <label className="relative cursor-pointer group">
+                                    <input
+                                        type="file"
+                                        accept="image/*"
+                                        className="hidden"
+                                        onChange={(e) => {
+                                            const file = e.target.files?.[0];
+                                            if (file) {
+                                                setAvatarFile(file);
+                                                setAvatar(URL.createObjectURL(file));
+                                            }
+                                        }}
+                                    />
+                                    <div className="w-24 h-24 rounded-full bg-slate-800 border-2 border-slate-700 flex items-center justify-center overflow-hidden relative shadow-lg">
+                                        {avatar ? (
+                                            <img src={avatar} alt="Avatar" className="w-full h-full object-cover" />
+                                        ) : (
+                                            <User size={32} className="text-slate-500" />
+                                        )}
+                                        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center transition-all duration-300">
+                                            <User size={18} className="text-white mb-1" />
+                                            <span className="text-[10px] text-white font-bold uppercase tracking-wider">Trocar</span>
+                                        </div>
+                                    </div>
+                                </label>
+                            </div>
+
                             {/* Name */}
                             <div>
                                 <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide block mb-2">

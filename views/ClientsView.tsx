@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, Plus, Users, AlertTriangle, Pause, CheckCircle, ChevronRight, User } from 'lucide-react';
 import { Client } from '../types';
-import { getClients, createClient, DBClient } from '../services/supabaseClient';
+import { getClients, createClient, DBClient, uploadAvatar } from '../services/supabaseClient';
 import { mockClients } from '../mocks/demoData';
 import AddClientModal from '../components/AddClientModal';
 import { ClientCardSkeleton } from '../components/Skeleton';
@@ -91,6 +91,20 @@ const ClientsView: React.FC<ClientsViewProps> = ({ user, onBack, onSelectClient 
         }
 
         try {
+            // Upload avatar first if exists
+            let avatarUrl = newClientData.avatar;
+            if ((newClientData as any).avatarFile) {
+                try {
+                    const uploadedUrl = await uploadAvatar((newClientData as any).avatarFile, user.id, 'new');
+                    if (uploadedUrl) {
+                        avatarUrl = uploadedUrl;
+                    }
+                } catch (e) {
+                    console.error('Error uploading avatar:', e);
+                    showToast('Não foi possível fazer upload da foto. Usando padrão.', 'error');
+                }
+            }
+
             const clientToCreate: any = {
                 coach_id: user.id,
                 name: newClientData.name,
@@ -100,7 +114,8 @@ const ClientsView: React.FC<ClientsViewProps> = ({ user, onBack, onSelectClient 
                 level: 'Iniciante',  // Default
                 status: 'active',
                 adherence: 0,
-                ...newClientData
+                ...newClientData,
+                avatar_url: avatarUrl // override avatar_url
             };
 
             // Remove non-DB fields and map camelCase to snake_case
@@ -118,6 +133,7 @@ const ClientsView: React.FC<ClientsViewProps> = ({ user, onBack, onSelectClient 
             delete clientToCreate.completedClasses;
             delete clientToCreate.paymentStatus; // separate table usually, or keep if column exists (not in current schema)
             delete clientToCreate.id; // Supabase generates UUID automatically
+            delete clientToCreate.avatarFile; // Remove file object
 
             // Fix: ensure paymentStatus is not sent if column doesn't exist (it doesn't in schema provided to user)
             // But types.ts has it. Schema has payments table. 

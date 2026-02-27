@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Settings, Play, Pause, AlertTriangle, CheckCircle, Calendar, FileText, TrendingUp, Camera, Dumbbell, Clock, Phone, Mail, Edit, Save, X, PlusCircle, User, Zap, Sparkles, UserPlus, Trash2 } from 'lucide-react';
 import { Client, MissedClass } from '../types';
 import { analyzeClientProgress } from '../services/geminiService';
-import { updateClient, deleteClient, supabase, getAssessments, getWorkouts, getClient } from '../services/supabaseClient';
+import { updateClient, deleteClient, supabase, getAssessments, getWorkouts, getClient, uploadAvatar } from '../services/supabaseClient';
 import { mapAssessmentsToClientShape, buildClientPhysicalUpdatePayload } from '../services/clientProfileUtils';
 import InviteStudentModal from '../components/InviteStudentModal';
 import ClientFinanceSection from '../components/ClientFinanceSection';
@@ -39,6 +39,7 @@ const ClientProfileView: React.FC<ClientProfileViewProps> = ({ client: initialCl
   const [showContactModal, setShowContactModal] = useState(false);
   const [editedEmail, setEditedEmail] = useState(client.email || '');
   const [editedPhone, setEditedPhone] = useState(client.phone || '');
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
 
   // Fetch full client data on mount
   useEffect(() => {
@@ -240,6 +241,29 @@ const ClientProfileView: React.FC<ClientProfileViewProps> = ({ client: initialCl
     }
   };
 
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !coachId) return;
+
+    setIsUploadingAvatar(true);
+    try {
+      const publicUrl = await uploadAvatar(file, coachId, client.id);
+      if (publicUrl) {
+        // Atualizar no banco
+        await updateClient(client.id, { avatar_url: publicUrl });
+        // Atualizar localmente
+        setClient(prev => ({ ...prev, avatar: publicUrl }));
+      } else {
+        alert('Erro ao fazer upload da imagem. Talvez o bucket "avatars" não exista ou precise ser configurado como público.');
+      }
+    } catch (error) {
+      console.error('Error changing avatar:', error);
+      alert('Erro inesperado ao alterar foto.');
+    } finally {
+      setIsUploadingAvatar(false);
+    }
+  };
+
   const getStatusColor = (status: Client['status']) => {
     const colors = {
       'active': 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
@@ -289,6 +313,27 @@ const ClientProfileView: React.FC<ClientProfileViewProps> = ({ client: initialCl
             <ArrowLeft size={20} />
           </button>
           <div className="flex items-center gap-2">
+            {/* Alterar Foto Button */}
+            {coachId && (
+              <label
+                className={`size-10 rounded-full bg-white/10 backdrop-blur-md text-white border border-white/20 flex items-center justify-center transition-colors ${isUploadingAvatar ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:bg-white/20'}`}
+                title="Trocar Foto"
+              >
+                {isUploadingAvatar ? (
+                  <div className="size-4 border-2 border-white/50 border-t-white rounded-full animate-spin" />
+                ) : (
+                  <Camera size={18} />
+                )}
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleAvatarChange}
+                  disabled={isUploadingAvatar}
+                />
+              </label>
+            )}
+
             {/* Invite Student Button */}
             {coachId && (
               <button

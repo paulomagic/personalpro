@@ -693,6 +693,46 @@ export function isSupabaseConfigured(): boolean {
 // ============ PHOTO STORAGE ============
 
 const STORAGE_BUCKET = 'assessment-photos';
+const AVATARS_BUCKET = 'avatars';
+
+export async function uploadAvatar(
+    file: File,
+    coachId: string,
+    clientId: string = 'new'
+): Promise<string | null> {
+    if (!supabase) {
+        console.warn('Supabase not configured - avatar upload skipped');
+        return null;
+    }
+
+    try {
+        const timestamp = Date.now();
+        const extension = file.name.split('.').pop() || 'jpg';
+        const filePath = `${coachId}/${clientId}/${timestamp}.${extension}`;
+
+        const { data, error } = await supabase.storage
+            .from(AVATARS_BUCKET)
+            .upload(filePath, file, {
+                cacheControl: '3600',
+                upsert: false
+            });
+
+        if (error) {
+            console.error('Error uploading avatar:', error.message);
+            return null;
+        }
+
+        // Get the public URL. NOTE: The "avatars" bucket must be set as PUBLIC in Supabase
+        const { data: publicData } = supabase.storage
+            .from(AVATARS_BUCKET)
+            .getPublicUrl(data.path);
+
+        return publicData.publicUrl;
+    } catch (error) {
+        console.error('Error in uploadAvatar:', error);
+        return null;
+    }
+}
 
 export async function uploadAssessmentPhoto(
     file: File,

@@ -49,6 +49,7 @@ const ViewLoader = () => (
 );
 
 function App() {
+  const intentionalError: number = "string"; // Error introduced to test CI protection
   const [currentView, setCurrentView] = useState<View>(View.LOGIN);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [activeWorkout, setActiveWorkout] = useState<Workout | null>(null);

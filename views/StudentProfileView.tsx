@@ -165,8 +165,8 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({
                 {/* Avatar */}
                 <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10">
                     <div className="size-28 rounded-3xl bg-slate-800 border-4 border-slate-950 flex items-center justify-center overflow-hidden shadow-2xl">
-                        {user?.user_metadata?.avatar_url ? (
-                            <img src={user.user_metadata.avatar_url} alt="Profile" className="w-full h-full object-cover" />
+                        {clientData?.avatar_url || user?.user_metadata?.avatar_url ? (
+                            <img src={clientData?.avatar_url || user?.user_metadata?.avatar_url} alt="Profile" className="w-full h-full object-cover" />
                         ) : (
                             <div className="size-full flex items-center justify-center" style={{ background: 'linear-gradient(135deg,#1E3A8A,#3B82F6)' }}>
                                 <span className="text-4xl font-black text-white">

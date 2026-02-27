@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Turnstile } from '@marsidev/react-turnstile';
 import { supabase, getInvitationByToken, acceptInvitation } from '../services/supabaseClient';
-import { DBInvitation } from '../services/supabaseClient';
 import type { AppSessionUser } from '../services/auth/authFlow';
 import { calculateLockDurationMs, getRemainingLockSeconds, isLockedOut } from '../services/auth/authFlow';
 
@@ -48,7 +47,6 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
 
   // Invitation states
   const [inviteToken, setInviteToken] = useState<string | null>(null);
-  const [invitation, setInvitation] = useState<DBInvitation | null>(null);
   const [isInviteMode, setIsInviteMode] = useState(false);
 
   // Check for invite token in URL on mount
@@ -64,7 +62,6 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
       // Load invitation details
       getInvitationByToken(token).then(inv => {
         if (inv) {
-          setInvitation(inv);
           setEmail(inv.email); // Pre-fill email from invitation
         } else {
           setError('Convite inválido ou expirado');

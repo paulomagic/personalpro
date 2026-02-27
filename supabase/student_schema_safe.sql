@@ -96,8 +96,7 @@ CREATE POLICY "Coaches can create invitations" ON invitations
 CREATE POLICY "Coaches can update their own invitations" ON invitations
   FOR UPDATE USING (auth.uid() = coach_id);
 
-CREATE POLICY "Anyone can view invitation by token" ON invitations
-  FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Anyone can view invitation by token" ON invitations;
 
 -- ============ FUNCTIONS ============
 
@@ -159,6 +158,29 @@ BEGIN
   );
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+
+-- Function to preview invitation by token without exposing full invitations table
+CREATE OR REPLACE FUNCTION public.get_invitation_by_token(invitation_token VARCHAR)
+RETURNS TABLE (
+  id UUID,
+  email VARCHAR,
+  client_id UUID,
+  status VARCHAR,
+  expires_at TIMESTAMP WITH TIME ZONE
+) AS $$
+BEGIN
+  RETURN QUERY
+  SELECT i.id, i.email, i.client_id, i.status, i.expires_at
+  FROM invitations i
+  WHERE i.token = invitation_token
+    AND i.status = 'pending'
+    AND i.expires_at > NOW()
+  LIMIT 1;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+
+REVOKE ALL ON FUNCTION public.get_invitation_by_token(VARCHAR) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.get_invitation_by_token(VARCHAR) TO anon, authenticated;
 
 COMMENT ON TABLE user_profiles IS 'Stores user role (coach/student/admin) and relationships';
 COMMENT ON TABLE invitations IS 'Stores pending/accepted invitations from coaches to students';

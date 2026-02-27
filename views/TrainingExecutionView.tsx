@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Workout, WorkoutExercise, Exercise } from '../types';
 import VideoPlayerModal from '../components/VideoPlayerModal';
 import { FeedbackForm } from '../components/FeedbackForm';
@@ -12,16 +12,22 @@ interface TrainingExecutionViewProps {
 }
 
 const TrainingExecutionView: React.FC<TrainingExecutionViewProps> = ({ workout, onFinish }) => {
-  // Get exercises from workout (could be top-level or in splits)
-  const getExercises = (): (WorkoutExercise | Exercise)[] => {
-    if (workout.splits && workout.splits.length > 0) {
-      // Get exercises from first split
-      return workout.splits[0].exercises || [];
-    }
+  const workoutSplits = Array.isArray(workout.splits) ? workout.splits : [];
+  const [selectedSplitIndex, setSelectedSplitIndex] = useState<number | null>(() => {
+    if (workoutSplits.length === 1) return 0;
+    if (workoutSplits.length > 1) return null;
+    return 0;
+  });
+  const activeSplit =
+    workoutSplits.length > 0 && selectedSplitIndex !== null
+      ? workoutSplits[selectedSplitIndex]
+      : null;
+  const exercises = useMemo<(WorkoutExercise | Exercise)[]>(() => {
+    if (activeSplit?.exercises?.length) return activeSplit.exercises;
     return workout.exercises || [];
-  };
+  }, [activeSplit, workout.exercises]);
+  const hasPendingSplitSelection = workoutSplits.length > 1 && selectedSplitIndex === null;
 
-  const exercises = getExercises();
   const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0);
   const [currentSet, setCurrentSet] = useState(1);
   const [currentLoad, setCurrentLoad] = useState(0);
@@ -67,19 +73,36 @@ const TrainingExecutionView: React.FC<TrainingExecutionViewProps> = ({ workout, 
   }, []);
 
   useEffect(() => {
+    if (hasPendingSplitSelection) return;
     void flushQueuedFeedback();
     void logFunnelEvent('workout_execution_started', {
       workoutId: workout.id,
       coldStartMode: isColdStartWorkout,
-      exercises: exercises.length
+      exercises: exercises.length,
+      splitId: activeSplit?.id,
+      splitName: activeSplit?.name
     });
-  }, [workout.id, isColdStartWorkout, exercises.length]);
+  }, [workout.id, isColdStartWorkout, exercises.length, hasPendingSplitSelection, activeSplit?.id, activeSplit?.name]);
+
+  useEffect(() => {
+    if (hasPendingSplitSelection) return;
+    setCurrentExerciseIndex(0);
+    setCurrentSet(1);
+    setCurrentLoad(0);
+    setIsResting(false);
+    setRestTime(90);
+    setShowFeedbackForm(false);
+    setFeedbackExerciseIndex(0);
+    setCompletedExercises(new Set());
+  }, [selectedSplitIndex, hasPendingSplitSelection]);
 
   const finishWorkout = () => {
     void logFunnelEvent('workout_execution_finished', {
       workoutId: workout.id,
       coldStartMode: isColdStartWorkout,
-      completedExercises: completedExercises.size
+      completedExercises: completedExercises.size,
+      splitId: activeSplit?.id,
+      splitName: activeSplit?.name
     });
     onFinish();
   };
@@ -220,6 +243,49 @@ const TrainingExecutionView: React.FC<TrainingExecutionViewProps> = ({ workout, 
   const firstName = nameParts.slice(0, Math.ceil(nameParts.length / 2)).join(' ');
   const lastName = nameParts.slice(Math.ceil(nameParts.length / 2)).join(' ');
 
+  if (hasPendingSplitSelection) {
+    return (
+      <div className="fixed inset-0 bg-slate-950 text-white flex flex-col px-6 py-10">
+        <div className="max-w-md mx-auto w-full">
+          <button
+            onClick={onFinish}
+            className="mb-6 text-sm text-slate-400 hover:text-white transition-colors"
+          >
+            ← Voltar
+          </button>
+
+          <h1 className="text-3xl font-black tracking-tight mb-2">Escolha o treino de hoje</h1>
+          <p className="text-sm text-slate-400 mb-8">
+            Este plano possui {workoutSplits.length} splits. Selecione qual bloco você vai executar agora.
+          </p>
+
+          <div className="space-y-3">
+            {workoutSplits.map((split, index) => {
+              const splitExercises = Array.isArray(split.exercises) ? split.exercises.length : 0;
+              return (
+                <button
+                  key={split.id || `${split.name}-${index}`}
+                  onClick={() => setSelectedSplitIndex(index)}
+                  className="w-full rounded-2xl border border-white/10 bg-white/5 p-4 text-left hover:bg-white/10 transition-colors"
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-lg font-black text-white">{split.name || `Split ${index + 1}`}</p>
+                      <p className="text-xs text-slate-400 mt-1">{split.description || 'Treino programado'}</p>
+                    </div>
+                    <span className="text-xs font-bold text-blue-400 uppercase tracking-widest">
+                      {splitExercises} exercícios
+                    </span>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (exercises.length === 0) {
     return (
       <div className="fixed inset-0 bg-slate-950 text-white flex flex-col items-center justify-center">
@@ -260,6 +326,11 @@ const TrainingExecutionView: React.FC<TrainingExecutionViewProps> = ({ workout, 
         <div className="text-center">
           <h2 className="text-2xl font-black text-white tracking-tighter tabular-nums">{formatTime(elapsedTime)}</h2>
           <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest">{workout.title || 'Treino'}</p>
+          {activeSplit?.name && (
+            <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest mt-1">
+              {activeSplit.name}
+            </p>
+          )}
           {isColdStartWorkout && (
             <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest mt-1">Modo Inicial Ativo</p>
           )}

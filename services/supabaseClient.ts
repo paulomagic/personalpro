@@ -948,6 +948,14 @@ export interface DBInvitation {
     created_at: string;
 }
 
+export interface DBInvitationPreview {
+    id: string;
+    email: string;
+    client_id?: string;
+    status: 'pending' | 'accepted' | 'expired' | 'cancelled';
+    expires_at: string;
+}
+
 // Get user profile by ID
 export async function getUserProfile(userId: string): Promise<DBUserProfile | null> {
     if (!supabase) return null;
@@ -1030,16 +1038,12 @@ export async function createInvitation(
 }
 
 // Get invitation by token
-export async function getInvitationByToken(token: string): Promise<DBInvitation | null> {
+export async function getInvitationByToken(token: string): Promise<DBInvitationPreview | null> {
     if (!supabase) return null;
 
-    const { data, error } = await supabase
-        .from('invitations')
-        .select('*')
-        .eq('token', token)
-        .eq('status', 'pending')
-        .gt('expires_at', new Date().toISOString())
-        .single();
+    const { data, error } = await supabase.rpc('get_invitation_by_token', {
+        invitation_token: token
+    });
 
     if (error) {
         if (error.code !== 'PGRST116') {
@@ -1048,7 +1052,16 @@ export async function getInvitationByToken(token: string): Promise<DBInvitation 
         return null;
     }
 
-    return data;
+    if (!Array.isArray(data) || data.length === 0) return null;
+
+    const invitation = data[0];
+    return {
+        id: invitation.id,
+        email: invitation.email,
+        client_id: invitation.client_id || undefined,
+        status: invitation.status,
+        expires_at: invitation.expires_at
+    };
 }
 
 // Accept invitation and convert user to student

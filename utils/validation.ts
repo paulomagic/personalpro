@@ -20,10 +20,12 @@ export function validateImageUrl(url: string | undefined | null): boolean {
 
     try {
         const parsed = new URL(url);
-        if (!['https:', 'http:'].includes(parsed.protocol)) {
+        if (parsed.protocol !== 'https:') {
             return false;
         }
-        return ALLOWED_AVATAR_DOMAINS.some(domain => parsed.hostname.includes(domain));
+        return ALLOWED_AVATAR_DOMAINS.some(domain =>
+            parsed.hostname === domain || parsed.hostname.endsWith(`.${domain}`)
+        );
     } catch {
         return false;
     }

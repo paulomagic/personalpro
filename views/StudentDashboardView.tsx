@@ -127,8 +127,8 @@ const StudentDashboardView: React.FC<StudentDashboardViewProps> = ({
                     onClick={() => onNavigate('student_profile')}
                     className="size-12 rounded-full bg-slate-800 flex items-center justify-center ring-2 ring-white/10 overflow-hidden"
                 >
-                    {user?.user_metadata?.avatar_url ? (
-                        <img src={user.user_metadata.avatar_url} alt="Profile" className="w-full h-full object-cover" />
+                    {clientData?.avatar_url || user?.user_metadata?.avatar_url ? (
+                        <img src={clientData?.avatar_url || user?.user_metadata?.avatar_url} alt="Profile" className="w-full h-full object-cover" />
                     ) : (
                         <User size={24} className="text-slate-400" />
                     )}

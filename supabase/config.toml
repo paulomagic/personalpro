@@ -1,8 +1,8 @@
 [functions.groq-proxy]
-verify_jwt = false
+verify_jwt = true
 
 [functions.gemini-proxy]
-verify_jwt = false
+verify_jwt = true
 
 [functions.validate-turnstile]
 verify_jwt = false

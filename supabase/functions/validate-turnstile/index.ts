@@ -17,7 +17,15 @@ function getAllowedOrigins(): string[] {
 function buildCorsHeaders(req: Request): Record<string, string> | null {
     const origin = req.headers.get("origin");
     const allowedOrigins = getAllowedOrigins();
-    const allowOrigin = !!origin && (allowedOrigins.length === 0 || allowedOrigins.includes(origin));
+    const effectiveOrigins = allowedOrigins.length > 0
+        ? allowedOrigins
+        : [
+            "http://localhost:5173",
+            "http://localhost:5174",
+            "http://127.0.0.1:5173",
+            "http://127.0.0.1:5174"
+        ];
+    const allowOrigin = !!origin && effectiveOrigins.includes(origin);
 
     if (!allowOrigin) return null;
 

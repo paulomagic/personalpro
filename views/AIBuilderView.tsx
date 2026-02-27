@@ -2,6 +2,7 @@ import React, { Suspense, lazy, useEffect, useState } from 'react';
 import { Client } from '../types';
 import { ThumbsUp, ThumbsDown, RefreshCw, Download } from 'lucide-react';
 import { logFunnelEvent } from '../services/loggingService';
+import PageHeader from '../components/PageHeader';
 
 const DetectionFeedback = lazy(() => import('../components/DetectionFeedback'));
 
@@ -915,24 +916,15 @@ const AIBuilderView: React.FC<AIBuilderViewProps> = ({ user, onBack, onDone }) =
   }
 
   return (
-    <div className="max-w-md mx-auto min-h-screen bg-slate-950 text-white selection:bg-blue-500/30">
-      <header className="sticky top-0 bg-transparent px-6 py-4 z-30">
-        <div className="flex justify-between items-center mb-10">
-          <button
-            onClick={onBack}
-            className="size-10 rounded-full glass-card flex items-center justify-center active:scale-90 transition-all"
-          >
-            <span className="material-symbols-outlined text-white">arrow_back</span>
-          </button>
-          <div className="text-center">
-            <h2 className="text-xl font-black text-white tracking-tight">AI Builder</h2>
-            <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest">Protocolos de Elite</p>
-          </div>
-          <div className="size-10"></div>
-        </div>
-      </header>
+    <div className="max-w-md mx-auto min-h-screen text-white selection:bg-blue-500/30" style={{ background: 'var(--bg-void)' }}>
+      <PageHeader
+        title="AI Builder"
+        subtitle="Protocolos de Elite"
+        onBack={onBack}
+        accentColor="blue"
+      />
 
-      <div className="p-6 space-y-8 pb-32">
+      <div className="px-6 space-y-8 pb-32">
         {/* Client Selection */}
         <section className="space-y-6">
           <div>
@@ -941,26 +933,29 @@ const AIBuilderView: React.FC<AIBuilderViewProps> = ({ user, onBack, onDone }) =
               <h3 className="font-black text-white tracking-tight">Selecione o Aluno</h3>
             </div>
             {fetchingClients ? (
-              <div className="h-24 glass-card rounded-3xl animate-pulse bg-white/5" />
+              <div className="h-24 glass-card rounded-[24px] animate-pulse bg-white/5" />
             ) : (
               <div className="flex gap-4 overflow-x-auto pb-2 no-scrollbar">
                 {clients.map(client => (
                   <button
                     key={client.id}
                     onClick={() => setSelectedClient(client)}
-                    className={`min-w-[100px] flex flex-col items-center gap-3 p-4 rounded-3xl transition-all duration-300 ${selectedClient?.id === client.id
-                      ? 'glass-card border-blue-500/50 bg-blue-500/10 shadow-glow scale-105'
-                      : 'glass-card opacity-40 hover:opacity-100'
+                    className={`min-w-[100px] flex flex-col items-center gap-3 p-4 rounded-[24px] transition-all duration-300 relative overflow-hidden group ${selectedClient?.id === client.id
+                      ? 'glass-card border border-blue-500/50 bg-blue-500/10 shadow-glow scale-105'
+                      : 'glass-card border border-white/5 opacity-60 hover:opacity-100 hover:border-blue-500/30'
                       }`}
                   >
+                    {selectedClient?.id === client.id && (
+                      <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/20 rounded-full blur-2xl pointer-events-none" />
+                    )}
                     <div
-                      className={`size-14 rounded-2xl bg-cover bg-center border-2 ${selectedClient?.id === client.id ? 'border-blue-400' : 'border-white/10'
+                      className={`size-[60px] rounded-[20px] bg-cover bg-center border-2 relative z-10 ${selectedClient?.id === client.id ? 'border-blue-400 shadow-lg shadow-blue-500/30' : 'border-white/10 group-hover:border-blue-400/50'
                         } transition-colors`}
                       style={{ backgroundImage: client.avatar ? `url(${client.avatar})` : 'none' }}
                     >
                       {!client.avatar && <span className="material-symbols-outlined text-slate-500 flex h-full items-center justify-center">person</span>}
                     </div>
-                    <span className={`text-[10px] font-black uppercase tracking-widest ${selectedClient?.id === client.id ? 'text-blue-400' : 'text-slate-500'
+                    <span className={`text-[10px] font-black uppercase tracking-widest relative z-10 ${selectedClient?.id === client.id ? 'text-blue-400' : 'text-slate-500'
                       }`}>{client.name.split(' ')[0]}</span>
                   </button>
                 ))}
@@ -981,9 +976,9 @@ const AIBuilderView: React.FC<AIBuilderViewProps> = ({ user, onBack, onDone }) =
                 <button
                   key={goal}
                   onClick={() => setSelectedGoal(goal)}
-                  className={`px-4 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 ${selectedGoal === goal
-                    ? 'bg-blue-600 text-white shadow-glow translate-y-[-2px]'
-                    : 'glass-card text-slate-500'
+                  className={`px-4 py-4 rounded-[20px] text-[10px] font-black uppercase tracking-widest transition-all duration-300 relative overflow-hidden group ${selectedGoal === goal
+                    ? 'bg-blue-600 border border-blue-400 text-white shadow-glow translate-y-[-2px]'
+                    : 'glass-card border border-white/5 text-slate-400 hover:border-blue-500/30 hover:text-white'
                     }`}
                 >
                   {goal}
@@ -999,12 +994,13 @@ const AIBuilderView: React.FC<AIBuilderViewProps> = ({ user, onBack, onDone }) =
             <h3 className="font-black text-white tracking-tight">Observações</h3>
           </div>
 
-          <div className="glass-card rounded-[28px] p-4 mb-4">
+          <div className="glass-card rounded-[28px] p-4 mb-4 border border-white/5 focus-within:border-blue-500/50 transition-all relative overflow-hidden group">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full blur-3xl pointer-events-none transition-all group-focus-within:bg-blue-500/10" />
             <textarea
               placeholder="Ex: Aluno com lesão no ombro, focar em bíceps..."
               value={observations}
               onChange={(e) => setObservations(e.target.value)}
-              className="w-full bg-transparent text-white placeholder:text-slate-500 text-sm outline-none min-h-[120px] resize-none font-medium"
+              className="w-full bg-transparent text-white placeholder:text-slate-500 text-sm outline-none min-h-[120px] resize-none font-medium relative z-10"
             />
           </div>
 
@@ -1041,10 +1037,13 @@ const AIBuilderView: React.FC<AIBuilderViewProps> = ({ user, onBack, onDone }) =
           <button
             onClick={handleGenerate}
             disabled={!selectedClient || !selectedGoal || loading}
-            className="w-full h-16 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 active:scale-[0.98] text-white font-black rounded-3xl text-sm transition-all shadow-xl shadow-blue-900/40 disabled:opacity-30 disabled:grayscale flex items-center justify-center gap-3 uppercase tracking-[0.2em]"
+            className="w-full h-[68px] glass-card rounded-[24px] relative overflow-hidden group disabled:opacity-30 disabled:grayscale transition-all active:scale-[0.98] border border-blue-500/30 hover:border-blue-400 shadow-xl shadow-blue-900/20"
           >
-            <span className="material-symbols-outlined">bolt</span>
-            Forjar Protocolo de Elite
+            <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-indigo-600 opacity-90 transition-all group-hover:opacity-100" />
+            <div className="absolute inset-0 flex items-center justify-center gap-3 z-10">
+              <span className="material-symbols-outlined text-white">bolt</span>
+              <span className="text-white font-black uppercase tracking-[0.2em] text-[13px] text-shadow-sm">Forjar Protocolo de Elite</span>
+            </div>
           </button>
         </div>
       </div>

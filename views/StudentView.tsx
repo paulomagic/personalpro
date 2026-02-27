@@ -9,6 +9,7 @@ import { logFunnelEvent } from '../services/loggingService';
 import { mockExercises } from '../mocks/demoData';
 import VideoPlayerModal from '../components/VideoPlayerModal';
 import { FeedbackForm } from '../components/FeedbackForm';
+import PageHeader from '../components/PageHeader';
 
 interface StudentViewProps {
     clientId?: string;          // ID do cliente para buscar treinos reais
@@ -420,38 +421,26 @@ const StudentView: React.FC<StudentViewProps> = ({
     if (!selectedSplit) {
         return (
             <div className="min-h-screen text-white" style={{ background: 'var(--bg-void)' }}>
-                {/* Header */}
-                <header className="sticky top-0 z-40 backdrop-blur-md border-b border-white/5 px-4 py-4 safe-area-top" style={{ background: 'rgba(2,8,23,0.95)' }}>
-                    <div className="max-w-md mx-auto">
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                                {onBack && (
-                                    <button
-                                        onClick={onBack}
-                                        className="size-10 rounded-full bg-white/10 backdrop-blur-md text-white border border-white/20 flex items-center justify-center active:scale-90 transition-all"
-                                    >
-                                        <ArrowLeft size={20} />
-                                    </button>
-                                )}
-                                <div>
-                                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Olá, {studentName.split(' ')[0]}! 👋</p>
-                                    <h1 className="text-xl font-display font-black text-white">{workout.title}</h1>
-                                </div>
+                {/* Header Premium (Seletor de Treinos) */}
+                <PageHeader
+                    title={workout.title}
+                    subtitle={`Olá, ${studentName.split(' ')[0]}! 👋`}
+                    onBack={onBack}
+                    accentColor="blue"
+                    rightSlot={
+                        coachLogo ? (
+                            <img src={coachLogo} alt={coachName} className="h-11 w-auto rounded-[14px] border border-white/10 shadow-lg" />
+                        ) : (
+                            <div className="text-right flex flex-col justify-center">
+                                <span className="text-[9px] font-black text-slate-500 uppercase tracking-[0.15em] mb-0.5">Personal</span>
+                                <span className="text-xs font-black text-white tracking-wide">{coachName}</span>
                             </div>
-                            {coachLogo ? (
-                                <img src={coachLogo} alt={coachName} className="h-10 w-auto" />
-                            ) : (
-                                <div className="text-right">
-                                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Personal</p>
-                                    <p className="text-sm font-bold text-white">{coachName}</p>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                </header>
+                        )
+                    }
+                />
 
                 {/* Split Selection */}
-                <main className="max-w-md mx-auto px-4 py-6 pb-32">
+                <main className="max-w-md mx-auto px-5 py-2 pb-32">
                     <div className="mb-6">
                         <h2 className="text-2xl font-display font-black text-white mb-2">Escolha seu Treino</h2>
                         <p className="text-sm text-slate-400">Selecione qual treino você vai fazer hoje</p>
@@ -474,11 +463,13 @@ const StudentView: React.FC<StudentViewProps> = ({
                                         if ('vibrate' in navigator) navigator.vibrate(20);
                                         setSelectedSplit(split);
                                     }}
-                                    className="w-full glass-card p-5 rounded-[24px] text-left border border-white/5 hover:border-blue-500/50 active:scale-[0.98] transition-all group"
+                                    className="w-full glass-card p-5 rounded-[24px] text-left relative overflow-hidden group hover:border-blue-500/30 transition-all active:scale-[0.98]"
                                 >
-                                    <div className="flex items-center gap-4">
-                                        <div className="size-16 rounded-2xl flex items-center justify-center shadow-lg flex-shrink-0" style={{ background: 'linear-gradient(135deg,#1E3A8A,#3B82F6)', boxShadow: '0 8px 24px rgba(30, 58, 138,0.3)' }}>
-                                            <span className="text-2xl font-black text-white">{splitLetter}</span>
+                                    <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-full blur-3xl group-hover:bg-blue-500/20 transition-all pointer-events-none" />
+
+                                    <div className="flex items-center gap-4 relative z-10">
+                                        <div className="size-[60px] rounded-[18px] flex items-center justify-center border border-white/10 flex-shrink-0" style={{ background: 'linear-gradient(135deg,#1E3A8A,#3B82F6)', boxShadow: '0 8px 30px rgba(59, 130, 246, 0.3)' }}>
+                                            <span className="text-[26px] font-black text-white">{splitLetter}</span>
                                         </div>
                                         <div className="flex-1 min-w-0">
                                             <h3 className="font-bold text-white text-lg mb-1 truncate">
@@ -516,50 +507,45 @@ const StudentView: React.FC<StudentViewProps> = ({
     // Workout Execution View (existing functionality)
     return (
         <div className="min-h-screen text-white" style={{ background: 'var(--bg-void)' }}>
-            {/* Header */}
-            <header className="sticky top-0 z-40 backdrop-blur-md border-b border-white/5 px-4 py-4 safe-area-top" style={{ background: 'rgba(2,8,23,0.95)' }}>
-                <div className="max-w-md mx-auto">
-                    <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center gap-3">
+            {/* Header Execution Premium */}
+            <header className="sticky top-0 z-40 backdrop-blur-xl border-b border-white/5 px-5 pt-12 pb-5 safe-area-top" style={{ background: 'rgba(3,7,18,0.85)' }}>
+                <div className="absolute top-0 left-0 right-0 h-32 pointer-events-none" style={{ background: `radial-gradient(ellipse 60% 80% at 50% 0%, rgba(59, 130, 246,0.08) 0%, transparent 100%)` }} />
 
-                            <button
-                                onClick={() => {
-                                    setSelectedSplit(null);
-                                    setProcessedSplitId(null);
-                                    setWorkoutStartTime(null);
-                                    setShowFeedbackForm(false);
-                                    setFeedbackCompletedExercises(new Set());
-                                }}
-                                className="size-10 rounded-full bg-white/10 backdrop-blur-md text-white border border-white/20 flex items-center justify-center active:scale-90 transition-all"
-                            >
-                                <ArrowLeft size={20} />
-                            </button>
-                            <div>
-                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Olá, {studentName.split(' ')[0]}! 👋</p>
-                                <h1 className="text-lg font-black text-white">Treino {selectedSplit.name} - {selectedSplit.description}</h1>
+                <div className="max-w-md mx-auto relative z-10">
+                    <div className="flex flex-col gap-4 mb-4">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <button
+                                    onClick={() => {
+                                        setSelectedSplit(null);
+                                        setProcessedSplitId(null);
+                                        setWorkoutStartTime(null);
+                                        setShowFeedbackForm(false);
+                                        setFeedbackCompletedExercises(new Set());
+                                    }}
+                                    className="size-11 rounded-2xl bg-white/10 backdrop-blur-xl text-white border border-white/20 flex items-center justify-center hover:bg-white/20 shadow-lg transition-all active:scale-95"
+                                >
+                                    <ArrowLeft size={20} strokeWidth={2.5} />
+                                </button>
+                                <div className="flex flex-col">
+                                    <span className="text-[10px] font-black text-blue-400 uppercase tracking-[0.15em] mb-0.5">Treino {selectedSplit.name}</span>
+                                    <span className="text-[15px] font-black tracking-wide text-white leading-tight pr-4">{selectedSplit.description}</span>
+                                </div>
                             </div>
                         </div>
-                        {coachLogo ? (
-                            <img src={coachLogo} alt={coachName} className="h-10 w-auto" />
-                        ) : (
-                            <div className="text-right">
-                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Personal</p>
-                                <p className="text-sm font-bold text-white">{coachName}</p>
-                            </div>
-                        )}
                     </div>
 
                     {/* Progress Bar */}
-                    <div className="relative h-2 bg-white/10 rounded-full overflow-hidden">
+                    <div className="relative h-1.5 bg-slate-800/50 rounded-full overflow-hidden mb-2">
                         <motion.div
                             initial={{ width: 0 }}
                             animate={{ width: `${progress}%` }}
-                            className="absolute inset-y-0 left-0 bg-gradient-to-r from-blue-500 to-emerald-500 rounded-full"
+                            className="absolute inset-y-0 left-0 bg-blue-500 rounded-full shadow-[0_0_10px_rgba(59,130,246,0.8)]"
                         />
                     </div>
-                    <div className="flex justify-between items-center mt-2">
-                        <span className="text-[10px] font-bold text-slate-500">{completedSets} de {totalSets} séries</span>
-                        <span className="text-[10px] font-bold text-emerald-400">{Math.round(progress)}% concluído</span>
+                    <div className="flex justify-between items-center px-1">
+                        <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{completedSets} de {totalSets} séries</span>
+                        <span className="text-[10px] font-black text-blue-400 uppercase tracking-widest">{Math.round(progress)}% concluído</span>
                     </div>
                     {isColdStartWorkout && (
                         <div className="flex justify-between items-center mt-1">
@@ -629,23 +615,27 @@ const StudentView: React.FC<StudentViewProps> = ({
                                 if ('vibrate' in navigator) navigator.vibrate(15);
                                 setActiveExercise(exerciseIndex);
                             }}
-                            className={`rounded-[24px] overflow-hidden transition-all ${isComplete
-                                ? 'bg-emerald-500/10 border border-emerald-500/30'
+                            className={`glass-card rounded-[24px] overflow-hidden transition-all group ${isComplete
+                                ? 'border border-blue-500/20 bg-blue-500/5'
                                 : isActive
-                                    ? 'bg-white/5 border border-blue-500/30'
-                                    : 'bg-white/5 border border-white/5'
+                                    ? 'border border-blue-500/50 bg-white/5 relative shadow-[0_4px_30px_rgba(59,130,246,0.15)]'
+                                    : 'border border-white/5 hover:border-blue-500/30'
                                 }`}
                         >
+                            {isActive && <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />}
+
                             {/* Exercise Header */}
-                            <div className="p-4 flex items-center gap-4">
-                                <div className={`size-12 rounded-xl flex items-center justify-center transition-all ${isComplete
-                                    ? 'bg-emerald-500 text-white'
-                                    : 'bg-slate-800 text-slate-400'
+                            <div className="p-4 flex items-center gap-4 relative z-10">
+                                <div className={`size-[52px] rounded-2xl flex items-center justify-center transition-all flex-shrink-0 ${isComplete
+                                    ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/30'
+                                    : isActive
+                                        ? 'bg-white/10 text-white shadow-lg shadow-black/20'
+                                        : 'bg-white/5 text-slate-400'
                                     }`}>
                                     {isComplete ? <Check size={24} /> : <Dumbbell size={20} />}
                                 </div>
                                 <div className="flex-1">
-                                    <h3 className={`font-bold text-base ${isComplete ? 'text-emerald-400' : 'text-white'}`}>
+                                    <h3 className={`font-bold text-lg leading-tight mb-0.5 ${isComplete ? 'text-blue-400' : 'text-white'}`}>
                                         {exercise.name}
                                     </h3>
                                     <p className="text-[10px] font-black text-slate-500 uppercase tracking-wider">
@@ -699,18 +689,18 @@ const StudentView: React.FC<StudentViewProps> = ({
                                             return (
                                                 <div
                                                     key={setIndex}
-                                                    className={`grid grid-cols-5 gap-2 items-center p-3 rounded-xl transition-all ${isSetComplete
-                                                        ? 'bg-emerald-500/10'
-                                                        : 'bg-slate-800/50'
+                                                    className={`grid grid-cols-5 gap-2 items-center p-3 rounded-2xl transition-all border ${isSetComplete
+                                                        ? 'bg-blue-500/10 border-blue-500/20'
+                                                        : 'bg-white/5 border-transparent'
                                                         }`}
                                                 >
-                                                    <div className="text-sm font-bold text-slate-400">
+                                                    <div className="text-sm font-black text-slate-500">
                                                         {setIndex + 1}
                                                     </div>
-                                                    <div className={`text-sm font-bold ${isSetComplete ? 'text-emerald-400' : 'text-white'}`}>
+                                                    <div className={`text-sm font-bold ${isSetComplete ? 'text-blue-400' : 'text-white'}`}>
                                                         {set.load || '-'}
                                                     </div>
-                                                    <div className={`text-sm font-bold ${isSetComplete ? 'text-emerald-400' : 'text-white'}`}>
+                                                    <div className={`text-sm font-bold ${isSetComplete ? 'text-blue-400' : 'text-white'}`}>
                                                         {set.reps || '-'}
                                                     </div>
                                                     <div className="text-sm font-medium text-slate-500">
@@ -723,9 +713,9 @@ const StudentView: React.FC<StudentViewProps> = ({
                                                                 if ('vibrate' in navigator) navigator.vibrate([15, 30, 15]);
                                                                 toggleSetComplete(exerciseIndex, setIndex);
                                                             }}
-                                                            className={`size-10 rounded-full border-2 flex items-center justify-center transition-all active:scale-90 ${isSetComplete
-                                                                ? 'bg-emerald-500 border-emerald-400 text-white'
-                                                                : 'border-slate-600 text-slate-600 hover:border-blue-500 hover:text-blue-500'
+                                                            className={`size-[42px] rounded-[14px] border-2 flex items-center justify-center transition-all active:scale-90 ${isSetComplete
+                                                                ? 'bg-blue-500 border-blue-500 text-white shadow-lg shadow-blue-500/30'
+                                                                : 'bg-white/5 border-white/10 text-slate-500 hover:border-blue-500 hover:text-blue-500 hover:bg-blue-500/10'
                                                                 }`}
                                                         >
                                                             <Check size={18} />
@@ -752,8 +742,8 @@ const StudentView: React.FC<StudentViewProps> = ({
             </main>
 
             {/* Finish Button */}
-            <div className="fixed bottom-20 left-0 right-0 bg-slate-950/90 backdrop-blur-md border-t border-white/5 py-3 safe-area-bottom">
-                <div className="max-w-md mx-auto px-4">
+            <div className="fixed bottom-0 left-0 right-0 py-6 px-4 bg-gradient-to-t from-slate-950 via-slate-950/90 to-transparent pointer-events-none z-40 safe-area-bottom">
+                <div className="max-w-md mx-auto pointer-events-auto">
                     {progress >= 100 ? (
                         <button
                             onClick={() => {
@@ -761,31 +751,34 @@ const StudentView: React.FC<StudentViewProps> = ({
                                 handleFinishWorkout();
                             }}
                             disabled={!canFinishWorkout}
-                            className={`w-full py-4 px-5 rounded-[24px] font-bold text-lg flex items-center gap-4 border-2 text-white transition-all ${canFinishWorkout
-                                ? 'bg-emerald-950/40 border-emerald-500/40 shadow-[0_0_20px_rgba(16,185,129,0.15)] hover:bg-emerald-950/60 hover:border-emerald-400 active:scale-[0.98]'
+                            className={`w-full h-[68px] rounded-[24px] relative overflow-hidden group disabled:opacity-30 disabled:grayscale transition-all active:scale-[0.98] border border-blue-500/30 shadow-xl shadow-blue-900/20 ${canFinishWorkout
+                                ? 'glass-card hover:border-blue-400 cursor-pointer'
                                 : 'bg-slate-900/60 border-slate-700/60 opacity-80 cursor-not-allowed'
                                 }`}
                         >
-                            <div className="size-12 rounded-xl bg-emerald-500/10 border-2 border-emerald-500/50 flex items-center justify-center flex-shrink-0">
-                                <Check size={24} className="text-emerald-400" strokeWidth={3} />
-                            </div>
-                            <div className="flex flex-col items-start flex-1">
-                                <span className="text-white font-bold leading-tight">Encerrar sessão</span>
-                                <span className="text-sm text-slate-400 font-normal">
-                                    {isColdStartWorkout && !hasAllRequiredFeedback
-                                        ? 'Envie feedback dos exercícios para concluir'
-                                        : 'Ótimo trabalho hoje'}
-                                </span>
+                            {canFinishWorkout && <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-indigo-600 opacity-90 transition-all group-hover:opacity-100" />}
+
+                            <div className="absolute inset-0 flex items-center justify-center gap-3 z-10 px-6">
+                                <div className="flex-1 flex flex-col items-start justify-center">
+                                    <span className="text-white font-black uppercase tracking-[0.15em] text-[13px] text-shadow-sm leading-tight">Encerrar Sessão</span>
+                                    <span className="text-[10px] text-white/70 font-semibold tracking-wide">
+                                        {isColdStartWorkout && !hasAllRequiredFeedback
+                                            ? 'Feedback obrigatório Pendente'
+                                            : 'Excelente trabalho hoje'}
+                                    </span>
+                                </div>
+                                <div className="size-11 rounded-[14px] bg-white/20 backdrop-blur-sm border-2 border-white/30 flex items-center justify-center shadow-inner mt-px">
+                                    <Check size={20} strokeWidth={3} className="text-white" />
+                                </div>
                             </div>
                         </button>
                     ) : (
-                        <button
-                            disabled
-                            className="w-full py-3.5 rounded-xl font-bold text-base flex items-center justify-center gap-3 bg-slate-800 text-slate-500 cursor-not-allowed transition-all"
+                        <div
+                            className="w-full h-[64px] rounded-[24px] glass-card border border-white/5 flex items-center justify-center gap-3 bg-slate-900/80 backdrop-blur-md opacity-80"
                         >
-                            <Trophy size={20} />
-                            <span>{Math.round(progress)}% Concluído</span>
-                        </button>
+                            <Trophy size={18} className="text-slate-500" />
+                            <span className="font-black text-[11px] text-slate-500 uppercase tracking-widest">{Math.round(progress)}% Concluído</span>
+                        </div>
                     )}
                 </div>
             </div>

@@ -697,51 +697,75 @@ export function isSupabaseConfigured(): boolean {
 const STORAGE_BUCKET = 'assessment-photos';
 const AVATARS_BUCKET = 'avatars';
 
+/**
+ * Converte uma imagem para base64 data URL otimizada (200x200, JPEG 80%)
+ * Armazena diretamente no campo avatar_url da tabela clients — sem Storage.
+ */
 export async function uploadAvatar(
     file: File,
-    coachId: string,
-    clientId: string = 'new'
+    _coachId: string,
+    _clientId: string = 'new'
 ): Promise<string | null> {
-    if (!supabase) {
-        console.warn('Supabase not configured - avatar upload skipped');
-        return null;
-    }
-
     try {
-        const timestamp = Date.now();
-        const extension = file.name.split('.').pop() || 'jpg';
-        const filePath = `${coachId}/${clientId}/${timestamp}.${extension}`;
+        console.log('[uploadAvatar] Convertendo imagem para base64...');
+        console.log('[uploadAvatar] Arquivo original:', file.name, file.size, 'bytes');
 
-        console.log('[uploadAvatar] Iniciando upload para bucket:', AVATARS_BUCKET);
-        console.log('[uploadAvatar] File path:', filePath);
-        console.log('[uploadAvatar] File size:', file.size, 'bytes');
+        const dataUrl = await compressImageToDataUrl(file, 200, 0.8);
 
-        const { data, error } = await supabase.storage
-            .from(AVATARS_BUCKET)
-            .upload(filePath, file, {
-                cacheControl: '3600',
-                upsert: true  // allow re-upload of same file
-            });
+        console.log('[uploadAvatar] Data URL gerada, tamanho:', dataUrl.length, 'chars (~', Math.round(dataUrl.length / 1024), 'KB)');
 
-        if (error) {
-            console.error('[uploadAvatar] ERRO ao fazer upload:', error);
-            return null;
-        }
-
-        console.log('[uploadAvatar] Upload OK, path:', data.path);
-
-        // Get the public URL
-        const { data: publicData } = supabase.storage
-            .from(AVATARS_BUCKET)
-            .getPublicUrl(data.path);
-
-        console.log('[uploadAvatar] URL pública gerada:', publicData.publicUrl);
-
-        return publicData.publicUrl;
+        return dataUrl;
     } catch (error) {
-        console.error('[uploadAvatar] Exceção inesperada:', error);
+        console.error('[uploadAvatar] Erro ao processar imagem:', error);
         return null;
     }
+}
+
+/**
+ * Comprime uma imagem usando canvas para redimensionar e converter em JPEG base64.
+ */
+function compressImageToDataUrl(file: File, maxSize: number, quality: number): Promise<string> {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const img = new Image();
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+
+                // Calcular dimensões mantendo proporção
+                let width = img.width;
+                let height = img.height;
+                if (width > height) {
+                    if (width > maxSize) {
+                        height = Math.round((height * maxSize) / width);
+                        width = maxSize;
+                    }
+                } else {
+                    if (height > maxSize) {
+                        width = Math.round((width * maxSize) / height);
+                        height = maxSize;
+                    }
+                }
+
+                canvas.width = width;
+                canvas.height = height;
+
+                const ctx = canvas.getContext('2d');
+                if (!ctx) {
+                    reject(new Error('Canvas context not available'));
+                    return;
+                }
+
+                ctx.drawImage(img, 0, 0, width, height);
+                const dataUrl = canvas.toDataURL('image/jpeg', quality);
+                resolve(dataUrl);
+            };
+            img.onerror = () => reject(new Error('Failed to load image'));
+            img.src = e.target?.result as string;
+        };
+        reader.onerror = () => reject(new Error('Failed to read file'));
+        reader.readAsDataURL(file);
+    });
 }
 
 export async function uploadAssessmentPhoto(

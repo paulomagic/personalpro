@@ -41,6 +41,7 @@ const ClientProfileView: React.FC<ClientProfileViewProps> = ({ client: initialCl
   const [editedPhone, setEditedPhone] = useState(client.phone || '');
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
 
+
   // Fetch full client data on mount
   useEffect(() => {
     const loadFullData = async () => {
@@ -260,7 +261,7 @@ const ClientProfileView: React.FC<ClientProfileViewProps> = ({ client: initialCl
         // Atualizar no banco
         const updateResult = await updateClient(client.id, { avatar_url: publicUrl });
         console.log('[handleAvatarChange] updateClient result:', updateResult);
-        // ✅ Atualizar ambos os campos localmente para consistência
+        // ✅ Atualizar estado local — key prop no img garante re-render correto
         setClient(prev => ({ ...prev, avatar: publicUrl, avatar_url: publicUrl }));
         console.log('[handleAvatarChange] Estado atualizado com nova foto');
       } else {
@@ -368,22 +369,21 @@ const ClientProfileView: React.FC<ClientProfileViewProps> = ({ client: initialCl
         {/* Profile Info with visible Avatar */}
         <div className="absolute bottom-4 left-0 right-0 px-6 z-10 flex items-end gap-4">
 
-          {/* Avatar circular VISÍVEL */}
+          {/* Avatar VISÍVEL — letra como fundo, foto por cima */}
           <div className="flex-shrink-0 relative">
-            <div className="size-[76px] rounded-2xl border-[3px] border-white/20 overflow-hidden shadow-2xl bg-slate-800">
-              {client.avatar_url || client.avatar ? (
+            <div className="size-[76px] rounded-2xl border-[3px] border-white/20 overflow-hidden shadow-2xl relative">
+              {/* Letra sempre visível como fallback */}
+              <div className="absolute inset-0 flex items-center justify-center" style={{ background: 'linear-gradient(135deg,#1E3A8A,#3B82F6)' }}>
+                <span className="text-2xl font-black text-white">{client.name.charAt(0)}</span>
+              </div>
+              {/* Foto por cima — se carregar, cobre a letra; se falhar, letra aparece */}
+              {(client.avatar_url || client.avatar) && (
                 <img
+                  key={client.avatar_url || client.avatar}
                   src={client.avatar_url || client.avatar}
                   alt={client.name}
-                  className="w-full h-full object-cover"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).style.display = 'none';
-                  }}
+                  className="absolute inset-0 w-full h-full object-cover z-10"
                 />
-              ) : (
-                <div className="size-full flex items-center justify-center" style={{ background: 'linear-gradient(135deg,#1E3A8A,#3B82F6)' }}>
-                  <span className="text-2xl font-black text-white">{client.name.charAt(0)}</span>
-                </div>
               )}
             </div>
           </div>

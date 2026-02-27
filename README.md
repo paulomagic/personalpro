@@ -18,3 +18,16 @@ View your app in AI Studio: https://ai.studio/apps/drive/1A0f6eeTWZnyXn6DKLRtGD7
 2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
 3. Run the app:
    `npm run dev`
+
+## Fluxo de Desenvolvimento Oficial (CI/CD)
+
+O diretório `main` possui proteção contra código quebrado. Qualquer nova implementação ou ajuste deve seguir o fluxo seguro abaixo:
+
+**Branch -> PR -> CI verde -> Code Review -> Merge**
+
+1. Crie uma branch a partir da `main`: `git checkout -b feature/nome-da-feature`
+2. Faça os testes localmente (`npm run typecheck:all`, `npm run test:regression`) e suba os commits.
+3. Abra um Pull Request para a branch `main`.
+4. Aguarde a validação obrigatória do robô (**quality-gate**).
+5. Aguarde a revisão de segurança e código (aprovada pelos Code Owners).
+6. Faça o Merge.

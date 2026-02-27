@@ -85,6 +85,8 @@ export function mapDBClientToClient(dbClient: DBClient & { avatar?: string }): a
         payment_day: dbClient.payment_day,
         payment_type: dbClient.payment_type,
         session_price: dbClient.session_price,
+        // Pass raw avatar_url so components can reference it directly
+        avatar_url: dbClient.avatar_url || dbClient.avatar,
     };
 }
 
@@ -134,7 +136,7 @@ export async function getClients(coachId: string): Promise<DBClient[]> {
 
     const { data, error } = await supabase
         .from('clients')
-        .select('*, avatar:avatar_url')
+        .select('*, avatar:avatar_url, avatar_url')
         .eq('coach_id', coachId)
         .order('name');
 
@@ -151,7 +153,7 @@ export async function getClient(clientId: string): Promise<DBClient | null> {
 
     const { data, error } = await supabase
         .from('clients')
-        .select('*, avatar:avatar_url, body_fat')
+        .select('*, avatar:avatar_url, avatar_url, body_fat')
         .eq('id', clientId)
         .single();
 

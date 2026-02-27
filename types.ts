@@ -219,6 +219,7 @@ export interface Client {
   id: string;
   name: string;
   avatar: string;
+  avatar_url?: string;       // Supabase Storage URL (used when updated via upload)
   goal: string;
   level: 'Iniciante' | 'Intermediário' | 'Avançado' | 'Atleta';
   adherence: number;

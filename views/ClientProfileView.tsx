@@ -300,7 +300,7 @@ const ClientProfileView: React.FC<ClientProfileViewProps> = ({ client: initialCl
       <header className="relative h-72 w-full overflow-hidden">
         <div className="absolute inset-0 z-0">
           <img
-            src={client.avatar || "https://images.unsplash.com/photo-1541534741688-6078c6bfb5c5?w=800&h=600&fit=crop"}
+            src={client.avatar_url || client.avatar || "https://images.unsplash.com/photo-1541534741688-6078c6bfb5c5?w=800&h=600&fit=crop"}
             className="w-full h-full object-cover scale-110 blur-[2px] opacity-60"
             alt="Hero"
           />

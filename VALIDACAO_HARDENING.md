@@ -143,5 +143,5 @@ curl -H "Origin: https://site-malicioso.com" \
 
 ---
 
-**Última revisão:** 2026-02-27 23:10 BRT  
-**Próxima revisão programada:** 2026-03-13
+**Última revisão:** 2026-02-27 23:51 BRT
+**Próxima revisão programada:** 2026-03-14

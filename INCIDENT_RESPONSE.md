@@ -1,7 +1,7 @@
 # 🚨 Plano de Resposta a Incidentes (IRP)
 
 **Nível de Confidencialidade:** Interno  
-**Última Atualização:** 2026-02-27  
+**Última Atualização:** 2026-02-28  
 **Responsável:** Paulo Ricardo
 
 Este documento define os procedimentos padrão para detectar, responder e recuperar de incidentes de segurança no PersonalPro.

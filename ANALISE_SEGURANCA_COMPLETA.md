@@ -214,4 +214,4 @@ Rate limiting específico para autenticação com maior rigor.
 
 *Este arquivo é atualizado automaticamente pelo workflow `.github/workflows/docs-update.yml` quando há mudanças no código.*
 
-**Próxima revisão agendada:** 2026-03-13
+**Próxima revisão agendada:** 2026-03-14

@@ -31,3 +31,22 @@ O diretório `main` possui proteção contra código quebrado. Qualquer nova imp
 4. Aguarde a validação obrigatória do robô (**quality-gate**).
 5. Aguarde a revisão de segurança e código (aprovada pelos Code Owners).
 6. Faça o Merge.
+
+## Auth Guard (Login/Registro sem CAPTCHA)
+
+O projeto usa uma Edge Function `auth-guard` para limitar tentativas de login/registro no servidor.
+
+### Secrets necessários (Supabase)
+
+- `ALLOWED_ORIGINS=https://personalpro-omega.vercel.app`
+- `SUPABASE_SERVICE_ROLE_KEY=<service_role_key>`
+- `AUTH_RATE_LIMIT_MAX=8`
+- `AUTH_RATE_LIMIT_WINDOW_MS=60000`
+- `RATE_LIMIT_RETENTION_SECONDS=86400`
+
+### Deploy
+
+1. Aplicar migrations:
+   `supabase db push`
+2. Deploy da função:
+   `supabase functions deploy auth-guard`

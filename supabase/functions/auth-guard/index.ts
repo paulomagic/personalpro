@@ -12,6 +12,8 @@ interface RateLimitRpcResponse {
     reset_at: string;
 }
 
+let requestCounter = 0;
+
 function getAllowedOrigins(): string[] {
     const raw = Deno.env.get("ALLOWED_ORIGINS") || "";
     return raw.split(",").map((o) => o.trim()).filter(Boolean);
@@ -65,6 +67,23 @@ async function checkAuthRateLimit(rateKey: string): Promise<RateLimitRpcResponse
     const windowSeconds = Math.max(1, Math.ceil(Number(Deno.env.get("AUTH_RATE_LIMIT_WINDOW_MS") || "60000") / 1000));
 
     try {
+        requestCounter += 1;
+        if (requestCounter % 300 === 0) {
+            void fetch(`${supabaseUrl}/rest/v1/rpc/cleanup_edge_rate_limits`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "apikey": serviceRoleKey,
+                    "Authorization": `Bearer ${serviceRoleKey}`,
+                },
+                body: JSON.stringify({
+                    p_older_than_seconds: Number(Deno.env.get("RATE_LIMIT_RETENTION_SECONDS") || "86400"),
+                })
+            }).catch(() => {
+                // Best-effort cleanup only.
+            });
+        }
+
         const response = await fetch(`${supabaseUrl}/rest/v1/rpc/check_rate_limit`, {
             method: "POST",
             headers: {
@@ -172,4 +191,3 @@ serve(async (req: Request) => {
         );
     }
 });
-

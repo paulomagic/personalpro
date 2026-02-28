@@ -82,6 +82,9 @@ if (fs.existsSync(envExamplePath) && fs.existsSync(envLocalPath)) {
 console.log('\n📂 Verificando integridade estrutural...');
 const criticalFiles = [
     'supabase/create_logs_tables.sql',
+    'supabase/functions/auth-guard/index.ts',
+    'supabase/migrations/20260227_add_edge_rate_limit_rpc.sql',
+    'supabase/migrations/20260227_add_edge_rate_limit_cleanup.sql',
     'SECURITY_CHECKLIST.md',
     'vercel.json'
 ];

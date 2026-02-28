@@ -57,6 +57,12 @@
   --shadow-cyan: 0 0 30px rgba(59, 130, 246, 0.2);
   --shadow-blue: 0 0 30px rgba(30, 58, 138, 0.3);
   --shadow-card: 0 8px 40px rgba(0, 0, 0, 0.5);
+
+  /* ── Primary Button DNA ── */
+  --btn-primary-bg: linear-gradient(135deg, #172554 0%, #1E3A8A 45%, #1D4ED8 80%, #3B82F6 100%);
+  --btn-primary-text: #F4F8FF;
+  --btn-primary-border: rgba(175, 207, 255, 0.32);
+  --btn-primary-shadow: 0 12px 38px -8px rgba(30, 58, 138, 0.45), 0 0 0 1px rgba(125, 170, 255, 0.2);
 }
 
 /* ================================================
@@ -100,6 +106,12 @@
   --shadow-cyan: 0 0 30px rgba(37, 99, 235, 0.15);
   --shadow-blue: 0 0 30px rgba(29, 78, 216, 0.2);
   --shadow-card: 0 8px 40px rgba(0, 0, 0, 0.08);
+
+  /* ── Primary Button DNA (Light) ── */
+  --btn-primary-bg: linear-gradient(135deg, #1E3A8A 0%, #2455C9 48%, #3B82F6 100%);
+  --btn-primary-text: #F4F8FF;
+  --btn-primary-border: rgba(173, 203, 255, 0.44);
+  --btn-primary-shadow: 0 10px 34px -6px rgba(30, 58, 138, 0.35), 0 0 0 1px rgba(125, 170, 255, 0.24);
 }
 
 /* Light mode body adjustments */
@@ -171,13 +183,44 @@
 [data-theme="light"] .bg-white\/5 { background-color: rgba(37, 99, 235, 0.04); }
 [data-theme="light"] .bg-white\/10 { background-color: rgba(37, 99, 235, 0.08); }
 
-/* Keep button text white and card elevated text readable */
-[data-theme="light"] button.bg-blue-600 .text-white,
-[data-theme="light"] .card-ai .text-white,
-[data-theme="light"] .bg-blue-500 .text-white,
-[data-theme="light"] .bg-blue-600,
-[data-theme="light"] button[class*="bg-blue"] {
-  color: #FFFFFF;
+/* Primary button coherence in Light mode (DNA from Home CTA) */
+[data-theme="light"] :is(
+  button.bg-blue-500,
+  button.bg-blue-600,
+  button.bg-blue-700,
+  button[class*="from-blue-"][class*="to-"],
+  button[style*="#172554"][style*="#3B82F6"],
+  button[style*="#1E3A8A"][style*="#3B82F6"],
+  button[style*="#2455C9"][style*="#3B82F6"]
+) {
+  background: var(--btn-primary-bg) !important;
+  color: var(--btn-primary-text) !important;
+  border: 1px solid var(--btn-primary-border) !important;
+  box-shadow: var(--btn-primary-shadow) !important;
+}
+
+[data-theme="light"] :is(
+  button.bg-blue-500,
+  button.bg-blue-600,
+  button.bg-blue-700,
+  button[class*="from-blue-"][class*="to-"],
+  button[style*="#172554"][style*="#3B82F6"],
+  button[style*="#1E3A8A"][style*="#3B82F6"],
+  button[style*="#2455C9"][style*="#3B82F6"]
+) :is(span, p, svg, i, .material-symbols-outlined) {
+  color: var(--btn-primary-text) !important;
+}
+
+[data-theme="light"] :is(
+  button.bg-blue-500,
+  button.bg-blue-600,
+  button.bg-blue-700,
+  button[class*="from-blue-"][class*="to-"]
+):disabled {
+  background: #94A3C7 !important;
+  border-color: #94A3C7 !important;
+  color: #E2E8F0 !important;
+  box-shadow: none !important;
 }
 
 /* ── Base ── */

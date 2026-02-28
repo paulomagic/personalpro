@@ -429,17 +429,23 @@ const ClientProfileView: React.FC<ClientProfileViewProps> = ({ client: initialCl
               key={tab}
               onClick={() => setActiveTab(tab)}
               className={`relative z-10 flex-1 py-3 px-2 rounded-[14px] flex items-center justify-center transition-all ${activeTab === tab
-                ? 'text-white'
+                ? ''
                 : 'text-slate-500 hover:text-slate-300'
                 }`}
+              style={activeTab === tab ? { color: 'var(--btn-primary-text)' } : undefined}
             >
               <span className="text-[11px] font-black uppercase tracking-wider">{tab}</span>
             </button>
           ))}
           {/* Active Background Pill */}
           <motion.div
-            className="absolute top-1 bottom-1 bg-blue-600 rounded-[14px] shadow-glow z-0"
-            style={{ width: `${100 / tabs.length}%` }}
+            className="absolute top-1 bottom-1 rounded-[14px] z-0"
+            style={{
+              width: `${100 / tabs.length}%`,
+              background: 'var(--btn-primary-bg)',
+              border: '1px solid var(--btn-primary-border)',
+              boxShadow: 'var(--btn-primary-shadow)',
+            }}
             animate={{
               left: `calc(${(tabs.indexOf(activeTab) * (100 / tabs.length))}%)`
             }}
@@ -497,8 +503,14 @@ const ClientProfileView: React.FC<ClientProfileViewProps> = ({ client: initialCl
                   <button
                     onClick={handleAnalyzeProgress}
                     disabled={loadingAnalysis}
-                    className="w-full py-3 text-white font-bold rounded-xl transition-all flex items-center justify-center gap-2"
-                    style={{ background: 'linear-gradient(135deg,#1E3A8A,#3B82F6)', opacity: loadingAnalysis ? 0.5 : 1 }}
+                    className="w-full py-3 font-bold rounded-xl transition-all flex items-center justify-center gap-2"
+                    style={{
+                      background: 'var(--btn-primary-bg)',
+                      color: 'var(--btn-primary-text)',
+                      border: '1px solid var(--btn-primary-border)',
+                      boxShadow: 'var(--btn-primary-shadow)',
+                      opacity: loadingAnalysis ? 0.5 : 1,
+                    }}
                   >
                     {loadingAnalysis ? (
                       <>
@@ -710,7 +722,13 @@ const ClientProfileView: React.FC<ClientProfileViewProps> = ({ client: initialCl
             >
               <button
                 onClick={onStartAssessment}
-                className="w-full py-4 rounded-2xl bg-blue-600 text-white font-black uppercase tracking-widest shadow-lg shadow-blue-900/40 flex items-center justify-center gap-2 active:scale-[0.98] transition-all"
+                className="w-full py-4 rounded-2xl font-black uppercase tracking-widest flex items-center justify-center gap-2 active:scale-[0.98] transition-all"
+                style={{
+                  background: 'var(--btn-primary-bg)',
+                  color: 'var(--btn-primary-text)',
+                  border: '1px solid var(--btn-primary-border)',
+                  boxShadow: 'var(--btn-primary-shadow)',
+                }}
               >
                 <PlusCircle size={20} />
                 Nova Avaliação
@@ -756,8 +774,13 @@ const ClientProfileView: React.FC<ClientProfileViewProps> = ({ client: initialCl
             >
               <button
                 onClick={() => onCreateWorkout ? onCreateWorkout() : onStartWorkout({ title: 'Novo Treino', exercises: [] })}
-                className="w-full py-4 rounded-2xl text-white font-black uppercase tracking-widest flex items-center justify-center gap-2 active:scale-[0.98] transition-all"
-                style={{ background: 'linear-gradient(135deg,#1E3A8A,#3B82F6)', boxShadow: '0 8px 32px rgba(30, 58, 138,0.3)' }}
+                className="w-full py-4 rounded-2xl font-black uppercase tracking-widest flex items-center justify-center gap-2 active:scale-[0.98] transition-all"
+                style={{
+                  background: 'var(--btn-primary-bg)',
+                  color: 'var(--btn-primary-text)',
+                  border: '1px solid var(--btn-primary-border)',
+                  boxShadow: 'var(--btn-primary-shadow)',
+                }}
               >
                 <Dumbbell size={20} />
                 Criar Novo Treino

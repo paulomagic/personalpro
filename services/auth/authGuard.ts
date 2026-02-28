@@ -54,6 +54,11 @@ export async function checkAuthGuard(
     email: string,
     supabaseUrl: string
 ): Promise<AuthGuardResult> {
+    // Em desenvolvimento local, não bloquear login/cadastro por dependência de CORS da Edge Function.
+    if (typeof import.meta !== 'undefined' && import.meta.env?.DEV) {
+        return { allowed: true, retryAfterSeconds: 0 };
+    }
+
     const normalizedEmail = email.toLowerCase().trim();
     if (!normalizedEmail || !supabaseUrl) {
         return { allowed: true, retryAfterSeconds: 0 };

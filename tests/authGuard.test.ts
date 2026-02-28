@@ -18,10 +18,9 @@ test('normalizeAuthGuardResult blocks on 429 and preserves retry hint', () => {
   assert.equal(result.error, 'Too many authentication attempts');
 });
 
-test('normalizeAuthGuardResult returns fallback error on unexpected status', () => {
+test('normalizeAuthGuardResult fail-opens on infrastructure status errors', () => {
   const result = normalizeAuthGuardResult(503, null);
-  assert.equal(result.allowed, false);
+  assert.equal(result.allowed, true);
   assert.equal(result.retryAfterSeconds, 0);
-  assert.match(result.error || '', /Serviço de segurança/);
+  assert.equal(result.error, undefined);
 });
-

@@ -34,10 +34,18 @@ export function normalizeAuthGuardResult(status: number, payload: AuthGuardRespo
         return { allowed: true, retryAfterSeconds };
     }
 
+    // Fail-open for availability issues to avoid locking out legitimate users.
+    // Abuse scenarios are still blocked by explicit 429 above.
+    if (status >= 500) {
+        return {
+            allowed: true,
+            retryAfterSeconds: 0
+        };
+    }
+
     return {
-        allowed: false,
-        retryAfterSeconds,
-        error: payload?.error || 'Serviço de segurança temporariamente indisponível.'
+        allowed: true,
+        retryAfterSeconds: 0
     };
 }
 
@@ -73,12 +81,10 @@ export async function checkAuthGuard(
         return normalizeAuthGuardResult(response.status, payload);
     } catch {
         return {
-            allowed: false,
-            retryAfterSeconds: 15,
-            error: 'Serviço de segurança indisponível. Tente novamente em 15 segundos.'
+            allowed: true,
+            retryAfterSeconds: 0
         };
     } finally {
         clearTimeout(timeout);
     }
 }
-

@@ -5,6 +5,7 @@ import { supabase } from '../services/supabaseClient';
 import PageHeader from '../components/PageHeader';
 import { BottomSheet } from '../components/BottomSheet';
 import { User, Bell, Palette, Shield, CreditCard, HelpCircle, ChevronRight, Edit3, LogOut } from 'lucide-react';
+import { useTheme, type ThemeMode } from '../services/ThemeContext';
 
 interface SettingsViewProps {
     user?: any;
@@ -23,8 +24,16 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user, onBack, onLogout }) =
     // States for Modals
     const [activeModal, setActiveModal] = React.useState<'profile' | 'notifications' | 'security' | 'help' | 'appearance' | null>(null);
 
-    // Theme state
-    const [selectedTheme, setSelectedTheme] = React.useState<'dark' | 'light' | 'system'>('dark');
+    // Theme state — connected to global ThemeContext
+    const { theme: selectedTheme, setTheme: setSelectedTheme } = useTheme();
+    const [pendingTheme, setPendingTheme] = React.useState<ThemeMode>(selectedTheme);
+
+    // Sync pendingTheme when appearance modal opens
+    React.useEffect(() => {
+        if (activeModal === 'appearance') {
+            setPendingTheme(selectedTheme);
+        }
+    }, [activeModal, selectedTheme]);
 
     // States for Profile Editing
     const [profileName, setProfileName] = React.useState(coachName);
@@ -373,43 +382,44 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user, onBack, onLogout }) =
                         </div>
                         <div className="space-y-3 mb-8">
                             {[
-                                { key: 'dark', label: 'Modo Escuro', icon: 'dark_mode', enabled: true },
-                                { key: 'light', label: 'Modo Claro', icon: 'light_mode', enabled: false },
-                                { key: 'system', label: 'Automático', icon: 'brightness_auto', enabled: false }
-                            ].map((theme) => (
+                                { key: 'dark', label: 'Modo Escuro', icon: 'dark_mode', desc: 'Interface escura premium' },
+                                { key: 'light', label: 'Modo Claro', icon: 'light_mode', desc: 'Interface clara e nítida' },
+                                { key: 'system', label: 'Automático', icon: 'brightness_auto', desc: 'Segue o sistema' }
+                            ].map((themeOption) => (
                                 <div
-                                    key={theme.key}
-                                    onClick={() => theme.enabled && setSelectedTheme(theme.key as any)}
+                                    key={themeOption.key}
+                                    onClick={() => setPendingTheme(themeOption.key as ThemeMode)}
                                     className={`bg-white/5 rounded-2xl p-4 border flex items-center justify-between transition-all cursor-pointer
-                                                ${selectedTheme === theme.key
+                                                ${pendingTheme === themeOption.key
                                             ? 'border-blue-500/50 bg-blue-500/10'
                                             : 'border-white/5 hover:bg-white/10'}
-                                                ${!theme.enabled && 'opacity-50 cursor-not-allowed'}
                                             `}
                                 >
                                     <div className="flex items-center gap-4">
-                                        <div className={`size-10 rounded-xl flex items-center justify-center transition-colors ${selectedTheme === theme.key ? 'bg-blue-500 text-white shadow-glow' : 'bg-slate-800 text-slate-500'}`}>
-                                            <span className="material-symbols-outlined text-sm">{theme.icon}</span>
+                                        <div className={`size-10 rounded-xl flex items-center justify-center transition-colors ${pendingTheme === themeOption.key ? 'bg-blue-500 text-white shadow-glow' : 'bg-slate-800 text-slate-500'}`}>
+                                            <span className="material-symbols-outlined text-sm">{themeOption.icon}</span>
                                         </div>
                                         <div>
-                                            <p className="text-sm font-black text-white">{theme.label}</p>
+                                            <p className="text-sm font-black text-white">{themeOption.label}</p>
                                             <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                                                {theme.enabled ? (selectedTheme === theme.key ? 'Selecionado' : 'Disponível') : 'Em breve'}
+                                                {pendingTheme === themeOption.key ? 'Selecionado' : themeOption.desc}
                                             </p>
                                         </div>
                                     </div>
-                                    <div className={`size-6 rounded-full border-2 flex items-center justify-center transition-all ${selectedTheme === theme.key ? 'border-blue-500 bg-blue-500' : 'border-slate-600'}`}>
-                                        {selectedTheme === theme.key && <span className="material-symbols-outlined text-white text-sm">check</span>}
+                                    <div className={`size-6 rounded-full border-2 flex items-center justify-center transition-all ${pendingTheme === themeOption.key ? 'border-blue-500 bg-blue-500' : 'border-slate-600'}`}>
+                                        {pendingTheme === themeOption.key && <span className="material-symbols-outlined text-white text-sm">check</span>}
                                     </div>
                                 </div>
                             ))}
                         </div>
                         <button
                             onClick={() => {
-                                showToast('Tema aplicado com sucesso!');
+                                setSelectedTheme(pendingTheme);
+                                showToast(`Tema ${pendingTheme === 'dark' ? 'escuro' : pendingTheme === 'light' ? 'claro' : 'automático'} aplicado!`);
                                 setActiveModal(null);
                             }}
-                            className="w-full h-16 bg-blue-600 hover:bg-blue-500 text-white font-black rounded-3xl active:scale-[0.98] transition-all uppercase tracking-widest shadow-glow"
+                            className="w-full h-16 bg-blue-600 hover:bg-blue-500 font-black rounded-3xl active:scale-[0.98] transition-all uppercase tracking-widest shadow-glow"
+                            style={{ color: '#FFFFFF' }}
                         >
                             Aplicar Tema
                         </button>

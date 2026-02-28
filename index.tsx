@@ -4,6 +4,7 @@ import ReactDOM from 'react-dom/client';
 import './index.css';
 import App from './App';
 import { installChunkRecovery } from './utils/chunkRecovery';
+import { ThemeProvider } from './services/ThemeContext';
 
 installChunkRecovery();
 
@@ -15,9 +16,12 @@ if (!rootElement) {
 const root = ReactDOM.createRoot(rootElement);
 root.render(
   <React.StrictMode>
-    <App />
+    <ThemeProvider>
+      <App />
+    </ThemeProvider>
   </React.StrictMode>
 );
+
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {

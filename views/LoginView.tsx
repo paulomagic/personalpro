@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase, getInvitationByToken, acceptInvitation } from '../services/supabaseClient';
 import type { AppSessionUser } from '../services/auth/authFlow';
 import { calculateLockDurationMs, getRemainingLockSeconds, isLockedOut } from '../services/auth/authFlow';
+import { persistLockoutState, readLockoutState } from '../services/auth/lockoutStorage';
 
 interface LoginViewProps {
   onLogin: (user: AppSessionUser | null) => void;
@@ -31,9 +32,6 @@ const InputField: React.FC<InputFieldProps> = ({ id, label, type, placeholder, v
     />
   </div>
 );
-
-const LOGIN_ATTEMPTS_KEY = 'personalpro:auth:loginAttempts';
-const LOCK_UNTIL_KEY = 'personalpro:auth:lockUntil';
 
 const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -79,16 +77,9 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
   useEffect(() => {
     if (typeof window === 'undefined') return;
     try {
-      const storedAttempts = Number(window.localStorage.getItem(LOGIN_ATTEMPTS_KEY) || '0');
-      const storedLockUntil = Number(window.localStorage.getItem(LOCK_UNTIL_KEY) || '0');
-      if (!Number.isNaN(storedAttempts) && storedAttempts > 0) {
-        setLoginAttempts(storedAttempts);
-      }
-      if (!Number.isNaN(storedLockUntil) && storedLockUntil > Date.now()) {
-        setLockUntil(storedLockUntil);
-      } else {
-        window.localStorage.removeItem(LOCK_UNTIL_KEY);
-      }
+      const state = readLockoutState(window.localStorage, Date.now());
+      setLoginAttempts(state.loginAttempts);
+      setLockUntil(state.lockUntil);
     } catch {
       // localStorage can be blocked by browser privacy settings
     }
@@ -97,17 +88,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
   useEffect(() => {
     if (typeof window === 'undefined') return;
     try {
-      if (loginAttempts > 0) {
-        window.localStorage.setItem(LOGIN_ATTEMPTS_KEY, String(loginAttempts));
-      } else {
-        window.localStorage.removeItem(LOGIN_ATTEMPTS_KEY);
-      }
-
-      if (lockUntil && lockUntil > Date.now()) {
-        window.localStorage.setItem(LOCK_UNTIL_KEY, String(lockUntil));
-      } else {
-        window.localStorage.removeItem(LOCK_UNTIL_KEY);
-      }
+      persistLockoutState(window.localStorage, { loginAttempts, lockUntil }, Date.now());
     } catch {
       // Ignore storage errors
     }

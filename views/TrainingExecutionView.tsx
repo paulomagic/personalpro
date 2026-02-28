@@ -5,6 +5,13 @@ import { FeedbackForm } from '../components/FeedbackForm';
 import { saveSessionFeedbackWithRetry, flushQueuedFeedback, getProgressionSuggestion } from '../services/ai/feedback';
 import { logFunnelEvent } from '../services/loggingService';
 import type { SessionFeedback } from '../services/ai/feedback/types';
+import {
+  getWorkoutSplits,
+  hasPendingSplitSelection,
+  resolveActiveSplit,
+  resolveExecutionExercises,
+  resolveInitialSplitIndex,
+} from '../services/trainingExecutionUtils';
 
 interface TrainingExecutionViewProps {
   workout: Workout;
@@ -12,21 +19,19 @@ interface TrainingExecutionViewProps {
 }
 
 const TrainingExecutionView: React.FC<TrainingExecutionViewProps> = ({ workout, onFinish }) => {
-  const workoutSplits = Array.isArray(workout.splits) ? workout.splits : [];
-  const [selectedSplitIndex, setSelectedSplitIndex] = useState<number | null>(() => {
-    if (workoutSplits.length === 1) return 0;
-    if (workoutSplits.length > 1) return null;
-    return 0;
-  });
-  const activeSplit =
-    workoutSplits.length > 0 && selectedSplitIndex !== null
-      ? workoutSplits[selectedSplitIndex]
-      : null;
+  const workoutSplits = useMemo(() => getWorkoutSplits(workout), [workout]);
+  const [selectedSplitIndex, setSelectedSplitIndex] = useState<number | null>(() => resolveInitialSplitIndex(workoutSplits));
+  const activeSplit = useMemo(
+    () => resolveActiveSplit(workoutSplits, selectedSplitIndex),
+    [workoutSplits, selectedSplitIndex]
+  );
   const exercises = useMemo<(WorkoutExercise | Exercise)[]>(() => {
-    if (activeSplit?.exercises?.length) return activeSplit.exercises;
-    return workout.exercises || [];
-  }, [activeSplit, workout.exercises]);
-  const hasPendingSplitSelection = workoutSplits.length > 1 && selectedSplitIndex === null;
+    return resolveExecutionExercises(workout, activeSplit);
+  }, [workout, activeSplit]);
+  const pendingSplitSelection = useMemo(
+    () => hasPendingSplitSelection(workoutSplits, selectedSplitIndex),
+    [workoutSplits, selectedSplitIndex]
+  );
 
   const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0);
   const [currentSet, setCurrentSet] = useState(1);
@@ -73,7 +78,7 @@ const TrainingExecutionView: React.FC<TrainingExecutionViewProps> = ({ workout, 
   }, []);
 
   useEffect(() => {
-    if (hasPendingSplitSelection) return;
+    if (pendingSplitSelection) return;
     void flushQueuedFeedback();
     void logFunnelEvent('workout_execution_started', {
       workoutId: workout.id,
@@ -82,10 +87,10 @@ const TrainingExecutionView: React.FC<TrainingExecutionViewProps> = ({ workout, 
       splitId: activeSplit?.id,
       splitName: activeSplit?.name
     });
-  }, [workout.id, isColdStartWorkout, exercises.length, hasPendingSplitSelection, activeSplit?.id, activeSplit?.name]);
+  }, [workout.id, isColdStartWorkout, exercises.length, pendingSplitSelection, activeSplit?.id, activeSplit?.name]);
 
   useEffect(() => {
-    if (hasPendingSplitSelection) return;
+    if (pendingSplitSelection) return;
     setCurrentExerciseIndex(0);
     setCurrentSet(1);
     setCurrentLoad(0);
@@ -94,7 +99,7 @@ const TrainingExecutionView: React.FC<TrainingExecutionViewProps> = ({ workout, 
     setShowFeedbackForm(false);
     setFeedbackExerciseIndex(0);
     setCompletedExercises(new Set());
-  }, [selectedSplitIndex, hasPendingSplitSelection]);
+  }, [selectedSplitIndex, pendingSplitSelection]);
 
   const finishWorkout = () => {
     void logFunnelEvent('workout_execution_finished', {
@@ -243,7 +248,7 @@ const TrainingExecutionView: React.FC<TrainingExecutionViewProps> = ({ workout, 
   const firstName = nameParts.slice(0, Math.ceil(nameParts.length / 2)).join(' ');
   const lastName = nameParts.slice(Math.ceil(nameParts.length / 2)).join(' ');
 
-  if (hasPendingSplitSelection) {
+  if (pendingSplitSelection) {
     return (
       <div className="fixed inset-0 bg-slate-950 text-white flex flex-col px-6 py-10">
         <div className="max-w-md mx-auto w-full">

@@ -1,6 +1,10 @@
 
 import { createClient as createSupabaseClient, SupabaseClient } from '@supabase/supabase-js';
 import { hydrateWorkoutWithVideos } from './exerciseService';
+import {
+    normalizeAcceptInvitationResult,
+    normalizeInvitationPreviewFromRpc,
+} from './invitations/invitationUtils';
 
 // Configuração Supabase - defina suas credenciais no arquivo .env
 // @ts-ignore - Vite env
@@ -1086,16 +1090,9 @@ export async function getInvitationByToken(token: string): Promise<DBInvitationP
         return null;
     }
 
-    if (!Array.isArray(data) || data.length === 0) return null;
-
-    const invitation = data[0];
-    return {
-        id: invitation.id,
-        email: invitation.email,
-        client_id: invitation.client_id || undefined,
-        status: invitation.status,
-        expires_at: invitation.expires_at
-    };
+    const invitation = normalizeInvitationPreviewFromRpc(data);
+    if (!invitation) return null;
+    return invitation;
 }
 
 // Accept invitation and convert user to student
@@ -1112,11 +1109,7 @@ export async function acceptInvitation(token: string, userId: string): Promise<{
         return { success: false, error: 'Erro ao aceitar convite' };
     }
 
-    if (!data?.success) {
-        return { success: false, error: data?.error || 'Convite inválido ou expirado' };
-    }
-
-    return { success: true };
+    return normalizeAcceptInvitationResult(data);
 }
 
 // Get all invitations sent by a coach

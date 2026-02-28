@@ -66,3 +66,25 @@ Execução local:
    `npx playwright install chromium`
 3. Rode os testes:
    `npm run test:e2e`
+
+## Navegação e Histórico (Back Button)
+
+O app agora sincroniza `View` interna com URL e histórico do navegador:
+
+- Back/forward do navegador/celular funciona entre telas principais
+- URLs são atualizadas com `pushState/replaceState` sem React Router
+- Telas com contexto carregam query params:
+  - `/clients/profile?client=<id>`
+  - `/training/execution?workout=<id>`
+
+Arquivos-chave:
+- `services/navigation/historyNavigation.ts`
+- `App.tsx`
+
+## Performance de Boot
+
+A carga de fontes foi simplificada para reduzir requisições externas:
+
+- Mantidas apenas `Inter` + `Lexend`
+- Removida família `Outfit` do `index.html`
+- `font-display` do Tailwind alinhada para `Lexend`

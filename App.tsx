@@ -1,9 +1,14 @@
-import React, { useState, useEffect, Suspense, lazy } from 'react';
+import React, { useState, useEffect, Suspense, lazy, useRef } from 'react';
 import { View, Client, Workout } from './types';
 import { supabase } from './services/supabaseCore';
 import { getUserProfile, countPendingRescheduleRequests, type DBUserProfile } from './services/userProfileService';
 import LoginView from './views/LoginView';
 import UpdateBanner from './components/UpdateBanner';
+import {
+  buildNavigationUrl,
+  isView,
+  resolveViewFromPath,
+} from './services/navigation/historyNavigation';
 import {
   canAccessAdminArea,
   createDemoUser,
@@ -59,6 +64,9 @@ function App() {
   const [pendingRequests, setPendingRequests] = useState(0);  // Reschedule requests count
   const [updateAvailable, setUpdateAvailable] = useState(false);
   const [waitingWorker, setWaitingWorker] = useState<ServiceWorker | null>(null);
+  const historyInitializedRef = useRef(false);
+  const previousViewRef = useRef<View>(View.LOGIN);
+  const historyPopRef = useRef(false);
 
   // Password Recovery State
   const [showRecoveryModal, setShowRecoveryModal] = useState(false);
@@ -154,6 +162,52 @@ function App() {
     const interval = setInterval(fetchPendingRequests, 30000);
     return () => clearInterval(interval);
   }, [user, userProfile]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const onPopState = (event: PopStateEvent) => {
+      const fromState = (event.state && isView(event.state.view)) ? event.state.view : null;
+      const fromPath = resolveViewFromPath(window.location.pathname);
+      const targetView = fromState || fromPath;
+      if (!targetView) return;
+
+      historyPopRef.current = true;
+      setCurrentView(targetView);
+    };
+
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const url = buildNavigationUrl(currentView, selectedClient, activeWorkout);
+    const state = { view: currentView };
+
+    if (!historyInitializedRef.current) {
+      window.history.replaceState(state, '', url);
+      historyInitializedRef.current = true;
+      previousViewRef.current = currentView;
+      return;
+    }
+
+    if (historyPopRef.current) {
+      historyPopRef.current = false;
+      window.history.replaceState(state, '', url);
+      previousViewRef.current = currentView;
+      return;
+    }
+
+    if (previousViewRef.current !== currentView) {
+      window.history.pushState(state, '', url);
+      previousViewRef.current = currentView;
+      return;
+    }
+
+    window.history.replaceState(state, '', url);
+  }, [currentView, selectedClient?.id, activeWorkout?.id]);
 
   // Handle PWA update when user clicks the banner
   const handleUpdate = () => {

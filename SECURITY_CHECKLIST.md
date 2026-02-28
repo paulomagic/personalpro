@@ -1,7 +1,8 @@
-# 🔐 Security Checklist - Apex Premium PT Assistant
+# 🔐 Security Checklist — Apex Premium PT Assistant
 
-Este arquivo contém o checklist de segurança para desenvolvimento de novas features.  
-**Execute `npm audit` regularmente** para verificar vulnerabilidades em dependências.
+**Última Atualização:** 2026-02-27  
+**Responsável:** Paulo Ricardo  
+**Projeto:** Apex Premium PT Assistant (PersonalPro)
 
 ---
 
@@ -17,77 +18,110 @@ Este arquivo contém o checklist de segurança para desenvolvimento de novas fea
 ### 2. Autenticação e Autorização
 - [ ] View requer autenticação (`user?.id` verificado)
 - [ ] RLS policies aplicadas para novas tabelas
-- [ ] coach_id é usado para filtrar dados
+- [ ] `coach_id` é usado para filtrar dados
 - [ ] Tokens/sessões são verificados antes de operações sensíveis
 
 ### 3. Proteção de Dados
 - [ ] Dados sensíveis NÃO são logados no console
-- [ ] API keys estão em variáveis de ambiente (.env.local)
+- [ ] API keys estão em variáveis de ambiente (`.env.local` ou Supabase Secrets)
 - [ ] Senhas nunca são armazenadas localmente
 - [ ] Dados do usuário são sanitizados antes de exibição
 
 ### 4. Comunicação Segura
 - [ ] Todas as requisições usam HTTPS
 - [ ] URLs de redirecionamento são validadas
-- [ ] window.open() usa URLs confiáveis
+- [ ] `window.open()` usa URLs confiáveis
 
 ### 5. Database (Supabase)
 - [ ] Nova tabela tem `ENABLE ROW LEVEL SECURITY`
 - [ ] Policies criadas para SELECT, INSERT, UPDATE, DELETE
-- [ ] coach_id referencia auth.users(id)
-- [ ] Dados não são expostos sem filtro de coach_id
+- [ ] `coach_id` referencia `auth.users(id)`
+- [ ] Dados não são expostos sem filtro de `coach_id`
 
 ---
 
-## 🤖 Gemini API Protection
+## 🛡️ Status de Segurança (2026-02-27)
 
-A partir de **2025-12-30**, as chamadas para a API do Gemini são feitas através de uma **Edge Function** no Supabase (`gemini-proxy`), protegendo a chave de API do frontend.
+### ✅ Implementado e Funcional
 
-### Como funciona:
-1. Frontend chama `/functions/v1/gemini-proxy` (sem expor a API key)
-2. Edge Function usa `GEMINI_API_KEY_PRIMARY` dos **Supabase Secrets**
-3. Resultado é retornado ao frontend
+| Item | Status | Implementação |
+|------|--------|---------------|
+| API Keys protegidas via Edge Functions | ✅ | `gemini-proxy`, `groq-proxy` |
+| CAPTCHA no registro (Cloudflare Turnstile) | ✅ | `validate-turnstile` + `LoginView.tsx` |
+| CAPTCHA Fail-Closed | ✅ | Retorna 503 se secret ausente |
+| HTTPS obrigatório | ✅ | Vercel + Supabase |
+| Autenticação via Supabase Auth (JWT) | ✅ | `supabaseCore.ts` |
+| Row Level Security (RLS) | ✅ | Todas as tabelas críticas |
+| CORS com lista de origens permitidas | ✅ | `supabase/functions/_shared/` |
+| Rate Limiting nas Edge Functions | ✅ | `_shared/rateLimit.ts` — DB + fallback em memória |
+| Rate Limiting no Login/Registro (Server-side) | ✅ | `auth-guard/index.ts` + `services/auth/authGuard.ts` |
+| Proteção local contra Brute Force (Client-side) | ✅ | `services/auth/lockoutStorage.ts` |
+| Token de convite criptográfico (CSPRNG) | ✅ | `crypto.getRandomValues` (32 bytes / 256 bits) |
+| Fluxo de convite atômico (race condition) | ✅ | RPC `accept_invitation` no Supabase |
+| Escalada de privilégio bloqueada | ✅ | `handle_new_user()` força `role='coach'` |
+| Limpeza automática de rate limit (DB) | ✅ | `cleanup_edge_rate_limits` RPC (a cada 500 req) |
+| SHA-256 hash anônimo de identidade no auth-guard | ✅ | `sha256Hex(action + email + ip)` |
+| Validação de IP de origem no CAPTCHA | ✅ | `x-forwarded-for` incluído na validação Turnstile |
+| CI com verificação de segurança automatizada | ✅ | `.github/workflows/ci.yml` — `npm run security-check` |
 
-### Deploy da Edge Function:
+### 🟡 Parcialmente Implementado
+
+| Item | Status | Observação |
+|------|--------|------------|
+| Sanitização de dados retornados pela IA | 🟡 | `escapeHtml()` no AIBuilderView. Falta DOMPurify global |
+| Logs condicionais em produção | 🟡 | `console.error` ainda presente em alguns serviços |
+| Validação de schemas com Zod | 🟡 | Zod instalado mas não aplicado a todas as operações de DB |
+
+### ❌ Pendente
+
+| Item | Prioridade | Observação |
+|------|------------|------------|
+| Dados Sensíveis em Prompts de IA (anonimização) | 🟠 MÉDIA | Nome, lesões e preferências do aluno vão para a API |
+| Content Security Policy (CSP) | 🟡 BAIXA | Não configurado no `vercel.json` ou `index.html` |
+| Monitoramento de custos de API | 🟡 BAIXA | Sem alertas automáticos de quota |
+| Modo Demo com banco isolado | 🟡 BAIXA | Demo usa banco real (dados de demonstração) |
+
+---
+
+## 🤖 Proteção das APIs de IA
+
+Todas as chamadas para Gemini e Groq são feitas via **Edge Functions** no Supabase, protegendo as chaves do frontend.
+
+### Edge Functions Ativas:
+
+| Função | Endpoint | Rate Limit | CORS |
+|--------|----------|------------|------|
+| `gemini-proxy` | `/functions/v1/gemini-proxy` | ✅ Ativo | ✅ Restrito |
+| `groq-proxy` | `/functions/v1/groq-proxy` | ✅ Ativo | ✅ Restrito |
+| `validate-turnstile` | `/functions/v1/validate-turnstile` | ✅ Ativo | ✅ Restrito |
+| `auth-guard` | `/functions/v1/auth-guard` | ✅ Ativo | ✅ Restrito |
+
+### Deploy:
 ```bash
-# Deploy da função
 supabase functions deploy gemini-proxy
+supabase functions deploy groq-proxy
+supabase functions deploy validate-turnstile
+supabase functions deploy auth-guard
+```
 
-# Configurar secrets
-supabase secrets set GEMINI_API_KEY_PRIMARY=sua-chave-aqui
-supabase secrets set GEMINI_API_KEY_FALLBACK=sua-chave-fallback  # opcional
+### Secrets no Supabase:
+```bash
+supabase secrets set GEMINI_API_KEY_PRIMARY=sua-chave
+supabase secrets set GEMINI_API_KEY_FALLBACK=sua-chave-fallback
+supabase secrets set GROQ_API_KEY=sua-chave
+supabase secrets set TURNSTILE_SECRET_KEY=sua-chave
 ```
 
 ---
 
 ## 📝 Histórico de Auditorias
 
-| Data | Vulnerabilidades | Ação |
-|------|------------------|------|
-| 2025-12-30 | 1 (API Key exposta) | ✅ Migrado para Edge Function |
-| 2024-12-28 | 0 | ✅ Nenhuma ação necessária |
-
----
-
-*Mantenha este arquivo atualizado ao adicionar novas features.*
-
-
-```bash
-# Executar verificação completa de segurança (Audit + Env Var + Files)
-npm run security-check
-
-# Verificar vulnerabilidades em dependências
-npm audit
-
-# Corrigir vulnerabilidades automaticamente (quando possível)
-npm audit fix
-
-# Ver detalhes de vulnerabilidades
-npm audit --json
-
-# Atualizar dependências
-npm update
-```
+| Data | Auditor | Vulnerabilidades | Resultado |
+|------|---------|------------------|-----------|
+| 2024-12-28 | Paulo Ricardo | 0 | ✅ Nenhuma ação necessária |
+| 2025-12-30 | Paulo Ricardo | 1 (API Key exposta) | ✅ Migrado para Edge Function |
+| 2026-02-15 | Paulo Ricardo | 12 identificadas | ✅ 9 corrigidas, 3 pendentes |
+| 2026-02-27 | Paulo Ricardo | Rate limit e auth-guard | ✅ Server-side rate limit implementado |
 
 ---
 
@@ -95,81 +129,33 @@ npm update
 
 | Frequência | Ação |
 |------------|------|
-| Semanal | `npm audit` |
-| Mensal | `npm update` |
-| Por feature | Verificar checklist acima |
-| Por release | Code review de segurança |
+| A cada commit | CI executa `npm run security-check` automaticamente |
+| Semanal | `npm audit` manual |
+| Mensal | `npm update` + revisão de dependências |
+| Por feature | Verificar checklist deste arquivo antes do PR |
+| Por release | Code review de segurança + atualizar este documento |
 
 ---
 
-## 🛡️ CAPTCHA Integration Guide
-
-### Opções Recomendadas:
-
-#### 1. **Cloudflare Turnstile** (Recomendado)
-- ✅ Gratuito
-- ✅ Privacy-friendly
-- ✅ Fácil integração
+## 🚀 Comandos Úteis
 
 ```bash
-npm install @marsidev/react-turnstile
-```
+# Verificação completa de segurança (Audit + Env Var + Files)
+npm run security-check
 
-```tsx
-import { Turnstile } from '@marsidev/react-turnstile';
+# Verificar vulnerabilidades em dependências
+npm audit
 
-<Turnstile 
-  siteKey="YOUR_SITE_KEY" 
-  onSuccess={(token) => setCaptchaToken(token)}
-/>
-```
+# Corrigir vulnerabilidades automaticamente
+npm audit fix
 
-#### 2. **hCaptcha**
-- ✅ Gratuito até 1M requests/mês
-- ✅ Privacy-focused
+# Ver detalhes em JSON
+npm audit --json
 
-```bash
-npm install @hcaptcha/react-hcaptcha
-```
-
-#### 3. **Google reCAPTCHA v3**
-- ⚠️ Requer criação de projeto no Google Cloud
-- ✅ Score-based (invisible)
-
-### Onde Implementar CAPTCHA:
-1. Formulário de registro
-2. Formulário de contato/suporte
-3. Reset de senha
-
-### Implementação Sugerida:
-```tsx
-// No LoginView.tsx
-const [captchaToken, setCaptchaToken] = useState<string | null>(null);
-
-const handleRegister = async () => {
-  if (!captchaToken) {
-    setError('Complete a verificação de segurança');
-    return;
-  }
-  // ... resto do registro
-};
+# Executar todos os testes (inclui testes de segurança unitários)
+npm run test:regression
 ```
 
 ---
 
-## 📊 Último npm audit
-
-**Data:** 2024-12-28  
-**Resultado:** ✅ 0 vulnerabilities found
-
----
-
-## 📝 Histórico de Auditorias
-
-| Data | Vulnerabilidades | Ação |
-|------|------------------|------|
-| 2024-12-28 | 0 | ✅ Nenhuma ação necessária |
-
----
-
-*Mantenha este arquivo atualizado ao adicionar novas features.*
+*Este arquivo é atualizado automaticamente pelo workflow `.github/workflows/docs-update.yml` quando há mudanças no código.*

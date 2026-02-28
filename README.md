@@ -50,3 +50,19 @@ O projeto usa uma Edge Function `auth-guard` para limitar tentativas de login/re
    `supabase db push`
 2. Deploy da função:
    `supabase functions deploy auth-guard`
+
+## E2E Smoke (Playwright)
+
+Fluxos cobertos:
+- Login em modo demonstração
+- Abertura de aluno no dashboard e início de treino rápido
+- Feedback de erro para token de convite inválido
+
+Execução local:
+
+1. Instale o runner:
+   `npm install -D @playwright/test`
+2. Instale o browser:
+   `npx playwright install chromium`
+3. Rode os testes:
+   `npm run test:e2e`

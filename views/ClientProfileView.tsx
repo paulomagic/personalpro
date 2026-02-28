@@ -1063,6 +1063,7 @@ const ClientProfileView: React.FC<ClientProfileViewProps> = ({ client: initialCl
             }
           ]
         })}
+        data-testid="quick-workout-button"
         className="fixed bottom-24 right-6 size-14 rounded-full bg-blue-600 text-white shadow-xl shadow-blue-600/30 flex items-center justify-center hover:bg-blue-700 active:scale-95 transition-all z-30"
       >
         <Play size={28} className="ml-1" />

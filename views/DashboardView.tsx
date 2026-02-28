@@ -500,6 +500,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: i * 0.06, duration: 0.3 }}
                 onClick={() => onSelectClient(client)}
+                data-testid={`dashboard-client-card-${client.id}`}
                 className="flex items-center gap-3 p-3 rounded-2xl cursor-pointer transition-all active:scale-[0.99]"
                 style={{
                   background: 'rgba(59, 130, 246,0.03)',

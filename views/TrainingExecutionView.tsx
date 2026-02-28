@@ -305,7 +305,7 @@ const TrainingExecutionView: React.FC<TrainingExecutionViewProps> = ({ workout, 
   }
 
   return (
-    <div className="fixed inset-0 bg-slate-950 text-white flex flex-col overflow-hidden">
+    <div data-testid="training-execution-screen" className="fixed inset-0 bg-slate-950 text-white flex flex-col overflow-hidden">
       {/* Progress Bar Top */}
       <div className="absolute top-0 left-0 right-0 h-1.5 bg-white/5 z-50">
         <div
@@ -428,6 +428,7 @@ const TrainingExecutionView: React.FC<TrainingExecutionViewProps> = ({ workout, 
             {/* Main Action */}
             <button
               onClick={handleCompleteSet}
+              data-testid="complete-set-button"
               aria-label={currentSet === totalSets && currentExerciseIndex === exercises.length - 1
                 ? 'Finalizar treino'
                 : currentSet === totalSets

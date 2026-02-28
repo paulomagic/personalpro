@@ -13,7 +13,33 @@ export default defineConfig(({ mode }) => {
     },
     plugins: [react()],
     build: {
-      chunkSizeWarningLimit: 450
+      chunkSizeWarningLimit: 450,
+      rollupOptions: {
+        output: {
+          manualChunks(id: string) {
+            if (!id.includes('node_modules')) return;
+
+            if (id.includes('/react/') || id.includes('react-dom') || id.includes('scheduler')) {
+              return 'vendor-react';
+            }
+            if (id.includes('@supabase/')) {
+              return 'vendor-supabase';
+            }
+            if (id.includes('framer-motion')) {
+              return 'vendor-motion';
+            }
+            if (id.includes('recharts') || id.includes('/d3-')) {
+              return 'vendor-charts';
+            }
+            if (id.includes('lucide-react')) {
+              return 'vendor-icons';
+            }
+            if (id.includes('zod')) {
+              return 'vendor-zod';
+            }
+          }
+        }
+      }
     },
 
     resolve: {

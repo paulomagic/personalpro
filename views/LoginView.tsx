@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { supabase, getInvitationByToken, acceptInvitation } from '../services/supabaseClient';
+import { supabase } from '../services/supabaseCore';
+import { getInvitationByToken, acceptInvitation } from '../services/invitations/invitationAuthService';
 import type { AppSessionUser } from '../services/auth/authFlow';
 import { calculateLockDurationMs, getRemainingLockSeconds, isLockedOut } from '../services/auth/authFlow';
 import { persistLockoutState, readLockoutState } from '../services/auth/lockoutStorage';
@@ -363,7 +364,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
         </p>
 
         {error && (
-          <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl">
+          <div role="alert" aria-live="assertive" className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl">
             <p className="text-red-400 text-sm text-center font-medium">{error}</p>
           </div>
         )}
@@ -412,7 +413,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
           </div>
           {!isRegister && (
             <div className="flex justify-end mt-1">
-              <button onClick={handleForgotPassword} className="text-sm text-blue-500 font-bold hover:underline">
+              <button type="button" onClick={handleForgotPassword} className="text-sm text-blue-500 font-bold hover:underline">
                 Esqueceu a senha?
               </button>
             </div>
@@ -442,7 +443,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
 
         <p className="text-center mt-6 text-sm text-slate-500">
           {isRegister ? 'Já tem uma conta?' : 'Não tem conta?'}
-          <button onClick={() => { setShowLogin(!isRegister); setShowRegister(!showRegister); setError(null); }} className="text-blue-500 font-bold ml-1 hover:underline">
+          <button type="button" onClick={() => { setShowLogin(!isRegister); setShowRegister(!showRegister); setError(null); }} className="text-blue-500 font-bold ml-1 hover:underline">
             {isRegister ? 'Entrar' : 'Criar conta'}
           </button>
         </p>
@@ -516,6 +517,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
 
           <button
             onClick={handleDemoLogin}
+            data-testid="demo-login-button"
             className="w-full h-14 bg-white/5 hover:bg-white/10 active:scale-[0.98] text-white font-bold rounded-2xl text-sm transition-all border border-white/10 uppercase tracking-wider"
           >
             Modo Demonstração
@@ -523,7 +525,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
         </div>
 
         <p className="text-center mt-6 text-xs text-slate-500">
-          Já tem uma conta? <button onClick={() => setShowLogin(true)} className="text-blue-500 font-bold hover:underline">Entrar</button>
+          Já tem uma conta? <button type="button" onClick={() => setShowLogin(true)} className="text-blue-500 font-bold hover:underline">Entrar</button>
         </p>
       </div>
     </div>

@@ -1,8 +1,8 @@
 import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { View, Client, Workout } from './types';
-import { supabase, getUserProfile, countPendingRescheduleRequests, type DBUserProfile } from './services/supabaseClient';
+import { supabase } from './services/supabaseCore';
+import { getUserProfile, countPendingRescheduleRequests, type DBUserProfile } from './services/userProfileService';
 import LoginView from './views/LoginView';
-import Layout from './components/Layout';
 import UpdateBanner from './components/UpdateBanner';
 import {
   canAccessAdminArea,
@@ -37,6 +37,7 @@ const AdminSettingsView = lazy(() => import('./views/AdminSettingsView'));
 const StudentDashboardView = lazy(() => import('./views/StudentDashboardView'));
 const StudentProfileView = lazy(() => import('./views/StudentProfileView'));
 const StudentCalendarView = lazy(() => import('./views/StudentCalendarView'));
+const Layout = lazy(() => import('./components/Layout'));
 
 // Loading fallback component
 const ViewLoader = () => (
@@ -157,6 +158,7 @@ function App() {
   // Handle PWA update when user clicks the banner
   const handleUpdate = () => {
     if (waitingWorker) {
+      waitingWorker.postMessage('clearCaches');
       waitingWorker.postMessage('skipWaiting');
     }
   };
@@ -567,11 +569,13 @@ function App() {
           onDismiss={() => setUpdateAvailable(false)}
         />
       )}
-      <Layout activeTab={getActiveTab()} onNavigate={handleNavigation} isStudent={userProfile?.role === 'student'} pendingRequests={pendingRequests}>
-        <Suspense fallback={<ViewLoader />}>
-          {renderContent()}
-        </Suspense>
-      </Layout>
+      <Suspense fallback={<ViewLoader />}>
+        <Layout activeTab={getActiveTab()} onNavigate={handleNavigation} isStudent={userProfile?.role === 'student'} pendingRequests={pendingRequests}>
+          <Suspense fallback={<ViewLoader />}>
+            {renderContent()}
+          </Suspense>
+        </Layout>
+      </Suspense>
 
       {renderRecoveryModal('Você está redefinindo sua senha de acesso. Digite a nova senha abaixo.')}
     </div>

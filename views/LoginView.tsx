@@ -3,6 +3,7 @@ import { supabase, getInvitationByToken, acceptInvitation } from '../services/su
 import type { AppSessionUser } from '../services/auth/authFlow';
 import { calculateLockDurationMs, getRemainingLockSeconds, isLockedOut } from '../services/auth/authFlow';
 import { persistLockoutState, readLockoutState } from '../services/auth/lockoutStorage';
+import { checkAuthGuard } from '../services/auth/authGuard';
 
 interface LoginViewProps {
   onLogin: (user: AppSessionUser | null) => void;
@@ -34,6 +35,7 @@ const InputField: React.FC<InputFieldProps> = ({ id, label, type, placeholder, v
 );
 
 const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
+  const SUPABASE_URL = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SUPABASE_URL) || '';
   const [currentSlide, setCurrentSlide] = useState(0);
   const [showRegister, setShowRegister] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
@@ -164,6 +166,13 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
         return;
       }
 
+      const guard = await checkAuthGuard('login', email, SUPABASE_URL);
+      if (!guard.allowed) {
+        const wait = guard.retryAfterSeconds > 0 ? ` Aguarde ${guard.retryAfterSeconds}s.` : '';
+        setError((guard.error || 'Muitas tentativas detectadas.') + wait);
+        return;
+      }
+
       const { data, error: authError } = await supabase.auth.signInWithPassword({
         email,
         password
@@ -215,6 +224,13 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
           user_metadata: { name, role: isInviteMode ? 'student' : 'coach' },
           isDemo: true
         });
+        return;
+      }
+
+      const guard = await checkAuthGuard('register', email, SUPABASE_URL);
+      if (!guard.allowed) {
+        const wait = guard.retryAfterSeconds > 0 ? ` Aguarde ${guard.retryAfterSeconds}s.` : '';
+        setError((guard.error || 'Muitas tentativas detectadas.') + wait);
         return;
       }
 

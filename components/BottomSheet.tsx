@@ -62,7 +62,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({ isOpen, onClose, title
                             </div>
                         )}
 
-                        <div className="px-6 pb-8 max-h-[80vh] overflow-y-auto custom-scrollbar">
+                        <div className="px-6 pb-28 max-h-[80vh] overflow-y-auto custom-scrollbar">
                             {children}
                         </div>
                     </motion.div>

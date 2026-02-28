@@ -55,12 +55,16 @@ const ViewLoader = () => (
 );
 
 function App() {
-  const [currentView, setCurrentView] = useState<View>(View.LOGIN);
+  const [currentView, setCurrentView] = useState<View>(() => {
+    if (typeof window === 'undefined') return View.LOGIN;
+    return resolveViewFromPath(window.location.pathname) || View.LOGIN;
+  });
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [activeWorkout, setActiveWorkout] = useState<Workout | null>(null);
   const [user, setUser] = useState<AppSessionUser | null>(null);
   const [userProfile, setUserProfile] = useState<DBUserProfile | null>(null);
   const [loading, setLoading] = useState(false);
+  const [routeHydrating, setRouteHydrating] = useState(false);
   const [pendingRequests, setPendingRequests] = useState(0);  // Reschedule requests count
   const [updateAvailable, setUpdateAvailable] = useState(false);
   const [waitingWorker, setWaitingWorker] = useState<ServiceWorker | null>(null);
@@ -172,6 +176,18 @@ function App() {
       const targetView = fromState || fromPath;
       if (!targetView) return;
 
+      const requiresClientContext = targetView === View.CLIENT_PROFILE
+        || targetView === View.ASSESSMENT
+        || targetView === View.SPORT_TRAINING;
+      const requiresWorkoutContext = targetView === View.TRAINING_EXECUTION;
+
+      if (requiresClientContext) {
+        setSelectedClient(null);
+      }
+      if (requiresWorkoutContext) {
+        setActiveWorkout(null);
+      }
+
       historyPopRef.current = true;
       setCurrentView(targetView);
     };
@@ -208,6 +224,87 @@ function App() {
 
     window.history.replaceState(state, '', url);
   }, [currentView, selectedClient?.id, activeWorkout?.id]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (!user || user.isDemo) {
+      setRouteHydrating(false);
+      return;
+    }
+
+    setRouteHydrating(false);
+
+    const fallbackView = resolvePostLoginView(userProfile, user);
+    const params = new URLSearchParams(window.location.search);
+    const clientId = params.get('client');
+    const workoutId = params.get('workout');
+
+    const needsClientContext = currentView === View.CLIENT_PROFILE
+      || currentView === View.ASSESSMENT
+      || currentView === View.SPORT_TRAINING;
+    const needsWorkoutContext = currentView === View.TRAINING_EXECUTION;
+
+    let cancelled = false;
+
+    const hydrate = async () => {
+      if (needsClientContext && !selectedClient) {
+        if (!clientId) {
+          setCurrentView(fallbackView);
+          return;
+        }
+
+        setRouteHydrating(true);
+        const { fetchClientByIdForDeepLink } = await import('./services/navigation/deepLinkDataService');
+        const resolvedClient = await fetchClientByIdForDeepLink(clientId);
+
+        if (cancelled) return;
+        setRouteHydrating(false);
+
+        if (!resolvedClient) {
+          setCurrentView(fallbackView);
+          return;
+        }
+
+        setSelectedClient(resolvedClient);
+      }
+
+      if (needsWorkoutContext && !activeWorkout) {
+        if (!workoutId) {
+          setCurrentView(fallbackView);
+          return;
+        }
+
+        setRouteHydrating(true);
+        const { fetchWorkoutByIdForDeepLink, fetchClientByIdForDeepLink } = await import('./services/navigation/deepLinkDataService');
+        const resolvedWorkout = await fetchWorkoutByIdForDeepLink(workoutId);
+
+        if (cancelled) return;
+        if (!resolvedWorkout) {
+          setRouteHydrating(false);
+          setCurrentView(fallbackView);
+          return;
+        }
+
+        setActiveWorkout(resolvedWorkout);
+
+        if (!selectedClient && resolvedWorkout.clientId) {
+          const resolvedClient = await fetchClientByIdForDeepLink(resolvedWorkout.clientId);
+          if (!cancelled && resolvedClient) {
+            setSelectedClient(resolvedClient);
+          }
+        }
+
+        if (!cancelled) {
+          setRouteHydrating(false);
+        }
+      }
+    };
+
+    void hydrate();
+    return () => {
+      cancelled = true;
+    };
+  }, [currentView, selectedClient?.id, activeWorkout?.id, user?.id, user?.isDemo, userProfile?.role]);
 
   // Handle PWA update when user clicks the banner
   const handleUpdate = () => {
@@ -293,7 +390,9 @@ function App() {
         console.error('Error loading user profile:', error);
       }
 
-      navigateTo(resolvePostLoginView(resolvedProfile, loggedUser));
+      const routeView = typeof window !== 'undefined' ? resolveViewFromPath(window.location.pathname) : null;
+      const postLoginView = resolvePostLoginView(resolvedProfile, loggedUser);
+      navigateTo(routeView && routeView !== View.LOGIN ? routeView : postLoginView);
     } else {
       // Fallback or explicit demo (should trigger restricted mode)
       const demoUser = createDemoUser();
@@ -381,7 +480,7 @@ function App() {
     );
   };
 
-  if (loading) {
+  if (loading || routeHydrating) {
     return (
       <div className="min-h-screen bg-slate-950 flex items-center justify-center">
         <div className="text-center animate-fade-in">

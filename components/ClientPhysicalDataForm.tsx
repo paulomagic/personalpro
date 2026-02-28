@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Cake, Weight, Ruler, Activity } from 'lucide-react';
+import { useTheme } from '../services/ThemeContext';
 
 interface ClientPhysicalData {
     age?: number;
@@ -27,6 +28,8 @@ export function ClientPhysicalDataForm({
     compact = false,
     readOnly = false
 }: Props) {
+    const { resolvedTheme } = useTheme();
+    const isLightTheme = resolvedTheme === 'light';
     const [localAge, setLocalAge] = useState(age?.toString() || '');
     const [localWeight, setLocalWeight] = useState(weight?.toString() || '');
     const [localHeight, setLocalHeight] = useState(height?.toString() || '');
@@ -91,25 +94,52 @@ export function ClientPhysicalDataForm({
     const bmiClass = bmi ? getBMIClassification(bmi) : null;
 
     // Classes de input com cores corretas (fundo escuro, texto claro)
-    const inputClasses = `
-        w-full 
-        bg-slate-800 
-        border border-slate-700 
-        rounded-lg 
-        px-4 py-3 
-        text-slate-100 
-        placeholder-slate-500 
-        focus:outline-none 
-        focus:ring-2 
-        focus:ring-blue-500/50 
-        focus:border-blue-500/50
-        disabled:opacity-50 
+    const inputClasses = (isLightTheme
+        ? `
+        w-full
+        bg-white/82
+        border border-blue-200/80
+        rounded-lg
+        px-4 py-3
+        text-slate-700
+        placeholder-slate-400
+        focus:outline-none
+        focus:ring-2
+        focus:ring-blue-400/25
+        focus:border-blue-400/55
+        disabled:opacity-50
         disabled:cursor-not-allowed
-    `.replace(/\s+/g, ' ').trim();
+    `
+        : `
+        w-full
+        bg-slate-800
+        border border-slate-700
+        rounded-lg
+        px-4 py-3
+        text-slate-100
+        placeholder-slate-500
+        focus:outline-none
+        focus:ring-2
+        focus:ring-blue-500/50
+        focus:border-blue-500/50
+        disabled:opacity-50
+        disabled:cursor-not-allowed
+    `).replace(/\s+/g, ' ').trim();
 
     if (compact) {
         return (
-            <div className="bg-slate-900/50 rounded-xl p-4 border border-slate-700/50">
+            <div
+                className="rounded-xl p-4"
+                style={isLightTheme
+                    ? {
+                        background: 'linear-gradient(160deg, rgba(224, 233, 248, 0.92), rgba(208, 220, 240, 0.9))',
+                        border: '1px solid rgba(130, 170, 235, 0.28)',
+                    }
+                    : {
+                        background: 'rgba(15, 23, 42, 0.5)',
+                        border: '1px solid rgba(51, 65, 85, 0.5)',
+                    }}
+            >
                 <div className="flex items-center gap-2 mb-3">
                     <Activity className="w-4 h-4 text-blue-400" />
                     <h3 className="text-sm font-medium text-slate-300">Dados Físicos</h3>
@@ -208,7 +238,18 @@ export function ClientPhysicalDataForm({
 
     // Versão completa (para perfil do cliente)
     return (
-        <div className="bg-slate-900/50 rounded-xl p-6 border border-slate-700/50">
+        <div
+            className="rounded-xl p-6"
+            style={isLightTheme
+                ? {
+                    background: 'linear-gradient(160deg, rgba(224, 233, 248, 0.92), rgba(208, 220, 240, 0.9))',
+                    border: '1px solid rgba(130, 170, 235, 0.28)',
+                }
+                : {
+                    background: 'rgba(15, 23, 42, 0.5)',
+                    border: '1px solid rgba(51, 65, 85, 0.5)',
+                }}
+        >
             <div className="flex items-center gap-2 mb-4">
                 <Activity className="w-4 h-4 text-blue-400" />
                 <h3 className="text-lg font-semibold text-white">Dados Físicos</h3>

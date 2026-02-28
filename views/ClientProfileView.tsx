@@ -8,6 +8,7 @@ import { mapAssessmentsToClientShape, buildClientPhysicalUpdatePayload } from '.
 import InviteStudentModal from '../components/InviteStudentModal';
 import ClientFinanceSection from '../components/ClientFinanceSection';
 import { ClientPhysicalDataForm } from '../components/ClientPhysicalDataForm';
+import { useTheme } from '../services/ThemeContext';
 
 interface ClientProfileViewProps {
   client: Client;
@@ -21,6 +22,8 @@ interface ClientProfileViewProps {
 }
 
 const ClientProfileView: React.FC<ClientProfileViewProps> = ({ client: initialClient, coachId, onBack, onStartWorkout, onStartAssessment, onCreateWorkout, onStudentView, onSportTraining }) => {
+  const { resolvedTheme } = useTheme();
+  const isLightTheme = resolvedTheme === 'light';
 
 
   const [client, setClient] = useState<Client>({
@@ -423,7 +426,19 @@ const ClientProfileView: React.FC<ClientProfileViewProps> = ({ client: initialCl
 
       {/* Premium Segmented Control (Tabs) */}
       <div className="px-5 mt-6 mb-2">
-        <div className="flex bg-slate-900/60 rounded-[18px] backdrop-blur-md p-1 border border-white/5 relative">
+        <div
+          className="flex rounded-[18px] backdrop-blur-md p-1 relative"
+          style={isLightTheme
+            ? {
+              background: 'linear-gradient(145deg, rgba(123, 141, 171, 0.45), rgba(109, 128, 162, 0.5))',
+              border: '1px solid rgba(130, 170, 235, 0.38)',
+              boxShadow: 'inset 0 1px 0 rgba(224, 236, 255, 0.25)',
+            }
+            : {
+              background: 'rgba(15, 23, 42, 0.6)',
+              border: '1px solid rgba(255,255,255,0.05)',
+            }}
+        >
           {tabs.map((tab, idx) => (
             <button
               key={tab}

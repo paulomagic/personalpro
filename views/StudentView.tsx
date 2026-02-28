@@ -10,6 +10,7 @@ import { mockExercises } from '../mocks/demoData';
 import VideoPlayerModal from '../components/VideoPlayerModal';
 import { FeedbackForm } from '../components/FeedbackForm';
 import PageHeader from '../components/PageHeader';
+import { useTheme } from '../services/ThemeContext';
 
 interface StudentViewProps {
     clientId?: string;          // ID do cliente para buscar treinos reais
@@ -66,6 +67,9 @@ const StudentView: React.FC<StudentViewProps> = ({
     onCompleteWorkout,
     onBack
 }) => {
+    const { resolvedTheme } = useTheme();
+    const isLightTheme = resolvedTheme === 'light';
+
     // States
     const [loading, setLoading] = useState(true);
     const [workout, setWorkout] = useState<StudentWorkoutState | null>(null);
@@ -468,8 +472,17 @@ const StudentView: React.FC<StudentViewProps> = ({
                                     <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-full blur-3xl group-hover:bg-blue-500/20 transition-all pointer-events-none" />
 
                                     <div className="flex items-center gap-4 relative z-10">
-                                        <div className="size-[60px] rounded-[18px] flex items-center justify-center border border-white/10 flex-shrink-0" style={{ background: 'linear-gradient(135deg,#1E3A8A,#3B82F6)', boxShadow: '0 8px 30px rgba(59, 130, 246, 0.3)' }}>
-                                            <span className="text-[26px] font-black text-white">{splitLetter}</span>
+                                        <div
+                                            className="size-[60px] rounded-[18px] flex items-center justify-center flex-shrink-0"
+                                            style={{
+                                                background: 'var(--btn-primary-bg)',
+                                                border: '1px solid var(--btn-primary-border)',
+                                                boxShadow: 'var(--btn-primary-shadow)',
+                                            }}
+                                        >
+                                            <span className="text-[26px] font-black" style={{ color: 'var(--btn-primary-text)' }}>
+                                                {splitLetter}
+                                            </span>
                                         </div>
                                         <div className="flex-1 min-w-0">
                                             <h3 className="font-bold text-white text-lg mb-1 truncate">
@@ -508,8 +521,26 @@ const StudentView: React.FC<StudentViewProps> = ({
     return (
         <div className="min-h-screen text-white" style={{ background: 'var(--bg-void)' }}>
             {/* Header Execution Premium */}
-            <header className="sticky top-0 z-40 backdrop-blur-xl border-b border-white/5 px-5 pt-12 pb-5 safe-area-top" style={{ background: 'rgba(3,7,18,0.85)' }}>
-                <div className="absolute top-0 left-0 right-0 h-32 pointer-events-none" style={{ background: `radial-gradient(ellipse 60% 80% at 50% 0%, rgba(59, 130, 246,0.08) 0%, transparent 100%)` }} />
+            <header
+                className="sticky top-0 z-40 backdrop-blur-xl px-5 pt-12 pb-5 safe-area-top"
+                style={isLightTheme
+                    ? {
+                        background: 'linear-gradient(180deg, rgba(231, 239, 252, 0.96) 0%, rgba(223, 233, 250, 0.9) 100%)',
+                        borderBottom: '1px solid rgba(130, 170, 235, 0.28)',
+                    }
+                    : {
+                        background: 'rgba(3,7,18,0.85)',
+                        borderBottom: '1px solid rgba(255,255,255,0.05)',
+                    }}
+            >
+                <div
+                    className="absolute top-0 left-0 right-0 h-32 pointer-events-none"
+                    style={{
+                        background: isLightTheme
+                            ? 'radial-gradient(ellipse 60% 80% at 50% 0%, rgba(59, 130, 246,0.14) 0%, transparent 100%)'
+                            : 'radial-gradient(ellipse 60% 80% at 50% 0%, rgba(59, 130, 246,0.08) 0%, transparent 100%)',
+                    }}
+                />
 
                 <div className="max-w-md mx-auto relative z-10">
                     <div className="flex flex-col gap-4 mb-4">
@@ -523,7 +554,17 @@ const StudentView: React.FC<StudentViewProps> = ({
                                         setShowFeedbackForm(false);
                                         setFeedbackCompletedExercises(new Set());
                                     }}
-                                    className="size-11 rounded-2xl bg-white/10 backdrop-blur-xl text-white border border-white/20 flex items-center justify-center hover:bg-white/20 shadow-lg transition-all active:scale-95"
+                                    className="size-11 rounded-2xl backdrop-blur-xl text-white flex items-center justify-center shadow-lg transition-all active:scale-95"
+                                    style={isLightTheme
+                                        ? {
+                                            background: 'rgba(255,255,255,0.66)',
+                                            border: '1px solid rgba(130, 170, 235, 0.35)',
+                                            boxShadow: '0 8px 22px rgba(63, 93, 152, 0.16)',
+                                        }
+                                        : {
+                                            background: 'rgba(255,255,255,0.10)',
+                                            border: '1px solid rgba(255,255,255,0.20)',
+                                        }}
                                 >
                                     <ArrowLeft size={20} strokeWidth={2.5} />
                                 </button>
@@ -742,7 +783,16 @@ const StudentView: React.FC<StudentViewProps> = ({
             </main>
 
             {/* Finish Button */}
-            <div className="fixed bottom-0 left-0 right-0 py-6 px-4 bg-gradient-to-t from-slate-950 via-slate-950/90 to-transparent pointer-events-none z-40 safe-area-bottom">
+            <div
+                className="fixed bottom-0 left-0 right-0 py-6 px-4 pointer-events-none z-40 safe-area-bottom"
+                style={isLightTheme
+                    ? {
+                        background: 'linear-gradient(to top, rgba(240,244,255,0.98) 0%, rgba(240,244,255,0.75) 42%, rgba(240,244,255,0) 100%)',
+                    }
+                    : {
+                        background: 'linear-gradient(to top, rgba(2,8,23,1) 0%, rgba(2,8,23,0.9) 40%, rgba(2,8,23,0) 100%)',
+                    }}
+            >
                 <div className="max-w-md mx-auto pointer-events-auto">
                     {progress >= 100 ? (
                         <button
@@ -751,33 +801,87 @@ const StudentView: React.FC<StudentViewProps> = ({
                                 handleFinishWorkout();
                             }}
                             disabled={!canFinishWorkout}
-                            className={`w-full h-[68px] rounded-[24px] relative overflow-hidden group disabled:opacity-30 disabled:grayscale transition-all active:scale-[0.98] border border-blue-500/30 shadow-xl shadow-blue-900/20 ${canFinishWorkout
-                                ? 'glass-card hover:border-blue-400 cursor-pointer'
-                                : 'bg-slate-900/60 border-slate-700/60 opacity-80 cursor-not-allowed'
+                            className={`w-full py-4 rounded-2xl relative overflow-hidden group disabled:opacity-35 transition-all active:scale-[0.98] ${canFinishWorkout
+                                ? 'cursor-pointer'
+                                : 'opacity-80 cursor-not-allowed'
                                 }`}
+                            style={canFinishWorkout
+                                ? {
+                                    background: 'var(--btn-primary-bg)',
+                                    border: '1px solid var(--btn-primary-border)',
+                                    boxShadow: 'var(--btn-primary-shadow)',
+                                }
+                                : (isLightTheme
+                                    ? {
+                                        background: 'linear-gradient(145deg, rgba(214, 224, 242, 0.95), rgba(204, 216, 238, 0.95))',
+                                        border: '1px solid rgba(130,170,235,0.28)',
+                                        boxShadow: 'inset 0 1px 0 rgba(246,250,255,0.45)',
+                                    }
+                                    : {
+                                        background: 'rgba(15,23,42,0.7)',
+                                        border: '1px solid rgba(51,65,85,0.65)',
+                                    })}
                         >
-                            {canFinishWorkout && <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-indigo-600 opacity-90 transition-all group-hover:opacity-100" />}
-
                             <div className="absolute inset-0 flex items-center justify-center gap-3 z-10 px-6">
                                 <div className="flex-1 flex flex-col items-start justify-center">
-                                    <span className="text-white font-black uppercase tracking-[0.15em] text-[13px] text-shadow-sm leading-tight">Encerrar Sessão</span>
-                                    <span className="text-[10px] text-white/70 font-semibold tracking-wide">
+                                    <span
+                                        className="font-black uppercase tracking-[0.15em] text-[13px] leading-tight"
+                                        style={{ color: canFinishWorkout ? 'var(--btn-primary-text)' : (isLightTheme ? '#3D5A80' : '#7A9FCC') }}
+                                    >
+                                        Encerrar Sessão
+                                    </span>
+                                    <span
+                                        className="text-[10px] font-semibold tracking-wide"
+                                        style={{ color: canFinishWorkout ? 'rgba(244,248,255,0.78)' : (isLightTheme ? '#64748B' : '#64748B') }}
+                                    >
                                         {isColdStartWorkout && !hasAllRequiredFeedback
                                             ? 'Feedback obrigatório Pendente'
                                             : 'Excelente trabalho hoje'}
                                     </span>
                                 </div>
-                                <div className="size-11 rounded-[14px] bg-white/20 backdrop-blur-sm border-2 border-white/30 flex items-center justify-center shadow-inner mt-px">
-                                    <Check size={20} strokeWidth={3} className="text-white" />
+                                <div
+                                    className="size-11 rounded-[14px] backdrop-blur-sm flex items-center justify-center mt-px"
+                                    style={canFinishWorkout
+                                        ? {
+                                            background: 'rgba(255,255,255,0.18)',
+                                            border: '2px solid rgba(255,255,255,0.3)',
+                                        }
+                                        : (isLightTheme
+                                            ? {
+                                                background: 'rgba(255,255,255,0.45)',
+                                                border: '2px solid rgba(130,170,235,0.28)',
+                                            }
+                                            : {
+                                                background: 'rgba(255,255,255,0.05)',
+                                                border: '2px solid rgba(255,255,255,0.12)',
+                                            })}
+                                >
+                                    <Check
+                                        size={20}
+                                        strokeWidth={3}
+                                        style={{ color: canFinishWorkout ? '#FFFFFF' : (isLightTheme ? '#64748B' : '#64748B') }}
+                                    />
                                 </div>
                             </div>
                         </button>
                     ) : (
                         <div
-                            className="w-full h-[64px] rounded-[24px] glass-card border border-white/5 flex items-center justify-center gap-3 bg-slate-900/80 backdrop-blur-md opacity-80"
+                            className="w-full py-4 rounded-2xl flex items-center justify-center gap-3 backdrop-blur-md"
+                            style={isLightTheme
+                                ? {
+                                    background: 'linear-gradient(145deg, rgba(222, 232, 248, 0.92), rgba(212, 224, 244, 0.92))',
+                                    border: '1px solid rgba(130,170,235,0.28)',
+                                    boxShadow: 'inset 0 1px 0 rgba(246,250,255,0.45)',
+                                }
+                                : {
+                                    background: 'rgba(2, 12, 37, 0.86)',
+                                    border: '1px solid rgba(255,255,255,0.06)',
+                                }}
                         >
-                            <Trophy size={18} className="text-slate-500" />
-                            <span className="font-black text-[11px] text-slate-500 uppercase tracking-widest">{Math.round(progress)}% Concluído</span>
+                            <Trophy size={18} style={{ color: isLightTheme ? '#526A8C' : '#64748B' }} />
+                            <span className="font-black text-[11px] uppercase tracking-widest" style={{ color: isLightTheme ? '#3D5A80' : '#64748B' }}>
+                                {Math.round(progress)}% Concluído
+                            </span>
                         </div>
                     )}
                 </div>

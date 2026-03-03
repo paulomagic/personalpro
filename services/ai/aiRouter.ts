@@ -39,7 +39,12 @@ async function logAIAction(entry: AILogEntry): Promise<void> {
     if (!supabase) return;
 
     try {
+        // Get current user id for RLS filtering
+        const { data: { session } } = await supabase.auth.getSession();
+        const userId = session?.user?.id ?? null;
+
         await supabase.from('ai_logs').insert({
+            user_id: userId,
             action_type: entry.action_type,
             provider_used: entry.provider_used,
             model_used: entry.model_name,

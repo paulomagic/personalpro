@@ -13,12 +13,14 @@ import type { Exercise } from '../../exerciseService';
  * Schema para a resposta estruturada da IA
  */
 export const AISelectionResponseSchema = z.object({
-    selected: z.number().int().min(1).max(20),
+    // z.coerce.number() handles AI responses that return "1" (string) instead of 1 (number)
+    selected: z.coerce.number().int().min(1).max(20),
     reasoning: z.string().min(5).max(500).optional(),  // Made optional to handle varied AI responses
     safety_check: z.object({
         kinetic_chain: z.enum(['fechada', 'aberta']).optional(),
         spinal_load: z.enum(['baixo', 'moderado', 'alto']).optional(),
-        is_machine: z.boolean().optional(),
+        // z.coerce.boolean() handles AI responses that return "true"/"false" as strings
+        is_machine: z.coerce.boolean().optional(),
         complexity: z.enum(['baixa', 'media', 'alta']).optional()
     }).optional()
 });

@@ -13,6 +13,12 @@ interface AuthGuardResponse {
     error?: string;
 }
 
+function isLocalRuntime(): boolean {
+    if (typeof window === 'undefined') return false;
+    const host = window.location.hostname;
+    return host === 'localhost' || host === '127.0.0.1';
+}
+
 function normalizeRetryAfter(value: unknown): number {
     const num = Number(value);
     if (Number.isNaN(num) || num < 0) return 0;
@@ -34,18 +40,27 @@ export function normalizeAuthGuardResult(status: number, payload: AuthGuardRespo
         return { allowed: true, retryAfterSeconds };
     }
 
-    // Fail-open for availability issues to avoid locking out legitimate users.
-    // Abuse scenarios are still blocked by explicit 429 above.
+    if (status >= 200 && status < 300) {
+        return {
+            allowed: false,
+            retryAfterSeconds,
+            error: payload?.error || 'Validação de segurança não autorizou esta tentativa.'
+        };
+    }
+
+    // Fail-closed: when protection infrastructure is unhealthy we block auth actions.
     if (status >= 500) {
         return {
-            allowed: true,
-            retryAfterSeconds: 0
+            allowed: false,
+            retryAfterSeconds,
+            error: 'Serviço de proteção temporariamente indisponível. Tente novamente em instantes.'
         };
     }
 
     return {
-        allowed: true,
-        retryAfterSeconds: 0
+        allowed: false,
+        retryAfterSeconds,
+        error: payload?.error || 'Tentativa bloqueada pela política de segurança.'
     };
 }
 
@@ -55,7 +70,7 @@ export async function checkAuthGuard(
     supabaseUrl: string
 ): Promise<AuthGuardResult> {
     // Em desenvolvimento local, não bloquear login/cadastro por dependência de CORS da Edge Function.
-    if (typeof import.meta !== 'undefined' && import.meta.env?.DEV) {
+    if (isLocalRuntime()) {
         return { allowed: true, retryAfterSeconds: 0 };
     }
 
@@ -86,8 +101,9 @@ export async function checkAuthGuard(
         return normalizeAuthGuardResult(response.status, payload);
     } catch {
         return {
-            allowed: true,
-            retryAfterSeconds: 0
+            allowed: false,
+            retryAfterSeconds: 0,
+            error: 'Não foi possível validar segurança da autenticação. Tente novamente.'
         };
     } finally {
         clearTimeout(timeout);

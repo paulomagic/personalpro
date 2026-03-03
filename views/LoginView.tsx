@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
+import { Turnstile } from '@marsidev/react-turnstile';
 import { supabase } from '../services/supabaseCore';
 import { getInvitationByToken, acceptInvitation } from '../services/invitations/invitationAuthService';
 import type { AppSessionUser } from '../services/auth/authFlow';
 import { calculateLockDurationMs, getRemainingLockSeconds, isLockedOut } from '../services/auth/authFlow';
 import { persistLockoutState, readLockoutState } from '../services/auth/lockoutStorage';
 import { checkAuthGuard } from '../services/auth/authGuard';
+import { validateTurnstileToken } from '../services/auth/turnstile';
 
 interface LoginViewProps {
   onLogin: (user: AppSessionUser | null) => void;
@@ -37,6 +39,7 @@ const InputField: React.FC<InputFieldProps> = ({ id, label, type, placeholder, v
 
 const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
   const SUPABASE_URL = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SUPABASE_URL) || '';
+  const TURNSTILE_SITE_KEY = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_TURNSTILE_SITE_KEY) || '';
   const [currentSlide, setCurrentSlide] = useState(0);
   const [showRegister, setShowRegister] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
@@ -54,6 +57,31 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
   // Invitation states
   const [inviteToken, setInviteToken] = useState<string | null>(null);
   const [isInviteMode, setIsInviteMode] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState('');
+  const [captchaWidgetKey, setCaptchaWidgetKey] = useState(0);
+  const isCaptchaEnabled = Boolean(TURNSTILE_SITE_KEY && SUPABASE_URL && supabase);
+
+  const resetCaptcha = () => {
+    setCaptchaToken('');
+    setCaptchaWidgetKey(prev => prev + 1);
+  };
+
+  const ensureCaptchaValidated = async () => {
+    if (!isCaptchaEnabled) return true;
+    if (!captchaToken) {
+      setError('Confirme o CAPTCHA para continuar.');
+      return false;
+    }
+
+    const captchaResult = await validateTurnstileToken(captchaToken, SUPABASE_URL);
+    resetCaptcha();
+    if (!captchaResult.valid) {
+      setError(captchaResult.error || 'Falha na validação do CAPTCHA.');
+      return false;
+    }
+
+    return true;
+  };
 
   // Check for invite token in URL on mount
   useEffect(() => {
@@ -167,6 +195,9 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
         return;
       }
 
+      const captchaOk = await ensureCaptchaValidated();
+      if (!captchaOk) return;
+
       const guard = await checkAuthGuard('login', email, SUPABASE_URL);
       if (!guard.allowed) {
         const wait = guard.retryAfterSeconds > 0 ? ` Aguarde ${guard.retryAfterSeconds}s.` : '';
@@ -227,6 +258,9 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
         });
         return;
       }
+
+      const captchaOk = await ensureCaptchaValidated();
+      if (!captchaOk) return;
 
       const guard = await checkAuthGuard('register', email, SUPABASE_URL);
       if (!guard.allowed) {
@@ -329,7 +363,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
     return (
       <div className="flex flex-col min-h-screen bg-slate-950 px-8 py-12">
         <button
-          onClick={() => { setShowLogin(false); setShowRegister(false); setError(null); }}
+          onClick={() => { setShowLogin(false); setShowRegister(false); setError(null); resetCaptcha(); }}
           aria-label="Voltar para tela inicial"
           className="absolute top-12 left-6 size-10 rounded-full bg-slate-900 border border-white/10 flex items-center justify-center text-slate-400 hover:text-white transition-colors"
         >
@@ -419,6 +453,32 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
             </div>
           )}
         </div>
+        {isCaptchaEnabled && (
+          <div className="mb-4 rounded-2xl border border-white/10 bg-slate-900/60 p-3">
+            <Turnstile
+              key={captchaWidgetKey}
+              siteKey={TURNSTILE_SITE_KEY}
+              onSuccess={(token) => {
+                setCaptchaToken(token);
+                if (error && error.toLowerCase().includes('captcha')) {
+                  setError(null);
+                }
+              }}
+              onExpire={() => setCaptchaToken('')}
+              onError={() => {
+                setCaptchaToken('');
+                setError('Não foi possível carregar o CAPTCHA. Atualize e tente novamente.');
+              }}
+              options={{
+                theme: 'dark',
+                size: 'flexible',
+              }}
+            />
+            <p className="mt-2 text-xs text-slate-400">
+              {captchaToken ? 'Verificação de segurança concluída.' : 'Confirme a verificação de segurança para continuar.'}
+            </p>
+          </div>
+        )}
         <button
           onClick={isRegister ? handleRegister : handleLogin}
           disabled={loading}
@@ -443,7 +503,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
 
         <p className="text-center mt-6 text-sm text-slate-500">
           {isRegister ? 'Já tem uma conta?' : 'Não tem conta?'}
-          <button type="button" onClick={() => { setShowLogin(!isRegister); setShowRegister(!showRegister); setError(null); }} className="text-blue-500 font-bold ml-1 hover:underline">
+          <button type="button" onClick={() => { setShowLogin(!isRegister); setShowRegister(!showRegister); setError(null); resetCaptcha(); }} className="text-blue-500 font-bold ml-1 hover:underline">
             {isRegister ? 'Entrar' : 'Criar conta'}
           </button>
         </p>

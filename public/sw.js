@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v21';
+const CACHE_VERSION = 'v22';
 const CACHE_NAME = `personalpro-${CACHE_VERSION}`;
 const STATIC_CACHE = `personalpro-static-${CACHE_VERSION}`;
 const DYNAMIC_CACHE = `personalpro-dynamic-${CACHE_VERSION}`;

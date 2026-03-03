@@ -2,7 +2,7 @@
 -- Created: 2026-03-03
 -- Goal: protect sensitive fitness/health fields at column level without breaking current reads.
 
-CREATE EXTENSION IF NOT EXISTS pgcrypto;
+CREATE EXTENSION IF NOT EXISTS pgcrypto SCHEMA extensions;
 
 ALTER TABLE public.clients
     ADD COLUMN IF NOT EXISTS injuries_encrypted BYTEA,
@@ -47,7 +47,7 @@ BEGIN
 
     RETURN v_key;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, extensions;
 
 REVOKE ALL ON FUNCTION public.get_clinical_data_key() FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.get_clinical_data_key() TO service_role;
@@ -57,7 +57,8 @@ RETURNS TRIGGER
 AS $$
 DECLARE
     v_key TEXT;
-    v_bmi NUMERIC(6,2);
+    v_bmi NUMERIC;
+    v_height_m NUMERIC;
 BEGIN
     v_key := public.get_clinical_data_key();
     IF v_key IS NULL THEN
@@ -83,8 +84,21 @@ BEGIN
     );
 
     v_bmi := NULL;
-    IF NEW.weight IS NOT NULL AND NEW.height IS NOT NULL AND NEW.height > 0 THEN
-        v_bmi := ROUND((NEW.weight / ((NEW.height / 100.0) * (NEW.height / 100.0)))::NUMERIC, 2);
+    IF NEW.weight IS NOT NULL AND NEW.weight > 0
+       AND NEW.height IS NOT NULL AND NEW.height > 0 THEN
+        -- Se height > 3, assumir centimetros; senao assumir metros
+        IF NEW.height > 3 THEN
+            v_height_m := NEW.height / 100.0;
+        ELSE
+            v_height_m := NEW.height;
+        END IF;
+        IF v_height_m > 0.3 THEN
+            v_bmi := ROUND((NEW.weight / (v_height_m * v_height_m))::NUMERIC, 2);
+            -- Ignorar valores absurdos (BMI razoavel: 5 a 200)
+            IF v_bmi < 5 OR v_bmi > 200 THEN
+                v_bmi := NULL;
+            END IF;
+        END IF;
     END IF;
 
     NEW.bmi_encrypted := pgp_sym_encrypt(
@@ -95,7 +109,7 @@ BEGIN
 
     RETURN NEW;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, extensions;
 
 DROP TRIGGER IF EXISTS trg_encrypt_clients_sensitive_columns ON public.clients;
 CREATE TRIGGER trg_encrypt_clients_sensitive_columns
@@ -168,7 +182,8 @@ DECLARE
     v_limit INTEGER := GREATEST(p_limit, 1);
     v_updated BIGINT := 0;
 BEGIN
-    IF auth.role() = 'service_role' THEN
+    -- Permitir execucao direta pelo SQL Editor (current_user = 'postgres')
+    IF current_user = 'postgres' OR auth.role() = 'service_role' THEN
         is_admin := TRUE;
     ELSE
         SELECT EXISTS (
@@ -201,7 +216,7 @@ BEGIN
     GET DIAGNOSTICS v_updated = ROW_COUNT;
     RETURN v_updated;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, extensions;
 
 GRANT EXECUTE ON FUNCTION public.backfill_client_sensitive_encryption(INTEGER) TO authenticated;
 

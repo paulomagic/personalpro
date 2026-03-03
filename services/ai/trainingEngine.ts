@@ -342,11 +342,13 @@ export async function generateWorkout(params: {
     debugTime('[TrainingEngine] AI Processing');
     onProgress?.({ stage: 'ai_processing', current: 3, total: 4, message: `Gerando treino... (0/${totalSlots})` });
 
-    // Config p-queue: 5 concurrent para não estourar Groq rate limit (30 req/min)
+    // Config p-queue: throttle to avoid Groq rate limits (30 req/min on Personal Pro)
+    // Strategy: max 2 slots per 4s = ~30 calls/min. The groq-proxy now fails fast on 429
+    // (no fallback model retry), so each slot = at most 1 Groq API call.
     const queue = new PQueue({
-        concurrency: 3,        // Reduced from 5 to avoid Groq rate limits
-        interval: 90000,       // Increased from 60s to 90s  
-        intervalCap: 20        // Reduced from 25 to be more conservative
+        concurrency: 2,        // 2 concurrent requests max
+        interval: 4000,        // 4 second window
+        intervalCap: 2         // max 2 tasks per 4s = ~30/min (within Groq limit)
     });
 
     let processedCount = 0;

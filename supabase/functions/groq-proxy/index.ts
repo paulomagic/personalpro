@@ -102,7 +102,7 @@ async function callGroq(
     apiKey: string,
     model: string,
     prompt: string
-): Promise<{ text: string | null; error: string | null; usage?: { in: number; out: number } }> {
+): Promise<{ text: string | null; error: string | null; usage?: { in: number; out: number }; isRateLimit?: boolean }> {
     try {
         const response = await fetch(GROQ_API_URL, {
             method: "POST",
@@ -126,6 +126,12 @@ async function callGroq(
                 max_tokens: 4096,
             }),
         });
+
+        // 429 = Groq rate limit — fail fast, do NOT retry with another model
+        // This avoids doubling API pressure (35 slots * 1 attempt vs 35 * 2 = 70 calls)
+        if (response.status === 429) {
+            return { text: null, error: 'rate_limit_exceeded', isRateLimit: true };
+        }
 
         const data: GroqAPIResponse = await response.json();
 
@@ -220,16 +226,27 @@ serve(async (req: Request) => {
             );
         }
 
-        let result: { text: string | null; error: string | null; usage?: { in: number; out: number } };
+        let result: { text: string | null; error: string | null; usage?: { in: number; out: number }; isRateLimit?: boolean };
         let modelUsed = model || MODEL_DEFAULT;
 
         // Try primary model
         console.log(`[groq-proxy] Trying ${modelUsed}...`);
         result = await callGroq(apiKey, modelUsed, prompt);
 
-        // Try fallback if primary failed
+        // If rate limited, return 429 immediately — do NOT try fallback model.
+        // This avoids doubling the Groq API pressure per workout generation.
+        // The client (aiRouter) will fall back to the local deterministic provider.
+        if (result.isRateLimit) {
+            console.warn(`[groq-proxy] Rate limited by Groq — returning 429 to client (fast fail)`);
+            return new Response(
+                JSON.stringify({ success: false, error: 'rate_limit_exceeded' }),
+                { status: 429, headers: jsonHeaders }
+            );
+        }
+
+        // Try fallback model only when primary failed for non-rate-limit reasons
         if (!result.text && modelUsed !== MODEL_FALLBACK) {
-            console.warn(`[groq-proxy] Primary failed: ${result.error}, trying fallback...`);
+            console.warn(`[groq-proxy] Primary failed: ${result.error}, trying fallback model...`);
             modelUsed = MODEL_FALLBACK;
             result = await callGroq(apiKey, modelUsed, prompt);
         }

@@ -35,6 +35,76 @@ export interface DBClient {
     session_price?: number;
 }
 
+interface ClientSensitiveDataRpcRow {
+    client_id?: string;
+    injuries: string | null;
+    observations: string | null;
+    preferences: string | null;
+    bmi?: number | null;
+}
+
+function mergeClientSensitiveData(
+    client: DBClient,
+    sensitive: ClientSensitiveDataRpcRow | null
+): DBClient {
+    if (!sensitive) return client;
+    return {
+        ...client,
+        injuries: sensitive.injuries ?? client.injuries,
+        observations: sensitive.observations ?? client.observations,
+        preferences: sensitive.preferences ?? client.preferences
+    };
+}
+
+async function getClientSensitiveData(clientId: string): Promise<ClientSensitiveDataRpcRow | null> {
+    if (!supabase) return null;
+    const { data, error } = await supabase
+        .rpc('get_client_sensitive_data', { p_client_id: clientId })
+        .maybeSingle();
+
+    if (error) {
+        // Fallback silencioso para evitar regressão quando RPC não está disponível para o papel atual.
+        return null;
+    }
+
+    return (data as ClientSensitiveDataRpcRow | null) ?? null;
+}
+
+async function getClientsSensitiveDataMap(clientIds: string[]): Promise<Map<string, ClientSensitiveDataRpcRow>> {
+    const safeIds = clientIds.filter(Boolean);
+    if (!supabase || !safeIds.length) return new Map();
+
+    const { data, error } = await supabase.rpc('get_clients_sensitive_data', {
+        p_client_ids: safeIds
+    });
+
+    if (error || !Array.isArray(data)) return new Map();
+
+    const rows = data as ClientSensitiveDataRpcRow[];
+    const entries = rows
+        .filter((row) => typeof row?.client_id === 'string' && row.client_id)
+        .map((row) => [row.client_id as string, row] as const);
+
+    return new Map(entries);
+}
+
+async function enrichClientsWithSensitiveData(clients: DBClient[]): Promise<DBClient[]> {
+    if (!clients.length) return clients;
+
+    const result: DBClient[] = [];
+    const chunkSize = 20;
+    for (let i = 0; i < clients.length; i += chunkSize) {
+        const chunk = clients.slice(i, i + chunkSize);
+        const sensitiveMap = await getClientsSensitiveDataMap(chunk.map((client) => client.id));
+        const enrichedChunk = chunk.map((client) =>
+            mergeClientSensitiveData(client, sensitiveMap.get(client.id) ?? null)
+        );
+        result.push(...enrichedChunk);
+    }
+
+    return result;
+}
+
 // Helper function to map DB snake_case to frontend camelCase
 export function mapDBClientToClient(dbClient: DBClient & { avatar?: string }): any {
     return {
@@ -137,7 +207,8 @@ export async function getClients(
         return [];
     }
 
-    return data || [];
+    const clients = (data || []) as DBClient[];
+    return enrichClientsWithSensitiveData(clients);
 }
 
 export async function getClient(clientId: string): Promise<DBClient | null> {
@@ -154,7 +225,9 @@ export async function getClient(clientId: string): Promise<DBClient | null> {
         return null;
     }
 
-    return data;
+    const client = data as DBClient;
+    const sensitive = await getClientSensitiveData(client.id);
+    return mergeClientSensitiveData(client, sensitive);
 }
 
 export async function createClient(client: Omit<DBClient, 'id' | 'created_at'>): Promise<DBClient | null> {

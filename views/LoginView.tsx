@@ -5,10 +5,11 @@ import { getInvitationByToken, acceptInvitation } from '../services/invitations/
 import type { AppSessionUser } from '../services/auth/authFlow';
 import { calculateLockDurationMs, getRemainingLockSeconds, isLockedOut } from '../services/auth/authFlow';
 import { persistLockoutState, readLockoutState } from '../services/auth/lockoutStorage';
-import { checkAuthGuard } from '../services/auth/authGuard';
+import { checkAuthGuard, isAuthGuardServiceUnavailableError } from '../services/auth/authGuard';
 import { validateTurnstileToken } from '../services/auth/turnstile';
 import {
   canBypassCaptchaWidgetFailure,
+  parseBooleanEnvFlag,
   isCaptchaServiceUnavailableError,
   resolveCaptchaStrictMode
 } from '../services/auth/captchaPolicy';
@@ -48,6 +49,9 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
   const CAPTCHA_STRICT_MODE = resolveCaptchaStrictMode(
     (typeof import.meta !== 'undefined' && import.meta.env?.VITE_CAPTCHA_STRICT_MODE) || undefined
   );
+  const AUTH_GUARD_STRICT_MODE = parseBooleanEnvFlag(
+    (typeof import.meta !== 'undefined' && import.meta.env?.VITE_AUTH_GUARD_STRICT_MODE) || undefined
+  ) ?? false;
   const [currentSlide, setCurrentSlide] = useState(0);
   const [showRegister, setShowRegister] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
@@ -220,9 +224,13 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
 
       const guard = await checkAuthGuard('login', email, SUPABASE_URL);
       if (!guard.allowed) {
-        const wait = guard.retryAfterSeconds > 0 ? ` Aguarde ${guard.retryAfterSeconds}s.` : '';
-        setError((guard.error || 'Muitas tentativas detectadas.') + wait);
-        return;
+        if (!AUTH_GUARD_STRICT_MODE && isAuthGuardServiceUnavailableError(guard.error)) {
+          setError('Proteção antiabuso indisponível. Continuando com proteção local de tentativas.');
+        } else {
+          const wait = guard.retryAfterSeconds > 0 ? ` Aguarde ${guard.retryAfterSeconds}s.` : '';
+          setError((guard.error || 'Muitas tentativas detectadas.') + wait);
+          return;
+        }
       }
 
       const { data, error: authError } = await supabase.auth.signInWithPassword({
@@ -284,9 +292,13 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
 
       const guard = await checkAuthGuard('register', email, SUPABASE_URL);
       if (!guard.allowed) {
-        const wait = guard.retryAfterSeconds > 0 ? ` Aguarde ${guard.retryAfterSeconds}s.` : '';
-        setError((guard.error || 'Muitas tentativas detectadas.') + wait);
-        return;
+        if (!AUTH_GUARD_STRICT_MODE && isAuthGuardServiceUnavailableError(guard.error)) {
+          setError('Proteção antiabuso indisponível. Continuando com proteção local de tentativas.');
+        } else {
+          const wait = guard.retryAfterSeconds > 0 ? ` Aguarde ${guard.retryAfterSeconds}s.` : '';
+          setError((guard.error || 'Muitas tentativas detectadas.') + wait);
+          return;
+        }
       }
 
       // If in invite mode, set role as student in user metadata

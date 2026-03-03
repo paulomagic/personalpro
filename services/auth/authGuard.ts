@@ -13,6 +13,22 @@ interface AuthGuardResponse {
     error?: string;
 }
 
+export function isAuthGuardServiceUnavailableError(error?: string): boolean {
+    if (!error) return false;
+    const normalized = error.toLowerCase();
+    const transientMarkers = [
+        'serviço de proteção temporariamente indisponível',
+        'servico de protecao temporariamente indisponivel',
+        'security service unavailable',
+        'não foi possível validar segurança da autenticação',
+        'nao foi possivel validar seguranca da autenticacao',
+        'internal server error',
+        'timeout',
+        'network'
+    ];
+    return transientMarkers.some((marker) => normalized.includes(marker));
+}
+
 function isLocalRuntime(): boolean {
     if (typeof window === 'undefined') return false;
     const host = window.location.hostname;

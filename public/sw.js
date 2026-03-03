@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v25';
+const CACHE_VERSION = 'v26';
 const STATIC_CACHE = `personalpro-static-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `personalpro-runtime-${CACHE_VERSION}`;
 const API_CACHE = `personalpro-api-${CACHE_VERSION}`;
@@ -173,6 +173,12 @@ self.addEventListener('fetch', (event) => {
     const url = request.url;
 
     if (request.method !== 'GET' || !url.startsWith('http')) return;
+    const requestUrl = new URL(url);
+    const isCrossOrigin = requestUrl.origin !== self.location.origin;
+
+    // Do not intercept generic cross-origin assets (fonts/google icons/third-party scripts),
+    // otherwise CSP connect-src is applied to SW fetch and may block valid page resources.
+    if (isCrossOrigin && !isApiRequest(url)) return;
 
     event.respondWith((async () => {
         if (request.mode === 'navigate') {
@@ -202,7 +208,15 @@ self.addEventListener('fetch', (event) => {
             cacheResponse: true,
             maxItems: MAX_RUNTIME_ITEMS
         });
-    })());
+    })().catch(async () => {
+        if (request.mode === 'navigate') {
+            const offlinePage = await caches.match('/offline.html');
+            if (offlinePage) return offlinePage;
+        }
+        const cached = await caches.match(request);
+        if (cached) return cached;
+        return new Response('', { status: 503, statusText: 'offline' });
+    }));
 });
 
 self.addEventListener('message', (event) => {

@@ -1,4 +1,4 @@
-import type { AdaptiveTrainingSignal } from './adaptiveSignalsService';
+import type { AdaptiveTrainingSignal } from './adaptiveSignalTypes';
 
 export interface WeeklyMicrocycleWeek {
     week: number;

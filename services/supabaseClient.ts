@@ -2,9 +2,39 @@
 import { supabase } from './supabaseCore';
 import { hydrateWorkoutWithVideos } from './exerciseService';
 import {
-    normalizeAcceptInvitationResult,
-    normalizeInvitationPreviewFromRpc,
-} from './invitations/invitationUtils';
+    mapDBClientToClient as mapDBClientToClientFromDomain,
+    getClients as getClientsFromDomain
+} from './supabase/domains/clientsDomain';
+import {
+    getAppointments as getAppointmentsFromDomain,
+    createAppointment as createAppointmentFromDomain,
+    updateAppointment as updateAppointmentFromDomain,
+    deleteAppointment as deleteAppointmentFromDomain,
+    getAllAppointmentsForCoach as getAllAppointmentsForCoachFromDomain,
+    deleteAppointmentsBulk as deleteAppointmentsBulkFromDomain,
+    createRescheduleRequest as createRescheduleRequestFromDomain,
+    getPendingRescheduleRequests as getPendingRescheduleRequestsFromDomain,
+    countPendingRescheduleRequests as countPendingRescheduleRequestsFromDomain,
+    respondToRescheduleRequest as respondToRescheduleRequestFromDomain
+} from './supabase/domains/appointmentsDomain';
+import {
+    getPayments as getPaymentsFromDomain,
+    createPayment as createPaymentFromDomain,
+    getPaymentsByClient as getPaymentsByClientFromDomain,
+    updatePayment as updatePaymentFromDomain
+} from './supabase/domains/paymentsDomain';
+import {
+    getWorkoutsByClient as getWorkoutsByClientFromDomain,
+    saveAIWorkout as saveAIWorkoutFromDomain
+} from './supabase/domains/workoutsDomain';
+import {
+    createInvitation as createInvitationFromDomain,
+    getInvitationByToken as getInvitationByTokenFromDomain,
+    acceptInvitation as acceptInvitationFromDomain,
+    getCoachInvitations as getCoachInvitationsFromDomain,
+    cancelInvitation as cancelInvitationFromDomain,
+    getCoachStudents as getCoachStudentsFromDomain
+} from './supabase/domains/invitationsDomain';
 export { supabase };
 
 // ============ TIPOS ============
@@ -70,74 +100,9 @@ async function getClientSensitiveData(clientId: string): Promise<ClientSensitive
     return (data as ClientSensitiveDataRpcRow | null) ?? null;
 }
 
-async function getClientsSensitiveDataMap(clientIds: string[]): Promise<Map<string, ClientSensitiveDataRpcRow>> {
-    const safeIds = clientIds.filter(Boolean);
-    if (!supabase || !safeIds.length) return new Map();
-
-    const { data, error } = await supabase.rpc('get_clients_sensitive_data', {
-        p_client_ids: safeIds
-    });
-
-    if (error || !Array.isArray(data)) return new Map();
-
-    const rows = data as ClientSensitiveDataRpcRow[];
-    const entries = rows
-        .filter((row) => typeof row?.client_id === 'string' && row.client_id)
-        .map((row) => [row.client_id as string, row] as const);
-
-    return new Map(entries);
-}
-
-async function enrichClientsWithSensitiveData(clients: DBClient[]): Promise<DBClient[]> {
-    if (!clients.length) return clients;
-
-    const result: DBClient[] = [];
-    const chunkSize = 20;
-    for (let i = 0; i < clients.length; i += chunkSize) {
-        const chunk = clients.slice(i, i + chunkSize);
-        const sensitiveMap = await getClientsSensitiveDataMap(chunk.map((client) => client.id));
-        const enrichedChunk = chunk.map((client) =>
-            mergeClientSensitiveData(client, sensitiveMap.get(client.id) ?? null)
-        );
-        result.push(...enrichedChunk);
-    }
-
-    return result;
-}
-
 // Helper function to map DB snake_case to frontend camelCase
 export function mapDBClientToClient(dbClient: DBClient & { avatar?: string }): any {
-    return {
-        id: dbClient.id,
-        name: dbClient.name,
-        email: dbClient.email,
-        phone: dbClient.phone,
-        avatar: dbClient.avatar || dbClient.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(dbClient.name)}&background=3b82f6&color=fff`,
-        goal: dbClient.goal,
-        level: dbClient.level as 'Iniciante' | 'Intermediário' | 'Avançado' | 'Atleta',
-        age: dbClient.age,
-        weight: dbClient.weight,  // ✅ Adicionado para preservar peso
-        height: dbClient.height,  // ✅ Adicionado para preservar altura
-        status: dbClient.status === 'inactive' ? 'paused' : dbClient.status,
-        adherence: dbClient.adherence || 0,
-        startDate: dbClient.created_at,
-        lastTraining: 'Não registrado',
-        observations: dbClient.observations,
-        injuries: dbClient.injuries,
-        preferences: dbClient.preferences,  // ✅ Adicionado para preservar preferências
-        missedClasses: [],
-        assessments: [],
-        totalClasses: 0,
-        completedClasses: 0,
-        paymentStatus: 'paid',
-        // Financial fields
-        monthly_fee: dbClient.monthly_fee,
-        payment_day: dbClient.payment_day,
-        payment_type: dbClient.payment_type,
-        session_price: dbClient.session_price,
-        // Pass raw avatar_url so components can reference it directly
-        avatar_url: dbClient.avatar_url || dbClient.avatar,
-    };
+    return mapDBClientToClientFromDomain(dbClient);
 }
 
 export interface Appointment {
@@ -190,25 +155,7 @@ export async function getClients(
     coachId: string,
     options: QueryPaginationOptions = {}
 ): Promise<DBClient[]> {
-    if (!supabase) return [];
-
-    const limit = Math.min(Math.max(options.limit ?? 200, 1), 500);
-    const offset = Math.max(options.offset ?? 0, 0);
-
-    const { data, error } = await supabase
-        .from('clients')
-        .select('*, avatar:avatar_url, avatar_url')
-        .eq('coach_id', coachId)
-        .order('name')
-        .range(offset, offset + limit - 1);
-
-    if (error) {
-        console.error('Error fetching clients:', error);
-        return [];
-    }
-
-    const clients = (data || []) as DBClient[];
-    return enrichClientsWithSensitiveData(clients);
+    return getClientsFromDomain(coachId, options);
 }
 
 export async function getClient(clientId: string): Promise<DBClient | null> {
@@ -363,84 +310,20 @@ export async function getAppointments(
     date?: string,
     options: QueryPaginationOptions = {}
 ): Promise<Appointment[]> {
-    if (!supabase) return [];
-
-    const limit = Math.min(Math.max(options.limit ?? 200, 1), 500);
-    const offset = Math.max(options.offset ?? 0, 0);
-
-    let query = supabase
-        .from('appointments')
-        .select('*, clients(name, avatar_url, phone)')
-        .eq('coach_id', coachId)
-        .neq('status', 'cancelled')  // Filtrar cancelados
-        .order('date')
-        .order('time')
-        .range(offset, offset + limit - 1);
-
-    if (date) {
-        query = query.eq('date', date);
-    }
-
-    const { data, error } = await query;
-
-    if (error) {
-        console.error('Error fetching appointments:', error);
-        return [];
-    }
-
-    return data || [];
+    return getAppointmentsFromDomain(coachId, date, options);
 }
 
 export async function createAppointment(appointment: Omit<Appointment, 'id' | 'created_at'>): Promise<Appointment | null> {
-    if (!supabase) return null;
-
-    const { data, error } = await supabase
-        .from('appointments')
-        .insert(appointment)
-        .select()
-        .single();
-
-    if (error) {
-        console.error('Error creating appointment:', error);
-        return null;
-    }
-
-    return data;
+    return createAppointmentFromDomain(appointment);
 }
 
 export async function updateAppointment(id: string, updates: Partial<Appointment>): Promise<Appointment | null> {
-    if (!supabase) return null;
-
-    const { data, error } = await supabase
-        .from('appointments')
-        .update(updates)
-        .eq('id', id)
-        .select()
-        .single();
-
-    if (error) {
-        console.error('Error updating appointment:', error);
-        return null;
-    }
-
-    return data;
+    return updateAppointmentFromDomain(id, updates);
 }
 
 // Delete appointment permanently
 export async function deleteAppointment(id: string): Promise<boolean> {
-    if (!supabase) return false;
-
-    const { error } = await supabase
-        .from('appointments')
-        .delete()
-        .eq('id', id);
-
-    if (error) {
-        console.error('Error deleting appointment:', error);
-        return false;
-    }
-
-    return true;
+    return deleteAppointmentFromDomain(id);
 }
 
 // Get all appointments for a coach (for cleanup purposes)
@@ -448,121 +331,31 @@ export async function getAllAppointmentsForCoach(
     coachId: string,
     options: QueryPaginationOptions = {}
 ): Promise<Appointment[]> {
-    if (!supabase) return [];
-
-    const limit = Math.min(Math.max(options.limit ?? 500, 1), 1000);
-    const offset = Math.max(options.offset ?? 0, 0);
-
-    const { data, error } = await supabase
-        .from('appointments')
-        .select('*, clients(name)')
-        .eq('coach_id', coachId)
-        .neq('status', 'cancelled')
-        .order('date')
-        .order('time')
-        .range(offset, offset + limit - 1);
-
-    if (error) {
-        console.error('Error fetching all appointments:', error);
-        return [];
-    }
-
-    return data || [];
+    return getAllAppointmentsForCoachFromDomain(coachId, options);
 }
 
 // Delete multiple appointments by IDs (bulk delete)
 export async function deleteAppointmentsBulk(ids: string[]): Promise<boolean> {
-    if (!supabase || ids.length === 0) return false;
-
-    const { error } = await supabase
-        .from('appointments')
-        .delete()
-        .in('id', ids);
-
-    if (error) {
-        console.error('Error bulk deleting appointments:', error);
-        return false;
-    }
-
-    return true;
+    return deleteAppointmentsBulkFromDomain(ids);
 }
 
 // ============ PAYMENTS ============
 
 export async function getPayments(coachId: string, status?: string): Promise<Payment[]> {
-    if (!supabase) return [];
-
-    let query = supabase
-        .from('payments')
-        .select('*, clients(name, avatar_url, phone)')
-        .eq('coach_id', coachId)
-        .order('due_date');
-
-    if (status) {
-        query = query.eq('status', status);
-    }
-
-    const { data, error } = await query;
-
-    if (error) {
-        console.error('Error fetching payments:', error);
-        return [];
-    }
-
-    return data || [];
+    return getPaymentsFromDomain(coachId, status);
 }
 
 export async function createPayment(payment: Omit<Payment, 'id' | 'created_at'>): Promise<Payment | null> {
-    if (!supabase) return null;
-
-    const { data, error } = await supabase
-        .from('payments')
-        .insert(payment)
-        .select()
-        .single();
-
-    if (error) {
-        console.error('Error creating payment:', error);
-        return null;
-    }
-
-    return data;
+    return createPaymentFromDomain(payment);
 }
 
 // Get payments by client ID for history
 export async function getPaymentsByClient(clientId: string): Promise<Payment[]> {
-    if (!supabase) return [];
-
-    const { data, error } = await supabase
-        .from('payments')
-        .select('*')
-        .eq('client_id', clientId)
-        .order('due_date', { ascending: false });
-
-    if (error) {
-        console.error('Error fetching payments by client:', error);
-        return [];
-    }
-
-    return data || [];
+    return getPaymentsByClientFromDomain(clientId);
 }
 
 export async function updatePayment(id: string, updates: Partial<Payment>): Promise<Payment | null> {
-    if (!supabase) return null;
-
-    const { data, error } = await supabase
-        .from('payments')
-        .update(updates)
-        .eq('id', id)
-        .select()
-        .single();
-
-    if (error) {
-        console.error('Error updating payment:', error);
-        return null;
-    }
-
-    return data;
+    return updatePaymentFromDomain(id, updates);
 }
 
 // ============ WORKOUTS ============
@@ -571,24 +364,7 @@ export async function getWorkouts(
     clientId: string,
     options: QueryPaginationOptions = {}
 ): Promise<Workout[]> {
-    if (!supabase) return [];
-
-    const limit = Math.min(Math.max(options.limit ?? 80, 1), 200);
-    const offset = Math.max(options.offset ?? 0, 0);
-
-    const { data, error } = await supabase
-        .from('workouts')
-        .select('*')
-        .eq('client_id', clientId)
-        .order('created_at', { ascending: false })
-        .range(offset, offset + limit - 1);
-
-    if (error) {
-        console.error('Error fetching workouts:', error);
-        return [];
-    }
-
-    return data || [];
+    return getWorkoutsByClientFromDomain(clientId, options);
 }
 
 export async function saveWorkout(workout: Omit<Workout, 'id' | 'created_at'>): Promise<Workout | null> {
@@ -675,30 +451,7 @@ export async function saveAIWorkout(
     workout: any,
     metadata: AIWorkoutMetadata
 ): Promise<Workout | null> {
-    if (!supabase) return null;
-
-    const workoutWithMetadata = {
-        client_id: clientId,
-        coach_id: coachId,
-        title: workout.title || 'Treino IA',
-        objective: workout.objective || '',
-        duration: workout.duration || '60 min',
-        splits: workout.splits || [],
-        ai_metadata: metadata, // Extra metadata column
-    };
-
-    const { data, error } = await supabase
-        .from('workouts')
-        .insert(workoutWithMetadata)
-        .select()
-        .single();
-
-    if (error) {
-        console.error('Error saving AI workout:', error);
-        return null;
-    }
-
-    return data;
+    return saveAIWorkoutFromDomain(clientId, coachId, workout, metadata);
 }
 
 // ============ WORKOUT HISTORY ============
@@ -1131,134 +884,38 @@ async function upsertUserProfile(profile: Partial<DBUserProfile> & { id: string 
 }
 
 // Generate secure random token for invitations
-function generateInvitationToken(): string {
-    const bytes = new Uint8Array(32);
-    crypto.getRandomValues(bytes);
-    return Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('');
-}
-
 // Create invitation for a student
 export async function createInvitation(
     coachId: string,
     email: string,
     clientId?: string
 ): Promise<DBInvitation | null> {
-    if (!supabase) return null;
-
-    const token = generateInvitationToken();
-    const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + 7); // Expires in 7 days
-
-    const { data, error } = await supabase
-        .from('invitations')
-        .insert({
-            coach_id: coachId,
-            email: email.toLowerCase().trim(),
-            client_id: clientId,
-            token,
-            status: 'pending',
-            expires_at: expiresAt.toISOString()
-        })
-        .select()
-        .single();
-
-    if (error) {
-        console.error('Error creating invitation:', error);
-        return null;
-    }
-
-    return data;
+    return createInvitationFromDomain(coachId, email, clientId);
 }
 
 // Get invitation by token
 export async function getInvitationByToken(token: string): Promise<DBInvitationPreview | null> {
-    if (!supabase) return null;
-
-    const { data, error } = await supabase.rpc('get_invitation_by_token', {
-        invitation_token: token
-    });
-
-    if (error) {
-        if (error.code !== 'PGRST116') {
-            console.error('Error fetching invitation:', error);
-        }
-        return null;
-    }
-
-    const invitation = normalizeInvitationPreviewFromRpc(data);
-    if (!invitation) return null;
-    return invitation;
+    return getInvitationByTokenFromDomain(token);
 }
 
 // Accept invitation and convert user to student
 export async function acceptInvitation(token: string, userId: string): Promise<{ success: boolean; error?: string }> {
-    if (!supabase) return { success: false, error: 'Supabase not configured' };
-    void userId; // user id is resolved server-side by auth.uid() in RPC
-
-    const { data, error } = await supabase.rpc('accept_invitation', {
-        invitation_token: token
-    });
-
-    if (error) {
-        console.error('Error accepting invitation:', error);
-        return { success: false, error: 'Erro ao aceitar convite' };
-    }
-
-    return normalizeAcceptInvitationResult(data);
+    return acceptInvitationFromDomain(token, userId);
 }
 
 // Get all invitations sent by a coach
 export async function getCoachInvitations(coachId: string): Promise<DBInvitation[]> {
-    if (!supabase) return [];
-
-    const { data, error } = await supabase
-        .from('invitations')
-        .select('*')
-        .eq('coach_id', coachId)
-        .order('created_at', { ascending: false });
-
-    if (error) {
-        console.error('Error fetching coach invitations:', error);
-        return [];
-    }
-
-    return data || [];
+    return getCoachInvitationsFromDomain(coachId);
 }
 
 // Cancel an invitation
 export async function cancelInvitation(invitationId: string, coachId: string): Promise<boolean> {
-    if (!supabase) return false;
-
-    const { error } = await supabase
-        .from('invitations')
-        .update({ status: 'cancelled' })
-        .eq('id', invitationId)
-        .eq('coach_id', coachId); // Security: only coach can cancel their own invites
-
-    if (error) {
-        console.error('Error cancelling invitation:', error);
-        return false;
-    }
-
-    return true;
+    return cancelInvitationFromDomain(invitationId, coachId);
 }
 
 // Get students for a coach (users with student role linked to this coach)
 export async function getCoachStudents(coachId: string): Promise<DBUserProfile[]> {
-    if (!supabase) return [];
-
-    const { data, error } = await supabase
-        .from('user_profiles')
-        .select('*')
-        .eq('coach_id', coachId)
-        .eq('role', 'student');
-
-    if (error) {
-        console.error('Error fetching coach students:', error);
-        return [];
-    }
-
-    return data || [];
+    return getCoachStudentsFromDomain(coachId);
 }
 
 // ============ RESCHEDULE REQUESTS ============
@@ -1309,72 +966,17 @@ export async function createRescheduleRequest(data: {
     requestedDate: string;
     reason?: string;
 }): Promise<DBRescheduleRequest | null> {
-    if (!supabase) return null;
-
-    const { data: result, error } = await supabase
-        .from('reschedule_requests')
-        .insert({
-            appointment_id: data.appointmentId,
-            client_id: data.clientId,
-            coach_id: data.coachId,
-            original_date: data.originalDate,
-            requested_date: data.requestedDate,
-            reason: data.reason,
-            status: 'pending'
-        })
-        .select()
-        .single();
-
-    if (error) {
-        console.error('Error creating reschedule request:', error);
-        return null;
-    }
-
-    return result;
+    return createRescheduleRequestFromDomain(data);
 }
 
 // Get pending reschedule requests for a coach
 export async function getPendingRescheduleRequests(coachId: string): Promise<(DBRescheduleRequest & { client_name?: string })[]> {
-    if (!supabase) return [];
-
-    const { data, error } = await supabase
-        .from('reschedule_requests')
-        .select(`
-            *,
-            clients!inner(name)
-        `)
-        .eq('coach_id', coachId)
-        .eq('status', 'pending')
-        .order('created_at', { ascending: false });
-
-    if (error) {
-        console.error('Error fetching pending requests:', error);
-        return [];
-    }
-
-    // Map client name to result
-    return (data || []).map(req => ({
-        ...req,
-        client_name: req.clients?.name
-    }));
+    return getPendingRescheduleRequestsFromDomain(coachId);
 }
 
 // Count pending reschedule requests for a coach
 export async function countPendingRescheduleRequests(coachId: string): Promise<number> {
-    if (!supabase) return 0;
-
-    const { count, error } = await supabase
-        .from('reschedule_requests')
-        .select('*', { count: 'exact', head: true })
-        .eq('coach_id', coachId)
-        .eq('status', 'pending');
-
-    if (error) {
-        console.error('Error counting pending requests:', error);
-        return 0;
-    }
-
-    return count || 0;
+    return countPendingRescheduleRequestsFromDomain(coachId);
 }
 
 // Respond to a reschedule request (approve/reject)
@@ -1383,55 +985,5 @@ export async function respondToRescheduleRequest(
     approved: boolean,
     responseNote?: string
 ): Promise<boolean> {
-    if (!supabase) return false;
-
-    // Get the request first
-    const { data: request, error: fetchError } = await supabase
-        .from('reschedule_requests')
-        .select('*')
-        .eq('id', requestId)
-        .single();
-
-    if (fetchError || !request) {
-        console.error('Error fetching request:', fetchError);
-        return false;
-    }
-
-    // Update request status
-    const { error: updateError } = await supabase
-        .from('reschedule_requests')
-        .update({
-            status: approved ? 'approved' : 'rejected',
-            response_note: responseNote,
-            responded_at: new Date().toISOString()
-        })
-        .eq('id', requestId);
-
-    if (updateError) {
-        console.error('Error updating request:', updateError);
-        return false;
-    }
-
-    // If approved, update the appointment date and time
-    if (approved) {
-        // Extract date and time from requested_date
-        // Format: "2026-01-09T18:00:00"
-        const [datePart, timePart] = request.requested_date.split('T');
-        const newTime = timePart ? timePart.slice(0, 5) : '00:00'; // Get HH:MM
-
-        const { error: appointmentError } = await supabase
-            .from('appointments')
-            .update({
-                date: request.requested_date,  // Full timestamp
-                time: newTime  // Just HH:MM format
-            })
-            .eq('id', request.appointment_id);
-
-        if (appointmentError) {
-            console.error('Error updating appointment:', appointmentError);
-            return false;
-        }
-    }
-
-    return true;
+    return respondToRescheduleRequestFromDomain(requestId, approved, responseNote);
 }

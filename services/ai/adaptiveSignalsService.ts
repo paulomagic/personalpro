@@ -1,15 +1,6 @@
 import { getLatestFeedback } from './feedback';
-
-export interface AdaptiveTrainingSignal {
-    readinessScore: number;
-    fatigueLevel: 'low' | 'moderate' | 'high';
-    recommendedVolumeDeltaPct: number;
-    recommendedIntensityDeltaPct: number;
-    recommendedDaysPerWeek: number;
-    confidence: number;
-    sourceSessions: number;
-    rationale: string;
-}
+import type { AdaptiveTrainingSignal } from './adaptiveSignalTypes';
+export type { AdaptiveTrainingSignal } from './adaptiveSignalTypes';
 
 function clamp(value: number, min: number, max: number): number {
     return Math.max(min, Math.min(max, value));

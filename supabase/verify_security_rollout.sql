@@ -7,7 +7,8 @@ FROM supabase_migrations.schema_migrations
 WHERE version IN (
   '20260303_add_ai_log_retention_and_usage_metrics',
   '20260303_schedule_log_retention_job',
-  '20260303_add_clinical_data_encryption_layer'
+  '20260303_add_clinical_data_encryption_layer',
+  '20260303_add_batch_sensitive_data_rpc'
 )
 ORDER BY version;
 
@@ -16,6 +17,8 @@ SELECT
   EXISTS (SELECT 1 FROM pg_proc WHERE proname = 'cleanup_old_logs') AS has_cleanup_old_logs,
   EXISTS (SELECT 1 FROM pg_proc WHERE proname = 'cleanup_old_logs_system') AS has_cleanup_old_logs_system,
   EXISTS (SELECT 1 FROM pg_proc WHERE proname = 'get_ai_usage_by_user') AS has_get_ai_usage_by_user,
+  EXISTS (SELECT 1 FROM pg_proc WHERE proname = 'get_client_sensitive_data') AS has_get_client_sensitive_data,
+  EXISTS (SELECT 1 FROM pg_proc WHERE proname = 'get_clients_sensitive_data') AS has_get_clients_sensitive_data,
   EXISTS (SELECT 1 FROM pg_proc WHERE proname = 'backfill_client_sensitive_encryption') AS has_backfill_client_sensitive_encryption;
 
 SELECT
@@ -58,6 +61,13 @@ SELECT
   COUNT(*) FILTER (WHERE preferences_encrypted IS NOT NULL) AS preferences_encrypted_count,
   COUNT(*) FILTER (WHERE bmi_encrypted IS NOT NULL) AS bmi_encrypted_count
 FROM public.clients;
+
+-- 4b) Smoke test for batch decrypt RPC (returns rows only when caller has access)
+SELECT
+  COUNT(*) AS sample_rows
+FROM public.get_clients_sensitive_data(
+  ARRAY(SELECT id FROM public.clients ORDER BY created_at DESC LIMIT 5)
+);
 
 -- Optional: run batched backfill manually until this returns 0
 -- SELECT public.backfill_client_sensitive_encryption(500) AS rows_updated;

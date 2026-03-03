@@ -1,5 +1,5 @@
 import type { Client } from '../../types';
-import type { AdaptiveTrainingSignal } from './adaptiveSignalsService';
+import type { AdaptiveTrainingSignal } from './adaptiveSignalTypes';
 
 export type InjuryRiskLevel = 'low' | 'moderate' | 'high' | 'critical';
 

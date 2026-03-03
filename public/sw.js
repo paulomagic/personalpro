@@ -1,14 +1,14 @@
-const CACHE_VERSION = 'v22';
-const CACHE_NAME = `personalpro-${CACHE_VERSION}`;
+const CACHE_VERSION = 'v23';
 const STATIC_CACHE = `personalpro-static-${CACHE_VERSION}`;
-const DYNAMIC_CACHE = `personalpro-dynamic-${CACHE_VERSION}`;
-const MAX_STATIC_ITEMS = 120;
-const MAX_DYNAMIC_ITEMS = 80;
+const RUNTIME_CACHE = `personalpro-runtime-${CACHE_VERSION}`;
+const API_CACHE = `personalpro-api-${CACHE_VERSION}`;
+const MAX_STATIC_ITEMS = 180;
+const MAX_RUNTIME_ITEMS = 120;
+const MAX_API_ITEMS = 60;
+const NETWORK_TIMEOUT_MS = 4000;
 
-// Bypass cache em desenvolvimento (localhost)
 const IS_DEV = self.location.hostname === 'localhost' || self.location.hostname === '127.0.0.1';
 
-// Assets estáticos para cachear imediatamente
 const STATIC_ASSETS = [
     '/offline.html',
     '/hero.png',
@@ -17,16 +17,15 @@ const STATIC_ASSETS = [
     '/manifest.json',
 ];
 
-// Padrões de URL para diferentes estratégias de cache
 const API_PATTERNS = ['supabase.co', '/rest/v1/', '/auth/v1/', '/functions/v1/'];
-const STATIC_PATTERNS = ['.woff2', '.woff', '.ttf', '.png', '.jpg', '.jpeg', '.svg', '.webp', '.ico'];
+const STATIC_PATTERNS = ['.woff2', '.woff', '.ttf', '.png', '.jpg', '.jpeg', '.svg', '.webp', '.ico', '.css', '.js'];
 
 function isApiRequest(url) {
     return API_PATTERNS.some((pattern) => url.includes(pattern));
 }
 
 function isStaticAsset(url) {
-    return STATIC_PATTERNS.some((pattern) => url.endsWith(pattern));
+    return STATIC_PATTERNS.some((pattern) => url.includes(pattern));
 }
 
 function isCacheableResponse(response) {
@@ -34,16 +33,7 @@ function isCacheableResponse(response) {
 }
 
 function shouldCacheApiResponse(url) {
-    return !url.includes('/auth/v1/')
-        && !url.includes('/rest/v1/')
-        && !url.includes('/functions/v1/');
-}
-
-function shouldBypassAssetCache(request, url) {
-    if (IS_DEV) {
-        return url.endsWith('.js') || url.endsWith('.css') || url.endsWith('.ts') || url.endsWith('.tsx');
-    }
-    return request.destination === 'script' || request.destination === 'style' || url.includes('/assets/');
+    return !url.includes('/auth/v1/') && !url.includes('/functions/v1/');
 }
 
 async function enforceCacheLimit(cacheName, maxItems) {
@@ -61,80 +51,87 @@ async function putInCache(cacheName, request, response, maxItems) {
     await enforceCacheLimit(cacheName, maxItems);
 }
 
-async function networkOnlyAsset(request) {
-    try {
-        return await fetch(request, { cache: 'no-store' });
-    } catch (error) {
-        const cached = await caches.match(request);
-        if (cached) return cached;
-        throw error;
-    }
+function withTimeout(promise, timeoutMs) {
+    return Promise.race([
+        promise,
+        new Promise((_, reject) => {
+            setTimeout(() => reject(new Error('network-timeout')), timeoutMs);
+        })
+    ]);
 }
 
-// Estratégia: Network First
+async function staleWhileRevalidate(request, cacheName = STATIC_CACHE, maxItems = MAX_STATIC_ITEMS) {
+    const cache = await caches.open(cacheName);
+    const cached = await cache.match(request);
+
+    const networkUpdate = fetch(request)
+        .then(async (response) => {
+            await putInCache(cacheName, request, response, maxItems);
+            return response;
+        })
+        .catch(() => null);
+
+    if (cached) {
+        void networkUpdate;
+        return cached;
+    }
+
+    const networkResponse = await networkUpdate;
+    if (networkResponse) return networkResponse;
+    throw new Error('offline-and-not-cached');
+}
+
 async function networkFirst(request, options = {}) {
-    const { cacheName = DYNAMIC_CACHE, cacheResponse = true, maxItems = MAX_DYNAMIC_ITEMS } = options;
+    const {
+        cacheName = RUNTIME_CACHE,
+        cacheResponse = true,
+        maxItems = MAX_RUNTIME_ITEMS,
+        timeoutMs = NETWORK_TIMEOUT_MS
+    } = options;
+
     try {
-        const networkResponse = await fetch(request);
+        const networkResponse = await withTimeout(fetch(request), timeoutMs);
         if (cacheResponse) {
             await putInCache(cacheName, request, networkResponse, maxItems);
         }
         return networkResponse;
-    } catch (error) {
-        const cachedResponse = await caches.match(request);
-        if (cachedResponse) return cachedResponse;
-        throw error;
+    } catch (_error) {
+        const cached = await caches.match(request);
+        if (cached) return cached;
+        throw _error;
     }
 }
 
-// Estratégia: Cache First (assets estáticos)
-async function cacheFirst(request) {
-    const cachedResponse = await caches.match(request);
-    if (cachedResponse) return cachedResponse;
-
-    const networkResponse = await fetch(request);
-    await putInCache(STATIC_CACHE, request, networkResponse, MAX_STATIC_ITEMS);
-    return networkResponse;
-}
-
-// Estratégia: Network First para navegação (evita index.html antigo após deploy)
 async function networkFirstNavigation(request) {
     try {
-        const networkResponse = await fetch(request, { cache: 'no-store' });
-        if (isCacheableResponse(networkResponse)) {
-            const contentType = networkResponse.headers.get('content-type') || '';
-            if (contentType.includes('text/html')) {
-                await putInCache(DYNAMIC_CACHE, request, networkResponse, MAX_DYNAMIC_ITEMS);
-            }
+        const response = await withTimeout(fetch(request, { cache: 'no-store' }), NETWORK_TIMEOUT_MS);
+        const contentType = response.headers.get('content-type') || '';
+        if (isCacheableResponse(response) && contentType.includes('text/html')) {
+            await putInCache(RUNTIME_CACHE, request, response, MAX_RUNTIME_ITEMS);
         }
-        return networkResponse;
-    } catch (error) {
+        return response;
+    } catch (_error) {
         const cachedResponse = await caches.match(request);
         if (cachedResponse) return cachedResponse;
         const offlinePage = await caches.match('/offline.html');
         if (offlinePage) return offlinePage;
-        throw error;
+        throw _error;
     }
 }
 
-// Install event - cache recursos estáticos
 self.addEventListener('install', (event) => {
-    console.log('[SW] Installing...');
     event.waitUntil(
-        caches.open(STATIC_CACHE)
-            .then((cache) => cache.addAll(STATIC_ASSETS))
+        caches.open(STATIC_CACHE).then((cache) => cache.addAll(STATIC_ASSETS))
     );
+    self.skipWaiting();
 });
 
-// Activate event - limpar caches antigos
 self.addEventListener('activate', (event) => {
-    console.log('[SW] Activating...');
     event.waitUntil(
         caches.keys()
             .then((cacheNames) => Promise.all(
                 cacheNames.map((cacheName) => {
-                    if (cacheName !== STATIC_CACHE && cacheName !== DYNAMIC_CACHE && cacheName !== CACHE_NAME) {
-                        console.log('[SW] Deleting old cache:', cacheName);
+                    if (![STATIC_CACHE, RUNTIME_CACHE, API_CACHE].includes(cacheName)) {
                         return caches.delete(cacheName);
                     }
                     return Promise.resolve(false);
@@ -144,63 +141,44 @@ self.addEventListener('activate', (event) => {
     );
 });
 
-// Fetch event - aplicar estratégias de cache
 self.addEventListener('fetch', (event) => {
     const { request } = event;
     const url = request.url;
 
-    if (request.method !== 'GET' || !url.startsWith('http')) {
-        return;
-    }
+    if (request.method !== 'GET' || !url.startsWith('http')) return;
 
-    event.respondWith(
-        (async () => {
-            try {
-                if (request.mode === 'navigate') {
-                    return await networkFirstNavigation(request);
-                }
+    event.respondWith((async () => {
+        if (request.mode === 'navigate') {
+            return networkFirstNavigation(request);
+        }
 
-                if (shouldBypassAssetCache(request, url)) {
-                    return await networkOnlyAsset(request);
-                }
+        if (IS_DEV) {
+            return fetch(request);
+        }
 
-                if (isApiRequest(url)) {
-                    return await networkFirst(request, {
-                        cacheResponse: shouldCacheApiResponse(url),
-                        cacheName: DYNAMIC_CACHE,
-                        maxItems: MAX_DYNAMIC_ITEMS,
-                    });
-                }
+        if (isApiRequest(url)) {
+            return networkFirst(request, {
+                cacheName: API_CACHE,
+                cacheResponse: shouldCacheApiResponse(url),
+                maxItems: MAX_API_ITEMS,
+                timeoutMs: 3000
+            });
+        }
 
-                if (isStaticAsset(url)) {
-                    return await cacheFirst(request);
-                }
+        if (isStaticAsset(url) || request.destination === 'style' || request.destination === 'script' || request.destination === 'font' || request.destination === 'image') {
+            return staleWhileRevalidate(request, STATIC_CACHE, MAX_STATIC_ITEMS);
+        }
 
-                return await networkFirst(request, {
-                    cacheResponse: true,
-                    cacheName: DYNAMIC_CACHE,
-                    maxItems: MAX_DYNAMIC_ITEMS,
-                });
-            } catch (error) {
-                if (request.mode === 'navigate') {
-                    const offlinePage = await caches.match('/offline.html');
-                    if (offlinePage) return offlinePage;
-                }
-
-                const cachedResponse = await caches.match(request);
-                if (cachedResponse) return cachedResponse;
-                throw error;
-            }
-        })()
-    );
+        return networkFirst(request, {
+            cacheName: RUNTIME_CACHE,
+            cacheResponse: true,
+            maxItems: MAX_RUNTIME_ITEMS
+        });
+    })());
 });
 
-// Escutar mensagens do cliente (forçar atualização/limpeza)
 self.addEventListener('message', (event) => {
-    if (event.data === 'skipWaiting') {
+    if (event.data === 'skipWaiting' || event.data?.type === 'SKIP_WAITING') {
         self.skipWaiting();
-    }
-    if (event.data === 'clearCaches') {
-        event.waitUntil(caches.keys().then((keys) => Promise.all(keys.map((key) => caches.delete(key)))));
     }
 });

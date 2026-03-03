@@ -329,6 +329,25 @@ export async function getAIMetrics() {
         avgLatency = Math.round(totalLatency / allLatency.length);
     }
 
+    // AI generation feedback (thumbs up/down captured as ai_logs metadata)
+    const { data: aiFeedbackLogs } = await supabase
+        .from('ai_logs')
+        .select('metadata, created_at')
+        .eq('model_used', 'feedback')
+        .gte('created_at', weekAgo);
+
+    let feedbackPositive = 0;
+    let feedbackNegative = 0;
+    aiFeedbackLogs?.forEach((log: any) => {
+        const feedback = log?.metadata?.feedback;
+        if (feedback === 'positive') feedbackPositive++;
+        if (feedback === 'negative') feedbackNegative++;
+    });
+    const feedbackTotal = feedbackPositive + feedbackNegative;
+    const feedbackApprovalRate = feedbackTotal > 0
+        ? Math.round((feedbackPositive / feedbackTotal) * 100)
+        : 0;
+
     return {
         totalLogs: totalLogs || 0,
         todayLogs: todayLogs || 0,
@@ -348,7 +367,13 @@ export async function getAIMetrics() {
         avgLatencyByAction,
         avgLatency,
         recentErrors: recentErrors || [],
-        requestsByDay
+        requestsByDay,
+        aiFeedback: {
+            total: feedbackTotal,
+            positive: feedbackPositive,
+            negative: feedbackNegative,
+            approvalRate: feedbackApprovalRate
+        }
     };
 }
 

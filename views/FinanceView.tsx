@@ -1,6 +1,7 @@
 import React, { Suspense, lazy, useCallback, useEffect, useState } from 'react';
 import { TrendingUp, Download, CheckCircle, AlertCircle, Clock, ChevronRight } from 'lucide-react';
-import { getPayments, updatePayment, getClients } from '../services/supabaseClient';
+import { getPayments, updatePayment } from '../services/supabase/domains/paymentsDomain';
+import { getClients } from '../services/supabase/domains/clientsDomain';
 import { mockClients } from '../mocks/demoData';
 import { PaymentCardSkeleton } from '../components/Skeleton';
 import EmptyState from '../components/EmptyState';

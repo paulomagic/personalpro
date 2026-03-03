@@ -25,13 +25,11 @@ import { ClientCardSkeleton } from '../components/Skeleton';
 import EmptyState from '../components/EmptyState';
 import {
   getClients,
-  getAppointments,
-  getPayments,
   mapDBClientToClient,
-  type Appointment,
   type DBClient,
-  type Payment,
-} from '../services/supabaseClient';
+} from '../services/supabase/domains/clientsDomain';
+import { getAppointments, type Appointment } from '../services/supabase/domains/appointmentsDomain';
+import { getPayments, type Payment } from '../services/supabase/domains/paymentsDomain';
 import type { AppSessionUser } from '../services/auth/authFlow';
 import { useTheme } from '../services/ThemeContext';
 

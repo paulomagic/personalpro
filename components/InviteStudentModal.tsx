@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Mail, Send, UserPlus, Check, AlertCircle } from 'lucide-react';
-import { createInvitation } from '../services/supabaseClient';
+import { createInvitation } from '../services/supabase/domains/invitationsDomain';
 
 interface InviteStudentModalProps {
     isOpen: boolean;

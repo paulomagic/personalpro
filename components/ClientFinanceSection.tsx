@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { DollarSign, Calendar, Edit, Save, X, Repeat, Plus, Clock, CheckCircle, AlertTriangle, ChevronDown, ChevronUp } from 'lucide-react';
-import { updateClient, DBClient, createPayment, getPaymentsByClient, Payment } from '../services/supabaseClient';
+import { updateClient } from '../services/supabaseClient';
+import { DBClient } from '../services/supabase/domains/clientsDomain';
+import { createPayment, getPaymentsByClient, Payment } from '../services/supabase/domains/paymentsDomain';
 import { useTheme } from '../services/ThemeContext';
 
 interface ClientFinanceSectionProps {

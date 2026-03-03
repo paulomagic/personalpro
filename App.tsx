@@ -309,8 +309,7 @@ function App() {
   // Handle PWA update when user clicks the banner
   const handleUpdate = () => {
     if (waitingWorker) {
-      waitingWorker.postMessage('clearCaches');
-      waitingWorker.postMessage('skipWaiting');
+      waitingWorker.postMessage({ type: 'SKIP_WAITING' });
     }
   };
 

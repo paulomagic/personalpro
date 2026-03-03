@@ -2,6 +2,7 @@ import React, { Suspense, lazy, useEffect, useState } from 'react';
 import { Client } from '../types';
 import { ThumbsUp, ThumbsDown, RefreshCw, Download } from 'lucide-react';
 import { logFunnelEvent } from '../services/loggingService';
+import { flushAIGenerationFeedbackQueue, saveAIGenerationFeedback } from '../services/ai/feedback/aiGenerationFeedbackService';
 import PageHeader from '../components/PageHeader';
 
 const DetectionFeedback = lazy(() => import('../components/DetectionFeedback'));
@@ -27,7 +28,8 @@ const loadDemoData = () => import('../mocks/demoData');
 const loadGeminiService = () => import('../services/geminiService');
 const loadTrainingEngine = () => import('../services/ai/trainingEngine');
 const loadAIRouter = () => import('../services/ai/aiRouter');
-const loadSupabaseClient = () => import('../services/supabaseClient');
+const loadClientsDomain = () => import('../services/supabase/domains/clientsDomain');
+const loadWorkoutsDomain = () => import('../services/supabase/domains/workoutsDomain');
 
 const hasMeaningfulLastTraining = (value?: string): boolean => {
   if (!value) return false;
@@ -318,9 +320,21 @@ const AIBuilderView: React.FC<AIBuilderViewProps> = ({ user, onBack, onDone }) =
     return mockClients as Client[];
   };
 
-  const handleFeedback = (type: 'positive' | 'negative') => {
+  const handleFeedback = async (type: 'positive' | 'negative') => {
     setFeedback(type);
-    // Here we would ideally save this to Supabase for RLHF
+    await saveAIGenerationFeedback({
+      feedback: type,
+      source: 'ai_builder',
+      clientId: selectedClient?.id,
+      workoutTitle: result?.title,
+      optionLabel: workoutOptions[selectedOptionIndex]?.optionLabel,
+      objective: result?.objective
+    });
+    void logFunnelEvent('ai_generation_feedback_submitted', {
+      feedback: type,
+      clientId: selectedClient?.id,
+      optionLabel: workoutOptions[selectedOptionIndex]?.optionLabel
+    });
   };
   const [editingExercise, setEditingExercise] = useState<{ splitIdx: number, exIdx: number } | null>(null);
   const [showAddExercise, setShowAddExercise] = useState(false);
@@ -422,7 +436,7 @@ const AIBuilderView: React.FC<AIBuilderViewProps> = ({ user, onBack, onDone }) =
     const fetchClients = async () => {
       setFetchingClients(true);
       try {
-        const { getClients, mapDBClientToClient } = await loadSupabaseClient();
+        const { getClients, mapDBClientToClient } = await loadClientsDomain();
 
         // Buscar clientes reais do banco de dados
         if (user?.id) {
@@ -456,6 +470,15 @@ const AIBuilderView: React.FC<AIBuilderViewProps> = ({ user, onBack, onDone }) =
 
     fetchClients();
   }, [user?.id]);
+
+  useEffect(() => {
+    void flushAIGenerationFeedbackQueue();
+    const onOnline = () => {
+      void flushAIGenerationFeedbackQueue();
+    };
+    window.addEventListener('online', onOnline);
+    return () => window.removeEventListener('online', onOnline);
+  }, []);
 
   const [refinementInput, setRefinementInput] = useState('');
   const [isRefining, setIsRefining] = useState(false);
@@ -762,7 +785,7 @@ const AIBuilderView: React.FC<AIBuilderViewProps> = ({ user, onBack, onDone }) =
           clientId: selectedClient.id,
           coldStartMode: !!result?.coldStartMode
         });
-        const { saveAIWorkout } = await loadSupabaseClient();
+        const { saveAIWorkout } = await loadWorkoutsDomain();
         // Prepare metadata
         const metadata = {
           model: 'gemini-2.5-flash',

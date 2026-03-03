@@ -1,6 +1,6 @@
 # 🔐 Security Checklist — Apex Premium PT Assistant
 
-**Última Atualização:** 2026-02-28  
+**Última Atualização:** 2026-03-03  
 **Responsável:** Paulo Ricardo  
 **Projeto:** Apex Premium PT Assistant (PersonalPro)
 

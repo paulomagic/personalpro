@@ -62,6 +62,7 @@ export interface ProviderRequest {
     action: ActionType;
     prompt: string;
     metadata?: Record<string, any>;
+    modelOverride?: string;
 }
 
 export interface ProviderResponse {

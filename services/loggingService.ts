@@ -327,7 +327,13 @@ export async function getAIMetrics() {
         .select('provider_used, action_type, success, created_at, error_message')
         .gte('created_at', weekAgo);
 
-    const trainingActions = new Set(['generate_workout', 'generate_workout_intention', 'regenerate_exercise', 'refine']);
+    const trainingActions = new Set([
+        'training_intent',
+        'generate_workout',
+        'generate_workout_intention',
+        'regenerate_exercise',
+        'refine'
+    ]);
     const providerStats: Record<string, {
         total: number;
         success: number;

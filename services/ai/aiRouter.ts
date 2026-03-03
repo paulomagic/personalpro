@@ -69,9 +69,31 @@ async function logAIAction(entry: AILogEntry): Promise<void> {
 }
 
 // ============ ROUTER ============
+interface ModelCandidate {
+    providerName: string;
+    model: string;
+    reason: string;
+}
+
+const GROQ_MODELS = {
+    operational: (typeof import.meta !== 'undefined' && import.meta.env?.VITE_GROQ_MODEL_OPERATIONAL) || 'openai/gpt-oss-20b',
+    reasoning: (typeof import.meta !== 'undefined' && import.meta.env?.VITE_GROQ_MODEL_REASONING) || 'deepseek-r1-distill-llama-70b',
+    fallback: (typeof import.meta !== 'undefined' && import.meta.env?.VITE_GROQ_MODEL_FALLBACK) || 'qwen/qwen3-32b',
+    narrative: (typeof import.meta !== 'undefined' && import.meta.env?.VITE_GROQ_MODEL_NARRATIVE) || 'llama-3.3-70b-versatile'
+} as const;
+
+const TRAINING_ACTIONS = new Set<ActionType>(['training_intent', 'refine']);
+
 export class AIRouter {
     private routing: RoutingRule[];
     private providers: Record<string, AIProvider>;
+    private healthByModel = new Map<string, {
+        score: number;
+        consecutiveFailures: number;
+        circuitOpenUntil: number;
+        lastError?: string;
+        lastUsedAt?: number;
+    }>();
 
     constructor(
         customRouting?: RoutingRule[],
@@ -84,6 +106,106 @@ export class AIRouter {
     // Get routing rule for action
     private getRoutingRule(action: ActionType): RoutingRule | undefined {
         return this.routing.find(r => r.action === action);
+    }
+
+    private getModelKey(providerName: string, model: string): string {
+        return `${providerName}:${model}`;
+    }
+
+    private getHealthState(providerName: string, model: string) {
+        const key = this.getModelKey(providerName, model);
+        let state = this.healthByModel.get(key);
+        if (!state) {
+            state = { score: 0, consecutiveFailures: 0, circuitOpenUntil: 0 };
+            this.healthByModel.set(key, state);
+        }
+        return state;
+    }
+
+    private isCircuitOpen(providerName: string, model: string): boolean {
+        const state = this.getHealthState(providerName, model);
+        return state.circuitOpenUntil > Date.now();
+    }
+
+    private markSuccess(providerName: string, model: string): void {
+        const state = this.getHealthState(providerName, model);
+        state.score = Math.min(20, state.score + 2);
+        state.consecutiveFailures = 0;
+        state.circuitOpenUntil = 0;
+        state.lastError = undefined;
+        state.lastUsedAt = Date.now();
+    }
+
+    private markFailure(providerName: string, model: string, errorMessage?: string): void {
+        const state = this.getHealthState(providerName, model);
+        const error = String(errorMessage || '').toLowerCase();
+        const isRateLimit = error.includes('429') || error.includes('rate');
+
+        state.score = Math.max(-20, state.score - (isRateLimit ? 4 : 2));
+        state.consecutiveFailures += 1;
+        state.lastError = errorMessage;
+        state.lastUsedAt = Date.now();
+
+        if (isRateLimit || state.consecutiveFailures >= 3) {
+            const cooldownMs = isRateLimit ? 30_000 : 10_000;
+            state.circuitOpenUntil = Date.now() + cooldownMs;
+        }
+    }
+
+    private isHeavyReasoningRequest(request: ProviderRequest): boolean {
+        const metadata = request.metadata || {};
+        if (request.action === 'analyze_progress') return true;
+        if (metadata.requiresReasoning === true || metadata.useDeepReasoning === true) return true;
+        return request.prompt.length >= 4200;
+    }
+
+    private isNarrativeRequest(request: ProviderRequest): boolean {
+        const metadata = request.metadata || {};
+        return request.action === 'message'
+            || metadata.responseStyle === 'narrative'
+            || metadata.copyMode === true;
+    }
+
+    private buildCandidateChain(request: ProviderRequest, rule: RoutingRule): ModelCandidate[] {
+        const heavyReasoning = this.isHeavyReasoningRequest(request);
+        const narrative = this.isNarrativeRequest(request);
+
+        const baseGroqChain: ModelCandidate[] = heavyReasoning
+            ? [
+                { providerName: 'groq', model: GROQ_MODELS.reasoning, reason: 'reasoning_primary' },
+                { providerName: 'groq', model: GROQ_MODELS.operational, reason: 'reasoning_to_operational' },
+                { providerName: 'groq', model: GROQ_MODELS.fallback, reason: 'reasoning_fallback' }
+            ]
+            : narrative
+                ? [
+                    { providerName: 'groq', model: GROQ_MODELS.narrative, reason: 'narrative_primary' },
+                    { providerName: 'groq', model: GROQ_MODELS.fallback, reason: 'narrative_fallback' },
+                    { providerName: 'groq', model: GROQ_MODELS.operational, reason: 'narrative_operational' }
+                ]
+                : [
+                    { providerName: 'groq', model: GROQ_MODELS.operational, reason: 'operational_primary' },
+                    { providerName: 'groq', model: GROQ_MODELS.reasoning, reason: 'operational_reasoning' },
+                    { providerName: 'groq', model: GROQ_MODELS.fallback, reason: 'operational_fallback' }
+                ];
+
+        const candidateChain = [...baseGroqChain];
+
+        if (rule.primaryProvider === 'gemini' || rule.fallbackProviders.includes('gemini')) {
+            candidateChain.push({ providerName: 'gemini', model: 'gemini-2.0-flash', reason: 'provider_fallback' });
+        }
+
+        if (TRAINING_ACTIONS.has(request.action) || rule.primaryProvider === 'local' || rule.fallbackProviders.includes('local')) {
+            candidateChain.push({ providerName: 'local', model: 'smart-generator-v1', reason: 'deterministic_last_resort' });
+        }
+
+        // Deduplicate provider:model preserving order.
+        const unique = new Set<string>();
+        return candidateChain.filter((candidate) => {
+            const key = this.getModelKey(candidate.providerName, candidate.model);
+            if (unique.has(key)) return false;
+            unique.add(key);
+            return true;
+        });
     }
 
     // Execute with fallback chain
@@ -103,13 +225,38 @@ export class AIRouter {
             };
         }
 
-        // Try primary provider
-        const primaryProvider = this.providers[rule.primaryProvider];
+        const chain = this.buildCandidateChain(request, rule);
+        const attemptFailures: Array<{ provider: string; model: string; reason: string; error?: string }> = [];
 
-        if (primaryProvider?.isAvailable()) {
-            const result = await primaryProvider.execute(request);
+        for (let i = 0; i < chain.length; i++) {
+            const candidate = chain[i];
+            const provider = this.providers[candidate.providerName];
+            if (!provider?.isAvailable()) {
+                attemptFailures.push({
+                    provider: candidate.providerName,
+                    model: candidate.model,
+                    reason: `${candidate.reason}:provider_unavailable`
+                });
+                continue;
+            }
+
+            if (this.isCircuitOpen(candidate.providerName, candidate.model)) {
+                attemptFailures.push({
+                    provider: candidate.providerName,
+                    model: candidate.model,
+                    reason: `${candidate.reason}:circuit_open`
+                });
+                continue;
+            }
+
+            const result = await provider.execute({
+                ...request,
+                modelOverride: candidate.providerName === 'local' ? undefined : candidate.model
+            });
 
             if (result.success) {
+                this.markSuccess(candidate.providerName, candidate.model);
+                const currentHealth = this.getHealthState(candidate.providerName, candidate.model);
                 await logAIAction({
                     action_type: request.action,
                     provider_used: result.provider,
@@ -120,46 +267,29 @@ export class AIRouter {
                     tokens_output: result.tokensOutput,
                     latency_ms: result.latencyMs,
                     success: true,
-                    fallback_used: false,
-                    metadata: request.metadata
+                    fallback_used: i > 0,
+                    fallback_provider: i > 0 ? candidate.providerName : undefined,
+                    metadata: {
+                        ...request.metadata,
+                        routingReason: candidate.reason,
+                        modelHealthScore: currentHealth.score,
+                        attempts: attemptFailures
+                    }
                 });
 
-                return { ...result, fallbackUsed: false };
+                return { ...result, fallbackUsed: i > 0 };
             }
 
-            // Primary failed, try fallbacks
-            console.warn(`Primary provider ${rule.primaryProvider} failed:`, result.error);
+            this.markFailure(candidate.providerName, candidate.model, result.error);
+            attemptFailures.push({
+                provider: candidate.providerName,
+                model: candidate.model,
+                reason: candidate.reason,
+                error: result.error
+            });
         }
 
-        // Try fallback chain
-        for (const fallbackName of rule.fallbackProviders) {
-            const fallbackProvider = this.providers[fallbackName];
-
-            if (fallbackProvider?.isAvailable()) {
-                const result = await fallbackProvider.execute(request);
-
-                if (result.success) {
-                    await logAIAction({
-                        action_type: request.action,
-                        provider_used: result.provider,
-                        model_name: result.model,
-                        prompt: request.prompt,
-                        response: result.text,
-                        tokens_input: result.tokensInput,
-                        tokens_output: result.tokensOutput,
-                        latency_ms: result.latencyMs,
-                        success: true,
-                        fallback_used: true,
-                        fallback_provider: fallbackName,
-                        metadata: request.metadata
-                    });
-
-                    return { ...result, fallbackUsed: true };
-                }
-            }
-        }
-
-        // All providers failed
+        // All attempts failed
         await logAIAction({
             action_type: request.action,
             provider_used: 'none',
@@ -170,7 +300,10 @@ export class AIRouter {
             success: false,
             fallback_used: true,
             error_message: 'All providers failed',
-            metadata: request.metadata
+            metadata: {
+                ...request.metadata,
+                attempts: attemptFailures
+            }
         });
 
         return {
@@ -179,7 +312,7 @@ export class AIRouter {
             provider: 'none',
             model: 'none',
             latencyMs: 0,
-            error: 'All providers failed',
+            error: `All providers failed: ${attemptFailures.map((item) => `${item.provider}:${item.model}:${item.reason}`).join(' | ')}`,
             fallbackUsed: true
         };
     }

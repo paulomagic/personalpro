@@ -32,13 +32,14 @@ export const geminiProvider: AIProvider = {
     async execute(request: ProviderRequest): Promise<ProviderResponse> {
         const startTime = Date.now();
         const tokensInput = estimateTokens(request.prompt);
+        const requestedModel = request.modelOverride || 'gemini-2.0-flash';
 
         if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
             return {
                 success: false,
                 text: null,
                 provider: 'gemini',
-                model: 'gemini-2.0-flash',
+                model: requestedModel,
                 latencyMs: 0,
                 error: 'Supabase URL or anon key not configured'
             };
@@ -52,7 +53,7 @@ export const geminiProvider: AIProvider = {
                     success: false,
                     text: null,
                     provider: 'gemini',
-                    model: 'gemini-2.0-flash',
+                    model: requestedModel,
                     latencyMs: Date.now() - startTime,
                     tokensInput,
                     error: 'User session not found'
@@ -67,7 +68,8 @@ export const geminiProvider: AIProvider = {
                 },
                 body: JSON.stringify({
                     prompt: request.prompt,
-                    action: request.action
+                    action: request.action,
+                    model: requestedModel
                 }),
             });
 
@@ -81,7 +83,7 @@ export const geminiProvider: AIProvider = {
                     success: false,
                     text: null,
                     provider: 'gemini',
-                    model: 'gemini-2.0-flash',
+                    model: requestedModel,
                     latencyMs,
                     tokensInput,
                     error: `HTTP ${response.status}: ${errorText}`
@@ -108,7 +110,7 @@ export const geminiProvider: AIProvider = {
                     success: false,
                     text: null,
                     provider: 'gemini',
-                    model: 'gemini-2.0-flash',
+                    model: requestedModel,
                     latencyMs,
                     tokensInput,
                     error: data.error || 'Unknown error'
@@ -123,7 +125,7 @@ export const geminiProvider: AIProvider = {
                 success: false,
                 text: null,
                 provider: 'gemini',
-                model: 'gemini-2.0-flash',
+                model: requestedModel,
                 latencyMs,
                 tokensInput,
                 error: error?.message || 'Network error'

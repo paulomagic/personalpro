@@ -32,13 +32,14 @@ export const groqProvider: AIProvider = {
     async execute(request: ProviderRequest): Promise<ProviderResponse> {
         const startTime = Date.now();
         const tokensInput = estimateTokens(request.prompt);
+        const requestedModel = request.modelOverride || 'llama-3.3-70b-versatile';
 
         if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
             return {
                 success: false,
                 text: null,
                 provider: 'groq',
-                model: 'llama-3.3-70b-versatile',
+                model: requestedModel,
                 latencyMs: 0,
                 error: 'Supabase URL or anon key not configured'
             };
@@ -52,7 +53,7 @@ export const groqProvider: AIProvider = {
                     success: false,
                     text: null,
                     provider: 'groq',
-                    model: 'llama-3.3-70b-versatile',
+                    model: requestedModel,
                     latencyMs: Date.now() - startTime,
                     tokensInput,
                     error: 'User session not found'
@@ -68,7 +69,7 @@ export const groqProvider: AIProvider = {
                 body: JSON.stringify({
                     prompt: request.prompt,
                     action: request.action,
-                    model: 'llama-3.3-70b-versatile'
+                    model: requestedModel
                 }),
             });
 
@@ -82,7 +83,7 @@ export const groqProvider: AIProvider = {
                     success: false,
                     text: null,
                     provider: 'groq',
-                    model: 'llama-3.3-70b-versatile',
+                    model: requestedModel,
                     latencyMs,
                     tokensInput,
                     error: `HTTP ${response.status}: ${errorText}`
@@ -109,7 +110,7 @@ export const groqProvider: AIProvider = {
                     success: false,
                     text: null,
                     provider: 'groq',
-                    model: 'llama-3.3-70b-versatile',
+                    model: requestedModel,
                     latencyMs,
                     tokensInput,
                     error: data.error || 'Unknown error'
@@ -124,7 +125,7 @@ export const groqProvider: AIProvider = {
                 success: false,
                 text: null,
                 provider: 'groq',
-                model: 'llama-3.3-70b-versatile',
+                model: requestedModel,
                 latencyMs,
                 tokensInput,
                 error: error?.message || 'Network error'

@@ -45,6 +45,10 @@ const TrainingExecutionView: React.FC<TrainingExecutionViewProps> = ({ workout, 
   const [showFeedbackForm, setShowFeedbackForm] = useState(false);
   const [feedbackExerciseIndex, setFeedbackExerciseIndex] = useState(0);
   const [completedExercises, setCompletedExercises] = useState<Set<number>>(new Set());
+  const [oneHandMode, setOneHandMode] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    return window.localStorage.getItem('personalpro:quick_one_hand_mode') === '1';
+  });
   const isColdStartWorkout = Boolean((workout as any)?.coldStartMode || (workout as any)?.ai_metadata?.coldStartMode);
 
   const parseRestSeconds = (value: string | number | undefined): number => {
@@ -60,10 +64,30 @@ const TrainingExecutionView: React.FC<TrainingExecutionViewProps> = ({ workout, 
   };
 
   const currentExercise = exercises[currentExerciseIndex] as WorkoutExercise;
+  const totalSets = currentExercise?.sets?.length || 4;
+  const totalPlannedSets = exercises.reduce((acc, exercise) => {
+    const safeExercise = exercise as WorkoutExercise;
+    return acc + (Array.isArray(safeExercise?.sets) ? safeExercise.sets.length : 4);
+  }, 0);
+  const completedSetsBeforeCurrent = exercises.slice(0, currentExerciseIndex).reduce((acc, exercise) => {
+    const safeExercise = exercise as WorkoutExercise;
+    return acc + (Array.isArray(safeExercise?.sets) ? safeExercise.sets.length : 4);
+  }, 0);
+  const executionProgressPct = totalPlannedSets > 0
+    ? Math.round(((completedSetsBeforeCurrent + Math.min(currentSet, totalSets)) / totalPlannedSets) * 100)
+    : 0;
+  const adherenceNudge = useMemo(() => {
+    if (isColdStartWorkout && completedExercises.size < exercises.length) {
+      return `Complete os feedbacks: ${completedExercises.size}/${exercises.length} para calibrar com precisão.`;
+    }
+    if (executionProgressPct >= 90) return 'Última etapa. Mantenha foco técnico e finalize forte.';
+    if (executionProgressPct >= 65) return 'Ritmo excelente. Mantenha consistência na execução.';
+    if (executionProgressPct >= 35) return 'Boa progressão. Controle descanso e qualidade das repetições.';
+    return 'Início sólido. Foque em técnica e percepção de esforço (RPE).';
+  }, [isColdStartWorkout, completedExercises.size, exercises.length, executionProgressPct]);
 
   // Get exercise details
   const exerciseName = currentExercise?.name || 'Exercício';
-  const totalSets = currentExercise?.sets?.length || 4;
   const targetReps = currentExercise?.sets?.[currentSet - 1]?.reps || 12;
   const targetMuscle = currentExercise?.targetMuscle || currentExercise?.category || 'Músculo';
   const restSeconds = parseRestSeconds(currentExercise?.sets?.[currentSet - 1]?.rest as any);
@@ -100,6 +124,11 @@ const TrainingExecutionView: React.FC<TrainingExecutionViewProps> = ({ workout, 
     setFeedbackExerciseIndex(0);
     setCompletedExercises(new Set());
   }, [selectedSplitIndex, pendingSplitSelection]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    window.localStorage.setItem('personalpro:quick_one_hand_mode', oneHandMode ? '1' : '0');
+  }, [oneHandMode]);
 
   const finishWorkout = () => {
     void logFunnelEvent('workout_execution_finished', {
@@ -243,6 +272,10 @@ const TrainingExecutionView: React.FC<TrainingExecutionViewProps> = ({ workout, 
     setRestTime(restSeconds);
   };
 
+  const adjustLoadQuick = (delta: number) => {
+    setCurrentLoad(prev => Math.max(0, Number((prev + delta).toFixed(1))));
+  };
+
   // Split exercise name for better display
   const nameParts = exerciseName.split(' ');
   const firstName = nameParts.slice(0, Math.ceil(nameParts.length / 2)).join(' ');
@@ -310,7 +343,7 @@ const TrainingExecutionView: React.FC<TrainingExecutionViewProps> = ({ workout, 
       <div className="absolute top-0 left-0 right-0 h-1.5 bg-white/5 z-50">
         <div
           className="h-full bg-blue-500 shadow-glow transition-all duration-700 ease-out"
-          style={{ width: `${((currentExerciseIndex * totalSets + currentSet) / (exercises.length * totalSets)) * 100}%` }}
+          style={{ width: `${executionProgressPct}%` }}
         ></div>
       </div>
 
@@ -343,8 +376,20 @@ const TrainingExecutionView: React.FC<TrainingExecutionViewProps> = ({ workout, 
           )}
         </div>
 
-        <div className="size-12 rounded-2xl glass-card flex items-center justify-center">
-          <span className="text-xs font-bold text-slate-400">{currentExerciseIndex + 1}/{exercises.length}</span>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setOneHandMode(prev => !prev)}
+            className={`h-12 px-3 rounded-2xl border text-[10px] font-black uppercase tracking-widest transition-all ${oneHandMode
+              ? 'bg-blue-500/20 border-blue-400/60 text-blue-300'
+              : 'glass-card border-white/10 text-slate-300'
+              }`}
+          >
+            1M
+          </button>
+          <div className="size-12 rounded-2xl glass-card flex items-center justify-center">
+            <span className="text-xs font-bold text-slate-400">{currentExerciseIndex + 1}/{exercises.length}</span>
+          </div>
         </div>
       </header>
 
@@ -365,6 +410,10 @@ const TrainingExecutionView: React.FC<TrainingExecutionViewProps> = ({ workout, 
           </div>
         ) : (
           <>
+            <div className="mb-4 glass-card border border-blue-500/20 bg-blue-500/10 rounded-2xl px-4 py-3 animate-fade-in">
+              <p className="text-[11px] text-blue-100 font-semibold">{adherenceNudge}</p>
+            </div>
+
             {/* Exercise Info */}
             <div className="mb-10 animate-slide-up">
               <div className="flex items-center justify-between mb-4">
@@ -391,6 +440,23 @@ const TrainingExecutionView: React.FC<TrainingExecutionViewProps> = ({ workout, 
                 </button>
               )}
             </div>
+
+            {oneHandMode && (
+              <div className="grid grid-cols-2 gap-3 mb-6 animate-slide-up">
+                <button
+                  onClick={() => adjustLoadQuick(-2.5)}
+                  className="h-14 rounded-2xl glass-card border border-white/15 text-white font-black text-sm tracking-widest active:scale-95 transition-all"
+                >
+                  -2.5 KG
+                </button>
+                <button
+                  onClick={() => adjustLoadQuick(2.5)}
+                  className="h-14 rounded-2xl bg-blue-600/90 border border-blue-400/40 text-white font-black text-sm tracking-widest active:scale-95 transition-all"
+                >
+                  +2.5 KG
+                </button>
+              </div>
+            )}
 
             {/* Reps & Load Display */}
             <div className="grid grid-cols-2 gap-8 mb-12 animate-slide-up stagger-1">

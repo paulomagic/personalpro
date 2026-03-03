@@ -85,6 +85,10 @@ const StudentView: React.FC<StudentViewProps> = ({
     const [showFeedbackForm, setShowFeedbackForm] = useState(false);
     const [feedbackExerciseIndex, setFeedbackExerciseIndex] = useState(0);
     const [feedbackCompletedExercises, setFeedbackCompletedExercises] = useState<Set<number>>(new Set());
+    const [oneHandMode, setOneHandMode] = useState<boolean>(() => {
+        if (typeof window === 'undefined') return false;
+        return window.localStorage.getItem('personalpro:quick_one_hand_mode') === '1';
+    });
 
     const isColdStartWorkout = Boolean(workout?.coldStartMode || workout?.ai_metadata?.coldStartMode);
 
@@ -129,6 +133,11 @@ const StudentView: React.FC<StudentViewProps> = ({
     useEffect(() => {
         void flushQueuedFeedback();
     }, []);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+        window.localStorage.setItem('personalpro:quick_one_hand_mode', oneHandMode ? '1' : '0');
+    }, [oneHandMode]);
 
     // Helper to normalize exercises with default sets
     const normalizeExercises = (exercises: WorkoutExercise[]): WorkoutExercise[] => {
@@ -199,10 +208,51 @@ const StudentView: React.FC<StudentViewProps> = ({
     const requiredFeedbackCount = isColdStartWorkout ? totalExercises : 0;
     const hasAllRequiredFeedback = requiredFeedbackCount === 0 || feedbackCompletedExercises.size >= requiredFeedbackCount;
     const canFinishWorkout = progress >= 100 && (!isColdStartWorkout || hasAllRequiredFeedback);
+    const activeExercisePendingSetIndex = completions[activeExercise]?.setCompletions?.findIndex(done => !done) ?? -1;
+    const canQuickCompleteSet = activeExercisePendingSetIndex >= 0;
+    const adherenceNudge = (() => {
+        if (isColdStartWorkout && !hasAllRequiredFeedback) {
+            return `Envie feedback de ${feedbackCompletedExercises.size}/${requiredFeedbackCount} exercícios para calibrar a IA com precisão.`;
+        }
+        if (progress >= 90) return 'Fase final: mantenha execução limpa e feche o treino.';
+        if (progress >= 65) return 'Ritmo forte. Continue sem alongar descansos.';
+        if (progress >= 35) return 'Consistência boa. Foque em amplitude e controle.';
+        return 'Início do treino: priorize técnica e percepção de esforço.';
+    })();
 
     const getFirstMissingFeedbackExerciseIndex = () => {
         if (!selectedSplit) return -1;
         return selectedSplit.exercises.findIndex((_, idx) => !feedbackCompletedExercises.has(idx));
+    };
+
+    const moveToNextPendingExercise = () => {
+        if (!selectedSplit) return;
+        const isDone = (idx: number) => completions[idx]?.setCompletions?.every(Boolean) || false;
+        const nextOpen = selectedSplit.exercises.findIndex((_, idx) => idx > activeExercise && !isDone(idx));
+        if (nextOpen >= 0) {
+            setActiveExercise(nextOpen);
+            return;
+        }
+        const firstOpen = selectedSplit.exercises.findIndex((_, idx) => !isDone(idx));
+        if (firstOpen >= 0) {
+            setActiveExercise(firstOpen);
+        }
+    };
+
+    const handleQuickCompleteNextSet = () => {
+        if (!selectedSplit) return;
+        if (activeExercisePendingSetIndex < 0) {
+            moveToNextPendingExercise();
+            return;
+        }
+        if ('vibrate' in navigator) navigator.vibrate([15, 30, 15]);
+        const remainingSets = completions[activeExercise]?.setCompletions.filter(done => !done).length ?? 0;
+        toggleSetComplete(activeExercise, activeExercisePendingSetIndex);
+        if (remainingSets <= 1) {
+            setTimeout(() => {
+                moveToNextPendingExercise();
+            }, 120);
+        }
     };
 
     // Toggle set completion
@@ -573,6 +623,18 @@ const StudentView: React.FC<StudentViewProps> = ({
                                     <span className="text-[15px] font-black tracking-wide text-white leading-tight pr-4">{selectedSplit.description}</span>
                                 </div>
                             </div>
+                            <button
+                                type="button"
+                                onClick={() => setOneHandMode(prev => !prev)}
+                                className={`h-11 px-3 rounded-2xl border text-[10px] font-black uppercase tracking-widest transition-all ${oneHandMode
+                                    ? 'bg-blue-500/20 border-blue-400/60 text-blue-300'
+                                    : (isLightTheme
+                                        ? 'bg-white/60 border-[rgba(130,170,235,0.35)] text-[#3D5A80]'
+                                        : 'bg-white/10 border-white/20 text-slate-300')
+                                    }`}
+                            >
+                                1M
+                            </button>
                         </div>
                     </div>
 
@@ -596,6 +658,22 @@ const StudentView: React.FC<StudentViewProps> = ({
                             </span>
                         </div>
                     )}
+                    <div
+                        className="mt-3 rounded-2xl px-3 py-2 border"
+                        style={isLightTheme
+                            ? {
+                                background: 'rgba(219, 234, 254, 0.68)',
+                                borderColor: 'rgba(130, 170, 235, 0.32)',
+                            }
+                            : {
+                                background: 'rgba(59,130,246,0.12)',
+                                borderColor: 'rgba(59,130,246,0.25)',
+                            }}
+                    >
+                        <p className="text-[11px] font-semibold" style={{ color: isLightTheme ? '#264569' : '#BFDBFE' }}>
+                            {adherenceNudge}
+                        </p>
+                    </div>
                 </div>
             </header>
 
@@ -794,6 +872,49 @@ const StudentView: React.FC<StudentViewProps> = ({
                     }}
             >
                 <div className="max-w-md mx-auto pointer-events-auto">
+                    {oneHandMode && (
+                        <div
+                            className="mb-3 p-2 rounded-2xl border"
+                            style={isLightTheme
+                                ? {
+                                    background: 'rgba(235,243,255,0.9)',
+                                    borderColor: 'rgba(130,170,235,0.32)',
+                                }
+                                : {
+                                    background: 'rgba(15,23,42,0.82)',
+                                    borderColor: 'rgba(59,130,246,0.28)',
+                                }}
+                        >
+                            <div className="grid grid-cols-2 gap-2">
+                                <button
+                                    type="button"
+                                    onClick={handleQuickCompleteNextSet}
+                                    disabled={!canQuickCompleteSet}
+                                    className="h-12 rounded-xl bg-blue-600 text-white text-[10px] font-black uppercase tracking-widest disabled:opacity-40 disabled:cursor-not-allowed"
+                                >
+                                    Próxima Série
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={moveToNextPendingExercise}
+                                    className="h-12 rounded-xl border text-[10px] font-black uppercase tracking-widest"
+                                    style={isLightTheme
+                                        ? {
+                                            borderColor: 'rgba(130,170,235,0.42)',
+                                            color: '#355680',
+                                            background: 'rgba(255,255,255,0.75)',
+                                        }
+                                        : {
+                                            borderColor: 'rgba(148,163,184,0.35)',
+                                            color: '#CBD5E1',
+                                            background: 'rgba(15,23,42,0.65)',
+                                        }}
+                                >
+                                    Próx Exercício
+                                </button>
+                            </div>
+                        </div>
+                    )}
                     {progress >= 100 ? (
                         <button
                             onClick={() => {

@@ -43,6 +43,13 @@ const AdminAIDashboardView: React.FC<AdminAIDashboardViewProps> = ({ onBack }) =
         return `${userId.slice(0, 8)}...`;
     };
 
+    const formatDateTime = (value?: string | null) => {
+        if (!value) return 'nunca';
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) return 'inválido';
+        return date.toLocaleString('pt-BR');
+    };
+
     return (
         <div className="min-h-screen bg-slate-950 text-white">
             {/* Header */}
@@ -101,6 +108,42 @@ const AdminAIDashboardView: React.FC<AdminAIDashboardViewProps> = ({ onBack }) =
                         </div>
                     </div>
                 </motion.div>
+
+                {metrics?.providerHealth && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.05 }}
+                        className={`rounded-2xl p-4 border ${metrics.providerHealth.status === 'critical'
+                            ? 'bg-red-500/10 border-red-500/40'
+                            : metrics.providerHealth.status === 'warning'
+                                ? 'bg-amber-500/10 border-amber-500/40'
+                                : 'bg-emerald-500/10 border-emerald-500/30'
+                            }`}
+                    >
+                        <div className="flex items-start gap-3">
+                            {metrics.providerHealth.status === 'ok'
+                                ? <CheckCircle size={18} className="text-emerald-400 mt-0.5" />
+                                : <AlertTriangle size={18} className={metrics.providerHealth.status === 'critical' ? 'text-red-400 mt-0.5' : 'text-amber-300 mt-0.5'} />}
+                            <div className="flex-1">
+                                <p className={`text-sm font-black ${metrics.providerHealth.status === 'critical'
+                                    ? 'text-red-300'
+                                    : metrics.providerHealth.status === 'warning'
+                                        ? 'text-amber-200'
+                                        : 'text-emerald-300'
+                                    }`}>
+                                    Saúde do Provedor IA: {String(metrics.providerHealth.status).toUpperCase()}
+                                </p>
+                                <p className="text-xs text-slate-300 mt-1">{metrics.providerHealth.reason}</p>
+                                <div className="mt-2 text-[11px] text-slate-400 grid grid-cols-2 gap-1">
+                                    <span>Treinos IA (24h): {metrics.providerHealth.workoutActions24h || 0}</span>
+                                    <span>Sucesso Groq (24h): {metrics.providerHealth.groqSuccess24h || 0}</span>
+                                    <span className="col-span-2">Último sucesso Groq: {formatDateTime(metrics.providerHealth.lastGroqSuccessAt)}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </motion.div>
+                )}
 
                 {/* Tokens do Dia */}
                 <motion.div

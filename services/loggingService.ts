@@ -217,6 +217,7 @@ export async function getActivityLogs(filters: AILogFilters = {}) {
 export async function getAIMetrics() {
     const today = new Date().toISOString().split('T')[0];
     const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    const oneDayAgoIso = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
     // Total logs
     const { count: totalLogs } = await supabase
@@ -319,6 +320,83 @@ export async function getAIMetrics() {
         requestsByDay[day].total++;
         if (log.success) requestsByDay[day].success++;
     });
+
+    // Provider health (used to detect incidents like "Groq stopped being used")
+    const { data: providerData } = await supabase
+        .from('ai_logs')
+        .select('provider_used, action_type, success, created_at, error_message')
+        .gte('created_at', weekAgo);
+
+    const trainingActions = new Set(['generate_workout', 'generate_workout_intention', 'regenerate_exercise', 'refine']);
+    const providerStats: Record<string, {
+        total: number;
+        success: number;
+        total24h: number;
+        success24h: number;
+        rateLimited24h: number;
+        lastSuccessAt: string | null;
+    }> = {};
+
+    let workoutActions24h = 0;
+    let groqSuccess24h = 0;
+    let lastGroqSuccessAt: string | null = null;
+
+    providerData?.forEach((row: any) => {
+        const provider = String(row.provider_used || 'none');
+        if (!providerStats[provider]) {
+            providerStats[provider] = {
+                total: 0,
+                success: 0,
+                total24h: 0,
+                success24h: 0,
+                rateLimited24h: 0,
+                lastSuccessAt: null
+            };
+        }
+
+        const stats = providerStats[provider];
+        stats.total += 1;
+        if (row.success) {
+            stats.success += 1;
+            if (!stats.lastSuccessAt || row.created_at > stats.lastSuccessAt) {
+                stats.lastSuccessAt = row.created_at;
+            }
+        }
+
+        const isLast24h = row.created_at >= oneDayAgoIso;
+        if (isLast24h) {
+            stats.total24h += 1;
+            if (row.success) {
+                stats.success24h += 1;
+            }
+            if (String(row.error_message || '').includes('429')) {
+                stats.rateLimited24h += 1;
+            }
+        }
+
+        if (provider === 'groq' && row.success) {
+            if (!lastGroqSuccessAt || row.created_at > lastGroqSuccessAt) {
+                lastGroqSuccessAt = row.created_at;
+            }
+            if (isLast24h) {
+                groqSuccess24h += 1;
+            }
+        }
+
+        if (isLast24h && trainingActions.has(String(row.action_type || ''))) {
+            workoutActions24h += 1;
+        }
+    });
+
+    let providerHealthStatus: 'ok' | 'warning' | 'critical' = 'ok';
+    let providerHealthReason = 'Providers operando normalmente.';
+    if (workoutActions24h >= 20 && groqSuccess24h === 0) {
+        providerHealthStatus = 'critical';
+        providerHealthReason = 'Treinos IA ativos sem sucesso no Groq nas últimas 24h.';
+    } else if (workoutActions24h >= 5 && groqSuccess24h === 0) {
+        providerHealthStatus = 'warning';
+        providerHealthReason = 'Baixo/no sucesso no Groq com geração de treino em andamento.';
+    }
 
     // Total tokens used & Breakdown by action
     const { data: tokenData } = await supabase
@@ -481,6 +559,14 @@ export async function getAIMetrics() {
         avgLatency,
         recentErrors: recentErrors || [],
         requestsByDay,
+        providerHealth: {
+            status: providerHealthStatus,
+            reason: providerHealthReason,
+            workoutActions24h,
+            groqSuccess24h,
+            lastGroqSuccessAt,
+            byProvider: providerStats
+        },
         aiFeedback: {
             total: feedbackTotal,
             positive: feedbackPositive,

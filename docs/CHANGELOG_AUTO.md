@@ -6,6 +6,11 @@ Gerado automaticamente pelo workflow `docs-update.yml`.
 
 ## 2026-03-03
 
+- **Commit:** 5202abe — feat(auth): fallback tolerante a falhas para firewall corporativo (auth-guard)
+- **Arquivos de segurança alterados:** scripts/security-check.cjs,services/auth/authGuard.ts,tests/authGuard.test.ts,
+
+## 2026-03-03
+
 - **Commit:** 42fae39 — feat(auth): fallback degradavel e politica estrita configuravel para captcha
 - **Arquivos de segurança alterados:** scripts/security-check.cjs,services/auth/captchaPolicy.ts,
 

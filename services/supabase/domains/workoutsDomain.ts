@@ -40,6 +40,35 @@ export interface Workout {
     created_at: string;
 }
 
+export interface WorkoutsQueryOptions {
+    limit?: number;
+    offset?: number;
+}
+
+export async function getWorkoutsByClient(
+    clientId: string,
+    options: WorkoutsQueryOptions = {}
+): Promise<Workout[]> {
+    if (!supabase) return [];
+
+    const limit = Math.min(Math.max(options.limit ?? 80, 1), 200);
+    const offset = Math.max(options.offset ?? 0, 0);
+
+    const { data, error } = await supabase
+        .from('workouts')
+        .select('*')
+        .eq('client_id', clientId)
+        .order('created_at', { ascending: false })
+        .range(offset, offset + limit - 1);
+
+    if (error) {
+        console.error('Error fetching workouts:', error);
+        return [];
+    }
+
+    return data || [];
+}
+
 export async function saveAIWorkout(
     clientId: string,
     coachId: string,

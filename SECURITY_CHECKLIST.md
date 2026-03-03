@@ -63,6 +63,9 @@
 | SHA-256 hash anônimo de identidade no auth-guard | ✅ | `sha256Hex(action + email + ip)` |
 | Validação de IP de origem no CAPTCHA | ✅ | `x-forwarded-for` incluído na validação Turnstile |
 | CI com verificação de segurança automatizada | ✅ | `.github/workflows/ci.yml` — `npm run security-check` |
+| Secret scan em CI + pre-commit | ✅ | `npm run secret-scan` + `.githooks/pre-commit` |
+| Política de retenção de logs com scheduler | ✅ | `cleanup_old_logs_system(90)` via `pg_cron` |
+| Camada de criptografia clínica (rollout) | ✅ | colunas `*_encrypted` + trigger + backfill |
 
 ### 🟡 Parcialmente Implementado
 
@@ -77,7 +80,7 @@
 | Item | Prioridade | Observação |
 |------|------------|------------|
 | Dados Sensíveis em Prompts de IA (anonimização) | 🟠 MÉDIA | Nome, lesões e preferências do aluno vão para a API |
-| Content Security Policy (CSP) | 🟡 BAIXA | Não configurado no `vercel.json` ou `index.html` |
+| Criptografia clínica 100% aplicada (read path) | 🟡 MÉDIA | Shadow encryption ativo; leitura principal ainda usa plaintext legado |
 | Monitoramento de custos de API | 🟡 BAIXA | Sem alertas automáticos de quota |
 | Modo Demo com banco isolado | 🟡 BAIXA | Demo usa banco real (dados de demonstração) |
 
@@ -142,6 +145,12 @@ supabase secrets set TURNSTILE_SECRET_KEY=sua-chave
 ```bash
 # Verificação completa de segurança (Audit + Env Var + Files)
 npm run security-check
+
+# Secret scan de todos os arquivos versionados
+npm run secret-scan
+
+# Secret scan apenas do que está staged (pre-commit)
+npm run secret-scan:staged
 
 # Verificar vulnerabilidades em dependências
 npm audit

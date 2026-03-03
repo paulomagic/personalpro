@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v26';
+const CACHE_VERSION = 'v27';
 const STATIC_CACHE = `personalpro-static-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `personalpro-runtime-${CACHE_VERSION}`;
 const API_CACHE = `personalpro-api-${CACHE_VERSION}`;
@@ -80,13 +80,17 @@ function withTimeout(promise, timeoutMs) {
 async function staleWhileRevalidate(request, cacheName = STATIC_CACHE, maxItems = MAX_STATIC_ITEMS) {
     const cache = await caches.open(cacheName);
     const cached = await cache.match(request);
+    const requestOrigin = new URL(request.url).origin;
+    const canFetchFromWorker = requestOrigin === self.location.origin || isApiRequest(request.url);
 
-    const networkUpdate = fetch(request)
-        .then(async (response) => {
-            await putInCache(cacheName, request, response, maxItems);
-            return response;
-        })
-        .catch(() => null);
+    const networkUpdate = canFetchFromWorker
+        ? fetch(request)
+            .then(async (response) => {
+                await putInCache(cacheName, request, response, maxItems);
+                return response;
+            })
+            .catch(() => null)
+        : Promise.resolve(null);
 
     if (cached) {
         void networkUpdate;
@@ -95,7 +99,7 @@ async function staleWhileRevalidate(request, cacheName = STATIC_CACHE, maxItems 
 
     const networkResponse = await networkUpdate;
     if (networkResponse) return networkResponse;
-    throw new Error('offline-and-not-cached');
+    return new Response('', { status: 503, statusText: 'offline-and-not-cached' });
 }
 
 async function networkFirst(request, options = {}) {

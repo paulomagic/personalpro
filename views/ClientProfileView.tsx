@@ -52,7 +52,7 @@ const ClientProfileView: React.FC<ClientProfileViewProps> = ({ client: initialCl
         const [clientData, assessmentsData, workoutsData] = await Promise.all([
           getClient(client.id),
           getAssessments(client.id),
-          getWorkouts(client.id)
+          getWorkouts(client.id, { limit: 50 })
         ]);
 
         // Map backend snake_case to frontend camelCase

@@ -118,8 +118,8 @@ const DashboardView: React.FC<DashboardViewProps> = ({
           setAppointments(DEMO_APPOINTMENTS);
         } else {
           const [clientsData, todayAppts, payments] = await Promise.all([
-            getClients(user.id),
-            getAppointments(user.id, today),
+            getClients(user.id, { limit: 50 }),
+            getAppointments(user.id, today, { limit: 20 }),
             getPayments(user.id),
           ]);
           setClients(

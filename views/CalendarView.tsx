@@ -82,12 +82,12 @@ const CalendarView: React.FC<CalendarViewProps> = ({ user, onBack, onSelectClien
             setLoading(true);
             try {
                 // Fetch real clients
-                const clientsData = await getClients(user.id);
+                const clientsData = await getClients(user.id, { limit: 300 });
                 setClients(clientsData);
 
                 // Fetch real appointments for selected date
                 const dateStr = selectedDate.toISOString().split('T')[0];
-                const appointmentsData = await getAppointments(user.id, dateStr);
+                const appointmentsData = await getAppointments(user.id, dateStr, { limit: 300 });
 
                 if (appointmentsData.length > 0) {
                     // Map DB appointments to display format

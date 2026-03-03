@@ -111,7 +111,7 @@ const FinanceView: React.FC<FinanceViewProps> = ({ user, onBack }) => {
                     setPayments(mapped);
                 } else {
                     // Fallback: Generate demo payments from clients
-                        const clients = await withTimeout(getClients(user.id));
+                        const clients = await withTimeout(getClients(user.id, { limit: 120 }));
                     if (clients.length > 0) {
                         const demoPayments = clients.slice(0, 5).map((c: any, i: number) => ({
                             id: `demo-${i}`,

@@ -2,6 +2,7 @@ interface CaptchaBypassPolicyInput {
   captchaEnabled: boolean;
   widgetFailed: boolean;
   strictMode: boolean;
+  failureReason?: string;
 }
 
 export function parseBooleanEnvFlag(value?: string): boolean | null {
@@ -21,7 +22,9 @@ export function resolveCaptchaStrictMode(
 }
 
 export function canBypassCaptchaWidgetFailure(input: CaptchaBypassPolicyInput): boolean {
-  return input.captchaEnabled && input.widgetFailed && !input.strictMode;
+  if (!input.captchaEnabled || !input.widgetFailed) return false;
+  if (!input.strictMode) return true;
+  return isCaptchaServiceUnavailableError(input.failureReason);
 }
 
 export function isCaptchaServiceUnavailableError(error?: string): boolean {
@@ -34,6 +37,10 @@ export function isCaptchaServiceUnavailableError(error?: string): boolean {
     'nao foi possivel validar',
     'validation service',
     'origin not allowed',
+    'invalid domain',
+    'invalid sitekey',
+    'invalid site key',
+    '400020',
     'timeout',
     'network'
   ];

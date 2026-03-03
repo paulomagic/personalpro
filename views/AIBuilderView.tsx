@@ -461,7 +461,7 @@ const AIBuilderView: React.FC<AIBuilderViewProps> = ({ user, onBack, onDone }) =
 
         // Buscar clientes reais do banco de dados
         if (user?.id) {
-          const dbClients = await getClients(user.id);
+          const dbClients = await getClients(user.id, { limit: 100 });
           if (dbClients && dbClients.length > 0) {
             const mappedClients = dbClients.map(mapDBClientToClient) as Client[];
             setClients(mappedClients);

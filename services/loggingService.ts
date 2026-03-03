@@ -24,6 +24,17 @@ export interface ActivityLogEntry {
     metadata?: Record<string, any>;
 }
 
+export interface FrontendErrorLogEntry {
+    type: 'runtime_error' | 'promise_rejection' | 'react_error_boundary';
+    message: string;
+    stack?: string;
+    source?: string;
+    line?: number;
+    column?: number;
+    componentStack?: string;
+    metadata?: Record<string, any>;
+}
+
 function redactSensitiveText(value?: string | null): string | null {
     if (!value) return null;
 
@@ -84,6 +95,22 @@ export async function logActivity(entry: ActivityLogEntry): Promise<void> {
     }
 }
 
+export async function logFrontendError(entry: FrontendErrorLogEntry): Promise<void> {
+    await logActivity({
+        action: `frontend_error:${entry.type}`,
+        resource_type: 'frontend',
+        metadata: {
+            message: redactSensitiveText(entry.message),
+            stack: redactSensitiveText(entry.stack),
+            source: entry.source,
+            line: entry.line,
+            column: entry.column,
+            componentStack: redactSensitiveText(entry.componentStack),
+            ...entry.metadata
+        }
+    });
+}
+
 export async function logFunnelEvent(
     stage: string,
     metadata?: Record<string, any>
@@ -106,6 +133,16 @@ export interface AILogFilters {
     success?: boolean;
     limit?: number;
     offset?: number;
+}
+
+export interface AIUsageByUser {
+    user_id: string | null;
+    total_requests: number;
+    successful_requests: number;
+    success_rate: number;
+    total_tokens: number;
+    avg_latency_ms: number | null;
+    last_request_at: string | null;
 }
 
 export async function getAILogs(filters: AILogFilters = {}) {
@@ -405,6 +442,25 @@ export async function getAIMetrics() {
         };
     });
 
+    let usageByUser: AIUsageByUser[] = [];
+    try {
+        const { data: usageRows, error: usageError } = await supabase
+            .rpc('get_ai_usage_by_user', { p_days: 30, p_limit: 20 });
+        if (!usageError && Array.isArray(usageRows)) {
+            usageByUser = usageRows.map((row: any) => ({
+                user_id: row.user_id || null,
+                total_requests: Number(row.total_requests || 0),
+                successful_requests: Number(row.successful_requests || 0),
+                success_rate: Number(row.success_rate || 0),
+                total_tokens: Number(row.total_tokens || 0),
+                avg_latency_ms: row.avg_latency_ms == null ? null : Number(row.avg_latency_ms),
+                last_request_at: row.last_request_at || null
+            }));
+        }
+    } catch {
+        usageByUser = [];
+    }
+
     return {
         totalLogs: totalLogs || 0,
         todayLogs: todayLogs || 0,
@@ -437,7 +493,8 @@ export async function getAIMetrics() {
             hitRate: precisionHitRate,
             avgConfidence: avgPrecisionConfidence,
             bySegment: precisionBySegmentNormalized
-        }
+        },
+        usageByUser
     };
 }
 

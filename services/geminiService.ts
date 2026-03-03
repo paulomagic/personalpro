@@ -4,6 +4,15 @@
 import { logAIAction } from './loggingService';
 import { supabase } from './supabaseClient';
 import { buildEdgeAuthHeaders } from './ai/providers/edgeHeaders';
+import {
+  ExerciseReplacementSchema,
+  extractLikelyJson,
+  formatSchemaError,
+  IntentionResponseSchema,
+  ProgressAnalysisSchema,
+  RefinedWorkoutSchema,
+  WorkoutProgramSchema
+} from './ai/responseSchemas';
 
 // Supabase URL for Edge Function
 const SUPABASE_URL = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SUPABASE_URL) || '';
@@ -258,31 +267,28 @@ Crie exercícios específicos, variados e adequados ao perfil. Seja criativo nos
       return null; // API failed, trigger local fallback
     }
 
-    // Clean up the response - remove markdown code blocks if present
-    let cleanText = text.trim();
-
-    // Remove markdown code blocks
-    cleanText = cleanText.replace(/```json\n?/gi, '');
-    cleanText = cleanText.replace(/```\n?/gi, '');
-    cleanText = cleanText.trim();
-
-    // Try to find JSON object boundaries
-    const jsonStart = cleanText.indexOf('{');
-    const jsonEnd = cleanText.lastIndexOf('}');
-
-    if (jsonStart !== -1 && jsonEnd !== -1 && jsonEnd > jsonStart) {
-      cleanText = cleanText.slice(jsonStart, jsonEnd + 1);
-    }
-
-    // Fix common JSON issues
-    cleanText = cleanText
-      .replace(/,\s*}/g, '}')  // Remove trailing commas before }
-      .replace(/,\s*]/g, ']')  // Remove trailing commas before ]
-      .replace(/\n/g, ' ')      // Remove newlines inside strings
-      .replace(/\t/g, ' ');     // Remove tabs
+    const cleanText = extractLikelyJson(text);
 
     try {
-      const parsedResult = JSON.parse(cleanText);
+      const parsedJson = JSON.parse(cleanText);
+      const schemaResult = WorkoutProgramSchema.safeParse(parsedJson);
+      if (!schemaResult.success) {
+        logAIAction({
+          action_type: 'generate_workout',
+          model_used: model || 'unknown',
+          prompt: prompt.substring(0, 300) + '...',
+          response: cleanText.substring(0, 500),
+          latency_ms: latencyMs,
+          tokens_input: tokensInput,
+          tokens_output: tokensOutput,
+          success: false,
+          error_message: `Schema validation failed: ${formatSchemaError(schemaResult.error)}`,
+          metadata: { clientName, goal, level, days }
+        });
+        return null;
+      }
+
+      const parsedResult = schemaResult.data;
 
       // VALIDATION: Ensure the result actually has exercises
       const hasExercises = parsedResult.splits?.some((split: any) =>
@@ -404,7 +410,28 @@ export async function analyzeClientProgress(clientData: {
       };
     }
 
-    let cleanText = text.replace(/```json|```/g, '').trim();
+    const cleanText = extractLikelyJson(text);
+    const parsedJson = JSON.parse(cleanText);
+    const schemaResult = ProgressAnalysisSchema.safeParse(parsedJson);
+
+    if (!schemaResult.success) {
+      logAIAction({
+        action_type: 'analyze_progress',
+        model_used: model || 'unknown',
+        prompt: prompt.substring(0, 300) + '...',
+        response: cleanText.substring(0, 500),
+        latency_ms: latencyMs,
+        success: false,
+        error_message: `Schema validation failed: ${formatSchemaError(schemaResult.error)}`,
+        metadata: { clientName: clientData.name }
+      });
+      return {
+        summary: `${clientData.name} está progredindo. Continue o bom trabalho!`,
+        improvements: ['Consistência nos treinos'],
+        concerns: [],
+        recommendations: ['Manter a rotina atual']
+      };
+    }
 
     // Log success
     logAIAction({
@@ -416,7 +443,7 @@ export async function analyzeClientProgress(clientData: {
       success: true,
       metadata: { clientName: clientData.name }
     });
-    return JSON.parse(cleanText);
+    return schemaResult.data;
   } catch (error) {
     console.error("Error analyzing progress:", error);
     return {
@@ -457,8 +484,23 @@ export async function regenerateExerciseWithAI(
     const { text, model, latencyMs } = await callGeminiWithFallback(prompt, 'regenerate_exercise');
 
     if (!text) return null;
-    let cleanText = text.replace(/```json|```/g, '').trim();
-    const result = JSON.parse(cleanText);
+    const cleanText = extractLikelyJson(text);
+    const parsedJson = JSON.parse(cleanText);
+    const schemaResult = ExerciseReplacementSchema.safeParse(parsedJson);
+
+    if (!schemaResult.success) {
+      logAIAction({
+        action_type: 'regenerate_exercise',
+        model_used: model || 'unknown',
+        prompt: prompt.substring(0, 300),
+        response: cleanText.substring(0, 500),
+        latency_ms: latencyMs,
+        success: false,
+        error_message: `Schema validation failed: ${formatSchemaError(schemaResult.error)}`,
+        metadata: { currentExercise, targetMuscle, goal }
+      });
+      return null;
+    }
 
     // Log success
     logAIAction({
@@ -471,7 +513,7 @@ export async function regenerateExerciseWithAI(
       metadata: { currentExercise, targetMuscle, goal }
     });
 
-    return result;
+    return schemaResult.data;
   } catch (error) {
     console.error("Error regenerating exercise:", error);
     return null;
@@ -499,18 +541,33 @@ export async function refineWorkoutWithAI(
     const { text, model, latencyMs } = await callGeminiWithFallback(prompt, 'refine_workout');
 
     if (!text) return null;
+    const cleanText = extractLikelyJson(text);
+    const parsedJson = JSON.parse(cleanText);
+    const schemaResult = RefinedWorkoutSchema.safeParse(parsedJson);
+
+    if (!schemaResult.success) {
+      logAIAction({
+        action_type: 'refine',
+        model_used: model || 'unknown',
+        prompt: instruction,
+        response: cleanText.substring(0, 500),
+        latency_ms: latencyMs,
+        success: false,
+        error_message: `Schema validation failed: ${formatSchemaError(schemaResult.error)}`
+      });
+      return null;
+    }
 
     // Log refine action
     logAIAction({
       action_type: 'refine',
       model_used: model || 'unknown',
       prompt: instruction,
-      response: text.substring(0, 500),
+      response: cleanText.substring(0, 500),
       latency_ms: latencyMs,
       success: true
     });
-    let cleanText = text.replace(/```json|```/g, '').trim();
-    return JSON.parse(cleanText);
+    return schemaResult.data;
   } catch (error) {
     console.error("Error refining workout:", error);
     return null;
@@ -603,9 +660,7 @@ export function isAIAvailable(): boolean {
 import {
   resolveExercise,
   parseClientInjuries,
-  type ExerciseIntention,
-  type Exercise,
-  type MovementPattern
+  type Exercise
 } from './exerciseService';
 
 // Types for intention-based generation
@@ -619,24 +674,6 @@ interface IntentionWorkoutData {
   adherence?: number;
   equipment?: string[];
   sessionDuration?: number;
-}
-
-interface AIIntentionResponse {
-  title: string;
-  objective: string;
-  splits: Array<{
-    name: string;
-    focus: string;
-    intentions: Array<{
-      movement_pattern: MovementPattern;
-      primary_muscle: string;
-      sets: number;
-      reps: string;
-      rest: string;
-      method?: string;
-      notes?: string;
-    }>;
-  }>;
 }
 
 /**
@@ -748,23 +785,28 @@ Crie ${clientData.days} splits com 5-7 intenções cada.`;
       return null;
     }
 
-    // Clean JSON
-    let cleanText = text.trim()
-      .replace(/```json\n?/gi, '')
-      .replace(/```\n?/gi, '')
-      .trim();
-
-    const jsonStart = cleanText.indexOf('{');
-    const jsonEnd = cleanText.lastIndexOf('}');
-    if (jsonStart !== -1 && jsonEnd !== -1) {
-      cleanText = cleanText.slice(jsonStart, jsonEnd + 1);
-    }
-    cleanText = cleanText
-      .replace(/,\s*}/g, '}')
-      .replace(/,\s*]/g, ']');
+    const cleanText = extractLikelyJson(text);
 
     try {
-      const aiResponse: AIIntentionResponse = JSON.parse(cleanText);
+      const parsedJson = JSON.parse(cleanText);
+      const schemaResult = IntentionResponseSchema.safeParse(parsedJson);
+      if (!schemaResult.success) {
+        logAIAction({
+          action_type: 'generate_workout_intention',
+          model_used: model || 'unknown',
+          prompt: prompt.substring(0, 300) + '...',
+          response: cleanText.substring(0, 500),
+          latency_ms: latencyMs,
+          tokens_input: tokensInput,
+          tokens_output: tokensOutput,
+          success: false,
+          error_message: `Schema validation failed: ${formatSchemaError(schemaResult.error)}`,
+          metadata: { clientName: clientData.name }
+        });
+        return null;
+      }
+
+      const aiResponse = schemaResult.data;
 
       // RESOLVE: Transform intentions into real exercises
       const resolvedSplits = await Promise.all(

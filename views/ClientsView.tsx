@@ -42,7 +42,7 @@ const ClientsView: React.FC<ClientsViewProps> = ({ user, onBack, onSelectClient 
             return;
         }
         try {
-            const data = await getClients(user.id);
+            const data = await getClients(user.id, { limit: 300 });
             // Map DBClient to Client type
             const mappedClients: Client[] = data.map(dbClient => ({
                 id: dbClient.id,

@@ -20,7 +20,7 @@ test('resolveCaptchaStrictMode defaults to false and respects explicit env overr
   assert.equal(resolveCaptchaStrictMode('true'), true);
 });
 
-test('canBypassCaptchaWidgetFailure allows bypass only when strict mode is disabled', () => {
+test('canBypassCaptchaWidgetFailure allows strict fallback only on transient widget failures', () => {
   assert.equal(
     canBypassCaptchaWidgetFailure({
       captchaEnabled: true,
@@ -34,7 +34,18 @@ test('canBypassCaptchaWidgetFailure allows bypass only when strict mode is disab
     canBypassCaptchaWidgetFailure({
       captchaEnabled: true,
       widgetFailed: true,
-      strictMode: true
+      strictMode: true,
+      failureReason: 'cloudflare turnstile 400020'
+    }),
+    true
+  );
+
+  assert.equal(
+    canBypassCaptchaWidgetFailure({
+      captchaEnabled: true,
+      widgetFailed: true,
+      strictMode: true,
+      failureReason: 'invalid user interaction'
     }),
     false
   );
@@ -42,5 +53,6 @@ test('canBypassCaptchaWidgetFailure allows bypass only when strict mode is disab
 
 test('isCaptchaServiceUnavailableError detects infrastructure-style errors', () => {
   assert.equal(isCaptchaServiceUnavailableError('Validation service not configured'), true);
+  assert.equal(isCaptchaServiceUnavailableError('Cloudflare Turnstile: Error 400020'), true);
   assert.equal(isCaptchaServiceUnavailableError('Falha na validação do CAPTCHA.'), false);
 });

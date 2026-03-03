@@ -28,6 +28,9 @@ jobs:
       - name: Typecheck (App + Functions)
         run: npm run typecheck:all
 
+      - name: Secret Scan
+        run: npm run secret-scan
+
       - name: Regression tests
         run: npm run test:regression
 

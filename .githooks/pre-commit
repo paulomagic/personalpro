@@ -1,0 +1,5 @@
+#!/bin/sh
+set -e
+
+echo "🔐 Executando secret scan (staged)..."
+npm run secret-scan:staged

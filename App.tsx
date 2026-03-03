@@ -4,6 +4,7 @@ import { supabase } from './services/supabaseCore';
 import { getUserProfile, countPendingRescheduleRequests, type DBUserProfile } from './services/userProfileService';
 import LoginView from './views/LoginView';
 import UpdateBanner from './components/UpdateBanner';
+import AppErrorBoundary from './components/AppErrorBoundary';
 import {
   buildNavigationUrl,
   isView,
@@ -18,6 +19,7 @@ import {
   type AppSessionUser,
   type NavigationIntent
 } from './services/auth/authFlow';
+import { logFrontendError } from './services/loggingService';
 
 // Lazy load heavy views to reduce initial bundle size
 const AIBuilderView = lazy(() => import('./views/AIBuilderView'));
@@ -122,6 +124,45 @@ function App() {
     );
 
     return () => subscription.unsubscribe();
+  }, []);
+
+  // Global frontend error capture to improve production diagnostics.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const onError = (event: ErrorEvent) => {
+      void logFrontendError({
+        type: 'runtime_error',
+        message: event.message || 'Unknown runtime error',
+        stack: event.error?.stack,
+        source: event.filename,
+        line: event.lineno,
+        column: event.colno
+      });
+    };
+
+    const onUnhandledRejection = (event: PromiseRejectionEvent) => {
+      const reason = event.reason;
+      const message = reason instanceof Error
+        ? reason.message
+        : typeof reason === 'string'
+          ? reason
+          : JSON.stringify(reason);
+
+      void logFrontendError({
+        type: 'promise_rejection',
+        message,
+        stack: reason instanceof Error ? reason.stack : undefined
+      });
+    };
+
+    window.addEventListener('error', onError);
+    window.addEventListener('unhandledrejection', onUnhandledRejection);
+
+    return () => {
+      window.removeEventListener('error', onError);
+      window.removeEventListener('unhandledrejection', onUnhandledRejection);
+    };
   }, []);
 
   // Service Worker update detection - show banner instead of auto-reload
@@ -517,8 +558,24 @@ function App() {
     );
   };
 
+  const renderWithBoundary = (content: React.ReactNode) => (
+    <AppErrorBoundary
+      onError={(error, errorInfo) => {
+        void logFrontendError({
+          type: 'react_error_boundary',
+          message: error.message || 'React boundary error',
+          stack: error.stack,
+          componentStack: errorInfo.componentStack,
+          metadata: { currentView }
+        });
+      }}
+    >
+      {content}
+    </AppErrorBoundary>
+  );
+
   if (loading || routeHydrating) {
-    return (
+    return renderWithBoundary(
       <div className="min-h-screen bg-slate-950 flex items-center justify-center">
         <div className="text-center animate-fade-in">
           <div className="size-16 border-4 border-blue-600/20 border-t-blue-500 rounded-full animate-spin mx-auto mb-6 shadow-glow"></div>
@@ -726,7 +783,7 @@ function App() {
   };
 
   if (currentView === View.LOGIN) {
-    return (
+    return renderWithBoundary(
       <div className="max-w-md mx-auto min-h-screen bg-slate-950">
         <LoginView onLogin={handleLoginSuccess} />
         {renderRecoveryModal('Digite sua nova senha de acesso abaixo.')}
@@ -736,7 +793,7 @@ function App() {
 
   // StudentView doesn't need the Layout dock
   if (currentView === View.STUDENT) {
-    return (
+    return renderWithBoundary(
       <div className="max-w-md mx-auto bg-slate-950 shadow-2xl min-h-screen overflow-hidden">
         {updateAvailable && (
           <UpdateBanner
@@ -751,7 +808,7 @@ function App() {
     );
   }
 
-  return (
+  return renderWithBoundary(
     <div className="max-w-md mx-auto bg-slate-950 shadow-2xl min-h-screen overflow-hidden">
       {updateAvailable && (
         <UpdateBanner

@@ -9,7 +9,6 @@ import { checkAuthGuard, isAuthGuardServiceUnavailableError } from '../services/
 import { validateTurnstileToken } from '../services/auth/turnstile';
 import {
   canBypassCaptchaWidgetFailure,
-  parseBooleanEnvFlag,
   isCaptchaServiceUnavailableError,
   resolveCaptchaStrictMode
 } from '../services/auth/captchaPolicy';
@@ -43,15 +42,21 @@ const InputField: React.FC<InputFieldProps> = ({ id, label, type, placeholder, v
   </div>
 );
 
+const GoogleIcon: React.FC<{ className?: string }> = ({ className = 'w-5 h-5' }) => (
+  <svg viewBox="0 0 24 24" aria-hidden="true" className={className}>
+    <path fill="#EA4335" d="M12 10.2v3.95h5.49c-.24 1.27-.96 2.35-2.04 3.08l3.3 2.55c1.92-1.76 3.03-4.34 3.03-7.4 0-.73-.07-1.43-.19-2.1H12z" />
+    <path fill="#34A853" d="M12 22c2.7 0 4.97-.89 6.63-2.42l-3.3-2.55c-.92.61-2.09.97-3.33.97-2.56 0-4.73-1.73-5.5-4.06l-3.42 2.64C4.75 19.91 8.08 22 12 22z" />
+    <path fill="#FBBC05" d="M6.5 13.94A5.98 5.98 0 0 1 6.2 12c0-.67.11-1.32.3-1.94L3.08 7.42A9.98 9.98 0 0 0 2 12c0 1.61.39 3.13 1.08 4.42l3.42-2.48z" />
+    <path fill="#4285F4" d="M12 6.05c1.47 0 2.8.5 3.84 1.49l2.88-2.88C16.96 3.03 14.7 2 12 2 8.08 2 4.75 4.09 3.08 7.42l3.42 2.64c.77-2.33 2.94-4.01 5.5-4.01z" />
+  </svg>
+);
+
 const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
   const SUPABASE_URL = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SUPABASE_URL) || '';
   const TURNSTILE_SITE_KEY = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_TURNSTILE_SITE_KEY) || '';
   const CAPTCHA_STRICT_MODE = resolveCaptchaStrictMode(
     (typeof import.meta !== 'undefined' && import.meta.env?.VITE_CAPTCHA_STRICT_MODE) || undefined
   );
-  const AUTH_GUARD_STRICT_MODE = parseBooleanEnvFlag(
-    (typeof import.meta !== 'undefined' && import.meta.env?.VITE_AUTH_GUARD_STRICT_MODE) || undefined
-  ) ?? false;
   const [currentSlide, setCurrentSlide] = useState(0);
   const [showRegister, setShowRegister] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
@@ -72,16 +77,19 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
   const [captchaToken, setCaptchaToken] = useState('');
   const [captchaWidgetKey, setCaptchaWidgetKey] = useState(0);
   const [captchaWidgetFailed, setCaptchaWidgetFailed] = useState(false);
+  const [captchaFailureReason, setCaptchaFailureReason] = useState<string>('');
   const isCaptchaEnabled = Boolean(TURNSTILE_SITE_KEY && SUPABASE_URL && supabase);
   const allowCaptchaBypass = canBypassCaptchaWidgetFailure({
     captchaEnabled: isCaptchaEnabled,
     widgetFailed: captchaWidgetFailed,
-    strictMode: CAPTCHA_STRICT_MODE
+    strictMode: CAPTCHA_STRICT_MODE,
+    failureReason: captchaFailureReason
   });
 
   const resetCaptcha = () => {
     setCaptchaToken('');
     setCaptchaWidgetFailed(false);
+    setCaptchaFailureReason('');
     setCaptchaWidgetKey(prev => prev + 1);
   };
 
@@ -224,7 +232,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
 
       const guard = await checkAuthGuard('login', email, SUPABASE_URL);
       if (!guard.allowed) {
-        if (!AUTH_GUARD_STRICT_MODE && isAuthGuardServiceUnavailableError(guard.error)) {
+        if (isAuthGuardServiceUnavailableError(guard.error)) {
           setError('Proteção antiabuso indisponível. Continuando com proteção local de tentativas.');
         } else {
           const wait = guard.retryAfterSeconds > 0 ? ` Aguarde ${guard.retryAfterSeconds}s.` : '';
@@ -292,7 +300,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
 
       const guard = await checkAuthGuard('register', email, SUPABASE_URL);
       if (!guard.allowed) {
-        if (!AUTH_GUARD_STRICT_MODE && isAuthGuardServiceUnavailableError(guard.error)) {
+        if (isAuthGuardServiceUnavailableError(guard.error)) {
           setError('Proteção antiabuso indisponível. Continuando com proteção local de tentativas.');
         } else {
           const wait = guard.retryAfterSeconds > 0 ? ` Aguarde ${guard.retryAfterSeconds}s.` : '';
@@ -498,9 +506,15 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
                 }
               }}
               onExpire={() => setCaptchaToken('')}
-              onError={() => {
+              onError={(error) => {
                 setCaptchaToken('');
                 setCaptchaWidgetFailed(true);
+                const normalizedError = typeof error === 'string'
+                  ? error
+                  : error
+                    ? String(error)
+                    : 'captcha-widget-unavailable';
+                setCaptchaFailureReason(normalizedError);
                 if (CAPTCHA_STRICT_MODE) {
                   setError('Não foi possível carregar o CAPTCHA. Atualize e tente novamente.');
                 } else {
@@ -551,7 +565,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
           disabled={loading}
           className="w-full h-14 bg-white text-slate-900 hover:bg-slate-100 active:scale-[0.98] font-bold rounded-2xl text-base transition-all shadow-lg disabled:opacity-50 flex items-center justify-center gap-3"
         >
-          <img src="https://www.google.com/favicon.ico" alt="Google" className="w-5 h-5" />
+          <GoogleIcon className="w-5 h-5" />
           <span>Entrar com Google</span>
         </button>
 
@@ -625,7 +639,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
             onClick={handleGoogleLogin}
             className="w-full h-14 bg-white text-slate-900 hover:bg-slate-100 active:scale-[0.98] font-bold rounded-2xl text-sm transition-all shadow-lg uppercase tracking-wider flex items-center justify-center gap-2"
           >
-            <img src="https://www.google.com/favicon.ico" alt="Google" className="w-4 h-4" />
+            <GoogleIcon className="w-4 h-4" />
             <span>Entrar com Google</span>
           </button>
 

@@ -73,18 +73,43 @@ if (fs.existsSync(envExamplePath) && fs.existsSync(envLocalPath)) {
     } else {
         console.log('\x1b[32m%s\x1b[0m', '✅ Nenhuma variável obrigatória está faltando.');
     }
+
+    try {
+        const mode = fs.statSync(envLocalPath).mode & 0o777;
+        const isRestricted = (mode & 0o077) === 0;
+        if (!isRestricted) {
+            console.warn('\x1b[33m%s\x1b[0m', '⚠️ .env.local está com permissões amplas. Recomendado: chmod 600 .env.local');
+        } else {
+            console.log('\x1b[32m%s\x1b[0m', '✅ Permissões de .env.local estão restritas (owner-only).');
+        }
+    } catch {
+        console.warn('\x1b[33m%s\x1b[0m', '⚠️ Não foi possível validar permissões de .env.local.');
+    }
 } else {
     // Apenas aviso se não encontrar os arquivos, não falha o script (pois pode ser CI/CD)
     console.warn('\x1b[33m%s\x1b[0m', '⚠️ Arquivos .env não encontrados para comparação completa ou em ambiente de CI.');
 }
 
-// 3. Verificar arquivos críticos de segurança
+// 3. Secret scan em arquivos versionados
+console.log('\n🔎 Executando varredura de segredos em arquivos versionados...');
+try {
+    execSync('node scripts/secret-scan.cjs', {
+        stdio: 'inherit',
+        cwd: path.join(__dirname, '..')
+    });
+} catch (error) {
+    console.error('\x1b[31m%s\x1b[0m', '❌ Secret scan identificou risco de vazamento.');
+    hasErrors = true;
+}
+
+// 4. Verificar arquivos críticos de segurança
 console.log('\n📂 Verificando integridade estrutural...');
 const criticalFiles = [
     'supabase/create_logs_tables.sql',
     'supabase/functions/auth-guard/index.ts',
     'supabase/migrations/20260227_add_edge_rate_limit_rpc.sql',
     'supabase/migrations/20260227_add_edge_rate_limit_cleanup.sql',
+    'scripts/secret-scan.cjs',
     'SECURITY_CHECKLIST.md',
     'vercel.json'
 ];

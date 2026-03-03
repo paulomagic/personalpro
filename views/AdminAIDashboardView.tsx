@@ -38,6 +38,11 @@ const AdminAIDashboardView: React.FC<AdminAIDashboardViewProps> = ({ onBack }) =
         return num.toLocaleString('pt-BR');
     };
 
+    const formatUserLabel = (userId?: string | null) => {
+        if (!userId) return 'Sem usuário';
+        return `${userId.slice(0, 8)}...`;
+    };
+
     return (
         <div className="min-h-screen bg-slate-950 text-white">
             {/* Header */}
@@ -268,6 +273,34 @@ const AdminAIDashboardView: React.FC<AdminAIDashboardViewProps> = ({ onBack }) =
                                     ))}
                             </div>
                         )}
+                    </motion.div>
+                )}
+
+                {metrics?.usageByUser && metrics.usageByUser.length > 0 && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.395 }}
+                        className="glass-card rounded-2xl p-4 border border-blue-500/20 bg-gradient-to-br from-blue-500/10 to-transparent"
+                    >
+                        <div className="flex items-center justify-between mb-3">
+                            <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Consumo IA por usuário (30 dias)</span>
+                            <span className="text-xs text-slate-400">{metrics.usageByUser.length} usuários</span>
+                        </div>
+                        <div className="space-y-2">
+                            {metrics.usageByUser.map((row: any) => (
+                                <div key={row.user_id || 'anonymous'} className="flex items-center justify-between text-xs border border-white/5 rounded-lg px-3 py-2">
+                                    <span className="text-slate-300 font-mono">{formatUserLabel(row.user_id)}</span>
+                                    <div className="flex items-center gap-3">
+                                        <span className="text-blue-300 font-bold">{formatNumber(row.total_tokens || 0)} tok</span>
+                                        <span className="text-slate-400">{row.total_requests || 0} req</span>
+                                        <span className={`${(row.success_rate || 0) >= 70 ? 'text-emerald-400' : (row.success_rate || 0) >= 40 ? 'text-amber-300' : 'text-red-400'} font-bold`}>
+                                            {Math.round(row.success_rate || 0)}%
+                                        </span>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
                     </motion.div>
                 )}
 

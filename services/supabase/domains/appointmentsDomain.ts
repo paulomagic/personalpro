@@ -27,8 +27,20 @@ export interface DBRescheduleRequest {
     responded_at?: string;
 }
 
-export async function getAppointments(coachId: string, date?: string): Promise<Appointment[]> {
+export interface AppointmentQueryOptions {
+    limit?: number;
+    offset?: number;
+}
+
+export async function getAppointments(
+    coachId: string,
+    date?: string,
+    options: AppointmentQueryOptions = {}
+): Promise<Appointment[]> {
     if (!supabase) return [];
+
+    const limit = Math.min(Math.max(options.limit ?? 200, 1), 500);
+    const offset = Math.max(options.offset ?? 0, 0);
 
     let query = supabase
         .from('appointments')
@@ -36,7 +48,8 @@ export async function getAppointments(coachId: string, date?: string): Promise<A
         .eq('coach_id', coachId)
         .neq('status', 'cancelled')
         .order('date')
-        .order('time');
+        .order('time')
+        .range(offset, offset + limit - 1);
 
     if (date) query = query.eq('date', date);
 
@@ -78,15 +91,22 @@ export async function deleteAppointment(id: string): Promise<boolean> {
     return true;
 }
 
-export async function getAllAppointmentsForCoach(coachId: string): Promise<Appointment[]> {
+export async function getAllAppointmentsForCoach(
+    coachId: string,
+    options: AppointmentQueryOptions = {}
+): Promise<Appointment[]> {
     if (!supabase) return [];
+
+    const limit = Math.min(Math.max(options.limit ?? 500, 1), 1000);
+    const offset = Math.max(options.offset ?? 0, 0);
     const { data, error } = await supabase
         .from('appointments')
         .select('*, clients(name)')
         .eq('coach_id', coachId)
         .neq('status', 'cancelled')
         .order('date')
-        .order('time');
+        .order('time')
+        .range(offset, offset + limit - 1);
     if (error) {
         console.error('Error fetching all appointments:', error);
         return [];

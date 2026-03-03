@@ -25,6 +25,13 @@ export interface DBClient {
     session_price?: number;
 }
 
+export interface ClientsQueryOptions {
+    limit?: number;
+    offset?: number;
+    search?: string;
+    status?: 'active' | 'inactive' | 'at-risk' | 'paused';
+}
+
 export function mapDBClientToClient(dbClient: DBClient & { avatar?: string }): any {
     return {
         id: dbClient.id,
@@ -57,14 +64,31 @@ export function mapDBClientToClient(dbClient: DBClient & { avatar?: string }): a
     };
 }
 
-export async function getClients(coachId: string): Promise<DBClient[]> {
+export async function getClients(
+    coachId: string,
+    options: ClientsQueryOptions = {}
+): Promise<DBClient[]> {
     if (!supabase) return [];
 
-    const { data, error } = await supabase
+    const limit = Math.min(Math.max(options.limit ?? 200, 1), 500);
+    const offset = Math.max(options.offset ?? 0, 0);
+    const normalizedStatus = options.status === 'paused' ? 'inactive' : options.status;
+
+    let query = supabase
         .from('clients')
         .select('*, avatar:avatar_url, avatar_url')
         .eq('coach_id', coachId)
-        .order('name');
+        .order('name')
+        .range(offset, offset + limit - 1);
+
+    if (options.search && options.search.trim()) {
+        query = query.ilike('name', `%${options.search.trim()}%`);
+    }
+    if (normalizedStatus) {
+        query = query.eq('status', normalizedStatus);
+    }
+
+    const { data, error } = await query;
 
     if (error) {
         console.error('Error fetching clients:', error);

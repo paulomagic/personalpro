@@ -6,6 +6,11 @@ Gerado automaticamente pelo workflow `docs-update.yml`.
 
 ## 2026-03-03
 
+- **Commit:** 3278170 — feat(architecture,ai,sw): PWA cache v23, AI feedback observability, and domain-driven design
+- **Arquivos de segurança alterados:** services/supabase/domains/invitationsDomain.ts,
+
+## 2026-03-03
+
 - **Commit:** 874555c — feat(security): Turnstile CAPTCHA + auth guard fail-closed + SW v22
 - **Arquivos de segurança alterados:** services/auth/authGuard.ts,services/auth/turnstile.ts,tests/authGuard.test.ts,
 

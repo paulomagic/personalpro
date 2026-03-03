@@ -10,7 +10,7 @@ import {
     RefreshCw,
     MessageSquare
 } from 'lucide-react';
-import { getPendingRescheduleRequests, respondToRescheduleRequest, DBRescheduleRequest } from '../services/supabaseClient';
+import { getPendingRescheduleRequests, respondToRescheduleRequest, DBRescheduleRequest } from '../services/supabase/domains/appointmentsDomain';
 
 interface PendingRequestsPanelProps {
     coachId: string;

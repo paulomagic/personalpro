@@ -5,7 +5,7 @@ const { execSync } = require('child_process');
 console.log('\x1b[36m%s\x1b[0m', '🛡️  Iniciando Verificação de Segurança PersonalPro...');
 
 let hasErrors = false;
-const OPTIONAL_ENV_KEYS = new Set(['VITE_TURNSTILE_SITE_KEY']);
+const OPTIONAL_ENV_KEYS = new Set(['VITE_TURNSTILE_SITE_KEY', 'VITE_CAPTCHA_STRICT_MODE', 'VITE_AUTH_GUARD_STRICT_MODE']);
 
 // 1. Verificar vulnerabilidades npm
 console.log('\n📦 Verificando dependências (npm audit)...');
@@ -82,6 +82,9 @@ if (fs.existsSync(envExamplePath) && fs.existsSync(envLocalPath)) {
 console.log('\n📂 Verificando integridade estrutural...');
 const criticalFiles = [
     'supabase/create_logs_tables.sql',
+    'supabase/functions/auth-guard/index.ts',
+    'supabase/migrations/20260227_add_edge_rate_limit_rpc.sql',
+    'supabase/migrations/20260227_add_edge_rate_limit_cleanup.sql',
     'SECURITY_CHECKLIST.md',
     'vercel.json'
 ];

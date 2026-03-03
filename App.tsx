@@ -1,9 +1,14 @@
-import React, { useState, useEffect, Suspense, lazy } from 'react';
+import React, { useState, useEffect, Suspense, lazy, useRef } from 'react';
 import { View, Client, Workout } from './types';
-import { supabase, getUserProfile, countPendingRescheduleRequests, type DBUserProfile } from './services/supabaseClient';
+import { supabase } from './services/supabaseCore';
+import { getUserProfile, countPendingRescheduleRequests, type DBUserProfile } from './services/userProfileService';
 import LoginView from './views/LoginView';
-import Layout from './components/Layout';
 import UpdateBanner from './components/UpdateBanner';
+import {
+  buildNavigationUrl,
+  isView,
+  resolveViewFromPath,
+} from './services/navigation/historyNavigation';
 import {
   canAccessAdminArea,
   createDemoUser,
@@ -37,6 +42,7 @@ const AdminSettingsView = lazy(() => import('./views/AdminSettingsView'));
 const StudentDashboardView = lazy(() => import('./views/StudentDashboardView'));
 const StudentProfileView = lazy(() => import('./views/StudentProfileView'));
 const StudentCalendarView = lazy(() => import('./views/StudentCalendarView'));
+const Layout = lazy(() => import('./components/Layout'));
 
 // Loading fallback component
 const ViewLoader = () => (
@@ -49,21 +55,40 @@ const ViewLoader = () => (
 );
 
 function App() {
-  const [currentView, setCurrentView] = useState<View>(View.LOGIN);
+  const [currentView, setCurrentView] = useState<View>(() => {
+    if (typeof window === 'undefined') return View.LOGIN;
+    return resolveViewFromPath(window.location.pathname) || View.LOGIN;
+  });
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [activeWorkout, setActiveWorkout] = useState<Workout | null>(null);
   const [user, setUser] = useState<AppSessionUser | null>(null);
   const [userProfile, setUserProfile] = useState<DBUserProfile | null>(null);
   const [loading, setLoading] = useState(false);
+  const [routeHydrating, setRouteHydrating] = useState(false);
   const [pendingRequests, setPendingRequests] = useState(0);  // Reschedule requests count
   const [updateAvailable, setUpdateAvailable] = useState(false);
   const [waitingWorker, setWaitingWorker] = useState<ServiceWorker | null>(null);
+  const historyInitializedRef = useRef(false);
+  const previousViewRef = useRef<View>(View.LOGIN);
+  const historyPopRef = useRef(false);
 
   // Password Recovery State
   const [showRecoveryModal, setShowRecoveryModal] = useState(false);
   const [newPassword, setNewPassword] = useState('');
   const [recoveryError, setRecoveryError] = useState<string | null>(null);
   const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
+  const requestServiceWorkerUserCachePurge = () => {
+    if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return;
+    navigator.serviceWorker.ready
+      .then((registration) => {
+        if (registration.active) {
+          registration.active.postMessage({ type: 'PURGE_USER_CACHES' });
+        }
+      })
+      .catch(() => {
+        // noop
+      });
+  };
 
   // Auth state listener - handle session expiration and logout from other tabs
   useEffect(() => {
@@ -77,6 +102,7 @@ function App() {
         }
 
         if (event === 'SIGNED_OUT' || !session) {
+          requestServiceWorkerUserCachePurge();
           setUser(null);
           setUserProfile(null);
           setCurrentView(View.LOGIN);
@@ -100,10 +126,31 @@ function App() {
 
   // Service Worker update detection - show banner instead of auto-reload
   useEffect(() => {
-    if ('serviceWorker' in navigator) {
+    if (!('serviceWorker' in navigator)) return;
+
+    let intervalId: number | null = null;
+    let refreshing = false;
+    const onVisibilityChange = () => {
+      if (document.visibilityState !== 'visible') return;
       navigator.serviceWorker.ready.then((registration) => {
+        void registration.update();
+      }).catch(() => {
+        // noop
+      });
+    };
+    const onControllerChange = () => {
+      if (!refreshing) {
+        refreshing = true;
+        window.location.reload();
+      }
+    };
+
+    navigator.serviceWorker.ready.then((registration) => {
         // Check for updates immediately
-        registration.update();
+        void registration.update();
+        intervalId = window.setInterval(() => {
+          void registration.update();
+        }, 20 * 60 * 1000);
 
         // Listen for new SW waiting
         registration.addEventListener('updatefound', () => {
@@ -124,17 +171,20 @@ function App() {
           setWaitingWorker(registration.waiting);
           setUpdateAvailable(true);
         }
+      }).catch(() => {
+        // noop
       });
 
-      // Handle when SW takes control (after user clicks update)
-      let refreshing = false;
-      navigator.serviceWorker.addEventListener('controllerchange', () => {
-        if (!refreshing) {
-          refreshing = true;
-          window.location.reload();
-        }
-      });
-    }
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    navigator.serviceWorker.addEventListener('controllerchange', onControllerChange);
+
+    return () => {
+      if (intervalId !== null) {
+        window.clearInterval(intervalId);
+      }
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+      navigator.serviceWorker.removeEventListener('controllerchange', onControllerChange);
+    };
   }, []);
 
   // Fetch pending reschedule requests count for coaches
@@ -154,10 +204,149 @@ function App() {
     return () => clearInterval(interval);
   }, [user, userProfile]);
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const onPopState = (event: PopStateEvent) => {
+      const fromState = (event.state && isView(event.state.view)) ? event.state.view : null;
+      const fromPath = resolveViewFromPath(window.location.pathname);
+      const targetView = fromState || fromPath;
+      if (!targetView) return;
+
+      const requiresClientContext = targetView === View.CLIENT_PROFILE
+        || targetView === View.ASSESSMENT
+        || targetView === View.SPORT_TRAINING;
+      const requiresWorkoutContext = targetView === View.TRAINING_EXECUTION;
+
+      if (requiresClientContext) {
+        setSelectedClient(null);
+      }
+      if (requiresWorkoutContext) {
+        setActiveWorkout(null);
+      }
+
+      historyPopRef.current = true;
+      setCurrentView(targetView);
+    };
+
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const url = buildNavigationUrl(currentView, selectedClient, activeWorkout);
+    const state = { view: currentView };
+
+    if (!historyInitializedRef.current) {
+      window.history.replaceState(state, '', url);
+      historyInitializedRef.current = true;
+      previousViewRef.current = currentView;
+      return;
+    }
+
+    if (historyPopRef.current) {
+      historyPopRef.current = false;
+      window.history.replaceState(state, '', url);
+      previousViewRef.current = currentView;
+      return;
+    }
+
+    if (previousViewRef.current !== currentView) {
+      window.history.pushState(state, '', url);
+      previousViewRef.current = currentView;
+      return;
+    }
+
+    window.history.replaceState(state, '', url);
+  }, [currentView, selectedClient?.id, activeWorkout?.id]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (!user || user.isDemo) {
+      setRouteHydrating(false);
+      return;
+    }
+
+    setRouteHydrating(false);
+
+    const fallbackView = resolvePostLoginView(userProfile, user);
+    const params = new URLSearchParams(window.location.search);
+    const clientId = params.get('client');
+    const workoutId = params.get('workout');
+
+    const needsClientContext = currentView === View.CLIENT_PROFILE
+      || currentView === View.ASSESSMENT
+      || currentView === View.SPORT_TRAINING;
+    const needsWorkoutContext = currentView === View.TRAINING_EXECUTION;
+
+    let cancelled = false;
+
+    const hydrate = async () => {
+      if (needsClientContext && !selectedClient) {
+        if (!clientId) {
+          setCurrentView(fallbackView);
+          return;
+        }
+
+        setRouteHydrating(true);
+        const { fetchClientByIdForDeepLink } = await import('./services/navigation/deepLinkDataService');
+        const resolvedClient = await fetchClientByIdForDeepLink(clientId);
+
+        if (cancelled) return;
+        setRouteHydrating(false);
+
+        if (!resolvedClient) {
+          setCurrentView(fallbackView);
+          return;
+        }
+
+        setSelectedClient(resolvedClient);
+      }
+
+      if (needsWorkoutContext && !activeWorkout) {
+        if (!workoutId) {
+          setCurrentView(fallbackView);
+          return;
+        }
+
+        setRouteHydrating(true);
+        const { fetchWorkoutByIdForDeepLink, fetchClientByIdForDeepLink } = await import('./services/navigation/deepLinkDataService');
+        const resolvedWorkout = await fetchWorkoutByIdForDeepLink(workoutId);
+
+        if (cancelled) return;
+        if (!resolvedWorkout) {
+          setRouteHydrating(false);
+          setCurrentView(fallbackView);
+          return;
+        }
+
+        setActiveWorkout(resolvedWorkout);
+
+        if (!selectedClient && resolvedWorkout.clientId) {
+          const resolvedClient = await fetchClientByIdForDeepLink(resolvedWorkout.clientId);
+          if (!cancelled && resolvedClient) {
+            setSelectedClient(resolvedClient);
+          }
+        }
+
+        if (!cancelled) {
+          setRouteHydrating(false);
+        }
+      }
+    };
+
+    void hydrate();
+    return () => {
+      cancelled = true;
+    };
+  }, [currentView, selectedClient?.id, activeWorkout?.id, user?.id, user?.isDemo, userProfile?.role]);
+
   // Handle PWA update when user clicks the banner
   const handleUpdate = () => {
     if (waitingWorker) {
-      waitingWorker.postMessage('skipWaiting');
+      waitingWorker.postMessage({ type: 'SKIP_WAITING' });
     }
   };
 
@@ -202,6 +391,7 @@ function App() {
 
   const handleLogout = async () => {
     // Sign out from Supabase first
+    requestServiceWorkerUserCachePurge();
     if (supabase) {
       await supabase.auth.signOut();
     }
@@ -237,7 +427,9 @@ function App() {
         console.error('Error loading user profile:', error);
       }
 
-      navigateTo(resolvePostLoginView(resolvedProfile, loggedUser));
+      const routeView = typeof window !== 'undefined' ? resolveViewFromPath(window.location.pathname) : null;
+      const postLoginView = resolvePostLoginView(resolvedProfile, loggedUser);
+      navigateTo(routeView && routeView !== View.LOGIN ? routeView : postLoginView);
     } else {
       // Fallback or explicit demo (should trigger restricted mode)
       const demoUser = createDemoUser();
@@ -325,7 +517,7 @@ function App() {
     );
   };
 
-  if (loading) {
+  if (loading || routeHydrating) {
     return (
       <div className="min-h-screen bg-slate-950 flex items-center justify-center">
         <div className="text-center animate-fade-in">
@@ -567,11 +759,13 @@ function App() {
           onDismiss={() => setUpdateAvailable(false)}
         />
       )}
-      <Layout activeTab={getActiveTab()} onNavigate={handleNavigation} isStudent={userProfile?.role === 'student'} pendingRequests={pendingRequests}>
-        <Suspense fallback={<ViewLoader />}>
-          {renderContent()}
-        </Suspense>
-      </Layout>
+      <Suspense fallback={<ViewLoader />}>
+        <Layout activeTab={getActiveTab()} onNavigate={handleNavigation} isStudent={userProfile?.role === 'student'} pendingRequests={pendingRequests}>
+          <Suspense fallback={<ViewLoader />}>
+            {renderContent()}
+          </Suspense>
+        </Layout>
+      </Suspense>
 
       {renderRecoveryModal('Você está redefinindo sua senha de acesso. Digite a nova senha abaixo.')}
     </div>

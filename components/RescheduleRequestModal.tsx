@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Calendar, Clock, Send, AlertCircle } from 'lucide-react';
-import { createRescheduleRequest } from '../services/supabaseClient';
-import { Appointment } from '../services/supabaseClient';
+import { createRescheduleRequest, Appointment } from '../services/supabase/domains/appointmentsDomain';
 
 interface RescheduleRequestModalProps {
     appointment: Appointment;

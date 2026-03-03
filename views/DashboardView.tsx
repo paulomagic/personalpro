@@ -25,14 +25,13 @@ import { ClientCardSkeleton } from '../components/Skeleton';
 import EmptyState from '../components/EmptyState';
 import {
   getClients,
-  getAppointments,
-  getPayments,
   mapDBClientToClient,
-  type Appointment,
   type DBClient,
-  type Payment,
-} from '../services/supabaseClient';
+} from '../services/supabase/domains/clientsDomain';
+import { getAppointments, type Appointment } from '../services/supabase/domains/appointmentsDomain';
+import { getPayments, type Payment } from '../services/supabase/domains/paymentsDomain';
 import type { AppSessionUser } from '../services/auth/authFlow';
+import { useTheme } from '../services/ThemeContext';
 
 interface DashboardViewProps {
   user: AppSessionUser | null;
@@ -90,6 +89,8 @@ const DashboardView: React.FC<DashboardViewProps> = ({
   onOpenAI,
   onNavigate,
 }) => {
+  const { resolvedTheme } = useTheme();
+  const isLightTheme = resolvedTheme === 'light';
   const [clients, setClients] = useState<Client[]>([]);
   const [loadingClients, setLoadingClients] = useState(false);
   const [appointments, setAppointments] = useState<DashboardAppointment[]>(DEMO_APPOINTMENTS);
@@ -155,6 +156,21 @@ const DashboardView: React.FC<DashboardViewProps> = ({
   const atRiskClient = clients.find((c) => c.status === 'at-risk' || c.adherence < 60) || clients[0];
   const nextAppointment = appointments[0];
   const activeClients = clients.filter((c) => c.status === 'active').length || clients.length;
+  const heroTextPrimary = isLightTheme ? '#F4F8FF' : '#FFFFFF';
+  const heroTextSecondary = isLightTheme ? 'rgba(229,239,255,0.8)' : 'rgba(255,255,255,0.7)';
+  const heroTextMuted = isLightTheme ? 'rgba(214,228,255,0.75)' : 'rgba(255,255,255,0.6)';
+  const heroCardGradient = isLightTheme
+    ? 'linear-gradient(135deg, #1E3A8A 0%, #2455C9 46%, #3B82F6 100%)'
+    : 'linear-gradient(135deg, #172554 0%, #1E3A8A 40%, #1D4ED8 80%, #3B82F6 100%)';
+  const heroCardShadow = isLightTheme
+    ? '0 16px 42px -10px rgba(30, 58, 138,0.35), 0 0 0 1px rgba(59, 130, 246,0.2)'
+    : '0 20px 60px -10px rgba(30, 58, 138,0.45), 0 0 0 1px rgba(59, 130, 246,0.15)';
+  const aiCtaGradient = isLightTheme
+    ? 'linear-gradient(135deg, #1E3A8A 0%, #2455C9 48%, #3B82F6 100%)'
+    : 'linear-gradient(135deg, #172554 0%, #1E3A8A 45%, #1D4ED8 80%, #3B82F6 100%)';
+  const aiCtaShadow = isLightTheme
+    ? '0 10px 34px -6px rgba(30, 58, 138,0.35), 0 0 0 1px rgba(59, 130, 246,0.18)'
+    : '0 12px 40px -6px rgba(30, 58, 138,0.5), 0 0 0 1px rgba(59, 130, 246,0.15)';
 
   // ════════════════════════════════════════════════════════════════════════
   return (
@@ -267,8 +283,8 @@ const DashboardView: React.FC<DashboardViewProps> = ({
         <div
           className="relative overflow-hidden rounded-3xl p-5"
           style={{
-            background: 'linear-gradient(135deg, #172554 0%, #1E3A8A 40%, #1D4ED8 80%, #3B82F6 100%)',
-            boxShadow: '0 20px 60px -10px rgba(30, 58, 138,0.45), 0 0 0 1px rgba(59, 130, 246,0.15)',
+            background: heroCardGradient,
+            boxShadow: heroCardShadow,
           }}
         >
           {/* Atmospheric orbs */}
@@ -294,16 +310,16 @@ const DashboardView: React.FC<DashboardViewProps> = ({
             <div className="flex justify-between items-start mb-4">
               <div>
                 <div className="flex items-center gap-1.5 mb-2">
-                  <Activity size={10} className="text-white/60" />
-                  <span className="text-[10px] text-white/60 font-black uppercase tracking-[0.15em]">
+                  <Activity size={10} style={{ color: heroTextMuted }} />
+                  <span className="text-[10px] font-black uppercase tracking-[0.15em]" style={{ color: heroTextMuted }}>
                     Protocolo do Dia
                   </span>
                 </div>
                 <div className="flex items-end gap-2">
-                  <span className="text-6xl font-black text-white leading-none">
+                  <span className="text-6xl font-black leading-none" style={{ color: heroTextPrimary }}>
                     {appointments.length}
                   </span>
-                  <span className="text-white/70 text-sm font-semibold mb-2 leading-tight">
+                  <span className="text-sm font-semibold mb-2 leading-tight" style={{ color: heroTextSecondary }}>
                     {appointments.length === 1 ? 'sessão\nagendada' : 'sessões\nagendadas'}
                   </span>
                 </div>
@@ -318,13 +334,13 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                     border: '1px solid rgba(255,255,255,0.1)',
                   }}
                 >
-                  <p className="text-[9px] text-white/60 font-black uppercase tracking-wider mb-1">
+                  <p className="text-[9px] font-black uppercase tracking-wider mb-1" style={{ color: heroTextMuted }}>
                     Próximo
                   </p>
-                  <p className="text-2xl font-black text-white leading-none">
+                  <p className="text-2xl font-black leading-none" style={{ color: heroTextPrimary }}>
                     {nextAppointment.time}
                   </p>
-                  <p className="text-[9px] text-white/60 mt-1 truncate max-w-[72px]">
+                  <p className="text-[9px] mt-1 truncate max-w-[72px]" style={{ color: heroTextMuted }}>
                     {nextAppointment.clientName.split(' ')[0]}
                   </p>
                 </div>
@@ -337,8 +353,12 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                 {appointments.map((a) => (
                   <span
                     key={a.id}
-                    className="text-[10px] font-bold text-white/80 px-2.5 py-1 rounded-full"
-                    style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.08)' }}
+                    className="text-[10px] font-bold px-2.5 py-1 rounded-full"
+                    style={{
+                      color: heroTextSecondary,
+                      background: 'rgba(255,255,255,0.1)',
+                      border: '1px solid rgba(255,255,255,0.08)',
+                    }}
                   >
                     {a.time} · {a.clientName.split(' ')[0]}
                   </span>
@@ -349,9 +369,10 @@ const DashboardView: React.FC<DashboardViewProps> = ({
             <motion.button
               whileTap={{ scale: 0.97 }}
               onClick={() => onNavigate?.('calendar')}
-              className="w-full py-3 rounded-2xl font-bold text-sm text-white flex items-center justify-center gap-2"
+              className="w-full py-3 rounded-2xl font-bold text-sm flex items-center justify-center gap-2"
               style={{
-                background: 'rgba(255,255,255,0.1)',
+                color: heroTextPrimary,
+                background: isLightTheme ? 'rgba(255,255,255,0.16)' : 'rgba(255,255,255,0.1)',
                 backdropFilter: 'blur(8px)',
                 border: '1px solid rgba(255,255,255,0.12)',
               }}
@@ -500,6 +521,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: i * 0.06, duration: 0.3 }}
                 onClick={() => onSelectClient(client)}
+                data-testid={`dashboard-client-card-${client.id}`}
                 className="flex items-center gap-3 p-3 rounded-2xl cursor-pointer transition-all active:scale-[0.99]"
                 style={{
                   background: 'rgba(59, 130, 246,0.03)',
@@ -597,10 +619,11 @@ const DashboardView: React.FC<DashboardViewProps> = ({
         <motion.button
           whileTap={{ scale: 0.97 }}
           onClick={onOpenAI}
-          className="w-full py-4 rounded-2xl font-black text-white uppercase tracking-wider flex items-center justify-center gap-3 relative overflow-hidden"
+          className="w-full py-4 rounded-2xl font-black uppercase tracking-wider flex items-center justify-center gap-3 relative overflow-hidden"
           style={{
-            background: 'linear-gradient(135deg, #172554 0%, #1E3A8A 45%, #1D4ED8 80%, #3B82F6 100%)',
-            boxShadow: '0 12px 40px -6px rgba(30, 58, 138,0.5), 0 0 0 1px rgba(59, 130, 246,0.15)',
+            color: heroTextPrimary,
+            background: aiCtaGradient,
+            boxShadow: aiCtaShadow,
           }}
         >
           {/* Shimmer */}
@@ -623,7 +646,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
           <div className="relative flex items-center gap-2.5 text-sm">
             <div
               className="size-7 rounded-xl flex items-center justify-center"
-              style={{ background: 'rgba(255,255,255,0.12)' }}
+              style={{ background: isLightTheme ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.12)' }}
             >
               <Brain size={15} />
             </div>

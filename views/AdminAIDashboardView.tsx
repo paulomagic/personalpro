@@ -197,6 +197,80 @@ const AdminAIDashboardView: React.FC<AdminAIDashboardViewProps> = ({ onBack }) =
                     </motion.div>
                 </div>
 
+                {metrics?.aiFeedback && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.38 }}
+                        className="glass-card rounded-2xl p-4 border border-emerald-500/20 bg-gradient-to-br from-emerald-500/10 to-transparent"
+                    >
+                        <div className="flex items-center justify-between mb-2">
+                            <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Feedback IA (7 dias)</span>
+                            <span className="text-xs text-slate-400">{metrics.aiFeedback.total} avaliações</span>
+                        </div>
+                        <div className="grid grid-cols-3 gap-3">
+                            <div>
+                                <p className="text-xl font-black text-emerald-400">{metrics.aiFeedback.positive || 0}</p>
+                                <p className="text-[10px] text-slate-500">positivo</p>
+                            </div>
+                            <div>
+                                <p className="text-xl font-black text-red-400">{metrics.aiFeedback.negative || 0}</p>
+                                <p className="text-[10px] text-slate-500">negativo</p>
+                            </div>
+                            <div>
+                                <p className="text-xl font-black text-white">{metrics.aiFeedback.approvalRate || 0}%</p>
+                                <p className="text-[10px] text-slate-500">aprovação</p>
+                            </div>
+                        </div>
+                    </motion.div>
+                )}
+
+                {metrics?.progressionPrecision && metrics.progressionPrecision.total > 0 && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.39 }}
+                        className="glass-card rounded-2xl p-4 border border-blue-500/20 bg-gradient-to-br from-blue-500/10 to-transparent"
+                    >
+                        <div className="flex items-center justify-between mb-3">
+                            <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Precisão Progressão IA (7 dias)</span>
+                            <span className="text-xs text-slate-400">{metrics.progressionPrecision.total} amostras</span>
+                        </div>
+                        <div className="grid grid-cols-3 gap-3 mb-3">
+                            <div>
+                                <p className="text-xl font-black text-blue-300">{metrics.progressionPrecision.avgScore || 0}</p>
+                                <p className="text-[10px] text-slate-500">score médio</p>
+                            </div>
+                            <div>
+                                <p className="text-xl font-black text-emerald-400">{metrics.progressionPrecision.hitRate || 0}%</p>
+                                <p className="text-[10px] text-slate-500">meta atingida</p>
+                            </div>
+                            <div>
+                                <p className="text-xl font-black text-white">{metrics.progressionPrecision.avgConfidence || 0}</p>
+                                <p className="text-[10px] text-slate-500">confiança</p>
+                            </div>
+                        </div>
+                        {metrics.progressionPrecision.bySegment && Object.keys(metrics.progressionPrecision.bySegment).length > 0 && (
+                            <div className="space-y-2">
+                                {Object.entries(metrics.progressionPrecision.bySegment)
+                                    .sort(([, a]: any, [, b]: any) => (b.total || 0) - (a.total || 0))
+                                    .map(([segment, data]: [string, any]) => (
+                                        <div key={segment} className="flex items-center justify-between text-xs">
+                                            <span className="text-slate-400">{segment.replace(/_/g, ' ')}</span>
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-blue-300 font-bold">score {data.avgScore}</span>
+                                                <span className={`font-bold ${data.hitRate >= 70 ? 'text-emerald-400' : data.hitRate >= 40 ? 'text-amber-300' : 'text-red-400'}`}>
+                                                    {data.hitRate}%
+                                                </span>
+                                                <span className="text-slate-500">({data.total})</span>
+                                            </div>
+                                        </div>
+                                    ))}
+                            </div>
+                        )}
+                    </motion.div>
+                )}
+
                 {/* Uso por Modelo */}
                 {metrics?.byModel && Object.keys(metrics.byModel).length > 0 && (
                     <motion.div
@@ -432,4 +506,3 @@ const AdminAIDashboardView: React.FC<AdminAIDashboardViewProps> = ({ onBack }) =
 };
 
 export default AdminAIDashboardView;
-

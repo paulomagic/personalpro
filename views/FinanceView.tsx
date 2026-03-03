@@ -1,7 +1,7 @@
-import React, { Suspense, lazy, useEffect, useState } from 'react';
-import { motion } from 'framer-motion';
+import React, { Suspense, lazy, useCallback, useEffect, useState } from 'react';
 import { TrendingUp, Download, CheckCircle, AlertCircle, Clock, ChevronRight } from 'lucide-react';
-import { getPayments, updatePayment, getClients } from '../services/supabaseClient';
+import { getPayments, updatePayment } from '../services/supabase/domains/paymentsDomain';
+import { getClients } from '../services/supabase/domains/clientsDomain';
 import { mockClients } from '../mocks/demoData';
 import { PaymentCardSkeleton } from '../components/Skeleton';
 import EmptyState from '../components/EmptyState';
@@ -36,6 +36,19 @@ const FinanceView: React.FC<FinanceViewProps> = ({ user, onBack }) => {
     const [loading, setLoading] = useState(true);
     const [payments, setPayments] = useState<Payment[]>([]);
     const [enableHeavyUI, setEnableHeavyUI] = useState(false);
+    const buildFallbackPayments = useCallback(
+        () => mockClients.slice(0, 5).map((c: any, i: number) => ({
+            id: `demo-${i}`,
+            clientName: c.name,
+            clientAvatar: c.avatar || c.avatar_url || '',
+            amount: 350 + i * 50,
+            dueDate: new Date(new Date().setDate(10 + i)).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }),
+            status: i % 3 === 0 ? 'paid' : i % 3 === 1 ? 'pending' : 'overdue' as any,
+            plan: 'Premium',
+            phone: c.phone || '',
+        })),
+        []
+    );
 
     useEffect(() => {
         const timer = window.setTimeout(() => setEnableHeavyUI(true), 0);
@@ -44,20 +57,19 @@ const FinanceView: React.FC<FinanceViewProps> = ({ user, onBack }) => {
 
     // Fetch payments from Supabase
     useEffect(() => {
+        const withTimeout = async <T,>(promise: Promise<T>, timeoutMs = 10000): Promise<T> => {
+            return await Promise.race([
+                promise,
+                new Promise<T>((_, reject) =>
+                    window.setTimeout(() => reject(new Error('Finance fetch timeout')), timeoutMs)
+                )
+            ]);
+        };
+
         const fetchPayments = async () => {
             if (!user?.id) {
                 // Demo fallback sem user.id
-                const demoPayments = mockClients.slice(0, 5).map((c: any, i: number) => ({
-                    id: `demo-${i}`,
-                    clientName: c.name,
-                    clientAvatar: c.avatar || c.avatar_url || '',
-                    amount: 350 + i * 50,
-                    dueDate: new Date(new Date().setDate(10 + i)).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }),
-                    status: i % 3 === 0 ? 'paid' : i % 3 === 1 ? 'pending' : 'overdue' as any,
-                    plan: 'Premium',
-                    phone: c.phone || '',
-                }));
-                setPayments(demoPayments);
+                setPayments(buildFallbackPayments());
                 setLoading(false);
                 return;
             }
@@ -81,7 +93,7 @@ const FinanceView: React.FC<FinanceViewProps> = ({ user, onBack }) => {
                     return;
                 }
 
-                const dbPayments = await getPayments(user.id);
+                    const dbPayments = await withTimeout(getPayments(user.id));
 
                 if (dbPayments.length > 0) {
                     // Map DB payments to our interface
@@ -99,7 +111,7 @@ const FinanceView: React.FC<FinanceViewProps> = ({ user, onBack }) => {
                     setPayments(mapped);
                 } else {
                     // Fallback: Generate demo payments from clients
-                    const clients = await getClients(user.id);
+                        const clients = await withTimeout(getClients(user.id));
                     if (clients.length > 0) {
                         const demoPayments = clients.slice(0, 5).map((c: any, i: number) => ({
                             id: `demo-${i}`,
@@ -117,13 +129,25 @@ const FinanceView: React.FC<FinanceViewProps> = ({ user, onBack }) => {
                 }
             } catch (error) {
                 console.error('Error fetching payments:', error);
+                // Fallback para evitar tela vazia caso a rede trave
+                setPayments(buildFallbackPayments());
             } finally {
                 setLoading(false);
             }
         };
 
         fetchPayments();
-    }, [user]);
+    }, [user, buildFallbackPayments]);
+
+    // Failsafe visual: evita tela "vazia" se a request travar
+    useEffect(() => {
+        if (!loading) return;
+        const timer = window.setTimeout(() => {
+            setPayments((prev) => (prev.length > 0 ? prev : buildFallbackPayments()));
+            setLoading(false);
+        }, 4000);
+        return () => window.clearTimeout(timer);
+    }, [loading, buildFallbackPayments]);
 
     const paidPayments = payments.filter(p => p.status === 'paid');
     const pendingPayments = payments.filter(p => p.status === 'pending' || p.status === 'overdue');
@@ -224,21 +248,8 @@ const FinanceView: React.FC<FinanceViewProps> = ({ user, onBack }) => {
             ? paidPayments
             : payments.slice(0, 10);
 
-    const containerVariants = {
-        hidden: { opacity: 0 },
-        visible: { opacity: 1, transition: { staggerChildren: 0.1 } }
-    };
-
-    const itemVariants = {
-        hidden: { opacity: 0, y: 20 },
-        visible: { opacity: 1, y: 0 }
-    };
-
     return (
-        <motion.div
-            initial="hidden"
-            animate="visible"
-            variants={containerVariants}
+        <div
             className="max-w-md mx-auto min-h-screen text-white pb-32"
             style={{ background: 'var(--bg-void)' }}
         >
@@ -273,7 +284,16 @@ const FinanceView: React.FC<FinanceViewProps> = ({ user, onBack }) => {
 
             {loading ? (
                 <div className="px-5 space-y-4">
-                    <div className="h-44 rounded-3xl animate-pulse" style={{ background: 'rgba(255,255,255,0.04)' }} />
+                    <div
+                        className="rounded-3xl p-6 flex items-center gap-3 animate-pulse"
+                        style={{ background: 'rgba(59, 130, 246,0.06)', border: '1px solid rgba(59, 130, 246,0.12)' }}
+                    >
+                        <div className="size-5 rounded-full border-2 border-blue-500/30 border-t-blue-500 animate-spin" />
+                        <p className="text-xs font-black uppercase tracking-widest" style={{ color: '#3D5A80' }}>
+                            Carregando Financeiro...
+                        </p>
+                    </div>
+                    <div className="h-44 rounded-3xl animate-pulse" style={{ background: 'rgba(59, 130, 246,0.06)', border: '1px solid rgba(59, 130, 246,0.1)' }} />
                     <PaymentCardSkeleton />
                     <PaymentCardSkeleton />
                     <PaymentCardSkeleton />
@@ -289,8 +309,7 @@ const FinanceView: React.FC<FinanceViewProps> = ({ user, onBack }) => {
             ) : (
                 <>
                     {/* Revenue Hero Card */}
-                    <motion.div
-                        variants={itemVariants}
+                    <div
                         className="mx-5 relative overflow-hidden rounded-3xl p-6 mb-5"
                         style={{
                             background: 'rgba(0,255,136,0.04)',
@@ -331,7 +350,7 @@ const FinanceView: React.FC<FinanceViewProps> = ({ user, onBack }) => {
                                 </div>
                             </div>
 
-                            <div className="h-36 -ml-3 mt-2">
+                            <div className="h-36 w-full min-w-0 mt-2">
                                 {enableHeavyUI ? (
                                     <Suspense fallback={<div className="h-full rounded-2xl animate-pulse" style={{ background: 'rgba(0,255,136,0.04)' }} />}>
                                         <FinanceOverviewChart data={financeData} />
@@ -341,13 +360,13 @@ const FinanceView: React.FC<FinanceViewProps> = ({ user, onBack }) => {
                                 )}
                             </div>
                         </div>
-                    </motion.div>
+                    </div>
 
                     {/* Tab Bar */}
-                    <motion.div variants={itemVariants} className="px-5 flex justify-between items-center mb-3">
+                    <div className="px-5 flex justify-between items-center mb-3">
                         <h3 className="text-[15px] font-black text-white tracking-tight">Transações</h3>
-                    </motion.div>
-                    <motion.div variants={itemVariants} className="px-5 mb-5">
+                    </div>
+                    <div className="px-5 mb-5">
                         <div
                             className="flex rounded-2xl p-1 relative"
                             style={{ background: 'rgba(59, 130, 246,0.04)', border: '1px solid rgba(59, 130, 246,0.08)' }}
@@ -366,10 +385,10 @@ const FinanceView: React.FC<FinanceViewProps> = ({ user, onBack }) => {
                                 </button>
                             ))}
                         </div>
-                    </motion.div>
+                    </div>
 
                     {/* Payment Cards */}
-                    <motion.div variants={itemVariants} className="px-5 space-y-2.5">
+                    <div className="px-5 space-y-2.5">
                         {displayPayments.length > 0 ? (
                             displayPayments.map((payment) => (
                                 <div
@@ -425,7 +444,7 @@ const FinanceView: React.FC<FinanceViewProps> = ({ user, onBack }) => {
                         ) : (
                             <EmptyState icon="receipt_long" title="Nenhuma transação" description="Cadastre pagamentos dos seus alunos para acompanhar o fluxo de caixa" variant="minimal" />
                         )}
-                    </motion.div>
+                    </div>
                 </>
             )}
 
@@ -485,7 +504,7 @@ const FinanceView: React.FC<FinanceViewProps> = ({ user, onBack }) => {
                     />
                 </Suspense>
             )}
-        </motion.div>
+        </div>
     );
 };
 

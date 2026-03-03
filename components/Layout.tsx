@@ -6,6 +6,7 @@ import {
     Users,
     User,
 } from 'lucide-react';
+import { useTheme } from '../services/ThemeContext';
 
 interface LayoutProps {
     children: React.ReactNode;
@@ -29,6 +30,24 @@ const Layout: React.FC<LayoutProps> = ({
     isStudent = false,
     pendingRequests = 0,
 }) => {
+    const { resolvedTheme } = useTheme();
+    const isLightTheme = resolvedTheme === 'light';
+    const navShellStyle = isLightTheme
+        ? {
+            background: 'rgba(11, 23, 53, 0.95)',
+            backdropFilter: 'blur(32px)',
+            WebkitBackdropFilter: 'blur(32px)',
+            border: '1px solid rgba(125, 170, 255, 0.32)',
+            boxShadow: '0 -2px 30px rgba(15,23,42,0.2), 0 10px 28px rgba(15,23,42,0.28), inset 0 1px 0 rgba(160,196,255,0.18)',
+        }
+        : {
+            background: 'rgba(6, 13, 31, 0.96)',
+            backdropFilter: 'blur(32px)',
+            WebkitBackdropFilter: 'blur(32px)',
+            border: '1px solid rgba(59, 130, 246, 0.08)',
+            boxShadow: '0 -2px 40px rgba(0,0,0,0.6), 0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(59, 130, 246,0.05)',
+        };
+
     const coachNavItems: NavItem[] = [
         { icon: Home, label: 'Home', tab: 'home', action: 'home' },
         { icon: CalendarDays, label: 'Agenda', tab: 'calendar', action: 'calendar' },
@@ -55,13 +74,7 @@ const Layout: React.FC<LayoutProps> = ({
             <div className="fixed bottom-0 left-0 right-0 z-50 flex justify-center pb-7 px-6">
                 <div
                     className="flex items-stretch w-full max-w-[320px] rounded-[28px] p-1.5 relative"
-                    style={{
-                        background: 'rgba(6, 13, 31, 0.96)',
-                        backdropFilter: 'blur(32px)',
-                        WebkitBackdropFilter: 'blur(32px)',
-                        border: '1px solid rgba(59, 130, 246, 0.08)',
-                        boxShadow: '0 -2px 40px rgba(0,0,0,0.6), 0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(59, 130, 246,0.05)',
-                    }}
+                    style={navShellStyle}
                 >
                     {navItems.map((item) => {
                         const isActive = activeTab === item.tab;
@@ -74,6 +87,7 @@ const Layout: React.FC<LayoutProps> = ({
                                 label={item.label}
                                 isActive={isActive}
                                 badge={showBadge ? pendingRequests : 0}
+                                isLightTheme={isLightTheme}
                                 onClick={() => onNavigate(item.action)}
                             />
                         );
@@ -90,6 +104,7 @@ interface NavButtonProps {
     isActive: boolean;
     onClick: () => void;
     badge?: number;
+    isLightTheme: boolean;
 }
 
 const NavButton: React.FC<NavButtonProps> = ({
@@ -98,6 +113,7 @@ const NavButton: React.FC<NavButtonProps> = ({
     isActive,
     onClick,
     badge = 0,
+    isLightTheme,
 }) => (
     <button
         onClick={onClick}
@@ -112,8 +128,10 @@ const NavButton: React.FC<NavButtonProps> = ({
                     layoutId="nav-pill"
                     className="absolute inset-0 rounded-[22px]"
                     style={{
-                        background: 'linear-gradient(135deg, rgba(30, 58, 138,0.2) 0%, rgba(59, 130, 246,0.12) 100%)',
-                        border: '1px solid rgba(59, 130, 246,0.18)',
+                        background: isLightTheme
+                            ? 'linear-gradient(135deg, rgba(59, 130, 246,0.26) 0%, rgba(125, 170, 255,0.2) 100%)'
+                            : 'linear-gradient(135deg, rgba(30, 58, 138,0.2) 0%, rgba(59, 130, 246,0.12) 100%)',
+                        border: isLightTheme ? '1px solid rgba(125, 170, 255,0.45)' : '1px solid rgba(59, 130, 246,0.18)',
                     }}
                     initial={{ opacity: 0, scale: 0.85 }}
                     animate={{ opacity: 1, scale: 1 }}
@@ -132,7 +150,10 @@ const NavButton: React.FC<NavButtonProps> = ({
                 <Icon
                     size={21}
                     strokeWidth={isActive ? 2.5 : 1.8}
-                    style={{ color: isActive ? '#3B82F6' : '#3D5A80', transition: 'color 0.25s' }}
+                    style={{
+                        color: isActive ? '#5EA2FF' : (isLightTheme ? '#89AFDF' : '#3D5A80'),
+                        transition: 'color 0.25s',
+                    }}
                 />
             </motion.div>
 
@@ -140,8 +161,8 @@ const NavButton: React.FC<NavButtonProps> = ({
             {badge > 0 && (
                 <span
                     aria-hidden="true"
-                    className="absolute -top-1.5 -right-1.5 min-w-[15px] h-[15px] px-0.5 rounded-full text-[8px] font-black text-white flex items-center justify-center"
-                    style={{ background: '#FF3366', boxShadow: '0 0 8px rgba(255,51,102,0.5)' }}
+                    className="absolute -top-1.5 -right-1.5 min-w-[15px] h-[15px] px-0.5 rounded-full text-[8px] font-black flex items-center justify-center"
+                    style={{ color: '#FFFFFF', background: '#FF3366', boxShadow: '0 0 8px rgba(255,51,102,0.5)' }}
                 >
                     {badge > 9 ? '9+' : badge}
                 </span>
@@ -153,7 +174,7 @@ const NavButton: React.FC<NavButtonProps> = ({
             animate={{ opacity: isActive ? 1 : 0.45 }}
             transition={{ duration: 0.2 }}
             className="relative z-10 text-[10px] font-bold tracking-wide"
-            style={{ color: isActive ? '#3B82F6' : '#3D5A80' }}
+            style={{ color: isActive ? '#5EA2FF' : (isLightTheme ? '#89AFDF' : '#3D5A80') }}
         >
             {label}
         </motion.span>
@@ -163,7 +184,7 @@ const NavButton: React.FC<NavButtonProps> = ({
             <motion.div
                 layoutId="nav-dot"
                 className="absolute -bottom-0.5 w-1 h-1 rounded-full"
-                style={{ background: '#3B82F6', boxShadow: '0 0 6px #3B82F6' }}
+                style={{ background: '#5EA2FF', boxShadow: '0 0 6px #5EA2FF' }}
                 initial={{ opacity: 0, scale: 0 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: 0.1 }}

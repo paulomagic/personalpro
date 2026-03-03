@@ -8,6 +8,7 @@ import { mapAssessmentsToClientShape, buildClientPhysicalUpdatePayload } from '.
 import InviteStudentModal from '../components/InviteStudentModal';
 import ClientFinanceSection from '../components/ClientFinanceSection';
 import { ClientPhysicalDataForm } from '../components/ClientPhysicalDataForm';
+import { useTheme } from '../services/ThemeContext';
 
 interface ClientProfileViewProps {
   client: Client;
@@ -21,6 +22,8 @@ interface ClientProfileViewProps {
 }
 
 const ClientProfileView: React.FC<ClientProfileViewProps> = ({ client: initialClient, coachId, onBack, onStartWorkout, onStartAssessment, onCreateWorkout, onStudentView, onSportTraining }) => {
+  const { resolvedTheme } = useTheme();
+  const isLightTheme = resolvedTheme === 'light';
 
 
   const [client, setClient] = useState<Client>({
@@ -423,23 +426,41 @@ const ClientProfileView: React.FC<ClientProfileViewProps> = ({ client: initialCl
 
       {/* Premium Segmented Control (Tabs) */}
       <div className="px-5 mt-6 mb-2">
-        <div className="flex bg-slate-900/60 rounded-[18px] backdrop-blur-md p-1 border border-white/5 relative">
+        <div
+          className="flex rounded-[18px] backdrop-blur-md p-1 relative"
+          style={isLightTheme
+            ? {
+              background: 'linear-gradient(145deg, rgba(123, 141, 171, 0.45), rgba(109, 128, 162, 0.5))',
+              border: '1px solid rgba(130, 170, 235, 0.38)',
+              boxShadow: 'inset 0 1px 0 rgba(224, 236, 255, 0.25)',
+            }
+            : {
+              background: 'rgba(15, 23, 42, 0.6)',
+              border: '1px solid rgba(255,255,255,0.05)',
+            }}
+        >
           {tabs.map((tab, idx) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
               className={`relative z-10 flex-1 py-3 px-2 rounded-[14px] flex items-center justify-center transition-all ${activeTab === tab
-                ? 'text-white'
+                ? ''
                 : 'text-slate-500 hover:text-slate-300'
                 }`}
+              style={activeTab === tab ? { color: 'var(--btn-primary-text)' } : undefined}
             >
               <span className="text-[11px] font-black uppercase tracking-wider">{tab}</span>
             </button>
           ))}
           {/* Active Background Pill */}
           <motion.div
-            className="absolute top-1 bottom-1 bg-blue-600 rounded-[14px] shadow-glow z-0"
-            style={{ width: `${100 / tabs.length}%` }}
+            className="absolute top-1 bottom-1 rounded-[14px] z-0"
+            style={{
+              width: `${100 / tabs.length}%`,
+              background: 'var(--btn-primary-bg)',
+              border: '1px solid var(--btn-primary-border)',
+              boxShadow: 'var(--btn-primary-shadow)',
+            }}
             animate={{
               left: `calc(${(tabs.indexOf(activeTab) * (100 / tabs.length))}%)`
             }}
@@ -497,8 +518,14 @@ const ClientProfileView: React.FC<ClientProfileViewProps> = ({ client: initialCl
                   <button
                     onClick={handleAnalyzeProgress}
                     disabled={loadingAnalysis}
-                    className="w-full py-3 text-white font-bold rounded-xl transition-all flex items-center justify-center gap-2"
-                    style={{ background: 'linear-gradient(135deg,#1E3A8A,#3B82F6)', opacity: loadingAnalysis ? 0.5 : 1 }}
+                    className="w-full py-3 font-bold rounded-xl transition-all flex items-center justify-center gap-2"
+                    style={{
+                      background: 'var(--btn-primary-bg)',
+                      color: 'var(--btn-primary-text)',
+                      border: '1px solid var(--btn-primary-border)',
+                      boxShadow: 'var(--btn-primary-shadow)',
+                      opacity: loadingAnalysis ? 0.5 : 1,
+                    }}
                   >
                     {loadingAnalysis ? (
                       <>
@@ -710,7 +737,13 @@ const ClientProfileView: React.FC<ClientProfileViewProps> = ({ client: initialCl
             >
               <button
                 onClick={onStartAssessment}
-                className="w-full py-4 rounded-2xl bg-blue-600 text-white font-black uppercase tracking-widest shadow-lg shadow-blue-900/40 flex items-center justify-center gap-2 active:scale-[0.98] transition-all"
+                className="w-full py-4 rounded-2xl font-black uppercase tracking-widest flex items-center justify-center gap-2 active:scale-[0.98] transition-all"
+                style={{
+                  background: 'var(--btn-primary-bg)',
+                  color: 'var(--btn-primary-text)',
+                  border: '1px solid var(--btn-primary-border)',
+                  boxShadow: 'var(--btn-primary-shadow)',
+                }}
               >
                 <PlusCircle size={20} />
                 Nova Avaliação
@@ -756,8 +789,13 @@ const ClientProfileView: React.FC<ClientProfileViewProps> = ({ client: initialCl
             >
               <button
                 onClick={() => onCreateWorkout ? onCreateWorkout() : onStartWorkout({ title: 'Novo Treino', exercises: [] })}
-                className="w-full py-4 rounded-2xl text-white font-black uppercase tracking-widest flex items-center justify-center gap-2 active:scale-[0.98] transition-all"
-                style={{ background: 'linear-gradient(135deg,#1E3A8A,#3B82F6)', boxShadow: '0 8px 32px rgba(30, 58, 138,0.3)' }}
+                className="w-full py-4 rounded-2xl font-black uppercase tracking-widest flex items-center justify-center gap-2 active:scale-[0.98] transition-all"
+                style={{
+                  background: 'var(--btn-primary-bg)',
+                  color: 'var(--btn-primary-text)',
+                  border: '1px solid var(--btn-primary-border)',
+                  boxShadow: 'var(--btn-primary-shadow)',
+                }}
               >
                 <Dumbbell size={20} />
                 Criar Novo Treino
@@ -1063,6 +1101,7 @@ const ClientProfileView: React.FC<ClientProfileViewProps> = ({ client: initialCl
             }
           ]
         })}
+        data-testid="quick-workout-button"
         className="fixed bottom-24 right-6 size-14 rounded-full bg-blue-600 text-white shadow-xl shadow-blue-600/30 flex items-center justify-center hover:bg-blue-700 active:scale-95 transition-all z-30"
       >
         <Play size={28} className="ml-1" />

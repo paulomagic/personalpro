@@ -5,6 +5,7 @@ interface RateLimitResult {
 }
 
 const memoryRequestsByKey = new Map<string, { count: number; resetAt: number }>();
+let requestCounter = 0;
 
 function checkRateLimitInMemory(rateKey: string, max: number, windowMs: number): RateLimitResult {
     const now = Date.now();
@@ -49,6 +50,23 @@ export async function checkRateLimit(rateKey: string): Promise<RateLimitResult> 
     }
 
     try {
+        requestCounter += 1;
+        if (requestCounter % 500 === 0) {
+            void fetch(`${supabaseUrl}/rest/v1/rpc/cleanup_edge_rate_limits`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "apikey": serviceRoleKey,
+                    "Authorization": `Bearer ${serviceRoleKey}`,
+                },
+                body: JSON.stringify({
+                    p_older_than_seconds: Number(Deno.env.get("RATE_LIMIT_RETENTION_SECONDS") || "86400"),
+                }),
+            }).catch(() => {
+                // Best-effort cleanup. Ignore failures.
+            });
+        }
+
         const response = await fetch(`${supabaseUrl}/rest/v1/rpc/check_rate_limit`, {
             method: "POST",
             headers: {
@@ -91,4 +109,3 @@ export function buildRateLimitHeaders(result: RateLimitResult): Record<string, s
         "Retry-After": String(result.retryAfterSeconds),
     };
 }
-

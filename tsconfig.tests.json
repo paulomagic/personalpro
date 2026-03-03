@@ -12,6 +12,9 @@
   "include": [
     "tests/**/*.ts",
     "services/auth/**/*.ts",
+    "services/invitations/**/*.ts",
+    "services/navigation/**/*.ts",
+    "services/trainingExecutionUtils.ts",
     "services/clientProfileUtils.ts",
     "services/ai/providers/edgeHeaders.ts",
     "utils/**/*.ts",

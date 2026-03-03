@@ -1,7 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { supabase, getInvitationByToken, acceptInvitation } from '../services/supabaseClient';
+import { Turnstile } from '@marsidev/react-turnstile';
+import { supabase } from '../services/supabaseCore';
+import { getInvitationByToken, acceptInvitation } from '../services/invitations/invitationAuthService';
 import type { AppSessionUser } from '../services/auth/authFlow';
 import { calculateLockDurationMs, getRemainingLockSeconds, isLockedOut } from '../services/auth/authFlow';
+import { persistLockoutState, readLockoutState } from '../services/auth/lockoutStorage';
+import { checkAuthGuard, isAuthGuardServiceUnavailableError } from '../services/auth/authGuard';
+import { validateTurnstileToken } from '../services/auth/turnstile';
+import {
+  canBypassCaptchaWidgetFailure,
+  parseBooleanEnvFlag,
+  isCaptchaServiceUnavailableError,
+  resolveCaptchaStrictMode
+} from '../services/auth/captchaPolicy';
 
 interface LoginViewProps {
   onLogin: (user: AppSessionUser | null) => void;
@@ -32,10 +43,15 @@ const InputField: React.FC<InputFieldProps> = ({ id, label, type, placeholder, v
   </div>
 );
 
-const LOGIN_ATTEMPTS_KEY = 'personalpro:auth:loginAttempts';
-const LOCK_UNTIL_KEY = 'personalpro:auth:lockUntil';
-
 const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
+  const SUPABASE_URL = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SUPABASE_URL) || '';
+  const TURNSTILE_SITE_KEY = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_TURNSTILE_SITE_KEY) || '';
+  const CAPTCHA_STRICT_MODE = resolveCaptchaStrictMode(
+    (typeof import.meta !== 'undefined' && import.meta.env?.VITE_CAPTCHA_STRICT_MODE) || undefined
+  );
+  const AUTH_GUARD_STRICT_MODE = parseBooleanEnvFlag(
+    (typeof import.meta !== 'undefined' && import.meta.env?.VITE_AUTH_GUARD_STRICT_MODE) || undefined
+  ) ?? false;
   const [currentSlide, setCurrentSlide] = useState(0);
   const [showRegister, setShowRegister] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
@@ -53,6 +69,43 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
   // Invitation states
   const [inviteToken, setInviteToken] = useState<string | null>(null);
   const [isInviteMode, setIsInviteMode] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState('');
+  const [captchaWidgetKey, setCaptchaWidgetKey] = useState(0);
+  const [captchaWidgetFailed, setCaptchaWidgetFailed] = useState(false);
+  const isCaptchaEnabled = Boolean(TURNSTILE_SITE_KEY && SUPABASE_URL && supabase);
+  const allowCaptchaBypass = canBypassCaptchaWidgetFailure({
+    captchaEnabled: isCaptchaEnabled,
+    widgetFailed: captchaWidgetFailed,
+    strictMode: CAPTCHA_STRICT_MODE
+  });
+
+  const resetCaptcha = () => {
+    setCaptchaToken('');
+    setCaptchaWidgetFailed(false);
+    setCaptchaWidgetKey(prev => prev + 1);
+  };
+
+  const ensureCaptchaValidated = async () => {
+    if (!isCaptchaEnabled) return true;
+    if (allowCaptchaBypass) return true;
+    if (!captchaToken) {
+      setError('Confirme o CAPTCHA para continuar.');
+      return false;
+    }
+
+    const captchaResult = await validateTurnstileToken(captchaToken, SUPABASE_URL);
+    resetCaptcha();
+    if (!captchaResult.valid) {
+      if (!CAPTCHA_STRICT_MODE && isCaptchaServiceUnavailableError(captchaResult.error)) {
+        setError('Validação de CAPTCHA indisponível. Continuando com proteção secundária.');
+        return true;
+      }
+      setError(captchaResult.error || 'Falha na validação do CAPTCHA.');
+      return false;
+    }
+
+    return true;
+  };
 
   // Check for invite token in URL on mount
   useEffect(() => {
@@ -79,16 +132,9 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
   useEffect(() => {
     if (typeof window === 'undefined') return;
     try {
-      const storedAttempts = Number(window.localStorage.getItem(LOGIN_ATTEMPTS_KEY) || '0');
-      const storedLockUntil = Number(window.localStorage.getItem(LOCK_UNTIL_KEY) || '0');
-      if (!Number.isNaN(storedAttempts) && storedAttempts > 0) {
-        setLoginAttempts(storedAttempts);
-      }
-      if (!Number.isNaN(storedLockUntil) && storedLockUntil > Date.now()) {
-        setLockUntil(storedLockUntil);
-      } else {
-        window.localStorage.removeItem(LOCK_UNTIL_KEY);
-      }
+      const state = readLockoutState(window.localStorage, Date.now());
+      setLoginAttempts(state.loginAttempts);
+      setLockUntil(state.lockUntil);
     } catch {
       // localStorage can be blocked by browser privacy settings
     }
@@ -97,17 +143,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
   useEffect(() => {
     if (typeof window === 'undefined') return;
     try {
-      if (loginAttempts > 0) {
-        window.localStorage.setItem(LOGIN_ATTEMPTS_KEY, String(loginAttempts));
-      } else {
-        window.localStorage.removeItem(LOGIN_ATTEMPTS_KEY);
-      }
-
-      if (lockUntil && lockUntil > Date.now()) {
-        window.localStorage.setItem(LOCK_UNTIL_KEY, String(lockUntil));
-      } else {
-        window.localStorage.removeItem(LOCK_UNTIL_KEY);
-      }
+      persistLockoutState(window.localStorage, { loginAttempts, lockUntil }, Date.now());
     } catch {
       // Ignore storage errors
     }
@@ -183,6 +219,20 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
         return;
       }
 
+      const captchaOk = await ensureCaptchaValidated();
+      if (!captchaOk) return;
+
+      const guard = await checkAuthGuard('login', email, SUPABASE_URL);
+      if (!guard.allowed) {
+        if (!AUTH_GUARD_STRICT_MODE && isAuthGuardServiceUnavailableError(guard.error)) {
+          setError('Proteção antiabuso indisponível. Continuando com proteção local de tentativas.');
+        } else {
+          const wait = guard.retryAfterSeconds > 0 ? ` Aguarde ${guard.retryAfterSeconds}s.` : '';
+          setError((guard.error || 'Muitas tentativas detectadas.') + wait);
+          return;
+        }
+      }
+
       const { data, error: authError } = await supabase.auth.signInWithPassword({
         email,
         password
@@ -235,6 +285,20 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
           isDemo: true
         });
         return;
+      }
+
+      const captchaOk = await ensureCaptchaValidated();
+      if (!captchaOk) return;
+
+      const guard = await checkAuthGuard('register', email, SUPABASE_URL);
+      if (!guard.allowed) {
+        if (!AUTH_GUARD_STRICT_MODE && isAuthGuardServiceUnavailableError(guard.error)) {
+          setError('Proteção antiabuso indisponível. Continuando com proteção local de tentativas.');
+        } else {
+          const wait = guard.retryAfterSeconds > 0 ? ` Aguarde ${guard.retryAfterSeconds}s.` : '';
+          setError((guard.error || 'Muitas tentativas detectadas.') + wait);
+          return;
+        }
       }
 
       // If in invite mode, set role as student in user metadata
@@ -331,7 +395,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
     return (
       <div className="flex flex-col min-h-screen bg-slate-950 px-8 py-12">
         <button
-          onClick={() => { setShowLogin(false); setShowRegister(false); setError(null); }}
+          onClick={() => { setShowLogin(false); setShowRegister(false); setError(null); resetCaptcha(); }}
           aria-label="Voltar para tela inicial"
           className="absolute top-12 left-6 size-10 rounded-full bg-slate-900 border border-white/10 flex items-center justify-center text-slate-400 hover:text-white transition-colors"
         >
@@ -366,7 +430,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
         </p>
 
         {error && (
-          <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl">
+          <div role="alert" aria-live="assertive" className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl">
             <p className="text-red-400 text-sm text-center font-medium">{error}</p>
           </div>
         )}
@@ -415,12 +479,60 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
           </div>
           {!isRegister && (
             <div className="flex justify-end mt-1">
-              <button onClick={handleForgotPassword} className="text-sm text-blue-500 font-bold hover:underline">
+              <button type="button" onClick={handleForgotPassword} className="text-sm text-blue-500 font-bold hover:underline">
                 Esqueceu a senha?
               </button>
             </div>
           )}
         </div>
+        {isCaptchaEnabled && (
+          <div className="mb-4 rounded-2xl border border-white/10 bg-slate-900/60 p-3">
+            <Turnstile
+              key={captchaWidgetKey}
+              siteKey={TURNSTILE_SITE_KEY}
+              onSuccess={(token) => {
+                setCaptchaToken(token);
+                setCaptchaWidgetFailed(false);
+                if (error && error.toLowerCase().includes('captcha')) {
+                  setError(null);
+                }
+              }}
+              onExpire={() => setCaptchaToken('')}
+              onError={() => {
+                setCaptchaToken('');
+                setCaptchaWidgetFailed(true);
+                if (CAPTCHA_STRICT_MODE) {
+                  setError('Não foi possível carregar o CAPTCHA. Atualize e tente novamente.');
+                } else {
+                  setError('CAPTCHA indisponível no momento. Você pode continuar com proteção secundária.');
+                }
+              }}
+              options={{
+                theme: 'dark',
+                size: 'flexible',
+              }}
+            />
+            <p className="mt-2 text-xs text-slate-400">
+              {allowCaptchaBypass
+                ? 'CAPTCHA em fallback. Rate limit e proteção de autenticação continuam ativos.'
+                : captchaToken
+                  ? 'Verificação de segurança concluída.'
+                  : 'Confirme a verificação de segurança para continuar.'}
+            </p>
+            {captchaWidgetFailed && (
+              <button
+                type="button"
+                onClick={() => {
+                  setError(null);
+                  resetCaptcha();
+                }}
+                className="mt-3 text-xs font-semibold text-blue-400 hover:text-blue-300"
+              >
+                Tentar recarregar o CAPTCHA
+              </button>
+            )}
+          </div>
+        )}
         <button
           onClick={isRegister ? handleRegister : handleLogin}
           disabled={loading}
@@ -445,7 +557,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
 
         <p className="text-center mt-6 text-sm text-slate-500">
           {isRegister ? 'Já tem uma conta?' : 'Não tem conta?'}
-          <button onClick={() => { setShowLogin(!isRegister); setShowRegister(!showRegister); setError(null); }} className="text-blue-500 font-bold ml-1 hover:underline">
+          <button type="button" onClick={() => { setShowLogin(!isRegister); setShowRegister(!showRegister); setError(null); resetCaptcha(); }} className="text-blue-500 font-bold ml-1 hover:underline">
             {isRegister ? 'Entrar' : 'Criar conta'}
           </button>
         </p>
@@ -519,6 +631,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
 
           <button
             onClick={handleDemoLogin}
+            data-testid="demo-login-button"
             className="w-full h-14 bg-white/5 hover:bg-white/10 active:scale-[0.98] text-white font-bold rounded-2xl text-sm transition-all border border-white/10 uppercase tracking-wider"
           >
             Modo Demonstração
@@ -526,7 +639,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
         </div>
 
         <p className="text-center mt-6 text-xs text-slate-500">
-          Já tem uma conta? <button onClick={() => setShowLogin(true)} className="text-blue-500 font-bold hover:underline">Entrar</button>
+          Já tem uma conta? <button type="button" onClick={() => setShowLogin(true)} className="text-blue-500 font-bold hover:underline">Entrar</button>
         </p>
       </div>
     </div>

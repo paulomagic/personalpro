@@ -1,30 +1,10 @@
 
-import { createClient as createSupabaseClient, SupabaseClient } from '@supabase/supabase-js';
+import { supabase } from './supabaseCore';
 import { hydrateWorkoutWithVideos } from './exerciseService';
-
-// Configuração Supabase - defina suas credenciais no arquivo .env
-// @ts-ignore - Vite env
-const SUPABASE_URL = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SUPABASE_URL) || '';
-// @ts-ignore - Vite env  
-const SUPABASE_ANON_KEY = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SUPABASE_ANON_KEY) || '';
-
-let supabase: SupabaseClient | null = null;
-
-if (SUPABASE_URL && SUPABASE_ANON_KEY) {
-    supabase = createSupabaseClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-        auth: {
-            persistSession: true,
-            autoRefreshToken: true,
-        },
-        global: {
-            headers: {
-                'Accept': 'application/json',
-                'Content-Type': 'application/json',
-            }
-        }
-    });
-}
-
+import {
+    normalizeAcceptInvitationResult,
+    normalizeInvitationPreviewFromRpc,
+} from './invitations/invitationUtils';
 export { supabase };
 
 // ============ TIPOS ============
@@ -568,6 +548,18 @@ export interface AIWorkoutMetadata {
         preferences?: string;
         adherence?: number;
     };
+    injuryRisk?: {
+        score: number;
+        level: string;
+    } | null;
+    precisionProfile?: {
+        segment: string;
+        label: string;
+        targetPrecisionScore: number;
+        maxMeanRpeError: number;
+        maxMeanRirError: number;
+        maxPainRate: number;
+    } | null;
 }
 
 export async function saveAIWorkout(
@@ -1086,16 +1078,9 @@ export async function getInvitationByToken(token: string): Promise<DBInvitationP
         return null;
     }
 
-    if (!Array.isArray(data) || data.length === 0) return null;
-
-    const invitation = data[0];
-    return {
-        id: invitation.id,
-        email: invitation.email,
-        client_id: invitation.client_id || undefined,
-        status: invitation.status,
-        expires_at: invitation.expires_at
-    };
+    const invitation = normalizeInvitationPreviewFromRpc(data);
+    if (!invitation) return null;
+    return invitation;
 }
 
 // Accept invitation and convert user to student
@@ -1112,11 +1097,7 @@ export async function acceptInvitation(token: string, userId: string): Promise<{
         return { success: false, error: 'Erro ao aceitar convite' };
     }
 
-    if (!data?.success) {
-        return { success: false, error: data?.error || 'Convite inválido ou expirado' };
-    }
-
-    return { success: true };
+    return normalizeAcceptInvitationResult(data);
 }
 
 // Get all invitations sent by a coach

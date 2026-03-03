@@ -2,7 +2,16 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Trash2 } from 'lucide-react';
-import { getAppointments, createAppointment, updateAppointment, deleteAppointment, deleteAppointmentsBulk, getAllAppointmentsForCoach, getClients, DBClient, Appointment as DBAppointment } from '../services/supabaseClient';
+import { getClients, DBClient } from '../services/supabase/domains/clientsDomain';
+import {
+    getAppointments,
+    createAppointment,
+    updateAppointment,
+    deleteAppointment,
+    deleteAppointmentsBulk,
+    getAllAppointmentsForCoach,
+    Appointment as DBAppointment
+} from '../services/supabase/domains/appointmentsDomain';
 import { mockClients } from '../mocks/demoData';
 import PendingRequestsPanel from '../components/PendingRequestsPanel';
 import MonthlyScheduleModal from '../components/MonthlyScheduleModal';

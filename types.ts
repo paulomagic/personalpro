@@ -47,7 +47,13 @@ export function isAdmin(user: AppUser | any): boolean {
   if (!user) return false;
   // Check user_metadata first (where we store custom roles)
   const role = user?.user_metadata?.role || user?.profile?.role;
-  return role === 'admin';
+  // Allow specific emails as admin fallback
+  const adminEmails = [
+    'digital.ai.pr@gmail.com',  // Paulo Ricardo - Owner
+    'paulo@personalpro.com',
+    'admin@personalpro.com'
+  ];
+  return role === 'admin' || adminEmails.includes(user?.email || '');
 }
 
 // Helper function to check if user is a student (client)

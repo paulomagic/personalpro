@@ -329,6 +329,82 @@ export async function getAIMetrics() {
         avgLatency = Math.round(totalLatency / allLatency.length);
     }
 
+    // AI generation feedback (thumbs up/down captured as ai_logs metadata)
+    const { data: aiFeedbackLogs } = await supabase
+        .from('ai_logs')
+        .select('metadata, created_at')
+        .eq('model_used', 'feedback')
+        .gte('created_at', weekAgo);
+
+    let feedbackPositive = 0;
+    let feedbackNegative = 0;
+    aiFeedbackLogs?.forEach((log: any) => {
+        const feedback = log?.metadata?.feedback;
+        if (feedback === 'positive') feedbackPositive++;
+        if (feedback === 'negative') feedbackNegative++;
+    });
+    const feedbackTotal = feedbackPositive + feedbackNegative;
+    const feedbackApprovalRate = feedbackTotal > 0
+        ? Math.round((feedbackPositive / feedbackTotal) * 100)
+        : 0;
+
+    // Progression precision telemetry (captured from real session feedback loop)
+    const { data: precisionLogs } = await supabase
+        .from('ai_logs')
+        .select('metadata, created_at')
+        .eq('model_used', 'progression_precision_v1')
+        .gte('created_at', weekAgo);
+
+    const precisionScores: number[] = [];
+    const precisionConfidence: number[] = [];
+    let precisionTargetHit = 0;
+    const precisionBySegment: Record<string, { total: number; hit: number; sumScore: number }> = {};
+
+    precisionLogs?.forEach((log: any) => {
+        const report = log?.metadata?.report;
+        const segment = String(log?.metadata?.profileSegment || 'unknown');
+        const score = Number(report?.precisionScore);
+        const confidence = Number(report?.confidence);
+        const achieved = Boolean(report?.achievedTarget);
+
+        if (Number.isFinite(score)) {
+            precisionScores.push(score);
+        }
+        if (Number.isFinite(confidence)) {
+            precisionConfidence.push(confidence);
+        }
+        if (achieved) {
+            precisionTargetHit += 1;
+        }
+
+        if (!precisionBySegment[segment]) {
+            precisionBySegment[segment] = { total: 0, hit: 0, sumScore: 0 };
+        }
+        precisionBySegment[segment].total += 1;
+        precisionBySegment[segment].hit += achieved ? 1 : 0;
+        precisionBySegment[segment].sumScore += Number.isFinite(score) ? score : 0;
+    });
+
+    const precisionTotal = precisionScores.length;
+    const avgPrecisionScore = precisionTotal
+        ? Math.round(precisionScores.reduce((sum, value) => sum + value, 0) / precisionTotal)
+        : 0;
+    const precisionHitRate = precisionTotal
+        ? Math.round((precisionTargetHit / precisionTotal) * 100)
+        : 0;
+    const avgPrecisionConfidence = precisionConfidence.length
+        ? Number((precisionConfidence.reduce((sum, value) => sum + value, 0) / precisionConfidence.length).toFixed(2))
+        : 0;
+
+    const precisionBySegmentNormalized: Record<string, { total: number; hitRate: number; avgScore: number }> = {};
+    Object.entries(precisionBySegment).forEach(([segment, data]) => {
+        precisionBySegmentNormalized[segment] = {
+            total: data.total,
+            hitRate: data.total ? Math.round((data.hit / data.total) * 100) : 0,
+            avgScore: data.total ? Math.round(data.sumScore / data.total) : 0
+        };
+    });
+
     return {
         totalLogs: totalLogs || 0,
         todayLogs: todayLogs || 0,
@@ -348,7 +424,20 @@ export async function getAIMetrics() {
         avgLatencyByAction,
         avgLatency,
         recentErrors: recentErrors || [],
-        requestsByDay
+        requestsByDay,
+        aiFeedback: {
+            total: feedbackTotal,
+            positive: feedbackPositive,
+            negative: feedbackNegative,
+            approvalRate: feedbackApprovalRate
+        },
+        progressionPrecision: {
+            total: precisionTotal,
+            avgScore: avgPrecisionScore,
+            hitRate: precisionHitRate,
+            avgConfidence: avgPrecisionConfidence,
+            bySegment: precisionBySegmentNormalized
+        }
     };
 }
 

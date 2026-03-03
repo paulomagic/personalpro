@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { DollarSign, Calendar, Edit, Save, X, Repeat, Plus, Clock, CheckCircle, AlertTriangle, ChevronDown, ChevronUp } from 'lucide-react';
-import { updateClient, DBClient, createPayment, getPaymentsByClient, Payment } from '../services/supabaseClient';
+import { updateClient } from '../services/supabaseClient';
+import { DBClient } from '../services/supabase/domains/clientsDomain';
+import { createPayment, getPaymentsByClient, Payment } from '../services/supabase/domains/paymentsDomain';
+import { useTheme } from '../services/ThemeContext';
 
 interface ClientFinanceSectionProps {
     client: {
@@ -18,6 +21,8 @@ interface ClientFinanceSectionProps {
 }
 
 const ClientFinanceSection: React.FC<ClientFinanceSectionProps> = ({ client, coachId, onUpdate }) => {
+    const { resolvedTheme } = useTheme();
+    const isLightTheme = resolvedTheme === 'light';
     const [isEditing, setIsEditing] = useState(false);
     const [saving, setSaving] = useState(false);
     const [showHistory, setShowHistory] = useState(false);
@@ -125,7 +130,17 @@ const ClientFinanceSection: React.FC<ClientFinanceSectionProps> = ({ client, coa
         <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-slate-800/50 rounded-[28px] p-5 border border-white/5"
+            className="rounded-[28px] p-5"
+            style={isLightTheme
+                ? {
+                    background: 'linear-gradient(160deg, rgba(224, 233, 248, 0.92), rgba(208, 220, 240, 0.9))',
+                    border: '1px solid rgba(130, 170, 235, 0.3)',
+                    boxShadow: 'inset 0 1px 0 rgba(240,248,255,0.5)',
+                }
+                : {
+                    background: 'rgba(30, 41, 59, 0.5)',
+                    border: '1px solid rgba(255,255,255,0.05)',
+                }}
         >
             {/* Header */}
             <div className="flex items-center justify-between mb-4">
@@ -259,7 +274,12 @@ const ClientFinanceSection: React.FC<ClientFinanceSectionProps> = ({ client, coa
                 <>
                     <div className="grid grid-cols-2 gap-3">
                         {/* Value Display */}
-                        <div className="bg-slate-900/50 rounded-xl p-3">
+                        <div
+                            className="rounded-xl p-3"
+                            style={isLightTheme
+                                ? { background: 'rgba(45, 77, 130, 0.14)', border: '1px solid rgba(122, 162, 230, 0.25)' }
+                                : { background: 'rgba(15, 23, 42, 0.5)' }}
+                        >
                             <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">
                                 {formData.payment_type === 'monthly' ? 'Mensalidade' : 'Por Sessão'}
                             </p>
@@ -269,7 +289,12 @@ const ClientFinanceSection: React.FC<ClientFinanceSectionProps> = ({ client, coa
                         </div>
 
                         {/* Payment Day / Type Display */}
-                        <div className="bg-slate-900/50 rounded-xl p-3">
+                        <div
+                            className="rounded-xl p-3"
+                            style={isLightTheme
+                                ? { background: 'rgba(45, 77, 130, 0.14)', border: '1px solid rgba(122, 162, 230, 0.25)' }
+                                : { background: 'rgba(15, 23, 42, 0.5)' }}
+                        >
                             <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">
                                 {formData.payment_type === 'monthly' ? 'Vencimento' : 'Tipo'}
                             </p>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { getClients, DBClient, getAllAppointmentsForCoach } from '../services/supabaseClient';
+import { getClients, DBClient } from '../services/supabase/domains/clientsDomain';
+import { getAllAppointmentsForCoach } from '../services/supabase/domains/appointmentsDomain';
 
 interface WeeklyPatternSelectorProps {
     coachId: string;

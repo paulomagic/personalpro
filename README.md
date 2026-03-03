@@ -31,3 +31,60 @@ O diretório `main` possui proteção contra código quebrado. Qualquer nova imp
 4. Aguarde a validação obrigatória do robô (**quality-gate**).
 5. Aguarde a revisão de segurança e código (aprovada pelos Code Owners).
 6. Faça o Merge.
+
+## Auth Guard (Login/Registro sem CAPTCHA)
+
+O projeto usa uma Edge Function `auth-guard` para limitar tentativas de login/registro no servidor.
+
+### Secrets necessários (Supabase)
+
+- `ALLOWED_ORIGINS=https://personalpro-omega.vercel.app`
+- `SUPABASE_SERVICE_ROLE_KEY=<service_role_key>`
+- `AUTH_RATE_LIMIT_MAX=8`
+- `AUTH_RATE_LIMIT_WINDOW_MS=60000`
+- `RATE_LIMIT_RETENTION_SECONDS=86400`
+
+### Deploy
+
+1. Aplicar migrations:
+   `supabase db push`
+2. Deploy da função:
+   `supabase functions deploy auth-guard`
+
+## E2E Smoke (Playwright)
+
+Fluxos cobertos:
+- Login em modo demonstração
+- Abertura de aluno no dashboard e início de treino rápido
+- Feedback de erro para token de convite inválido
+
+Execução local:
+
+1. Instale o runner:
+   `npm install -D @playwright/test`
+2. Instale o browser:
+   `npx playwright install chromium`
+3. Rode os testes:
+   `npm run test:e2e`
+
+## Navegação e Histórico (Back Button)
+
+O app agora sincroniza `View` interna com URL e histórico do navegador:
+
+- Back/forward do navegador/celular funciona entre telas principais
+- URLs são atualizadas com `pushState/replaceState` sem React Router
+- Telas com contexto carregam query params:
+  - `/clients/profile?client=<id>`
+  - `/training/execution?workout=<id>`
+
+Arquivos-chave:
+- `services/navigation/historyNavigation.ts`
+- `App.tsx`
+
+## Performance de Boot
+
+A carga de fontes foi simplificada para reduzir requisições externas:
+
+- Mantidas apenas `Inter` + `Lexend`
+- Removida família `Outfit` do `index.html`
+- `font-display` do Tailwind alinhada para `Lexend`

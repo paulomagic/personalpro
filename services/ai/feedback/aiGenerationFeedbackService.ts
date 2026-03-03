@@ -1,6 +1,9 @@
 import { supabase } from '../../supabaseCore';
 
 const QUEUE_KEY = 'personalpro_ai_generation_feedback_queue_v1';
+const MAX_QUEUED_ITEMS = 60;
+const QUEUE_RETENTION_MS = 14 * 24 * 60 * 60 * 1000;
+const MAX_QUEUE_ATTEMPTS = 6;
 
 type FeedbackKind = 'positive' | 'negative';
 
@@ -20,6 +23,19 @@ interface QueuedItem {
     attempts: number;
 }
 
+function pruneQueue(items: QueuedItem[]): QueuedItem[] {
+    const now = Date.now();
+    const filtered = items.filter((item) => {
+        const createdAtMs = new Date(item.createdAt).getTime();
+        const fresh = Number.isFinite(createdAtMs) && (now - createdAtMs) <= QUEUE_RETENTION_MS;
+        const underAttempts = (item.attempts || 0) < MAX_QUEUE_ATTEMPTS;
+        return fresh && underAttempts;
+    });
+
+    if (filtered.length <= MAX_QUEUED_ITEMS) return filtered;
+    return filtered.slice(-MAX_QUEUED_ITEMS);
+}
+
 function canUseStorage(): boolean {
     return typeof window !== 'undefined' && typeof window.localStorage !== 'undefined';
 }
@@ -30,7 +46,12 @@ function readQueue(): QueuedItem[] {
         const raw = window.localStorage.getItem(QUEUE_KEY);
         if (!raw) return [];
         const parsed = JSON.parse(raw);
-        return Array.isArray(parsed) ? parsed : [];
+        const queue = Array.isArray(parsed) ? parsed : [];
+        const pruned = pruneQueue(queue);
+        if (pruned.length !== queue.length) {
+            writeQueue(pruned);
+        }
+        return pruned;
     } catch {
         return [];
     }
@@ -39,7 +60,7 @@ function readQueue(): QueuedItem[] {
 function writeQueue(items: QueuedItem[]): void {
     if (!canUseStorage()) return;
     try {
-        window.localStorage.setItem(QUEUE_KEY, JSON.stringify(items));
+        window.localStorage.setItem(QUEUE_KEY, JSON.stringify(pruneQueue(items)));
     } catch {
         // noop
     }
@@ -120,6 +141,9 @@ export async function flushAIGenerationFeedbackQueue(maxItems = 20): Promise<{ p
         if (ok) {
             processed += 1;
         } else {
+            if ((item.attempts || 0) + 1 >= MAX_QUEUE_ATTEMPTS) {
+                continue;
+            }
             failed.push({ ...item, attempts: item.attempts + 1 });
         }
     }

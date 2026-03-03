@@ -6,6 +6,8 @@ import { supabase } from '../../supabaseClient';
 import type { SessionFeedback, ProgressionHistory } from './types';
 import { analyzeSessionFeedback, analyzeTrend, DEFAULT_PROGRESSION_CONFIG } from './adaptiveProgression';
 import type { ProgressionAdjustment } from './types';
+import { logAIAction } from '../../loggingService';
+import { buildProgressionPrecisionReport, resolvePrecisionProfile } from '../progressionPrecisionService';
 
 const isDev = import.meta.env.DEV;
 const debugLog = (...args: unknown[]) => {
@@ -13,6 +15,12 @@ const debugLog = (...args: unknown[]) => {
 };
 
 const FEEDBACK_QUEUE_STORAGE_KEY = 'personalpro_feedback_queue_v1';
+const PRECISION_TELEMETRY_LAST_RUN_KEY = 'personalpro_precision_telemetry_last_run_v1';
+const PRECISION_TELEMETRY_MIN_INTERVAL_MS = 4 * 60 * 1000;
+const MAX_QUEUED_FEEDBACK_ITEMS = 80;
+const FEEDBACK_QUEUE_RETENTION_MS = 10 * 24 * 60 * 60 * 1000;
+const MAX_QUEUE_ATTEMPTS = 8;
+const MAX_FEEDBACK_NOTE_LENGTH = 500;
 
 interface QueuedFeedbackItem {
     id: string;
@@ -22,8 +30,112 @@ interface QueuedFeedbackItem {
     lastError?: string;
 }
 
+function sanitizeFeedbackForQueue(
+    feedback: Omit<SessionFeedback, 'session_date'>
+): Omit<SessionFeedback, 'session_date'> {
+    return {
+        ...feedback,
+        notes: feedback.notes ? feedback.notes.slice(0, MAX_FEEDBACK_NOTE_LENGTH) : feedback.notes
+    };
+}
+
+function pruneQueuedFeedbackItems(items: QueuedFeedbackItem[]): QueuedFeedbackItem[] {
+    const now = Date.now();
+    const filtered = items.filter((item) => {
+        const queuedAtMs = new Date(item.queuedAt).getTime();
+        const isFresh = Number.isFinite(queuedAtMs) && (now - queuedAtMs) <= FEEDBACK_QUEUE_RETENTION_MS;
+        const underAttempts = (item.attempts || 0) < MAX_QUEUE_ATTEMPTS;
+        return isFresh && underAttempts;
+    });
+
+    if (filtered.length <= MAX_QUEUED_FEEDBACK_ITEMS) return filtered;
+    return filtered.slice(-MAX_QUEUED_FEEDBACK_ITEMS);
+}
+
 function canUseStorage(): boolean {
     return typeof window !== 'undefined' && typeof window.localStorage !== 'undefined';
+}
+
+function shouldCapturePrecisionTelemetry(studentId: string): boolean {
+    if (!canUseStorage()) return true;
+    try {
+        const raw = window.localStorage.getItem(PRECISION_TELEMETRY_LAST_RUN_KEY);
+        const parsed = raw ? JSON.parse(raw) as Record<string, number> : {};
+        const now = Date.now();
+        const lastRun = parsed[studentId] || 0;
+        if (now - lastRun < PRECISION_TELEMETRY_MIN_INTERVAL_MS) {
+            return false;
+        }
+        parsed[studentId] = now;
+        window.localStorage.setItem(PRECISION_TELEMETRY_LAST_RUN_KEY, JSON.stringify(parsed));
+        return true;
+    } catch {
+        return true;
+    }
+}
+
+async function captureProgressionPrecisionTelemetry(studentId: string): Promise<void> {
+    if (!studentId || studentId === 'unknown' || !supabase) return;
+    if (!shouldCapturePrecisionTelemetry(studentId)) return;
+
+    const startedAt = Date.now();
+
+    try {
+        const [feedbacks, clientSnapshotResult] = await Promise.all([
+            getLatestFeedback(studentId, 12),
+            supabase
+                .from('clients')
+                .select('goal, level, age, adherence, status')
+                .eq('id', studentId)
+                .maybeSingle()
+        ]);
+
+        if (!feedbacks.length) return;
+
+        const clientSnapshot = clientSnapshotResult?.data;
+        const profile = resolvePrecisionProfile({
+            level: clientSnapshot?.level,
+            goal: clientSnapshot?.goal,
+            age: clientSnapshot?.age,
+            adherence: clientSnapshot?.adherence,
+            status: clientSnapshot?.status
+        });
+        const report = buildProgressionPrecisionReport({
+            feedbacks,
+            profile
+        });
+
+        await logAIAction({
+            action_type: 'analyze_progress',
+            model_used: 'progression_precision_v1',
+            prompt: `student:${studentId};segment:${profile.segment};sample:${report.sampleSize}`,
+            response: `precision=${report.precisionScore};target=${profile.target.targetPrecisionScore};achieved=${report.achievedTarget}`,
+            tokens_input: 0,
+            tokens_output: 0,
+            latency_ms: Date.now() - startedAt,
+            success: true,
+            metadata: {
+                studentId,
+                profileSegment: profile.segment,
+                profileLabel: profile.label,
+                target: profile.target,
+                report
+            }
+        });
+    } catch (error: any) {
+        console.warn('[FeedbackService] Precision telemetry failed:', error);
+        await logAIAction({
+            action_type: 'analyze_progress',
+            model_used: 'progression_precision_v1',
+            prompt: `student:${studentId};telemetry_error`,
+            response: null,
+            tokens_input: 0,
+            tokens_output: 0,
+            latency_ms: Date.now() - startedAt,
+            success: false,
+            error_message: error?.message || 'precision_telemetry_failed'
+        });
+    }
 }
 
 function readFeedbackQueue(): QueuedFeedbackItem[] {
@@ -32,7 +144,12 @@ function readFeedbackQueue(): QueuedFeedbackItem[] {
         const raw = window.localStorage.getItem(FEEDBACK_QUEUE_STORAGE_KEY);
         if (!raw) return [];
         const parsed = JSON.parse(raw);
-        return Array.isArray(parsed) ? parsed : [];
+        const queue = Array.isArray(parsed) ? parsed : [];
+        const pruned = pruneQueuedFeedbackItems(queue);
+        if (pruned.length !== queue.length) {
+            writeFeedbackQueue(pruned);
+        }
+        return pruned;
     } catch (error) {
         console.warn('[FeedbackService] Failed to read feedback queue:', error);
         return [];
@@ -42,7 +159,8 @@ function readFeedbackQueue(): QueuedFeedbackItem[] {
 function writeFeedbackQueue(items: QueuedFeedbackItem[]): boolean {
     if (!canUseStorage()) return false;
     try {
-        window.localStorage.setItem(FEEDBACK_QUEUE_STORAGE_KEY, JSON.stringify(items));
+        const pruned = pruneQueuedFeedbackItems(items);
+        window.localStorage.setItem(FEEDBACK_QUEUE_STORAGE_KEY, JSON.stringify(pruned));
         return true;
     } catch (error) {
         console.warn('[FeedbackService] Failed to write feedback queue:', error);
@@ -57,15 +175,16 @@ function pushFeedbackToQueue(
     const queue = readFeedbackQueue();
     queue.push({
         id: `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
-        feedback,
+        feedback: sanitizeFeedbackForQueue(feedback),
         attempts: 0,
         queuedAt: new Date().toISOString(),
         lastError: errorMessage
     });
-    const queued = writeFeedbackQueue(queue);
+    const normalizedQueue = pruneQueuedFeedbackItems(queue);
+    const queued = writeFeedbackQueue(normalizedQueue);
     return {
         queued,
-        queueSize: queue.length
+        queueSize: normalizedQueue.length
     };
 }
 
@@ -115,6 +234,9 @@ export async function flushQueuedFeedback(maxItems = 20): Promise<{
         }
 
         failed++;
+        if ((item.attempts || 0) + 1 >= MAX_QUEUE_ATTEMPTS) {
+            continue;
+        }
         kept.push({
             ...item,
             attempts: item.attempts + 1,
@@ -172,6 +294,7 @@ export async function saveSessionFeedback(
         }
 
         debugLog('[FeedbackService] Feedback saved successfully:', data.id);
+        void captureProgressionPrecisionTelemetry(feedback.student_id);
         return { success: true, id: data.id };
 
     } catch (error: any) {

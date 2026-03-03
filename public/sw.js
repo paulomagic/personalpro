@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v24';
+const CACHE_VERSION = 'v25';
 const STATIC_CACHE = `personalpro-static-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `personalpro-runtime-${CACHE_VERSION}`;
 const API_CACHE = `personalpro-api-${CACHE_VERSION}`;
@@ -34,6 +34,23 @@ function isCacheableResponse(response) {
 
 function shouldCacheApiResponse(url) {
     return !url.includes('/auth/v1/') && !url.includes('/functions/v1/');
+}
+
+function hasSensitiveAuth(request) {
+    try {
+        return request.headers.has('authorization') || request.credentials === 'include';
+    } catch (_error) {
+        return false;
+    }
+}
+
+async function clearUserCaches() {
+    const cacheNames = await caches.keys();
+    await Promise.all(
+        cacheNames
+            .filter((name) => name.startsWith('personalpro-api-') || name.startsWith('personalpro-runtime-'))
+            .map((name) => caches.delete(name))
+    );
 }
 
 async function enforceCacheLimit(cacheName, maxItems) {
@@ -102,8 +119,13 @@ async function networkFirst(request, options = {}) {
     }
 }
 
-async function networkFirstNavigation(request) {
+async function networkFirstNavigation(event) {
+    const request = event.request;
     try {
+        const preloaded = await event.preloadResponse;
+        if (preloaded) {
+            return preloaded;
+        }
         const response = await withTimeout(fetch(request, { cache: 'no-store' }), NETWORK_TIMEOUT_MS);
         const contentType = response.headers.get('content-type') || '';
         if (isCacheableResponse(response) && contentType.includes('text/html')) {
@@ -137,6 +159,11 @@ self.addEventListener('activate', (event) => {
                     return Promise.resolve(false);
                 })
             ))
+            .then(async () => {
+                if (self.registration.navigationPreload) {
+                    await self.registration.navigationPreload.enable();
+                }
+            })
             .then(() => self.clients.claim())
     );
 });
@@ -149,7 +176,7 @@ self.addEventListener('fetch', (event) => {
 
     event.respondWith((async () => {
         if (request.mode === 'navigate') {
-            return networkFirstNavigation(request);
+            return networkFirstNavigation(event);
         }
 
         if (IS_DEV) {
@@ -157,9 +184,10 @@ self.addEventListener('fetch', (event) => {
         }
 
         if (isApiRequest(url)) {
+            const cacheableApi = shouldCacheApiResponse(url) && !hasSensitiveAuth(request);
             return networkFirst(request, {
                 cacheName: API_CACHE,
-                cacheResponse: shouldCacheApiResponse(url),
+                cacheResponse: cacheableApi,
                 maxItems: MAX_API_ITEMS,
                 timeoutMs: 3000
             });
@@ -180,5 +208,9 @@ self.addEventListener('fetch', (event) => {
 self.addEventListener('message', (event) => {
     if (event.data === 'skipWaiting' || event.data?.type === 'SKIP_WAITING') {
         self.skipWaiting();
+        return;
+    }
+    if (event.data?.type === 'PURGE_USER_CACHES') {
+        event.waitUntil(clearUserCaches());
     }
 });

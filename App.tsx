@@ -77,6 +77,18 @@ function App() {
   const [newPassword, setNewPassword] = useState('');
   const [recoveryError, setRecoveryError] = useState<string | null>(null);
   const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
+  const requestServiceWorkerUserCachePurge = () => {
+    if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return;
+    navigator.serviceWorker.ready
+      .then((registration) => {
+        if (registration.active) {
+          registration.active.postMessage({ type: 'PURGE_USER_CACHES' });
+        }
+      })
+      .catch(() => {
+        // noop
+      });
+  };
 
   // Auth state listener - handle session expiration and logout from other tabs
   useEffect(() => {
@@ -90,6 +102,7 @@ function App() {
         }
 
         if (event === 'SIGNED_OUT' || !session) {
+          requestServiceWorkerUserCachePurge();
           setUser(null);
           setUserProfile(null);
           setCurrentView(View.LOGIN);
@@ -113,10 +126,31 @@ function App() {
 
   // Service Worker update detection - show banner instead of auto-reload
   useEffect(() => {
-    if ('serviceWorker' in navigator) {
+    if (!('serviceWorker' in navigator)) return;
+
+    let intervalId: number | null = null;
+    let refreshing = false;
+    const onVisibilityChange = () => {
+      if (document.visibilityState !== 'visible') return;
       navigator.serviceWorker.ready.then((registration) => {
+        void registration.update();
+      }).catch(() => {
+        // noop
+      });
+    };
+    const onControllerChange = () => {
+      if (!refreshing) {
+        refreshing = true;
+        window.location.reload();
+      }
+    };
+
+    navigator.serviceWorker.ready.then((registration) => {
         // Check for updates immediately
-        registration.update();
+        void registration.update();
+        intervalId = window.setInterval(() => {
+          void registration.update();
+        }, 20 * 60 * 1000);
 
         // Listen for new SW waiting
         registration.addEventListener('updatefound', () => {
@@ -137,17 +171,20 @@ function App() {
           setWaitingWorker(registration.waiting);
           setUpdateAvailable(true);
         }
+      }).catch(() => {
+        // noop
       });
 
-      // Handle when SW takes control (after user clicks update)
-      let refreshing = false;
-      navigator.serviceWorker.addEventListener('controllerchange', () => {
-        if (!refreshing) {
-          refreshing = true;
-          window.location.reload();
-        }
-      });
-    }
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    navigator.serviceWorker.addEventListener('controllerchange', onControllerChange);
+
+    return () => {
+      if (intervalId !== null) {
+        window.clearInterval(intervalId);
+      }
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+      navigator.serviceWorker.removeEventListener('controllerchange', onControllerChange);
+    };
   }, []);
 
   // Fetch pending reschedule requests count for coaches
@@ -354,6 +391,7 @@ function App() {
 
   const handleLogout = async () => {
     // Sign out from Supabase first
+    requestServiceWorkerUserCachePurge();
     if (supabase) {
       await supabase.auth.signOut();
     }

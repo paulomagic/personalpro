@@ -548,6 +548,18 @@ export interface AIWorkoutMetadata {
         preferences?: string;
         adherence?: number;
     };
+    injuryRisk?: {
+        score: number;
+        level: string;
+    } | null;
+    precisionProfile?: {
+        segment: string;
+        label: string;
+        targetPrecisionScore: number;
+        maxMeanRpeError: number;
+        maxMeanRirError: number;
+        maxPainRate: number;
+    } | null;
 }
 
 export async function saveAIWorkout(

@@ -1,4 +1,4 @@
-import React, { Suspense, lazy, useEffect, useState } from 'react';
+import React, { Suspense, lazy, useEffect, useMemo, useState } from 'react';
 import { Client } from '../types';
 import { ThumbsUp, ThumbsDown, RefreshCw, Download } from 'lucide-react';
 import { logFunnelEvent } from '../services/loggingService';
@@ -6,6 +6,11 @@ import { flushAIGenerationFeedbackQueue, saveAIGenerationFeedback } from '../ser
 import { getAdaptiveTrainingSignal, type AdaptiveTrainingSignal } from '../services/ai/adaptiveSignalsService';
 import { assessInjuryRisk, type InjuryRiskAssessment } from '../services/ai/injuryRiskService';
 import { buildWeeklyMicrocyclePlan } from '../services/ai/weeklyProgressionEngine';
+import {
+  applyPrecisionGuardrailsToMicrocycle,
+  buildPrecisionPromptContext,
+  resolvePrecisionProfile
+} from '../services/ai/progressionPrecisionService';
 import PageHeader from '../components/PageHeader';
 
 const DetectionFeedback = lazy(() => import('../components/DetectionFeedback'));
@@ -345,6 +350,16 @@ const AIBuilderView: React.FC<AIBuilderViewProps> = ({ user, onBack, onDone }) =
   const [adaptiveSignal, setAdaptiveSignal] = useState<AdaptiveTrainingSignal | null>(null);
   const [loadingAdaptiveSignal, setLoadingAdaptiveSignal] = useState(false);
   const [injuryRisk, setInjuryRisk] = useState<InjuryRiskAssessment | null>(null);
+  const precisionProfile = useMemo(() => {
+    if (!selectedClient) return null;
+    return resolvePrecisionProfile({
+      level: selectedClient.level,
+      goal: selectedGoal || selectedClient.goal,
+      age: selectedClient.age,
+      adherence: selectedClient.adherence,
+      status: selectedClient.status
+    });
+  }, [selectedClient, selectedGoal]);
 
   // Update exercise in result
   const updateExercise = (splitIdx: number, exIdx: number, field: string, value: string | number) => {
@@ -648,9 +663,10 @@ const AIBuilderView: React.FC<AIBuilderViewProps> = ({ user, onBack, onDone }) =
       ? `SINAL_ADAPTATIVO: readiness=${effectiveAdaptiveSignal.readinessScore}; fatigue=${effectiveAdaptiveSignal.fatigueLevel}; volume_delta=${effectiveAdaptiveSignal.recommendedVolumeDeltaPct}%; intensity_delta=${effectiveAdaptiveSignal.recommendedIntensityDeltaPct}%; dias_semana=${adaptiveDays}; confianca=${effectiveAdaptiveSignal.confidence}`
       : '';
     const riskBrief = `RISCO_LESAO: score=${preRisk.score}; level=${preRisk.level}; conservative=${preRisk.conservativeMode}; constraints=${preRisk.recommendedConstraints.join(' | ')}`;
+    const precisionBrief = precisionProfile ? buildPrecisionPromptContext(precisionProfile) : '';
     const coldStartMode = isColdStartClient(selectedClient);
     const effectiveGoal = selectedGoal || selectedClient.goal;
-    const combinedObservations = [selectedClient.observations, observations, adaptiveBrief, riskBrief]
+    const combinedObservations = [selectedClient.observations, observations, adaptiveBrief, riskBrief, precisionBrief]
       .filter(Boolean)
       .join(' | ');
     const weeklyMicrocycle = buildWeeklyMicrocyclePlan({
@@ -660,9 +676,12 @@ const AIBuilderView: React.FC<AIBuilderViewProps> = ({ user, onBack, onDone }) =
       injuryRiskScore: preRisk.score,
       coldStartMode
     });
+    const guardedMicrocycleWeeks = precisionProfile
+      ? applyPrecisionGuardrailsToMicrocycle(weeklyMicrocycle.weeks, precisionProfile.segment)
+      : weeklyMicrocycle.weeks;
     const applyMicrocycle = (baseWorkout: any) => ({
       ...baseWorkout,
-      mesocycle: weeklyMicrocycle.weeks.map(week => ({
+      mesocycle: guardedMicrocycleWeeks.map(week => ({
         week: week.week,
         phase: week.phase,
         focus: week.focus,
@@ -672,9 +691,10 @@ const AIBuilderView: React.FC<AIBuilderViewProps> = ({ user, onBack, onDone }) =
       })),
       personalNotes: [
         ...(Array.isArray(baseWorkout.personalNotes) ? baseWorkout.personalNotes : []),
-        `📅 Microciclo automático (${weeklyMicrocycle.weeks.length} semanas) calibrado por sinais reais.`,
-        `🛡️ Risco de lesão: ${preRisk.score}/100 (${preRisk.level}).`
-      ]
+        `📅 Microciclo automático (${guardedMicrocycleWeeks.length} semanas) calibrado por sinais reais.`,
+        `🛡️ Risco de lesão: ${preRisk.score}/100 (${preRisk.level}).`,
+        precisionProfile ? `🎯 Perfil de precisão IA: ${precisionProfile.label} (meta ${precisionProfile.target.targetPrecisionScore}/100).` : ''
+      ].filter(Boolean)
     });
 
     void logFunnelEvent('workout_generation_started', {
@@ -685,7 +705,8 @@ const AIBuilderView: React.FC<AIBuilderViewProps> = ({ user, onBack, onDone }) =
       coldStartMode,
       adaptiveReadiness: effectiveAdaptiveSignal?.readinessScore,
       injuryRiskScore: preRisk.score,
-      injuryRiskLevel: preRisk.level
+      injuryRiskLevel: preRisk.level,
+      precisionSegment: precisionProfile?.segment
     });
 
     const clientExtendedData = {
@@ -697,7 +718,13 @@ const AIBuilderView: React.FC<AIBuilderViewProps> = ({ user, onBack, onDone }) =
       previousWorkouts: [],
       recentProgress: observations || '',
       adaptiveSignal: effectiveAdaptiveSignal,
-      injuryRisk: preRisk
+      injuryRisk: preRisk,
+      precisionProfile: precisionProfile
+        ? {
+          segment: precisionProfile.segment,
+          targetScore: precisionProfile.target.targetPrecisionScore
+        }
+        : null
     };
 
     try {
@@ -750,7 +777,8 @@ const AIBuilderView: React.FC<AIBuilderViewProps> = ({ user, onBack, onDone }) =
                 : '',
               selectedClient.injuries && selectedClient.injuries.toLowerCase() !== 'nenhuma'
                 ? `⚠️ Considerando: ${selectedClient.injuries.split('-')[0].trim()}`
-                : ''
+                : '',
+              precisionProfile ? `🎯 Política de precisão: ${precisionProfile.label}` : ''
             ].filter(Boolean),
             optionLabel: 'Engine'
           };
@@ -766,7 +794,8 @@ const AIBuilderView: React.FC<AIBuilderViewProps> = ({ user, onBack, onDone }) =
             clientId: selectedClient.id,
             optionsCount: 1,
             coldStartMode,
-            injuryRiskScore: preRisk.score
+            injuryRiskScore: preRisk.score,
+            precisionSegment: precisionProfile?.segment
           });
           setLoading(false);
           setActiveTabIndex(0);
@@ -820,6 +849,9 @@ const AIBuilderView: React.FC<AIBuilderViewProps> = ({ user, onBack, onDone }) =
           if (effectiveAdaptiveSignal) {
             personalNotes.push(`🧠 Readiness ${effectiveAdaptiveSignal.readinessScore}/100 • ${effectiveAdaptiveSignal.fatigueLevel === 'high' ? 'fadiga alta' : effectiveAdaptiveSignal.fatigueLevel === 'moderate' ? 'fadiga moderada' : 'fadiga baixa'}`);
           }
+          if (precisionProfile) {
+            personalNotes.push(`🎯 Política de precisão: ${precisionProfile.label} (meta ${precisionProfile.target.targetPrecisionScore}/100).`);
+          }
           const resultWithNotes = { ...mappedResult, personalNotes, optionLabel: idx === 0 ? 'Clássico' : idx === 1 ? 'Avançado' : 'Funcional' };
           const withColdStart = coldStartMode ? applyColdStartProtocol(resultWithNotes) : resultWithNotes;
           return applyMicrocycle(withColdStart);
@@ -834,7 +866,8 @@ const AIBuilderView: React.FC<AIBuilderViewProps> = ({ user, onBack, onDone }) =
           optionsCount: successfulResults.length,
           coldStartMode,
           adaptiveReadiness: effectiveAdaptiveSignal?.readinessScore,
-          injuryRiskScore: preRisk.score
+          injuryRiskScore: preRisk.score,
+          precisionSegment: precisionProfile?.segment
         });
       } else {
         // Fallback to local generation
@@ -850,7 +883,8 @@ const AIBuilderView: React.FC<AIBuilderViewProps> = ({ user, onBack, onDone }) =
           clientId: selectedClient.id,
           coldStartMode,
           adaptiveReadiness: effectiveAdaptiveSignal?.readinessScore,
-          injuryRiskScore: preRisk.score
+          injuryRiskScore: preRisk.score,
+          precisionSegment: precisionProfile?.segment
         });
       }
     } catch (error) {
@@ -859,6 +893,7 @@ const AIBuilderView: React.FC<AIBuilderViewProps> = ({ user, onBack, onDone }) =
         clientId: selectedClient.id,
         coldStartMode,
         adaptiveReadiness: effectiveAdaptiveSignal?.readinessScore,
+        precisionSegment: precisionProfile?.segment,
         error: error instanceof Error ? error.message : 'unknown_error'
       });
       const localExercisesForFallback = await ensureExerciseCatalog();
@@ -873,7 +908,8 @@ const AIBuilderView: React.FC<AIBuilderViewProps> = ({ user, onBack, onDone }) =
         clientId: selectedClient.id,
         coldStartMode,
         adaptiveReadiness: effectiveAdaptiveSignal?.readinessScore,
-        injuryRiskScore: preRisk.score
+        injuryRiskScore: preRisk.score,
+        precisionSegment: precisionProfile?.segment
       });
     } finally {
       setLoading(false);
@@ -902,7 +938,8 @@ const AIBuilderView: React.FC<AIBuilderViewProps> = ({ user, onBack, onDone }) =
         void logFunnelEvent('workout_save_started', {
           coachId: user.id,
           clientId: selectedClient.id,
-          coldStartMode: !!result?.coldStartMode
+          coldStartMode: !!result?.coldStartMode,
+          precisionSegment: precisionProfile?.segment
         });
         const { saveAIWorkout } = await loadWorkoutsDomain();
         // Prepare metadata
@@ -912,6 +949,22 @@ const AIBuilderView: React.FC<AIBuilderViewProps> = ({ user, onBack, onDone }) =
           generatedAt: new Date().toISOString(),
           coldStartMode: !!result?.coldStartMode,
           calibrationPlan: result?.calibrationPlan || null,
+          injuryRisk: injuryRisk
+            ? {
+              score: injuryRisk.score,
+              level: injuryRisk.level
+            }
+            : null,
+          precisionProfile: precisionProfile
+            ? {
+              segment: precisionProfile.segment,
+              label: precisionProfile.label,
+              targetPrecisionScore: precisionProfile.target.targetPrecisionScore,
+              maxMeanRpeError: precisionProfile.target.maxMeanRpeError,
+              maxMeanRirError: precisionProfile.target.maxMeanRirError,
+              maxPainRate: precisionProfile.target.maxPainRate
+            }
+            : null,
           clientData: {
             injuries: selectedClient.injuries,
             preferences: selectedClient.preferences,
@@ -930,7 +983,8 @@ const AIBuilderView: React.FC<AIBuilderViewProps> = ({ user, onBack, onDone }) =
         void logFunnelEvent('workout_save_succeeded', {
           coachId: user.id,
           clientId: selectedClient.id,
-          coldStartMode: !!result?.coldStartMode
+          coldStartMode: !!result?.coldStartMode,
+          precisionSegment: precisionProfile?.segment
         });
       }
     } catch (error) {
@@ -938,6 +992,7 @@ const AIBuilderView: React.FC<AIBuilderViewProps> = ({ user, onBack, onDone }) =
       void logFunnelEvent('workout_save_failed', {
         coachId: user.id,
         clientId: selectedClient?.id,
+        precisionSegment: precisionProfile?.segment,
         error: error instanceof Error ? error.message : 'unknown_error'
       });
     } finally {
@@ -1218,6 +1273,20 @@ const AIBuilderView: React.FC<AIBuilderViewProps> = ({ user, onBack, onDone }) =
                   : injuryRisk.conservativeMode
                     ? 'Planner em modo conservador: IA reduzirá estímulo e progressão.'
                     : 'Risco controlado: progressão padrão com monitoramento.'}
+              </p>
+            </div>
+          )}
+
+          {selectedClient && precisionProfile && (
+            <div className="mt-4 glass-card rounded-[24px] p-4 border border-indigo-500/30 bg-indigo-500/10">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-[10px] font-black uppercase tracking-widest text-indigo-300">Precisão da IA</p>
+                <p className="text-[10px] text-indigo-100">{precisionProfile.segment}</p>
+              </div>
+              <p className="text-sm text-white font-bold mb-1">{precisionProfile.label}</p>
+              <p className="text-xs text-slate-300 mb-2">{precisionProfile.rationale}</p>
+              <p className="text-[11px] text-indigo-100">
+                Meta: {precisionProfile.target.targetPrecisionScore}/100 · erro RPE ≤ {precisionProfile.target.maxMeanRpeError} · erro RIR ≤ {precisionProfile.target.maxMeanRirError}
               </p>
             </div>
           )}

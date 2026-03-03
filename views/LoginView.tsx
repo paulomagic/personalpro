@@ -7,6 +7,11 @@ import { calculateLockDurationMs, getRemainingLockSeconds, isLockedOut } from '.
 import { persistLockoutState, readLockoutState } from '../services/auth/lockoutStorage';
 import { checkAuthGuard } from '../services/auth/authGuard';
 import { validateTurnstileToken } from '../services/auth/turnstile';
+import {
+  canBypassCaptchaWidgetFailure,
+  isCaptchaServiceUnavailableError,
+  resolveCaptchaStrictMode
+} from '../services/auth/captchaPolicy';
 
 interface LoginViewProps {
   onLogin: (user: AppSessionUser | null) => void;
@@ -40,6 +45,9 @@ const InputField: React.FC<InputFieldProps> = ({ id, label, type, placeholder, v
 const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
   const SUPABASE_URL = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SUPABASE_URL) || '';
   const TURNSTILE_SITE_KEY = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_TURNSTILE_SITE_KEY) || '';
+  const CAPTCHA_STRICT_MODE = resolveCaptchaStrictMode(
+    (typeof import.meta !== 'undefined' && import.meta.env?.VITE_CAPTCHA_STRICT_MODE) || undefined
+  );
   const [currentSlide, setCurrentSlide] = useState(0);
   const [showRegister, setShowRegister] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
@@ -59,15 +67,23 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
   const [isInviteMode, setIsInviteMode] = useState(false);
   const [captchaToken, setCaptchaToken] = useState('');
   const [captchaWidgetKey, setCaptchaWidgetKey] = useState(0);
+  const [captchaWidgetFailed, setCaptchaWidgetFailed] = useState(false);
   const isCaptchaEnabled = Boolean(TURNSTILE_SITE_KEY && SUPABASE_URL && supabase);
+  const allowCaptchaBypass = canBypassCaptchaWidgetFailure({
+    captchaEnabled: isCaptchaEnabled,
+    widgetFailed: captchaWidgetFailed,
+    strictMode: CAPTCHA_STRICT_MODE
+  });
 
   const resetCaptcha = () => {
     setCaptchaToken('');
+    setCaptchaWidgetFailed(false);
     setCaptchaWidgetKey(prev => prev + 1);
   };
 
   const ensureCaptchaValidated = async () => {
     if (!isCaptchaEnabled) return true;
+    if (allowCaptchaBypass) return true;
     if (!captchaToken) {
       setError('Confirme o CAPTCHA para continuar.');
       return false;
@@ -76,6 +92,10 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
     const captchaResult = await validateTurnstileToken(captchaToken, SUPABASE_URL);
     resetCaptcha();
     if (!captchaResult.valid) {
+      if (!CAPTCHA_STRICT_MODE && isCaptchaServiceUnavailableError(captchaResult.error)) {
+        setError('Validação de CAPTCHA indisponível. Continuando com proteção secundária.');
+        return true;
+      }
       setError(captchaResult.error || 'Falha na validação do CAPTCHA.');
       return false;
     }
@@ -460,6 +480,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
               siteKey={TURNSTILE_SITE_KEY}
               onSuccess={(token) => {
                 setCaptchaToken(token);
+                setCaptchaWidgetFailed(false);
                 if (error && error.toLowerCase().includes('captcha')) {
                   setError(null);
                 }
@@ -467,7 +488,12 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
               onExpire={() => setCaptchaToken('')}
               onError={() => {
                 setCaptchaToken('');
-                setError('Não foi possível carregar o CAPTCHA. Atualize e tente novamente.');
+                setCaptchaWidgetFailed(true);
+                if (CAPTCHA_STRICT_MODE) {
+                  setError('Não foi possível carregar o CAPTCHA. Atualize e tente novamente.');
+                } else {
+                  setError('CAPTCHA indisponível no momento. Você pode continuar com proteção secundária.');
+                }
               }}
               options={{
                 theme: 'dark',
@@ -475,8 +501,24 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
               }}
             />
             <p className="mt-2 text-xs text-slate-400">
-              {captchaToken ? 'Verificação de segurança concluída.' : 'Confirme a verificação de segurança para continuar.'}
+              {allowCaptchaBypass
+                ? 'CAPTCHA em fallback. Rate limit e proteção de autenticação continuam ativos.'
+                : captchaToken
+                  ? 'Verificação de segurança concluída.'
+                  : 'Confirme a verificação de segurança para continuar.'}
             </p>
+            {captchaWidgetFailed && (
+              <button
+                type="button"
+                onClick={() => {
+                  setError(null);
+                  resetCaptcha();
+                }}
+                className="mt-3 text-xs font-semibold text-blue-400 hover:text-blue-300"
+              >
+                Tentar recarregar o CAPTCHA
+              </button>
+            )}
           </div>
         )}
         <button

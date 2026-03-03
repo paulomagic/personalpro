@@ -5,7 +5,7 @@ const { execSync } = require('child_process');
 console.log('\x1b[36m%s\x1b[0m', '🛡️  Iniciando Verificação de Segurança PersonalPro...');
 
 let hasErrors = false;
-const OPTIONAL_ENV_KEYS = new Set(['VITE_TURNSTILE_SITE_KEY']);
+const OPTIONAL_ENV_KEYS = new Set(['VITE_TURNSTILE_SITE_KEY', 'VITE_CAPTCHA_STRICT_MODE']);
 
 // 1. Verificar vulnerabilidades npm
 console.log('\n📦 Verificando dependências (npm audit)...');

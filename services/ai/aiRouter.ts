@@ -75,11 +75,28 @@ interface ModelCandidate {
     reason: string;
 }
 
+function resolveGroqModel(envValue: string | undefined, fallback: string): string {
+    const normalized = (envValue || '').trim();
+    return normalized || fallback;
+}
+
 const GROQ_MODELS = {
-    operational: (typeof import.meta !== 'undefined' && import.meta.env?.VITE_GROQ_MODEL_OPERATIONAL) || 'openai/gpt-oss-20b',
-    reasoning: (typeof import.meta !== 'undefined' && import.meta.env?.VITE_GROQ_MODEL_REASONING) || 'deepseek-r1-distill-llama-70b',
-    fallback: (typeof import.meta !== 'undefined' && import.meta.env?.VITE_GROQ_MODEL_FALLBACK) || 'qwen/qwen3-32b',
-    narrative: (typeof import.meta !== 'undefined' && import.meta.env?.VITE_GROQ_MODEL_NARRATIVE) || 'llama-3.3-70b-versatile'
+    operational: resolveGroqModel(
+        typeof import.meta !== 'undefined' ? import.meta.env?.VITE_GROQ_MODEL_OPERATIONAL : undefined,
+        'openai/gpt-oss-20b'
+    ),
+    reasoning: resolveGroqModel(
+        typeof import.meta !== 'undefined' ? import.meta.env?.VITE_GROQ_MODEL_REASONING : undefined,
+        'deepseek-r1-distill-llama-70b'
+    ),
+    fallback: resolveGroqModel(
+        typeof import.meta !== 'undefined' ? import.meta.env?.VITE_GROQ_MODEL_FALLBACK : undefined,
+        'qwen/qwen3-32b'
+    ),
+    narrative: resolveGroqModel(
+        typeof import.meta !== 'undefined' ? import.meta.env?.VITE_GROQ_MODEL_NARRATIVE : undefined,
+        'llama-3.3-70b-versatile'
+    )
 } as const;
 
 const TRAINING_ACTIONS = new Set<ActionType>(['training_intent', 'refine']);

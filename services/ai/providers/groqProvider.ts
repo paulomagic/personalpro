@@ -9,12 +9,17 @@ import { buildEdgeAuthHeaders } from './edgeHeaders';
 const SUPABASE_URL = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SUPABASE_URL) || '';
 const SUPABASE_ANON_KEY = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SUPABASE_ANON_KEY) || '';
 const GROQ_PROXY_URL = `${SUPABASE_URL}/functions/v1/groq-proxy`;
-const GROQ_OPERATIONAL_MODEL = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_GROQ_MODEL_OPERATIONAL) || 'openai/gpt-oss-20b';
+const GROQ_OPERATIONAL_MODEL = ((typeof import.meta !== 'undefined' && import.meta.env?.VITE_GROQ_MODEL_OPERATIONAL) || 'openai/gpt-oss-20b').trim();
 
 const isDev = typeof import.meta !== 'undefined' && import.meta.env?.DEV;
 
 function estimateTokens(text: string): number {
     return Math.ceil(text.length / 4);
+}
+
+function normalizeModelName(model: string | undefined | null, fallback: string): string {
+    const normalized = (model || '').trim();
+    return normalized || fallback;
 }
 
 function safeJsonParse(text: string): any | null {
@@ -41,7 +46,7 @@ export const groqProvider: AIProvider = {
     async execute(request: ProviderRequest): Promise<ProviderResponse> {
         const startTime = Date.now();
         const tokensInput = estimateTokens(request.prompt);
-        const requestedModel = request.modelOverride || GROQ_OPERATIONAL_MODEL;
+        const requestedModel = normalizeModelName(request.modelOverride, GROQ_OPERATIONAL_MODEL);
 
         if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
             return {

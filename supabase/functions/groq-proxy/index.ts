@@ -11,9 +11,14 @@ import { buildRateLimitHeaders, checkRateLimit } from "../_shared/rateLimit.ts";
 
 const GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions";
 
+function normalizeModelName(value: string | null | undefined, fallback: string): string {
+    const normalized = (value || "").trim();
+    return normalized || fallback;
+}
+
 // Models
-const MODEL_DEFAULT = Deno.env.get("GROQ_MODEL_DEFAULT") || "openai/gpt-oss-20b";
-const MODEL_FALLBACK = Deno.env.get("GROQ_MODEL_FALLBACK") || "qwen/qwen3-32b";
+const MODEL_DEFAULT = normalizeModelName(Deno.env.get("GROQ_MODEL_DEFAULT"), "openai/gpt-oss-20b");
+const MODEL_FALLBACK = normalizeModelName(Deno.env.get("GROQ_MODEL_FALLBACK"), "qwen/qwen3-32b");
 
 function getAllowedOrigins(): string[] {
     const raw = Deno.env.get("ALLOWED_ORIGINS") || "";
@@ -116,6 +121,7 @@ async function callGroq(
     action?: string
 ): Promise<GroqCallResult> {
     try {
+        const modelName = normalizeModelName(model, MODEL_DEFAULT);
         const isStructuredAction = action === 'training_intent' || action === 'refine';
 
         const response = await fetch(GROQ_API_URL, {
@@ -125,7 +131,7 @@ async function callGroq(
                 "Authorization": `Bearer ${apiKey}`,
             },
             body: JSON.stringify({
-                model,
+                model: modelName,
                 messages: [
                     {
                         role: "system",
@@ -279,7 +285,7 @@ serve(async (req: Request) => {
         }
 
         let result: GroqCallResult;
-        let modelUsed = model || MODEL_DEFAULT;
+        let modelUsed = normalizeModelName(model, MODEL_DEFAULT);
 
         // Try primary model
         console.log(`[groq-proxy] Trying ${modelUsed}...`);

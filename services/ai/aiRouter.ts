@@ -76,9 +76,9 @@ interface ModelCandidate {
 }
 
 const GROQ_MODELS = {
-    operational: (typeof import.meta !== 'undefined' && import.meta.env?.VITE_GROQ_MODEL_OPERATIONAL) || 'openai/gpt-oss-20b',
+    operational: (typeof import.meta !== 'undefined' && import.meta.env?.VITE_GROQ_MODEL_OPERATIONAL) || 'llama-3.1-8b-instant',
     reasoning: (typeof import.meta !== 'undefined' && import.meta.env?.VITE_GROQ_MODEL_REASONING) || 'deepseek-r1-distill-llama-70b',
-    fallback: (typeof import.meta !== 'undefined' && import.meta.env?.VITE_GROQ_MODEL_FALLBACK) || 'qwen/qwen3-32b',
+    fallback: (typeof import.meta !== 'undefined' && import.meta.env?.VITE_GROQ_MODEL_FALLBACK) || 'mixtral-8x7b-32768',
     narrative: (typeof import.meta !== 'undefined' && import.meta.env?.VITE_GROQ_MODEL_NARRATIVE) || 'llama-3.3-70b-versatile'
 } as const;
 

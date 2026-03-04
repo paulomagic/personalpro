@@ -76,9 +76,9 @@ interface ModelCandidate {
 }
 
 const GROQ_MODELS = {
-    operational: (typeof import.meta !== 'undefined' && import.meta.env?.VITE_GROQ_MODEL_OPERATIONAL) || 'llama-3.1-8b-instant',
+    operational: (typeof import.meta !== 'undefined' && import.meta.env?.VITE_GROQ_MODEL_OPERATIONAL) || 'openai/gpt-oss-20b',
     reasoning: (typeof import.meta !== 'undefined' && import.meta.env?.VITE_GROQ_MODEL_REASONING) || 'deepseek-r1-distill-llama-70b',
-    fallback: (typeof import.meta !== 'undefined' && import.meta.env?.VITE_GROQ_MODEL_FALLBACK) || 'mixtral-8x7b-32768',
+    fallback: (typeof import.meta !== 'undefined' && import.meta.env?.VITE_GROQ_MODEL_FALLBACK) || 'qwen/qwen3-32b',
     narrative: (typeof import.meta !== 'undefined' && import.meta.env?.VITE_GROQ_MODEL_NARRATIVE) || 'llama-3.3-70b-versatile'
 } as const;
 
@@ -140,14 +140,17 @@ export class AIRouter {
         const state = this.getHealthState(providerName, model);
         const error = String(errorMessage || '').toLowerCase();
         const isRateLimit = error.includes('429') || error.includes('rate');
+        const isModelNotFound = error.includes('model_not_found')
+            || error.includes('model not found')
+            || error.includes('does not exist');
 
-        state.score = Math.max(-20, state.score - (isRateLimit ? 4 : 2));
+        state.score = Math.max(-20, state.score - (isRateLimit ? 4 : isModelNotFound ? 8 : 2));
         state.consecutiveFailures += 1;
         state.lastError = errorMessage;
         state.lastUsedAt = Date.now();
 
-        if (isRateLimit || state.consecutiveFailures >= 3) {
-            const cooldownMs = isRateLimit ? 30_000 : 10_000;
+        if (isModelNotFound || isRateLimit || state.consecutiveFailures >= 3) {
+            const cooldownMs = isModelNotFound ? 10 * 60_000 : isRateLimit ? 30_000 : 10_000;
             state.circuitOpenUntil = Date.now() + cooldownMs;
         }
     }

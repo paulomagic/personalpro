@@ -356,6 +356,7 @@ Sua arquitetura é NEURO-SIMBÓLICA: você usa inteligência para selecionar exe
     constraints.push(`
 === FORMATO DE RESPOSTA (OBRIGATÓRIO) ===
 Responda APENAS com JSON válido, sem markdown, sem introduções.
+Campo "selected" DEVE ser inteiro puro (ex: 1). Não use texto, ordinal, range, null, NaN ou string.
 
 {
   "selected": <número 1-N do exercício escolhido>,

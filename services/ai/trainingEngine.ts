@@ -1001,6 +1001,14 @@ async function selectWithAI(
         candidatesList
     );
 
+    const validationContext = {
+        conditions: ctx.conditions || [],
+        restrictions: ctx.restrictions,
+        biomechProfile: ctx.biomechProfile,
+        level: ctx.level,
+        goal: ctx.goal
+    };
+
     // v3.0: Loop de retry com validação
     for (let attempt = 0; attempt <= MAX_AI_RETRIES; attempt++) {
         try {
@@ -1024,13 +1032,7 @@ async function selectWithAI(
                 const validation = validateAIResponse(
                     result.text,
                     candidates.map(c => c.exercise),
-                    {
-                        conditions: ctx.conditions || [],
-                        restrictions: ctx.restrictions,
-                        biomechProfile: ctx.biomechProfile,
-                        level: ctx.level,
-                        goal: ctx.goal
-                    }
+                    validationContext
                 );
 
                 if (validation.valid && validation.selectedExercise) {
@@ -1046,18 +1048,29 @@ async function selectWithAI(
                     console.warn(`[AI v3.0] ❌ Validation failed (attempt ${attempt + 1}/${MAX_AI_RETRIES + 1}):`);
                     validation.violations.forEach(v => console.warn(`  - ${v}`));
 
+                    const hasNonRecoverableSelectedSchemaError = validation.violations.some((violation) => {
+                        const normalized = violation.toLowerCase();
+                        return normalized.includes('erro de schema')
+                            && normalized.includes('selected')
+                            && (normalized.includes('nan') || normalized.includes('number'));
+                    });
+
+                    if (hasNonRecoverableSelectedSchemaError) {
+                        debugLog('[AI v3.0] 🛡️ Schema selected inválido não recuperável, aplicando fallback seguro imediato');
+                        const safeAlternative = findSafeAlternative(
+                            candidates.map(c => c.exercise),
+                            validationContext
+                        );
+                        if (safeAlternative) return safeAlternative;
+                        break;
+                    }
+
                     // Se é última tentativa, buscar alternativa segura
                     if (attempt === MAX_AI_RETRIES) {
                         debugLog('[AI v3.0] 🔄 Finding safe alternative...');
                         const safeAlternative = findSafeAlternative(
                             candidates.map(c => c.exercise),
-                            {
-                                conditions: ctx.conditions || [],
-                                restrictions: ctx.restrictions,
-                                biomechProfile: ctx.biomechProfile,
-                                level: ctx.level,
-                                goal: ctx.goal
-                            }
+                            validationContext
                         );
                         if (safeAlternative) {
                             debugLog(`[AI v3.0] ✅ Safe alternative found: ${safeAlternative.name}`);

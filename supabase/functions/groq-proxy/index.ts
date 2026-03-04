@@ -1,5 +1,5 @@
 // Supabase Edge Function: groq-proxy
-// Proxies calls to Groq API for LLaMA 3.1 8B
+// Proxies calls to Groq API with model override + fallback
 // Default provider for transactional AI tasks
 //
 // Deploy with: supabase functions deploy groq-proxy
@@ -12,8 +12,8 @@ import { buildRateLimitHeaders, checkRateLimit } from "../_shared/rateLimit.ts";
 const GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions";
 
 // Models
-const MODEL_DEFAULT = "llama-3.3-70b-versatile";
-const MODEL_FALLBACK = "llama-3.1-8b-instant";
+const MODEL_DEFAULT = Deno.env.get("GROQ_MODEL_DEFAULT") || "openai/gpt-oss-20b";
+const MODEL_FALLBACK = Deno.env.get("GROQ_MODEL_FALLBACK") || "qwen/qwen3-32b";
 
 function getAllowedOrigins(): string[] {
     const raw = Deno.env.get("ALLOWED_ORIGINS") || "";
@@ -88,8 +88,9 @@ interface GroqAPIResponse {
         };
     }>;
     error?: {
-        message: string;
-        type: string;
+        message?: string;
+        type?: string;
+        code?: string;
     };
     usage?: {
         prompt_tokens: number;
@@ -97,13 +98,26 @@ interface GroqAPIResponse {
     };
 }
 
+interface GroqCallResult {
+    text: string | null;
+    error: string | null;
+    usage?: { in: number; out: number };
+    isRateLimit?: boolean;
+    isModelNotFound?: boolean;
+    statusCode?: number;
+    errorCode?: string;
+}
+
 // Helper to call Groq API
 async function callGroq(
     apiKey: string,
     model: string,
-    prompt: string
-): Promise<{ text: string | null; error: string | null; usage?: { in: number; out: number }; isRateLimit?: boolean }> {
+    prompt: string,
+    action?: string
+): Promise<GroqCallResult> {
     try {
+        const isStructuredAction = action === 'training_intent' || action === 'refine';
+
         const response = await fetch(GROQ_API_URL, {
             method: "POST",
             headers: {
@@ -122,21 +136,59 @@ async function callGroq(
                         content: prompt
                     }
                 ],
-                temperature: 0.7,
-                max_tokens: 4096,
+                // Ações estruturadas exigem mais consistência e menos aleatoriedade.
+                temperature: isStructuredAction ? 0.2 : 0.7,
+                max_tokens: isStructuredAction ? 1400 : 4096,
             }),
         });
+
+        let data: GroqAPIResponse | null = null;
+        try {
+            data = await response.json();
+        } catch {
+            data = null;
+        }
 
         // 429 = Groq rate limit — fail fast, do NOT retry with another model
         // This avoids doubling API pressure (35 slots * 1 attempt vs 35 * 2 = 70 calls)
         if (response.status === 429) {
-            return { text: null, error: 'rate_limit_exceeded', isRateLimit: true };
+            return {
+                text: null,
+                error: data?.error?.message || 'rate_limit_exceeded',
+                isRateLimit: true,
+                statusCode: 429,
+                errorCode: data?.error?.code || data?.error?.type || 'rate_limit_exceeded'
+            };
         }
 
-        const data: GroqAPIResponse = await response.json();
+        if (!response.ok) {
+            const errorMessage = data?.error?.message || `Groq upstream error (${response.status})`;
+            const errorCode = data?.error?.code || data?.error?.type || `http_${response.status}`;
+            const normalized = `${errorCode} ${errorMessage}`.toLowerCase();
+            const isModelNotFound = response.status === 404
+                || normalized.includes('model_not_found')
+                || normalized.includes('model not found');
+
+            return {
+                text: null,
+                error: errorMessage,
+                statusCode: response.status,
+                errorCode,
+                isModelNotFound
+            };
+        }
 
         if (data.error) {
-            return { text: null, error: data.error.message };
+            const errorCode = data.error.code || data.error.type || 'groq_error';
+            const errorMessage = data.error.message || 'Groq upstream error';
+            const normalized = `${errorCode} ${errorMessage}`.toLowerCase();
+            return {
+                text: null,
+                error: errorMessage,
+                statusCode: 502,
+                errorCode,
+                isModelNotFound: normalized.includes('model_not_found') || normalized.includes('model not found')
+            };
         }
 
         const text = data.choices?.[0]?.message?.content || null;
@@ -145,9 +197,9 @@ async function callGroq(
             out: data.usage.completion_tokens
         } : undefined;
 
-        return { text, error: null, usage };
+        return { text, error: text ? null : 'empty_response', usage, statusCode: 200, errorCode: text ? undefined : 'empty_response' };
     } catch (error) {
-        return { text: null, error: String(error) };
+        return { text: null, error: String(error), statusCode: 502, errorCode: 'network_error' };
     }
 }
 
@@ -226,12 +278,12 @@ serve(async (req: Request) => {
             );
         }
 
-        let result: { text: string | null; error: string | null; usage?: { in: number; out: number }; isRateLimit?: boolean };
+        let result: GroqCallResult;
         let modelUsed = model || MODEL_DEFAULT;
 
         // Try primary model
         console.log(`[groq-proxy] Trying ${modelUsed}...`);
-        result = await callGroq(apiKey, modelUsed, prompt);
+        result = await callGroq(apiKey, modelUsed, prompt, action);
 
         // If rate limited, return 429 immediately — do NOT try fallback model.
         // This avoids doubling the Groq API pressure per workout generation.
@@ -239,7 +291,13 @@ serve(async (req: Request) => {
         if (result.isRateLimit) {
             console.warn(`[groq-proxy] Rate limited by Groq — returning 429 to client (fast fail)`);
             return new Response(
-                JSON.stringify({ success: false, error: 'rate_limit_exceeded' }),
+                JSON.stringify({
+                    success: false,
+                    error: 'rate_limit_exceeded',
+                    code: result.errorCode || 'rate_limit_exceeded',
+                    details: result.error,
+                    model_attempted: modelUsed
+                }),
                 { status: 429, headers: jsonHeaders }
             );
         }
@@ -248,7 +306,7 @@ serve(async (req: Request) => {
         if (!result.text && modelUsed !== MODEL_FALLBACK) {
             console.warn(`[groq-proxy] Primary failed: ${result.error}, trying fallback model...`);
             modelUsed = MODEL_FALLBACK;
-            result = await callGroq(apiKey, modelUsed, prompt);
+            result = await callGroq(apiKey, modelUsed, prompt, action);
         }
 
         const latencyMs = Date.now() - startTime;
@@ -267,13 +325,22 @@ serve(async (req: Request) => {
                 { status: 200, headers: jsonHeaders }
             );
         } else {
-            console.error(`[groq-proxy] All models failed: ${result.error}`);
+            console.error(`[groq-proxy] All models failed: ${result.error} (code=${result.errorCode || 'unknown'}, status=${result.statusCode || 'n/a'})`);
+            const status = result.isModelNotFound
+                ? 404
+                : result.statusCode && result.statusCode >= 400 && result.statusCode < 500
+                    ? result.statusCode
+                    : 502;
             return new Response(
                 JSON.stringify({
                     success: false,
                     error: "AI generation failed",
+                    code: result.errorCode || (result.isModelNotFound ? 'model_not_found' : 'upstream_error'),
+                    details: result.error,
+                    model_attempted: modelUsed,
+                    upstream_status: result.statusCode || null
                 }),
-                { status: 500, headers: jsonHeaders }
+                { status, headers: jsonHeaders }
             );
         }
     } catch (error) {

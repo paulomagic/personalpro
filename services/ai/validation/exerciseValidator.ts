@@ -13,8 +13,23 @@ import type { Exercise } from '../../exerciseService';
  * Schema para a resposta estruturada da IA
  */
 export const AISelectionResponseSchema = z.object({
-    // z.coerce.number() handles AI responses that return "1" (string) instead of 1 (number)
-    selected: z.coerce.number().int().min(1).max(20),
+    // Normaliza variações comuns da IA ("1", "opção 1", "1º", etc.) para inteiro
+    selected: z.preprocess((value) => {
+        if (typeof value === 'number') return value;
+        if (typeof value === 'string') {
+            const trimmed = value.trim();
+            if (!trimmed) return value;
+            const direct = Number(trimmed);
+            if (Number.isFinite(direct)) return direct;
+
+            const firstInteger = trimmed.match(/-?\d+/);
+            if (firstInteger) {
+                const parsed = Number(firstInteger[0]);
+                if (Number.isFinite(parsed)) return parsed;
+            }
+        }
+        return value;
+    }, z.number().int().min(1).max(20)),
     reasoning: z.string().min(5).max(500).optional(),  // Made optional to handle varied AI responses
     safety_check: z.object({
         kinetic_chain: z.enum(['fechada', 'aberta']).optional(),
@@ -276,7 +291,16 @@ export function validateAIResponse(
         }
 
         const jsonParsed = JSON.parse(cleanText);
-        parsed = AISelectionResponseSchema.parse(jsonParsed);
+        const normalizedParsed = (
+            jsonParsed && typeof jsonParsed === 'object' && 'selected' in jsonParsed
+        )
+            ? jsonParsed
+            : {
+                ...jsonParsed,
+                selected: jsonParsed?.selection ?? jsonParsed?.selected_index ?? jsonParsed?.choice
+            };
+
+        parsed = AISelectionResponseSchema.parse(normalizedParsed);
     } catch (error: any) {
         return {
             valid: false,

@@ -6,6 +6,13 @@ import PageHeader from '../components/PageHeader';
 import { BottomSheet } from '../components/BottomSheet';
 import { User, Bell, Palette, Shield, CreditCard, HelpCircle, ChevronRight, Edit3, LogOut } from 'lucide-react';
 import { useTheme, type ThemeMode } from '../services/ThemeContext';
+import {
+    isPushSupported,
+    loadNotificationPrefs,
+    saveNotificationPrefs,
+    subscribeToPushNotifications,
+    unsubscribeFromPushNotifications
+} from '../services/pushNotifications';
 
 interface SettingsViewProps {
     user?: any;
@@ -47,12 +54,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user, onBack, onLogout }) =
     const [saving, setSaving] = React.useState(false);
 
     // States for Notifications
-    const [notifState, setNotifState] = React.useState({
-        push: false,
-        email: false,
-        sms: true,
-        promo: false
-    });
+    const [notifState, setNotifState] = React.useState(() => loadNotificationPrefs());
     const [newPassword, setNewPassword] = React.useState('');
     const [confirmPassword, setConfirmPassword] = React.useState('');
     const [securitySaving, setSecuritySaving] = React.useState(false);
@@ -61,18 +63,104 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user, onBack, onLogout }) =
     const [toastMessage, setToastMessage] = React.useState<string | null>(null);
     const [toastType, setToastType] = React.useState<'success' | 'error'>('success');
 
+    const syncPushSubscription = React.useCallback(async (subscription: PushSubscription | null) => {
+        if (!supabase || !user?.id) return;
+        try {
+            if (!subscription) {
+                await supabase
+                    .from('push_subscriptions')
+                    .delete()
+                    .eq('user_id', user.id);
+                return;
+            }
+
+            await supabase
+                .from('push_subscriptions')
+                .upsert({
+                    user_id: user.id,
+                    endpoint: subscription.endpoint,
+                    p256dh: subscription.toJSON()?.keys?.p256dh || null,
+                    auth: subscription.toJSON()?.keys?.auth || null,
+                    updated_at: new Date().toISOString()
+                }, {
+                    onConflict: 'user_id,endpoint'
+                });
+        } catch {
+            // tabela/back-end pode não estar provisionado ainda
+        }
+    }, [user?.id]);
+
     const showToast = (msg: string, type: 'success' | 'error' = 'success') => {
         setToastMessage(msg);
         setToastType(type);
         setTimeout(() => setToastMessage(null), 3000);
     };
 
-    const toggleNotif = (key: keyof typeof notifState) => {
+    React.useEffect(() => {
+        setNotifState(loadNotificationPrefs());
+    }, []);
+
+    React.useEffect(() => {
+        let cancelled = false;
+        if (!isPushSupported()) return;
+
+        navigator.serviceWorker.ready
+            .then((registration) => registration.pushManager.getSubscription())
+            .then((subscription) => {
+                if (cancelled || !subscription) return;
+                setNotifState((prev) => {
+                    if (prev.push) return prev;
+                    const next = { ...prev, push: true };
+                    saveNotificationPrefs(next);
+                    return next;
+                });
+            })
+            .catch(() => {
+                // noop
+            });
+
+        return () => {
+            cancelled = true;
+        };
+    }, []);
+
+    const toggleNotif = async (key: keyof typeof notifState) => {
         if (key === 'push') {
-            showToast('Push notifications em breve.', 'error');
+            if (!isPushSupported()) {
+                showToast('Push não suportado neste navegador.', 'error');
+                return;
+            }
+
+            if (notifState.push) {
+                const result = await unsubscribeFromPushNotifications();
+                if (!result.success) {
+                    showToast(result.message, 'error');
+                    return;
+                }
+                await syncPushSubscription(null);
+                const next = { ...notifState, push: false };
+                setNotifState(next);
+                saveNotificationPrefs(next);
+                showToast(result.message);
+                return;
+            }
+
+            const result = await subscribeToPushNotifications();
+            if (!result.success) {
+                showToast(result.message, 'error');
+                return;
+            }
+            await syncPushSubscription(result.subscription || null);
+            const next = { ...notifState, push: true };
+            setNotifState(next);
+            saveNotificationPrefs(next);
+            showToast(result.message);
             return;
         }
-        setNotifState(prev => ({ ...prev, [key]: !prev[key] }));
+
+        const next = { ...notifState, [key]: !notifState[key] };
+        setNotifState(next);
+        saveNotificationPrefs(next);
     };
 
     const menuItems = [
@@ -110,11 +198,9 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user, onBack, onLogout }) =
         }
     };
 
-    // Save notification preferences (stored in localStorage for now)
     const handleSaveNotifications = () => {
-        const persisted = { ...notifState, push: false };
-        localStorage.setItem('apex_notifications', JSON.stringify(persisted));
-        showToast('Preferências salvas. Push será liberado em breve.');
+        saveNotificationPrefs(notifState);
+        showToast('Preferências de notificação salvas.');
         setActiveModal(null);
     };
 
@@ -336,7 +422,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user, onBack, onLogout }) =
                         </div>
                         <div className="space-y-3 mb-8">
                             {[
-                                { key: 'push', label: 'Push Notifications', sub: 'Alertas no celular', comingSoon: true },
+                                { key: 'push', label: 'Push Notifications', sub: isPushSupported() ? 'Alertas no celular' : 'Indisponível neste navegador', comingSoon: !isPushSupported() },
                                 { key: 'email', label: 'Emails', sub: 'Resumos e relatórios' },
                                 { key: 'sms', label: 'SMS', sub: 'Avisos urgentes' },
                                 { key: 'promo', label: 'Marketing', sub: 'Novidades e ofertas' }

@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v33';
+const CACHE_VERSION = 'v34';
 const STATIC_CACHE = `personalpro-static-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `personalpro-runtime-${CACHE_VERSION}`;
 const API_CACHE = `personalpro-api-${CACHE_VERSION}`;
@@ -221,6 +221,64 @@ self.addEventListener('fetch', (event) => {
         if (cached) return cached;
         return new Response('', { status: 503, statusText: 'offline' });
     }));
+});
+
+self.addEventListener('push', (event) => {
+    let payload = {};
+    try {
+        payload = event.data ? event.data.json() : {};
+    } catch (_error) {
+        payload = { body: event.data?.text?.() || 'Você tem uma nova atualização.' };
+    }
+
+    const title = payload.title || 'Apex PersonalPro';
+    const options = {
+        body: payload.body || 'Você tem uma nova atualização.',
+        icon: payload.icon || '/icons/icon-192.png',
+        badge: payload.badge || '/icons/icon-192.png',
+        tag: payload.tag || 'apex-push',
+        data: {
+            url: payload.url || '/dashboard',
+            ...(payload.data || {})
+        }
+    };
+
+    event.waitUntil(self.registration.showNotification(title, options));
+});
+
+self.addEventListener('notificationclick', (event) => {
+    event.notification.close();
+    const targetUrl = event.notification?.data?.url || '/dashboard';
+
+    event.waitUntil((async () => {
+        const allClients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+        for (const client of allClients) {
+            if ('focus' in client) {
+                client.focus();
+                client.navigate(targetUrl);
+                return;
+            }
+        }
+        await self.clients.openWindow(targetUrl);
+    })());
+});
+
+self.addEventListener('sync', (event) => {
+    const tag = event.tag;
+    if (tag !== 'flush-feedback-queue' && tag !== 'flush-ai-generation-feedback-queue') {
+        return;
+    }
+
+    event.waitUntil((async () => {
+        const clients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+        const messageType = tag === 'flush-feedback-queue'
+            ? 'SYNC_FEEDBACK_QUEUE'
+            : 'SYNC_AI_GENERATION_FEEDBACK_QUEUE';
+
+        clients.forEach((client) => {
+            client.postMessage({ type: messageType });
+        });
+    })());
 });
 
 self.addEventListener('message', (event) => {

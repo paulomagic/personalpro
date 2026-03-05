@@ -297,7 +297,7 @@ const ClientProfileView: React.FC<ClientProfileViewProps> = ({ client: initialCl
   };
 
   return (
-    <div className="max-w-md mx-auto min-h-screen text-white selection:bg-cyan-500/20" style={{ background: 'var(--bg-void)' }}>
+    <div className="max-w-md mx-auto min-h-screen text-white selection:bg-cyan-500/20 bg-[var(--bg-void)]">
       <ClientProfileHeroHeader
         client={client}
         coachId={coachId}
@@ -311,39 +311,28 @@ const ClientProfileView: React.FC<ClientProfileViewProps> = ({ client: initialCl
       {/* Premium Segmented Control (Tabs) */}
       <div className="px-5 mt-6 mb-2">
         <div
-          className="flex rounded-[18px] backdrop-blur-md p-1 relative"
-          style={isLightTheme
-            ? {
-              background: 'linear-gradient(145deg, rgba(123, 141, 171, 0.45), rgba(109, 128, 162, 0.5))',
-              border: '1px solid rgba(130, 170, 235, 0.38)',
-              boxShadow: 'inset 0 1px 0 rgba(224, 236, 255, 0.25)',
-            }
-            : {
-              background: 'rgba(15, 23, 42, 0.6)',
-              border: '1px solid rgba(255,255,255,0.05)',
-            }}
+          className={`flex rounded-[18px] backdrop-blur-md p-1 relative border ${isLightTheme
+            ? 'bg-[linear-gradient(145deg,rgba(123,141,171,0.45),rgba(109,128,162,0.5))] border-[rgba(130,170,235,0.38)] shadow-[inset_0_1px_0_rgba(224,236,255,0.25)]'
+            : 'bg-[rgba(15,23,42,0.6)] border-[rgba(255,255,255,0.05)]'
+            }`}
         >
           {tabs.map((tab, idx) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
               className={`relative z-10 flex-1 py-3 px-2 rounded-[14px] flex items-center justify-center transition-all ${activeTab === tab
-                ? ''
+                ? 'text-[var(--btn-primary-text)]'
                 : 'text-slate-500 hover:text-slate-300'
                 }`}
-              style={activeTab === tab ? { color: 'var(--btn-primary-text)' } : undefined}
             >
               <span className="text-[11px] font-black uppercase tracking-wider">{tab}</span>
             </button>
           ))}
           {/* Active Background Pill */}
           <motion.div
-            className="absolute top-1 bottom-1 rounded-[14px] z-0"
+            className="absolute top-1 bottom-1 rounded-[14px] z-0 bg-[var(--btn-primary-bg)] border border-[var(--btn-primary-border)] shadow-[var(--btn-primary-shadow)]"
             style={{
               width: `${100 / tabs.length}%`,
-              background: 'var(--btn-primary-bg)',
-              border: '1px solid var(--btn-primary-border)',
-              boxShadow: 'var(--btn-primary-shadow)',
             }}
             animate={{
               left: `calc(${(tabs.indexOf(activeTab) * (100 / tabs.length))}%)`

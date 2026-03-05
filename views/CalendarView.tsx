@@ -354,7 +354,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({ user, onBack, onSelectClien
     };
 
     return (
-        <div className="max-w-md mx-auto min-h-screen text-white selection:bg-cyan-500/20 pb-12" style={{ background: 'var(--bg-void)' }}>
+        <div className="max-w-md mx-auto min-h-screen text-white selection:bg-cyan-500/20 pb-12 bg-[var(--bg-void)]">
 
             {/* AI Header */}
             <PageHeader
@@ -368,17 +368,15 @@ const CalendarView: React.FC<CalendarViewProps> = ({ user, onBack, onSelectClien
                             <button
                                 onClick={handleCleanupDuplicates}
                                 disabled={cleaningUp}
-                                className="size-10 rounded-2xl flex items-center justify-center active:scale-90 transition-all disabled:opacity-60"
-                                style={{ background: 'rgba(255,51,102,0.08)', border: '1px solid rgba(255,51,102,0.15)' }}
+                                className="size-10 rounded-2xl flex items-center justify-center active:scale-90 transition-all disabled:opacity-60 bg-[rgba(255,51,102,0.08)] border border-[rgba(255,51,102,0.15)]"
                                 title="Limpar Agendamentos"
                             >
-                                <Trash2 size={15} style={{ color: '#FF3366' }} className={cleaningUp ? 'animate-spin' : ''} />
+                                <Trash2 size={15} className={`${cleaningUp ? 'animate-spin ' : ''}text-[#FF3366]`} />
                             </button>
                         )}
                         <button
                             onClick={() => setShowNewModal(true)}
-                            className="size-10 rounded-2xl flex items-center justify-center active:scale-90 transition-all"
-                            style={{ background: 'linear-gradient(135deg, #1E3A8A, #3B82F6)', boxShadow: '0 4px 16px rgba(30, 58, 138,0.35)' }}
+                            className="size-10 rounded-2xl flex items-center justify-center active:scale-90 transition-all bg-[linear-gradient(135deg,#1E3A8A,#3B82F6)] shadow-[0_4px_16px_rgba(30,58,138,0.35)]"
                         >
                             <Plus size={18} color="white" />
                         </button>
@@ -392,18 +390,16 @@ const CalendarView: React.FC<CalendarViewProps> = ({ user, onBack, onSelectClien
                     {monthNames[selectedDate.getMonth()]} {selectedDate.getFullYear()}
                 </h2>
                 <div
-                    className="flex rounded-xl p-1"
-                    style={{ background: 'rgba(59, 130, 246,0.05)', border: '1px solid rgba(59, 130, 246,0.1)' }}
+                    className="flex rounded-xl p-1 bg-[rgba(59,130,246,0.05)] border border-[rgba(59,130,246,0.1)]"
                 >
                     {(['day', 'week'] as const).map((mode) => (
                         <button
                             key={mode}
                             onClick={() => setViewMode(mode)}
-                            className="px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all"
-                            style={viewMode === mode
-                                ? { background: 'linear-gradient(135deg,#1E3A8A,#3B82F6)', color: 'white' }
-                                : { color: '#3D5A80' }
-                            }
+                            className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === mode
+                                ? 'bg-[linear-gradient(135deg,#1E3A8A,#3B82F6)] text-white'
+                                : 'text-[#3D5A80]'
+                                }`}
                         >
                             {mode === 'day' ? 'Dia' : 'Semana'}
                         </button>
@@ -417,22 +413,17 @@ const CalendarView: React.FC<CalendarViewProps> = ({ user, onBack, onSelectClien
                     <button
                         key={i}
                         onClick={() => setSelectedDate(day)}
-                        className="flex flex-col items-center min-w-[52px] py-3.5 rounded-2xl transition-all duration-300"
-                        style={isSelected(day)
-                            ? { background: 'linear-gradient(135deg,#1E3A8A,#3B82F6)', boxShadow: '0 6px 20px rgba(30, 58, 138,0.35)', transform: 'scale(1.05)' }
+                        className={`flex flex-col items-center min-w-[52px] py-3.5 rounded-2xl transition-all duration-300 ${isSelected(day)
+                            ? 'bg-[linear-gradient(135deg,#1E3A8A,#3B82F6)] shadow-[0_6px_20px_rgba(30,58,138,0.35)] scale-105'
                             : isToday(day)
-                                ? { background: 'rgba(59, 130, 246,0.08)', border: '1px solid rgba(59, 130, 246,0.2)' }
-                                : { background: 'rgba(59, 130, 246,0.03)', border: '1px solid rgba(59, 130, 246,0.06)' }
-                        }
+                                ? 'bg-[rgba(59,130,246,0.08)] border border-[rgba(59,130,246,0.2)]'
+                                : 'bg-[rgba(59,130,246,0.03)] border border-[rgba(59,130,246,0.06)]'
+                            }`}
                     >
-                        <span className="text-[9px] font-black uppercase tracking-widest mb-1"
-                            style={{ color: isSelected(day) ? 'rgba(255,255,255,0.8)' : '#3D5A80' }}
-                        >
+                        <span className={`text-[9px] font-black uppercase tracking-widest mb-1 ${isSelected(day) ? 'text-[rgba(255,255,255,0.8)]' : 'text-[#3D5A80]'}`}>
                             {dayNames[i]}
                         </span>
-                        <span className="text-base font-black"
-                            style={{ color: isSelected(day) ? 'white' : isToday(day) ? '#3B82F6' : '#7A9FCC' }}
-                        >
+                        <span className={`text-base font-black ${isSelected(day) ? 'text-white' : isToday(day) ? 'text-[#3B82F6]' : 'text-[#7A9FCC]'}`}>
                             {day.getDate()}
                         </span>
                     </button>
@@ -448,20 +439,18 @@ const CalendarView: React.FC<CalendarViewProps> = ({ user, onBack, onSelectClien
                 {/* Stats Row */}
                 <div className="grid grid-cols-2 gap-3">
                     <div
-                        className="p-4 rounded-2xl"
-                        style={{ background: 'rgba(59, 130, 246,0.04)', border: '1px solid rgba(59, 130, 246,0.1)' }}
+                        className="p-4 rounded-2xl bg-[rgba(59,130,246,0.04)] border border-[rgba(59,130,246,0.1)]"
                     >
-                        <p className="text-[10px] font-black uppercase tracking-widest mb-1" style={{ color: '#3D5A80' }}>Hoje</p>
+                        <p className="text-[10px] font-black uppercase tracking-widest mb-1 text-[#3D5A80]">Hoje</p>
                         <p className="text-3xl font-black text-white">{appointments.length}</p>
-                        <p className="text-[10px] font-semibold mt-0.5" style={{ color: '#7A9FCC' }}>sessões</p>
+                        <p className="text-[10px] font-semibold mt-0.5 text-[#7A9FCC]">sessões</p>
                     </div>
                     <div
-                        className="p-4 rounded-2xl"
-                        style={{ background: 'rgba(0,255,136,0.04)', border: '1px solid rgba(0,255,136,0.1)' }}
+                        className="p-4 rounded-2xl bg-[rgba(0,255,136,0.04)] border border-[rgba(0,255,136,0.1)]"
                     >
-                        <p className="text-[10px] font-black uppercase tracking-widest mb-1" style={{ color: '#3D5A80' }}>Próximo</p>
+                        <p className="text-[10px] font-black uppercase tracking-widest mb-1 text-[#3D5A80]">Próximo</p>
                         <p className="text-2xl font-black text-white">{appointments[0]?.time || '--:--'}</p>
-                        <p className="text-[10px] font-semibold mt-0.5" style={{ color: '#00FF88' }}>{appointments[0]?.clientName?.split(' ')[0] || 'Livre'}</p>
+                        <p className="text-[10px] font-semibold mt-0.5 text-[#00FF88]">{appointments[0]?.clientName?.split(' ')[0] || 'Livre'}</p>
                     </div>
                 </div>
 
@@ -475,7 +464,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({ user, onBack, onSelectClien
                 {/* Appointments List */}
                 {!loading && (
                     <div>
-                        <h3 className="text-[10px] font-black uppercase tracking-[0.2em] mb-3" style={{ color: '#3D5A80' }}>Fluxo de Protocolos</h3>
+                        <h3 className="text-[10px] font-black uppercase tracking-[0.2em] mb-3 text-[#3D5A80]">Fluxo de Protocolos</h3>
 
                         {appointments.length === 0 ? (
                             <div className="glass-card rounded-[28px] p-8 text-center">
@@ -498,8 +487,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({ user, onBack, onSelectClien
                                             animate={{ opacity: 1, y: 0 }}
                                             exit={{ opacity: 0, x: -100 }}
                                             onClick={() => setShowDetailModal(apt)}
-                                            className="w-full rounded-2xl p-4 flex items-center gap-4 active:scale-[0.99] transition-all text-left group"
-                                            style={{ background: 'rgba(59, 130, 246,0.03)', border: '1px solid rgba(59, 130, 246,0.07)' }}
+                                            className="w-full rounded-2xl p-4 flex items-center gap-4 active:scale-[0.99] transition-all text-left group bg-[rgba(59,130,246,0.03)] border border-[rgba(59,130,246,0.07)]"
                                         >
                                             {/* Time */}
                                             <div className="text-center w-14 border-r border-white/5 pr-4 mr-1">
@@ -510,9 +498,10 @@ const CalendarView: React.FC<CalendarViewProps> = ({ user, onBack, onSelectClien
                                             {/* Client Info */}
                                             <div className="flex-1 min-w-0">
                                                 <div className="flex items-center gap-3">
-                                                    <div
-                                                        className="size-11 rounded-2xl bg-cover bg-center border-2 border-white/10 group-hover:border-blue-500/30 transition-colors"
-                                                        style={{ backgroundImage: `url(${apt.clientAvatar})` }}
+                                                    <img
+                                                        className="size-11 rounded-2xl object-cover border-2 border-white/10 group-hover:border-blue-500/30 transition-colors"
+                                                        src={apt.clientAvatar}
+                                                        alt={apt.clientName}
                                                     />
                                                     <div>
                                                         <h4 className="font-black text-white text-sm leading-tight mb-0.5">{apt.clientName}</h4>
@@ -556,7 +545,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({ user, onBack, onSelectClien
                 {/* Available Slots */}
                 {!loading && freeSlots.length > 0 && (
                     <div className="pb-8">
-                        <h3 className="text-[10px] font-black uppercase tracking-[0.2em] mb-3" style={{ color: '#3D5A80' }}>Janelas Disponíveis</h3>
+                        <h3 className="text-[10px] font-black uppercase tracking-[0.2em] mb-3 text-[#3D5A80]">Janelas Disponíveis</h3>
                         <div className="grid grid-cols-4 gap-2">
                             {freeSlots.map((time) => (
                                 <button
@@ -565,8 +554,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({ user, onBack, onSelectClien
                                         setNewAppointment(prev => ({ ...prev, time }));
                                         setShowNewModal(true);
                                     }}
-                                    className="py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95"
-                                    style={{ background: 'rgba(59, 130, 246,0.04)', border: '1px solid rgba(59, 130, 246,0.08)', color: '#7A9FCC' }}
+                                    className="py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 bg-[rgba(59,130,246,0.04)] border border-[rgba(59,130,246,0.08)] text-[#7A9FCC]"
                                 >
                                     {time}
                                 </button>
@@ -602,9 +590,10 @@ const CalendarView: React.FC<CalendarViewProps> = ({ user, onBack, onSelectClien
                             <div className="w-12 h-1 bg-white/10 rounded-full mx-auto mb-8"></div>
 
                             <div className="flex items-center gap-5 mb-8">
-                                <div
-                                    className="size-20 rounded-3xl bg-cover bg-center border-2 border-white/10 shadow-glow"
-                                    style={{ backgroundImage: `url(${showDetailModal.clientAvatar})` }}
+                                <img
+                                    className="size-20 rounded-3xl object-cover border-2 border-white/10 shadow-glow"
+                                    src={showDetailModal.clientAvatar}
+                                    alt={showDetailModal.clientName}
                                 />
                                 <div>
                                     <h3 className="text-2xl font-black text-white tracking-tight">{showDetailModal.clientName}</h3>
@@ -719,9 +708,10 @@ const CalendarView: React.FC<CalendarViewProps> = ({ user, onBack, onSelectClien
                                                     : 'bg-[#0F1629] border border-gray-700 hover:bg-[#1a2235]'
                                                     }`}
                                             >
-                                                <div
-                                                    className="size-12 rounded-xl bg-cover bg-center border-2 border-white/10 mb-2"
-                                                    style={{ backgroundImage: `url(${client.avatar || client.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(client.name)}&background=3b82f6&color=fff`})` }}
+                                                <img
+                                                    className="size-12 rounded-xl object-cover border-2 border-white/10 mb-2"
+                                                    src={client.avatar || client.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(client.name)}&background=3b82f6&color=fff`}
+                                                    alt={client.name}
                                                 />
                                                 <span className="text-[9px] font-bold text-white truncate w-full text-center">
                                                     {client.name.split(' ')[0]}

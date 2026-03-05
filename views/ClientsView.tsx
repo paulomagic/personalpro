@@ -199,8 +199,7 @@ const ClientsView: React.FC<ClientsViewProps> = ({ user, onBack, onSelectClient 
             initial="hidden"
             animate="visible"
             variants={containerVariants}
-            className="max-w-md mx-auto min-h-screen text-white selection:bg-cyan-500/20 pb-12"
-            style={{ background: 'var(--bg-void)' }}
+            className="max-w-md mx-auto min-h-screen text-white selection:bg-cyan-500/20 pb-12 bg-[var(--bg-void)]"
         >
             {/* Toast */}
             {toast && (
@@ -268,8 +267,7 @@ const ClientsView: React.FC<ClientsViewProps> = ({ user, onBack, onSelectClient 
                         placeholder="Buscar aluno..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full h-12 pl-11 pr-5 rounded-2xl text-sm font-bold text-white placeholder:text-[#3D5A80] outline-none"
-                        style={{ background: 'rgba(59, 130, 246,0.04)', border: '1px solid rgba(59, 130, 246,0.1)' }}
+                        className="w-full h-12 pl-11 pr-5 rounded-2xl text-sm font-bold text-white placeholder:text-[#3D5A80] outline-none bg-[rgba(59,130,246,0.04)] border border-[rgba(59,130,246,0.1)]"
                     />
                 </div>
             </motion.div>
@@ -346,11 +344,11 @@ const ClientsView: React.FC<ClientsViewProps> = ({ user, onBack, onSelectClient 
                                     <div className="flex items-center gap-2">
                                         <div className="h-1 flex-1 rounded-full overflow-hidden bg-[rgba(59,130,246,0.06)] max-w-20">
                                             <div
-                                                className="h-full rounded-full"
-                                                style={{
-                                                    width: `${client.adherence}%`,
-                                                    background: client.adherence < 50 ? '#FFB800' : 'linear-gradient(90deg,#0099FF,#00FF88)',
-                                                }}
+                                                className={`h-full rounded-full ${client.adherence < 50
+                                                    ? 'bg-[#FFB800]'
+                                                    : 'bg-[linear-gradient(90deg,#0099FF,#00FF88)]'
+                                                    }`}
+                                                style={{ width: `${client.adherence}%` }}
                                             />
                                         </div>
                                         <span className={`text-[10px] font-black ${client.adherence < 50 ? 'text-[#FFB800]' : 'text-[#00FF88]'}`}>{client.adherence}%</span>

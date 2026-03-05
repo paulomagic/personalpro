@@ -438,9 +438,9 @@ const StudentView: React.FC<StudentViewProps> = ({
     // Loading state
     if (loading) {
         return (
-            <div className="min-h-screen text-white flex items-center justify-center" style={{ background: 'var(--bg-void)' }}>
+            <div className="min-h-screen text-white flex items-center justify-center bg-[var(--bg-void)]">
                 <div className="text-center">
-                    <div className="size-16 border-4 border-t-transparent rounded-full animate-spin mx-auto mb-4" style={{ borderColor: '#3B82F6', borderTopColor: 'transparent' }} />
+                    <div className="size-16 border-4 border-[#3B82F6] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
                     <p className="text-slate-400 text-sm font-medium">Carregando treino...</p>
                 </div>
             </div>
@@ -475,7 +475,7 @@ const StudentView: React.FC<StudentViewProps> = ({
     // Split Selection View
     if (!selectedSplit) {
         return (
-            <div className="min-h-screen text-white" style={{ background: 'var(--bg-void)' }}>
+            <div className="min-h-screen text-white bg-[var(--bg-void)]">
                 {/* Header Premium (Seletor de Treinos) */}
                 <PageHeader
                     title={workout.title}
@@ -524,14 +524,9 @@ const StudentView: React.FC<StudentViewProps> = ({
 
                                     <div className="flex items-center gap-4 relative z-10">
                                         <div
-                                            className="size-[60px] rounded-[18px] flex items-center justify-center flex-shrink-0"
-                                            style={{
-                                                background: 'var(--btn-primary-bg)',
-                                                border: '1px solid var(--btn-primary-border)',
-                                                boxShadow: 'var(--btn-primary-shadow)',
-                                            }}
+                                            className="size-[60px] rounded-[18px] flex items-center justify-center flex-shrink-0 bg-[var(--btn-primary-bg)] border border-[var(--btn-primary-border)] shadow-[var(--btn-primary-shadow)]"
                                         >
-                                            <span className="text-[26px] font-black" style={{ color: 'var(--btn-primary-text)' }}>
+                                            <span className="text-[26px] font-black text-[var(--btn-primary-text)]">
                                                 {splitLetter}
                                             </span>
                                         </div>
@@ -570,27 +565,19 @@ const StudentView: React.FC<StudentViewProps> = ({
 
     // Workout Execution View (existing functionality)
     return (
-        <div className="min-h-screen text-white" style={{ background: 'var(--bg-void)' }}>
+        <div className="min-h-screen text-white bg-[var(--bg-void)]">
             {/* Header Execution Premium */}
             <header
-                className="sticky top-0 z-40 backdrop-blur-xl px-5 pt-12 pb-5 safe-area-top"
-                style={isLightTheme
-                    ? {
-                        background: 'linear-gradient(180deg, rgba(231, 239, 252, 0.96) 0%, rgba(223, 233, 250, 0.9) 100%)',
-                        borderBottom: '1px solid rgba(130, 170, 235, 0.28)',
-                    }
-                    : {
-                        background: 'rgba(3,7,18,0.85)',
-                        borderBottom: '1px solid rgba(255,255,255,0.05)',
-                    }}
+                className={`sticky top-0 z-40 backdrop-blur-xl px-5 pt-12 pb-5 safe-area-top border-b ${isLightTheme
+                    ? 'bg-[linear-gradient(180deg,rgba(231,239,252,0.96)_0%,rgba(223,233,250,0.9)_100%)] border-b-[rgba(130,170,235,0.28)]'
+                    : 'bg-[rgba(3,7,18,0.85)] border-b-[rgba(255,255,255,0.05)]'
+                    }`}
             >
                 <div
-                    className="absolute top-0 left-0 right-0 h-32 pointer-events-none"
-                    style={{
-                        background: isLightTheme
-                            ? 'radial-gradient(ellipse 60% 80% at 50% 0%, rgba(59, 130, 246,0.14) 0%, transparent 100%)'
-                            : 'radial-gradient(ellipse 60% 80% at 50% 0%, rgba(59, 130, 246,0.08) 0%, transparent 100%)',
-                    }}
+                    className={`absolute top-0 left-0 right-0 h-32 pointer-events-none ${isLightTheme
+                        ? 'bg-[radial-gradient(ellipse_60%_80%_at_50%_0%,rgba(59,130,246,0.14)_0%,transparent_100%)]'
+                        : 'bg-[radial-gradient(ellipse_60%_80%_at_50%_0%,rgba(59,130,246,0.08)_0%,transparent_100%)]'
+                        }`}
                 />
 
                 <div className="max-w-md mx-auto relative z-10">
@@ -605,17 +592,10 @@ const StudentView: React.FC<StudentViewProps> = ({
                                         setShowFeedbackForm(false);
                                         setFeedbackCompletedExercises(new Set());
                                     }}
-                                    className="size-11 rounded-2xl backdrop-blur-xl text-white flex items-center justify-center shadow-lg transition-all active:scale-95"
-                                    style={isLightTheme
-                                        ? {
-                                            background: 'rgba(255,255,255,0.66)',
-                                            border: '1px solid rgba(130, 170, 235, 0.35)',
-                                            boxShadow: '0 8px 22px rgba(63, 93, 152, 0.16)',
-                                        }
-                                        : {
-                                            background: 'rgba(255,255,255,0.10)',
-                                            border: '1px solid rgba(255,255,255,0.20)',
-                                        }}
+                                    className={`size-11 rounded-2xl backdrop-blur-xl text-white flex items-center justify-center shadow-lg transition-all active:scale-95 border ${isLightTheme
+                                        ? 'bg-[rgba(255,255,255,0.66)] border-[rgba(130,170,235,0.35)] shadow-[0_8px_22px_rgba(63,93,152,0.16)]'
+                                        : 'bg-[rgba(255,255,255,0.10)] border-[rgba(255,255,255,0.20)]'
+                                        }`}
                                 >
                                     <ArrowLeft size={20} strokeWidth={2.5} />
                                 </button>
@@ -660,18 +640,12 @@ const StudentView: React.FC<StudentViewProps> = ({
                         </div>
                     )}
                     <div
-                        className="mt-3 rounded-2xl px-3 py-2 border"
-                        style={isLightTheme
-                            ? {
-                                background: 'rgba(219, 234, 254, 0.68)',
-                                borderColor: 'rgba(130, 170, 235, 0.32)',
-                            }
-                            : {
-                                background: 'rgba(59,130,246,0.12)',
-                                borderColor: 'rgba(59,130,246,0.25)',
-                            }}
+                        className={`mt-3 rounded-2xl px-3 py-2 border ${isLightTheme
+                            ? 'bg-[rgba(219,234,254,0.68)] border-[rgba(130,170,235,0.32)]'
+                            : 'bg-[rgba(59,130,246,0.12)] border-[rgba(59,130,246,0.25)]'
+                            }`}
                     >
-                        <p className="text-[11px] font-semibold" style={{ color: isLightTheme ? '#264569' : '#BFDBFE' }}>
+                        <p className={`text-[11px] font-semibold ${isLightTheme ? 'text-[#264569]' : 'text-[#BFDBFE]'}`}>
                             {adherenceNudge}
                         </p>
                     </div>
@@ -687,7 +661,7 @@ const StudentView: React.FC<StudentViewProps> = ({
                         exit={{ opacity: 0, y: 50 }}
                         className="fixed bottom-20 left-4 right-4 z-50 max-w-md mx-auto"
                     >
-                        <div className="rounded-[24px] p-6 shadow-2xl" style={{ background: 'linear-gradient(135deg,#1E3A8A,#3B82F6)', boxShadow: '0 16px 48px rgba(30, 58, 138,0.3)' }}>
+                        <div className="rounded-[24px] p-6 shadow-2xl bg-[linear-gradient(135deg,#1E3A8A,#3B82F6)] shadow-[0_16px_48px_rgba(30,58,138,0.3)]">
                             <div className="flex items-center justify-between mb-4">
                                 <div className="flex items-center gap-3">
                                     <div className="size-12 rounded-full bg-white/20 flex items-center justify-center">
@@ -863,28 +837,18 @@ const StudentView: React.FC<StudentViewProps> = ({
 
             {/* Finish Button */}
             <div
-                className="fixed bottom-0 left-0 right-0 py-6 px-4 pointer-events-none z-40 safe-area-bottom"
-                style={isLightTheme
-                    ? {
-                        background: 'linear-gradient(to top, rgba(240,244,255,0.98) 0%, rgba(240,244,255,0.75) 42%, rgba(240,244,255,0) 100%)',
-                    }
-                    : {
-                        background: 'linear-gradient(to top, rgba(2,8,23,1) 0%, rgba(2,8,23,0.9) 40%, rgba(2,8,23,0) 100%)',
-                    }}
+                className={`fixed bottom-0 left-0 right-0 py-6 px-4 pointer-events-none z-40 safe-area-bottom ${isLightTheme
+                    ? 'bg-[linear-gradient(to_top,rgba(240,244,255,0.98)_0%,rgba(240,244,255,0.75)_42%,rgba(240,244,255,0)_100%)]'
+                    : 'bg-[linear-gradient(to_top,rgba(2,8,23,1)_0%,rgba(2,8,23,0.9)_40%,rgba(2,8,23,0)_100%)]'
+                    }`}
             >
                 <div className="max-w-md mx-auto pointer-events-auto">
                     {oneHandMode && (
                         <div
-                            className="mb-3 p-2 rounded-2xl border"
-                            style={isLightTheme
-                                ? {
-                                    background: 'rgba(235,243,255,0.9)',
-                                    borderColor: 'rgba(130,170,235,0.32)',
-                                }
-                                : {
-                                    background: 'rgba(15,23,42,0.82)',
-                                    borderColor: 'rgba(59,130,246,0.28)',
-                                }}
+                            className={`mb-3 p-2 rounded-2xl border ${isLightTheme
+                                ? 'bg-[rgba(235,243,255,0.9)] border-[rgba(130,170,235,0.32)]'
+                                : 'bg-[rgba(15,23,42,0.82)] border-[rgba(59,130,246,0.28)]'
+                                }`}
                         >
                             <div className="grid grid-cols-2 gap-2">
                                 <button
@@ -898,18 +862,10 @@ const StudentView: React.FC<StudentViewProps> = ({
                                 <button
                                     type="button"
                                     onClick={moveToNextPendingExercise}
-                                    className="h-12 rounded-xl border text-[10px] font-black uppercase tracking-widest"
-                                    style={isLightTheme
-                                        ? {
-                                            borderColor: 'rgba(130,170,235,0.42)',
-                                            color: '#355680',
-                                            background: 'rgba(255,255,255,0.75)',
-                                        }
-                                        : {
-                                            borderColor: 'rgba(148,163,184,0.35)',
-                                            color: '#CBD5E1',
-                                            background: 'rgba(15,23,42,0.65)',
-                                        }}
+                                    className={`h-12 rounded-xl border text-[10px] font-black uppercase tracking-widest ${isLightTheme
+                                        ? 'border-[rgba(130,170,235,0.42)] text-[#355680] bg-[rgba(255,255,255,0.75)]'
+                                        : 'border-[rgba(148,163,184,0.35)] text-[#CBD5E1] bg-[rgba(15,23,42,0.65)]'
+                                        }`}
                                 >
                                     Próx Exercício
                                 </button>
@@ -924,37 +880,22 @@ const StudentView: React.FC<StudentViewProps> = ({
                             }}
                             disabled={!canFinishWorkout}
                             className={`w-full py-4 rounded-2xl relative overflow-hidden group disabled:opacity-35 transition-all active:scale-[0.98] ${canFinishWorkout
-                                ? 'cursor-pointer'
+                                ? 'cursor-pointer bg-[var(--btn-primary-bg)] border border-[var(--btn-primary-border)] shadow-[var(--btn-primary-shadow)]'
                                 : 'opacity-80 cursor-not-allowed'
-                                }`}
-                            style={canFinishWorkout
-                                ? {
-                                    background: 'var(--btn-primary-bg)',
-                                    border: '1px solid var(--btn-primary-border)',
-                                    boxShadow: 'var(--btn-primary-shadow)',
-                                }
-                                : (isLightTheme
-                                    ? {
-                                        background: 'linear-gradient(145deg, rgba(214, 224, 242, 0.95), rgba(204, 216, 238, 0.95))',
-                                        border: '1px solid rgba(130,170,235,0.28)',
-                                        boxShadow: 'inset 0 1px 0 rgba(246,250,255,0.45)',
-                                    }
-                                    : {
-                                        background: 'rgba(15,23,42,0.7)',
-                                        border: '1px solid rgba(51,65,85,0.65)',
-                                    })}
+                                } ${!canFinishWorkout && (isLightTheme
+                                    ? 'bg-[linear-gradient(145deg,rgba(214,224,242,0.95),rgba(204,216,238,0.95))] border border-[rgba(130,170,235,0.28)] shadow-[inset_0_1px_0_rgba(246,250,255,0.45)]'
+                                    : 'bg-[rgba(15,23,42,0.7)] border border-[rgba(51,65,85,0.65)]'
+                                )}`}
                         >
                             <div className="absolute inset-0 flex items-center justify-center gap-3 z-10 px-6">
                                 <div className="flex-1 flex flex-col items-start justify-center">
                                     <span
-                                        className="font-black uppercase tracking-[0.15em] text-[13px] leading-tight"
-                                        style={{ color: canFinishWorkout ? 'var(--btn-primary-text)' : (isLightTheme ? '#3D5A80' : '#7A9FCC') }}
+                                        className={`font-black uppercase tracking-[0.15em] text-[13px] leading-tight ${canFinishWorkout ? 'text-[var(--btn-primary-text)]' : (isLightTheme ? 'text-[#3D5A80]' : 'text-[#7A9FCC]')}`}
                                     >
                                         Encerrar Sessão
                                     </span>
                                     <span
-                                        className="text-[10px] font-semibold tracking-wide"
-                                        style={{ color: canFinishWorkout ? 'rgba(244,248,255,0.78)' : (isLightTheme ? '#64748B' : '#64748B') }}
+                                        className={`text-[10px] font-semibold tracking-wide ${canFinishWorkout ? 'text-[rgba(244,248,255,0.78)]' : 'text-[#64748B]'}`}
                                     >
                                         {isColdStartWorkout && !hasAllRequiredFeedback
                                             ? 'Feedback obrigatório Pendente'
@@ -962,46 +903,30 @@ const StudentView: React.FC<StudentViewProps> = ({
                                     </span>
                                 </div>
                                 <div
-                                    className="size-11 rounded-[14px] backdrop-blur-sm flex items-center justify-center mt-px"
-                                    style={canFinishWorkout
-                                        ? {
-                                            background: 'rgba(255,255,255,0.18)',
-                                            border: '2px solid rgba(255,255,255,0.3)',
-                                        }
+                                    className={`size-11 rounded-[14px] backdrop-blur-sm flex items-center justify-center mt-px border-2 ${canFinishWorkout
+                                        ? 'bg-[rgba(255,255,255,0.18)] border-[rgba(255,255,255,0.3)]'
                                         : (isLightTheme
-                                            ? {
-                                                background: 'rgba(255,255,255,0.45)',
-                                                border: '2px solid rgba(130,170,235,0.28)',
-                                            }
-                                            : {
-                                                background: 'rgba(255,255,255,0.05)',
-                                                border: '2px solid rgba(255,255,255,0.12)',
-                                            })}
+                                            ? 'bg-[rgba(255,255,255,0.45)] border-[rgba(130,170,235,0.28)]'
+                                            : 'bg-[rgba(255,255,255,0.05)] border-[rgba(255,255,255,0.12)]')
+                                        }`}
                                 >
                                     <Check
                                         size={20}
                                         strokeWidth={3}
-                                        style={{ color: canFinishWorkout ? '#FFFFFF' : (isLightTheme ? '#64748B' : '#64748B') }}
+                                        className={canFinishWorkout ? 'text-white' : 'text-[#64748B]'}
                                     />
                                 </div>
                             </div>
                         </button>
                     ) : (
                         <div
-                            className="w-full py-4 rounded-2xl flex items-center justify-center gap-3 backdrop-blur-md"
-                            style={isLightTheme
-                                ? {
-                                    background: 'linear-gradient(145deg, rgba(222, 232, 248, 0.92), rgba(212, 224, 244, 0.92))',
-                                    border: '1px solid rgba(130,170,235,0.28)',
-                                    boxShadow: 'inset 0 1px 0 rgba(246,250,255,0.45)',
-                                }
-                                : {
-                                    background: 'rgba(2, 12, 37, 0.86)',
-                                    border: '1px solid rgba(255,255,255,0.06)',
-                                }}
+                            className={`w-full py-4 rounded-2xl flex items-center justify-center gap-3 backdrop-blur-md border ${isLightTheme
+                                ? 'bg-[linear-gradient(145deg,rgba(222,232,248,0.92),rgba(212,224,244,0.92))] border-[rgba(130,170,235,0.28)] shadow-[inset_0_1px_0_rgba(246,250,255,0.45)]'
+                                : 'bg-[rgba(2,12,37,0.86)] border-[rgba(255,255,255,0.06)]'
+                                }`}
                         >
-                            <Trophy size={18} style={{ color: isLightTheme ? '#526A8C' : '#64748B' }} />
-                            <span className="font-black text-[11px] uppercase tracking-widest" style={{ color: isLightTheme ? '#3D5A80' : '#64748B' }}>
+                            <Trophy size={18} className={isLightTheme ? 'text-[#526A8C]' : 'text-[#64748B]'} />
+                            <span className={`font-black text-[11px] uppercase tracking-widest ${isLightTheme ? 'text-[#3D5A80]' : 'text-[#64748B]'}`}>
                                 {Math.round(progress)}% Concluído
                             </span>
                         </div>

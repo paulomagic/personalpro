@@ -52,13 +52,21 @@ const AIBuilderWizardStepProfile: React.FC<AIBuilderWizardStepProfileProps> = ({
                 {selectedClient?.id === client.id && (
                   <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/20 rounded-full blur-2xl pointer-events-none" />
                 )}
-                <div
-                  className={`size-[60px] rounded-[20px] bg-cover bg-center border-2 relative z-10 ${selectedClient?.id === client.id ? 'border-blue-400 shadow-lg shadow-blue-500/30' : 'border-white/10 group-hover:border-blue-400/50'
-                    } transition-colors`}
-                  style={{ backgroundImage: client.avatar ? `url(${client.avatar})` : 'none' }}
-                >
-                  {!client.avatar && <span className="material-symbols-outlined text-slate-500 flex h-full items-center justify-center">person</span>}
-                </div>
+                {client.avatar ? (
+                  <img
+                    className={`size-[60px] rounded-[20px] object-cover border-2 relative z-10 ${selectedClient?.id === client.id ? 'border-blue-400 shadow-lg shadow-blue-500/30' : 'border-white/10 group-hover:border-blue-400/50'
+                      } transition-colors`}
+                    src={client.avatar}
+                    alt={client.name}
+                  />
+                ) : (
+                  <div
+                    className={`size-[60px] rounded-[20px] bg-cover bg-center border-2 relative z-10 ${selectedClient?.id === client.id ? 'border-blue-400 shadow-lg shadow-blue-500/30' : 'border-white/10 group-hover:border-blue-400/50'
+                      } transition-colors`}
+                  >
+                    <span className="material-symbols-outlined text-slate-500 flex h-full items-center justify-center">person</span>
+                  </div>
+                )}
                 <span className={`text-[10px] font-black uppercase tracking-widest relative z-10 ${selectedClient?.id === client.id ? 'text-blue-400' : 'text-slate-500'}`}>{client.name.split(' ')[0]}</span>
               </button>
             ))}

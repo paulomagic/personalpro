@@ -135,18 +135,16 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({
             initial="hidden"
             animate="visible"
             variants={containerVariants}
-            className="min-h-screen pb-32"
-            style={{ background: 'var(--bg-void)' }}
+            className="min-h-screen pb-32 bg-[var(--bg-void)]"
         >
             {/* Header with Avatar */}
             <motion.div
                 variants={itemVariants}
-                className="relative h-64 overflow-hidden"
-                style={{ background: 'linear-gradient(135deg, #030712 0%, #0a1628 50%, #001a3d 100%)' }}
+                className="relative h-64 overflow-hidden bg-[linear-gradient(135deg,#030712_0%,#0a1628_50%,#001a3d_100%)]"
             >
                 {/* Decorative elements */}
-                <div className="absolute top-0 right-0 w-64 h-64 rounded-full blur-3xl -mr-32 -mt-32" style={{ background: 'rgba(30, 58, 138,0.15)' }} />
-                <div className="absolute bottom-0 left-0 w-48 h-48 rounded-full blur-2xl -ml-24 -mb-24" style={{ background: 'rgba(59, 130, 246,0.1)' }} />
+                <div className="absolute top-0 right-0 w-64 h-64 rounded-full blur-3xl -mr-32 -mt-32 bg-[rgba(30,58,138,0.15)]" />
+                <div className="absolute bottom-0 left-0 w-48 h-48 rounded-full blur-2xl -ml-24 -mb-24 bg-[rgba(59,130,246,0.1)]" />
 
                 {/* Top bar - with safe area padding */}
                 <div className="absolute top-0 left-0 right-0 pt-14 px-6 flex justify-between items-center z-10">
@@ -170,7 +168,7 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({
                         {clientData?.avatar_url || user?.user_metadata?.avatar_url ? (
                             <img src={clientData?.avatar_url || user?.user_metadata?.avatar_url} alt="Profile" className="w-full h-full object-cover" />
                         ) : (
-                            <div className="size-full flex items-center justify-center" style={{ background: 'linear-gradient(135deg,#1E3A8A,#3B82F6)' }}>
+                            <div className="size-full flex items-center justify-center bg-[linear-gradient(135deg,#1E3A8A,#3B82F6)]">
                                 <span className="text-4xl font-black text-white">
                                     {studentName.charAt(0).toUpperCase()}
                                 </span>
@@ -289,7 +287,7 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({
                                             <span className="text-sm font-black text-white">{biometrics.muscleMass} <span className="text-[10px] text-slate-500">kg</span></span>
                                         </div>
                                         <div className="h-2.5 bg-slate-900/50 rounded-full overflow-hidden border border-white/5">
-                                            <div className="h-full bg-gradient-to-r from-blue-600 to-cyan-400 rounded-full shadow-[0_0_10px_rgba(59,130,246,0.5)]" style={{ width: '65%' }} />
+                                            <div className="h-full w-[65%] bg-gradient-to-r from-blue-600 to-cyan-400 rounded-full shadow-[0_0_10px_rgba(59,130,246,0.5)]" />
                                         </div>
                                     </div>
                                     <div>

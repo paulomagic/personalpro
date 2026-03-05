@@ -109,8 +109,7 @@ const StudentDashboardView: React.FC<StudentDashboardViewProps> = ({
             initial="hidden"
             animate="visible"
             variants={containerVariants}
-            className="min-h-screen pb-32 p-6"
-            style={{ background: 'var(--bg-void)' }}
+            className="min-h-screen pb-32 p-6 bg-[var(--bg-void)]"
         >
             {/* Header */}
             <motion.header variants={itemVariants} className="flex justify-between items-start pt-4 mb-8">
@@ -246,8 +245,8 @@ const StudentDashboardView: React.FC<StudentDashboardViewProps> = ({
                     className={`w-full card-dark p-4 flex items-center gap-4 active:scale-[0.99] transition-all group ${!currentWorkout ? 'opacity-50' : ''}`}
                     disabled={!currentWorkout}
                 >
-                    <div className="size-12 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform" style={{ background: 'rgba(59, 130, 246,0.1)' }}>
-                        <Dumbbell size={24} style={{ color: '#3B82F6' }} />
+                    <div className="size-12 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform bg-[rgba(59,130,246,0.1)]">
+                        <Dumbbell size={24} className="text-[#3B82F6]" />
                     </div>
                     <div className="flex-1 text-left">
                         <p className="font-bold text-white">Meus Treinos</p>

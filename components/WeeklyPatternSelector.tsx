@@ -180,9 +180,10 @@ const WeeklyPatternSelector: React.FC<WeeklyPatternSelectorProps> = ({
                                         : 'bg-[#0F1629] border border-gray-700 hover:bg-[#1a2235]'
                                         }`}
                                 >
-                                    <div
-                                        className="size-12 rounded-xl bg-cover bg-center border-2 border-white/10 mb-2"
-                                        style={{ backgroundImage: `url(${client.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(client.name)}&background=3b82f6&color=fff`})` }}
+                                    <img
+                                        className="size-12 rounded-xl object-cover border-2 border-white/10 mb-2"
+                                        src={client.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(client.name)}&background=3b82f6&color=fff`}
+                                        alt={client.name}
                                     />
                                     <span className="text-[9px] font-bold text-white truncate w-full text-center">
                                         {client.name.split(' ')[0]}

@@ -74,11 +74,11 @@ const AIBuilderResultModal: React.FC<AIBuilderResultModalProps> = ({
   handleSaveWorkout
 }) => {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'var(--bg-void)' }}>
-      <div className="w-full max-w-md h-full flex flex-col animate-fade-in relative" style={{ background: 'var(--bg-void)' }}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--bg-void)]">
+      <div className="w-full max-w-md h-full flex flex-col animate-fade-in relative bg-[var(--bg-void)]">
         <div className="absolute inset-0 z-0 opacity-15">
-          <div className="absolute top-0 right-0 size-96 rounded-full blur-[120px]" style={{ background: '#1E3A8A' }}></div>
-          <div className="absolute bottom-0 left-0 size-96 rounded-full blur-[120px]" style={{ background: '#3B82F6' }}></div>
+          <div className="absolute top-0 right-0 size-96 rounded-full blur-[120px] bg-[#1E3A8A]"></div>
+          <div className="absolute bottom-0 left-0 size-96 rounded-full blur-[120px] bg-[#3B82F6]"></div>
         </div>
 
         <header className="relative z-10 px-6 pt-14 pb-6 glass-card bg-slate-950/50 border-0 border-b border-white/10 rounded-0">
@@ -386,8 +386,7 @@ const AIBuilderResultModal: React.FC<AIBuilderResultModalProps> = ({
         <footer className="fixed bottom-20 left-0 right-0 p-4 px-6 max-w-md mx-auto z-20">
           <button
             onClick={handleSaveWorkout}
-            className="w-full h-14 text-white font-black rounded-2xl flex items-center justify-center gap-3 uppercase tracking-widest active:scale-95 transition-all"
-            style={{ background: 'linear-gradient(135deg,#1E3A8A,#3B82F6)', boxShadow: '0 8px 32px rgba(30, 58, 138,0.35)' }}
+            className="w-full h-14 text-white font-black rounded-2xl flex items-center justify-center gap-3 uppercase tracking-widest active:scale-95 transition-all bg-[linear-gradient(135deg,#1E3A8A,#3B82F6)] shadow-[0_8px_32px_rgba(30,58,138,0.35)]"
           >
             <span className="material-symbols-outlined">check_circle</span>
             Salvar Protocolo

@@ -139,7 +139,7 @@ const AssessmentView: React.FC<AssessmentViewProps> = ({ user, client, onBack, o
     };
 
     return (
-        <div className="min-h-screen bg-slate-950 text-white pb-32 font-sans" style={{ background: 'var(--bg-void)' }}>
+        <div className="min-h-screen bg-slate-950 text-white pb-32 font-sans bg-[var(--bg-void)]">
             {/* Standardized Header */}
             <PageHeader
                 title="NOVA AVALIAÇÃO"

@@ -102,9 +102,9 @@ const ClientProfileTabPanels: React.FC<ClientProfileTabPanelsProps> = ({
           className="space-y-6"
         >
           {!progressAnalysis && client.assessments && client.assessments.length > 0 && (
-            <div className="rounded-2xl p-5" style={{ background: 'rgba(59, 130, 246,0.04)', border: '1px solid rgba(59, 130, 246,0.1)' }}>
+            <div className="rounded-2xl p-5 bg-[rgba(59,130,246,0.04)] border border-[rgba(59,130,246,0.1)]">
               <div className="flex items-center gap-2 mb-4">
-                <Sparkles size={18} style={{ color: '#3B82F6' }} />
+                <Sparkles size={18} className="text-[#3B82F6]" />
                 <h3 className="font-black text-white tracking-tight">Análise de IA</h3>
               </div>
               <p className="text-sm text-slate-400 mb-4">
@@ -113,14 +113,7 @@ const ClientProfileTabPanels: React.FC<ClientProfileTabPanelsProps> = ({
               <button
                 onClick={handleAnalyzeProgress}
                 disabled={loadingAnalysis}
-                className="w-full py-3 font-bold rounded-xl transition-all flex items-center justify-center gap-2"
-                style={{
-                  background: 'var(--btn-primary-bg)',
-                  color: 'var(--btn-primary-text)',
-                  border: '1px solid var(--btn-primary-border)',
-                  boxShadow: 'var(--btn-primary-shadow)',
-                  opacity: loadingAnalysis ? 0.5 : 1,
-                }}
+                className={`w-full py-3 font-bold rounded-xl transition-all flex items-center justify-center gap-2 bg-[var(--btn-primary-bg)] text-[var(--btn-primary-text)] border border-[var(--btn-primary-border)] shadow-[var(--btn-primary-shadow)] ${loadingAnalysis ? 'opacity-50' : 'opacity-100'}`}
               >
                 {loadingAnalysis ? (
                   <>
@@ -138,11 +131,11 @@ const ClientProfileTabPanels: React.FC<ClientProfileTabPanelsProps> = ({
           )}
 
           {progressAnalysis && (
-            <div className="rounded-2xl p-5" style={{ background: 'rgba(59, 130, 246,0.04)', border: '1px solid rgba(59, 130, 246,0.1)' }}>
+            <div className="rounded-2xl p-5 bg-[rgba(59,130,246,0.04)] border border-[rgba(59,130,246,0.1)]">
               <div className="flex items-center gap-2 mb-4">
-                <Sparkles size={18} style={{ color: '#3B82F6' }} />
+                <Sparkles size={18} className="text-[#3B82F6]" />
                 <h3 className="font-black text-white tracking-tight">Análise de IA</h3>
-                <span className="px-2 py-0.5 text-[9px] font-black text-white rounded-full uppercase" style={{ background: 'linear-gradient(135deg,#1E3A8A,#3B82F6)' }}>Gemini</span>
+                <span className="px-2 py-0.5 text-[9px] font-black text-white rounded-full uppercase bg-[linear-gradient(135deg,#1E3A8A,#3B82F6)]">Gemini</span>
               </div>
               <p className="text-sm text-slate-300 mb-4">{progressAnalysis.summary}</p>
 
@@ -182,9 +175,9 @@ const ClientProfileTabPanels: React.FC<ClientProfileTabPanelsProps> = ({
           )}
 
           {loadingAnalysis && (
-            <div className="rounded-2xl p-5 animate-pulse" style={{ background: 'rgba(59, 130, 246,0.04)', border: '1px solid rgba(59, 130, 246,0.1)' }}>
+            <div className="rounded-2xl p-5 animate-pulse bg-[rgba(59,130,246,0.04)] border border-[rgba(59,130,246,0.1)]">
               <div className="flex items-center gap-2">
-                <Sparkles size={18} style={{ color: '#3B82F6' }} className="animate-spin" />
+                <Sparkles size={18} className="animate-spin text-[#3B82F6]" />
                 <p className="text-sm text-slate-400">Analisando progresso com IA...</p>
               </div>
             </div>
@@ -323,13 +316,7 @@ const ClientProfileTabPanels: React.FC<ClientProfileTabPanelsProps> = ({
         >
           <button
             onClick={onStartAssessment}
-            className="w-full py-4 rounded-2xl font-black uppercase tracking-widest flex items-center justify-center gap-2 active:scale-[0.98] transition-all"
-            style={{
-              background: 'var(--btn-primary-bg)',
-              color: 'var(--btn-primary-text)',
-              border: '1px solid var(--btn-primary-border)',
-              boxShadow: 'var(--btn-primary-shadow)',
-            }}
+            className="w-full py-4 rounded-2xl font-black uppercase tracking-widest flex items-center justify-center gap-2 active:scale-[0.98] transition-all bg-[var(--btn-primary-bg)] text-[var(--btn-primary-text)] border border-[var(--btn-primary-border)] shadow-[var(--btn-primary-shadow)]"
           >
             <PlusCircle size={20} />
             Nova Avaliação
@@ -374,13 +361,7 @@ const ClientProfileTabPanels: React.FC<ClientProfileTabPanelsProps> = ({
         >
           <button
             onClick={() => onCreateWorkout ? onCreateWorkout() : onStartWorkout({ title: 'Novo Treino', exercises: [] })}
-            className="w-full py-4 rounded-2xl font-black uppercase tracking-widest flex items-center justify-center gap-2 active:scale-[0.98] transition-all"
-            style={{
-              background: 'var(--btn-primary-bg)',
-              color: 'var(--btn-primary-text)',
-              border: '1px solid var(--btn-primary-border)',
-              boxShadow: 'var(--btn-primary-shadow)',
-            }}
+            className="w-full py-4 rounded-2xl font-black uppercase tracking-widest flex items-center justify-center gap-2 active:scale-[0.98] transition-all bg-[var(--btn-primary-bg)] text-[var(--btn-primary-text)] border border-[var(--btn-primary-border)] shadow-[var(--btn-primary-shadow)]"
           >
             <Dumbbell size={20} />
             Criar Novo Treino
@@ -399,8 +380,7 @@ const ClientProfileTabPanels: React.FC<ClientProfileTabPanelsProps> = ({
             {onSportTraining && (
               <button
                 onClick={onSportTraining}
-                className="py-3 rounded-xl font-bold text-xs uppercase tracking-widest flex items-center justify-center gap-2 active:scale-[0.98] transition-all"
-                style={{ background: 'rgba(59, 130, 246,0.07)', border: '1px solid rgba(59, 130, 246,0.15)', color: '#3B82F6' }}
+                className="py-3 rounded-xl font-bold text-xs uppercase tracking-widest flex items-center justify-center gap-2 active:scale-[0.98] transition-all bg-[rgba(59,130,246,0.07)] border border-[rgba(59,130,246,0.15)] text-[#3B82F6]"
               >
                 <Zap size={16} />
                 Esportivo ⭐

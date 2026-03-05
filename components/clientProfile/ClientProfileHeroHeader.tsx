@@ -117,7 +117,7 @@ const ClientProfileHeroHeader: React.FC<ClientProfileHeroHeaderProps> = ({
       <div className="absolute bottom-4 left-0 right-0 px-6 z-10 flex items-end gap-4">
         <div className="flex-shrink-0 relative">
           <div className="size-[76px] rounded-2xl border-[3px] border-white/20 overflow-hidden shadow-2xl relative">
-            <div className="absolute inset-0 flex items-center justify-center" style={{ background: 'linear-gradient(135deg,#1E3A8A,#3B82F6)' }}>
+            <div className="absolute inset-0 flex items-center justify-center bg-[linear-gradient(135deg,#1E3A8A,#3B82F6)]">
               <span className="text-2xl font-black text-white">{client.name.charAt(0)}</span>
             </div>
             {(client.avatar_url || client.avatar) && (

@@ -11,6 +11,7 @@
     "typecheck:functions": "tsc --noEmit -p tsconfig.functions.json",
     "typecheck:all": "npm run typecheck && npm run typecheck:functions",
     "test:regression": "rm -rf .tmp-tests && tsc -p tsconfig.tests.json && printf '{\"type\":\"commonjs\"}' > .tmp-tests/package.json && node --test .tmp-tests/tests/**/*.test.js",
+    "bundle:budget": "node scripts/check-bundle-budget.cjs",
     "secret-scan": "node scripts/secret-scan.cjs",
     "secret-scan:staged": "node scripts/secret-scan.cjs --staged",
     "security-check": "node scripts/security-check.cjs",

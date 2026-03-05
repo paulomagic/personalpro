@@ -245,6 +245,56 @@ const AdminAIDashboardView: React.FC<AdminAIDashboardViewProps> = ({ onBack }) =
                     </motion.div>
                 </div>
 
+                {metrics?.productMetrics && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.37 }}
+                        className="glass-card rounded-2xl p-4 border border-cyan-500/20 bg-gradient-to-br from-cyan-500/10 to-transparent"
+                    >
+                        <div className="flex items-center justify-between mb-3">
+                            <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Métricas de Produto ({metrics.productMetrics.windowDays} dias)</span>
+                            <span className="text-xs text-slate-400">{metrics.productMetrics.tta?.samples || 0} amostras TTA</span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3 mb-3">
+                            <div>
+                                <p className="text-xl font-black text-cyan-300">
+                                    {metrics.productMetrics.tta?.avgSeconds || 0}s
+                                </p>
+                                <p className="text-[10px] text-slate-500">TTA médio</p>
+                            </div>
+                            <div>
+                                <p className="text-xl font-black text-cyan-100">
+                                    p50 {metrics.productMetrics.tta?.p50Seconds || 0}s
+                                </p>
+                                <p className="text-[10px] text-slate-500">TTA mediano</p>
+                            </div>
+                            <div>
+                                <p className={`text-xl font-black ${(metrics.productMetrics.workoutCompletionRate || 0) >= 60 ? 'text-emerald-400' : (metrics.productMetrics.workoutCompletionRate || 0) >= 40 ? 'text-amber-300' : 'text-red-400'}`}>
+                                    {metrics.productMetrics.workoutCompletionRate || 0}%
+                                </p>
+                                <p className="text-[10px] text-slate-500">Conclusão de treino</p>
+                            </div>
+                            <div>
+                                <p className={`text-xl font-black ${(metrics.productMetrics.localFallbackRate || 0) <= 25 ? 'text-emerald-400' : (metrics.productMetrics.localFallbackRate || 0) <= 45 ? 'text-amber-300' : 'text-red-400'}`}>
+                                    {metrics.productMetrics.localFallbackRate || 0}%
+                                </p>
+                                <p className="text-[10px] text-slate-500">Fallback local IA</p>
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 text-xs">
+                            <div className="rounded-lg border border-white/5 p-2 bg-white/[0.02]">
+                                <p className="text-slate-400">Conversão geração</p>
+                                <p className="font-black text-white">{metrics.productMetrics.generationConversionRate || 0}%</p>
+                            </div>
+                            <div className="rounded-lg border border-white/5 p-2 bg-white/[0.02]">
+                                <p className="text-slate-400">Conversão salvar treino</p>
+                                <p className="font-black text-white">{metrics.productMetrics.saveConversionRate || 0}%</p>
+                            </div>
+                        </div>
+                    </motion.div>
+                )}
+
                 {metrics?.aiFeedback && (
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}

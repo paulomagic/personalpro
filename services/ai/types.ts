@@ -53,6 +53,7 @@ export type AIIntentResponse = z.infer<typeof AIIntentResponseSchema>;
 // ============ PROVIDER INTERFACE ============
 export type ActionType =
     | 'training_intent'    // Geração de intenção biomecânica
+    | 'regenerate_exercise' // Substituição de exercício específico
     | 'analyze_progress'   // Análise profunda de progresso
     | 'insight'            // Insights personalizados
     | 'message'            // Geração de mensagens
@@ -91,6 +92,7 @@ export interface RoutingRule {
 
 export const DEFAULT_ROUTING: RoutingRule[] = [
     { action: 'training_intent', primaryProvider: 'groq', fallbackProviders: ['local'] },
+    { action: 'regenerate_exercise', primaryProvider: 'groq', fallbackProviders: ['gemini', 'local'] },
     { action: 'analyze_progress', primaryProvider: 'gemini', fallbackProviders: [] },
     { action: 'insight', primaryProvider: 'gemini', fallbackProviders: ['groq'] },
     { action: 'message', primaryProvider: 'groq', fallbackProviders: ['local'] },

@@ -214,6 +214,30 @@ export async function getActivityLogs(filters: AILogFilters = {}) {
 // Admin Metrics
 // ============================================
 
+interface ProductFunnelLogRow {
+    user_id: string | null;
+    action: string;
+    metadata?: Record<string, any> | null;
+    created_at: string;
+}
+
+function extractEntityId(metadata?: Record<string, any> | null): string {
+    if (!metadata || typeof metadata !== 'object') return 'unknown';
+    const value = metadata.clientId ?? metadata.studentId ?? metadata.workoutId ?? metadata.coachId;
+    return value == null ? 'unknown' : String(value);
+}
+
+function percentileFromSorted(values: number[], quantile: number): number {
+    if (values.length === 0) return 0;
+    if (values.length === 1) return values[0];
+    const position = Math.min(values.length - 1, Math.max(0, (values.length - 1) * quantile));
+    const lower = Math.floor(position);
+    const upper = Math.ceil(position);
+    if (lower === upper) return values[lower];
+    const weight = position - lower;
+    return Math.round(values[lower] + (values[upper] - values[lower]) * weight);
+}
+
 export async function getAIMetrics() {
     const today = new Date().toISOString().split('T')[0];
     const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
@@ -526,6 +550,102 @@ export async function getAIMetrics() {
         };
     });
 
+    // Product funnel metrics (7 days): TTA, generation conversion, local fallback, workout completion
+    const funnelActions = [
+        'funnel:workout_generation_started',
+        'funnel:workout_generation_succeeded',
+        'funnel:workout_generation_fallback_local',
+        'funnel:workout_generation_failed',
+        'funnel:workout_save_succeeded',
+        'funnel:workout_started',
+        'funnel:workout_execution_started',
+        'funnel:workout_finished',
+        'funnel:workout_execution_finished'
+    ];
+
+    const { data: productFunnelData } = await supabase
+        .from('activity_logs')
+        .select('user_id, action, metadata, created_at')
+        .in('action', funnelActions)
+        .gte('created_at', weekAgo)
+        .order('created_at', { ascending: true });
+
+    const funnel = {
+        generationStarted: 0,
+        generationSucceeded: 0,
+        generationFallbackLocal: 0,
+        generationFailed: 0,
+        workoutSaveSucceeded: 0,
+        workoutStarted: 0,
+        workoutFinished: 0
+    };
+
+    const pendingGenerationStarts = new Map<string, number[]>();
+    const ttaSamplesSeconds: number[] = [];
+
+    (productFunnelData as ProductFunnelLogRow[] | null)?.forEach((row) => {
+        const action = String(row.action || '');
+        const metadata = row.metadata && typeof row.metadata === 'object' ? row.metadata : {};
+        const key = `${row.user_id || 'anon'}:${extractEntityId(metadata)}`;
+        const createdAtMs = new Date(row.created_at).getTime();
+        if (!Number.isFinite(createdAtMs)) return;
+
+        if (action === 'funnel:workout_generation_started') {
+            funnel.generationStarted += 1;
+            const queue = pendingGenerationStarts.get(key) || [];
+            queue.push(createdAtMs);
+            pendingGenerationStarts.set(key, queue);
+            return;
+        }
+
+        if (action === 'funnel:workout_generation_succeeded') {
+            funnel.generationSucceeded += 1;
+        } else if (action === 'funnel:workout_generation_fallback_local') {
+            funnel.generationFallbackLocal += 1;
+        } else if (action === 'funnel:workout_generation_failed') {
+            funnel.generationFailed += 1;
+        } else if (action === 'funnel:workout_save_succeeded') {
+            funnel.workoutSaveSucceeded += 1;
+        } else if (action === 'funnel:workout_started' || action === 'funnel:workout_execution_started') {
+            funnel.workoutStarted += 1;
+        } else if (action === 'funnel:workout_finished' || action === 'funnel:workout_execution_finished') {
+            funnel.workoutFinished += 1;
+        }
+
+        if (action === 'funnel:workout_generation_succeeded' || action === 'funnel:workout_generation_fallback_local') {
+            const queue = pendingGenerationStarts.get(key);
+            if (!queue || queue.length === 0) return;
+            const startAtMs = queue.shift();
+            if (startAtMs == null) return;
+            if (queue.length === 0) pendingGenerationStarts.delete(key);
+            const deltaSeconds = Math.round((createdAtMs - startAtMs) / 1000);
+            if (deltaSeconds >= 0 && deltaSeconds <= 6 * 60 * 60) {
+                ttaSamplesSeconds.push(deltaSeconds);
+            }
+        }
+    });
+
+    const generatedCount = funnel.generationSucceeded + funnel.generationFallbackLocal;
+    const completionRate = funnel.workoutStarted > 0
+        ? Math.round((funnel.workoutFinished / funnel.workoutStarted) * 100)
+        : 0;
+    const localFallbackRate = funnel.generationStarted > 0
+        ? Math.round((funnel.generationFallbackLocal / funnel.generationStarted) * 100)
+        : 0;
+    const generationConversionRate = funnel.generationStarted > 0
+        ? Math.round((generatedCount / funnel.generationStarted) * 100)
+        : 0;
+    const saveConversionRate = generatedCount > 0
+        ? Math.round((funnel.workoutSaveSucceeded / generatedCount) * 100)
+        : 0;
+
+    const sortedTta = [...ttaSamplesSeconds].sort((a, b) => a - b);
+    const ttaAvgSeconds = sortedTta.length > 0
+        ? Math.round(sortedTta.reduce((sum, value) => sum + value, 0) / sortedTta.length)
+        : 0;
+    const ttaP50Seconds = percentileFromSorted(sortedTta, 0.5);
+    const ttaP90Seconds = percentileFromSorted(sortedTta, 0.9);
+
     let usageByUser: AIUsageByUser[] = [];
     try {
         const { data: usageRows, error: usageError } = await supabase
@@ -585,6 +705,20 @@ export async function getAIMetrics() {
             hitRate: precisionHitRate,
             avgConfidence: avgPrecisionConfidence,
             bySegment: precisionBySegmentNormalized
+        },
+        productMetrics: {
+            windowDays: 7,
+            funnel,
+            generationConversionRate,
+            localFallbackRate,
+            saveConversionRate,
+            workoutCompletionRate: completionRate,
+            tta: {
+                samples: ttaSamplesSeconds.length,
+                avgSeconds: ttaAvgSeconds,
+                p50Seconds: ttaP50Seconds,
+                p90Seconds: ttaP90Seconds
+            }
         },
         usageByUser
     };

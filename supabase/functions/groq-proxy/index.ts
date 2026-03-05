@@ -126,7 +126,10 @@ async function callGroq(
 ): Promise<GroqCallResult> {
     try {
         const modelName = normalizeModelName(model, MODEL_DEFAULT);
-        const isStructuredAction = action === 'training_intent' || action === 'refine';
+        const isStructuredAction =
+            action === 'training_intent'
+            || action === 'refine'
+            || action === 'regenerate_exercise';
 
         const response = await fetch(GROQ_API_URL, {
             method: "POST",

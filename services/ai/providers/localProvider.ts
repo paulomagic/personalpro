@@ -173,6 +173,58 @@ export const localProvider: AIProvider = {
                 };
             }
 
+            if (request.action === 'refine') {
+                const currentWorkout = request.metadata?.currentWorkout;
+                const splits = Array.isArray(currentWorkout?.splits) ? currentWorkout.splits : null;
+                if (splits) {
+                    return {
+                        success: true,
+                        text: JSON.stringify({ splits }),
+                        provider: 'local',
+                        model: 'deterministic-refine-v1',
+                        latencyMs: Date.now() - startTime
+                    };
+                }
+                return {
+                    success: false,
+                    text: null,
+                    provider: 'local',
+                    model: 'deterministic-refine-v1',
+                    latencyMs: Date.now() - startTime,
+                    error: 'missing_current_workout'
+                };
+            }
+
+            if (request.action === 'regenerate_exercise') {
+                const targetMuscle = String(request.metadata?.targetMuscle || 'geral');
+                const currentExercise = String(request.metadata?.currentExercise || 'exercicio_atual');
+                const normalized = targetMuscle.toLowerCase();
+                const replacementByMuscle: Record<string, string> = {
+                    peito: 'Supino Máquina',
+                    costas: 'Remada Sentada',
+                    ombro: 'Desenvolvimento com Halteres',
+                    quadriceps: 'Leg Press 45°',
+                    posterior_coxa: 'Mesa Flexora',
+                    gluteos: 'Hip Thrust',
+                    core: 'Prancha com apoio'
+                };
+
+                return {
+                    success: true,
+                    text: JSON.stringify({
+                        name: replacementByMuscle[normalized] || `Variação segura para ${currentExercise}`,
+                        sets: 4,
+                        reps: '8-12',
+                        rest: '60s',
+                        targetMuscle,
+                        technique: 'Priorize amplitude controlada e execução estável.'
+                    }),
+                    provider: 'local',
+                    model: 'deterministic-regenerate-v1',
+                    latencyMs: Date.now() - startTime
+                };
+            }
+
             if (request.action === 'message') {
                 const messages: Record<string, string> = {
                     reminder: `Olá! 👋 Lembrete do seu treino de hoje. Vamos manter o foco! 💪`,

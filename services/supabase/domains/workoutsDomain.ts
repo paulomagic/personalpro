@@ -1,5 +1,6 @@
 import { supabase } from '../../supabaseCore';
 import { hydrateWorkoutWithVideos } from '../../exerciseService';
+import { isSupabaseUuid } from '../utils/identifiers';
 
 export interface AIWorkoutMetadata {
     model: string;
@@ -50,7 +51,7 @@ export async function getWorkoutsByClient(
     clientId: string,
     options: WorkoutsQueryOptions = {}
 ): Promise<Workout[]> {
-    if (!supabase) return [];
+    if (!supabase || !isSupabaseUuid(clientId)) return [];
 
     const limit = Math.min(Math.max(options.limit ?? 80, 1), 200);
     const offset = Math.max(options.offset ?? 0, 0);
@@ -76,7 +77,7 @@ export async function saveAIWorkout(
     workout: any,
     metadata: AIWorkoutMetadata
 ): Promise<Workout | null> {
-    if (!supabase) return null;
+    if (!supabase || !isSupabaseUuid(clientId) || !isSupabaseUuid(coachId)) return null;
 
     const workoutWithMetadata = {
         client_id: clientId,
@@ -103,7 +104,7 @@ export async function saveAIWorkout(
 }
 
 export async function saveWorkout(workout: Omit<Workout, 'id' | 'created_at'>): Promise<Workout | null> {
-    if (!supabase) return null;
+    if (!supabase || !isSupabaseUuid(workout.client_id) || !isSupabaseUuid(workout.coach_id)) return null;
 
     const { data, error } = await supabase
         .from('workouts')
@@ -120,7 +121,7 @@ export async function saveWorkout(workout: Omit<Workout, 'id' | 'created_at'>): 
 }
 
 export async function getCurrentWorkoutByClient(clientId: string): Promise<Workout | null> {
-    if (!supabase) return null;
+    if (!supabase || !isSupabaseUuid(clientId)) return null;
 
     const { data, error } = await supabase
         .from('workouts')

@@ -9,6 +9,7 @@ import type { ProgressionAdjustment } from './types';
 import { logAIAction } from '../../loggingService';
 import { buildProgressionPrecisionReport, resolvePrecisionProfile } from '../progressionPrecisionService';
 import { readQueueWithFallback, writeQueueWithFallback } from '../../offline/queueStorage';
+import { isSupabaseUuid } from '../../supabase/utils/identifiers';
 
 const isDev = import.meta.env.DEV;
 const debugLog = (...args: unknown[]) => {
@@ -77,7 +78,7 @@ function shouldCapturePrecisionTelemetry(studentId: string): boolean {
 }
 
 async function captureProgressionPrecisionTelemetry(studentId: string): Promise<void> {
-    if (!studentId || studentId === 'unknown' || !supabase) return;
+    if (!isSupabaseUuid(studentId) || !supabase) return;
     if (!shouldCapturePrecisionTelemetry(studentId)) return;
 
     const startedAt = Date.now();
@@ -370,6 +371,9 @@ export async function getExerciseFeedbackHistory(
     exerciseId: string,
     limit: number = 10
 ): Promise<SessionFeedback[]> {
+    if (!supabase || !isSupabaseUuid(studentId)) {
+        return [];
+    }
 
     try {
         const { data, error } = await supabase
@@ -400,6 +404,9 @@ export async function getLatestFeedback(
     studentId: string,
     limit: number = 10
 ): Promise<SessionFeedback[]> {
+    if (!supabase || !isSupabaseUuid(studentId)) {
+        return [];
+    }
 
     try {
         const { data, error } = await supabase
@@ -431,6 +438,9 @@ export async function getProgressionSuggestion(
     studentId: string,
     exerciseId: string
 ): Promise<ProgressionAdjustment | null> {
+    if (!isSupabaseUuid(studentId)) {
+        return null;
+    }
 
     try {
         // Buscar último feedback
@@ -467,6 +477,9 @@ export async function getProgressionTrend(
     suggestion: string;
     confidence: number;
 } | null> {
+    if (!isSupabaseUuid(studentId)) {
+        return null;
+    }
 
     try {
         const feedbacks = await getExerciseFeedbackHistory(studentId, exerciseId, sessionsCount);
@@ -496,6 +509,9 @@ export async function getProgressionTrend(
 export async function getAverageRIRByExercise(
     studentId: string
 ): Promise<Array<{ exercise_id: string; avg_rir: number; sessions: number }>> {
+    if (!supabase || !isSupabaseUuid(studentId)) {
+        return [];
+    }
 
     try {
         const { data, error } = await supabase

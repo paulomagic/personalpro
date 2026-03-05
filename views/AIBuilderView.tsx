@@ -5,6 +5,7 @@ import { logFunnelEvent } from '../services/loggingService';
 import { flushAIGenerationFeedbackQueue, saveAIGenerationFeedback } from '../services/ai/feedback/aiGenerationFeedbackService';
 import { getAdaptiveTrainingSignal, type AdaptiveTrainingSignal } from '../services/ai/adaptiveSignalsService';
 import { assessInjuryRisk, type InjuryRiskAssessment } from '../services/ai/injuryRiskService';
+import { isDemoSessionUser } from '../services/auth/authFlow';
 import {
   resolvePrecisionProfile
 } from '../services/ai/progressionPrecisionService';
@@ -33,6 +34,7 @@ const loadWorkoutsDomain = () => import('../services/supabase/domains/workoutsDo
 
 
 const AIBuilderView: React.FC<AIBuilderViewProps> = ({ user, onBack, onDone }) => {
+  const isDemo = isDemoSessionUser(user);
   const [loading, setLoading] = useState(false);
   const [loadingMessageIndex, setLoadingMessageIndex] = useState(0);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
@@ -74,7 +76,7 @@ const AIBuilderView: React.FC<AIBuilderViewProps> = ({ user, onBack, onDone }) =
     enabled: Boolean(user?.id || user?.isDemo),
     queryFn: async () => {
       try {
-        if (user?.id) {
+        if (!isDemo && user?.id) {
           const { getClients, mapDBClientToClient } = await loadClientsDomain();
           const dbClients = await getClients(user.id, { limit: 100 });
           if (dbClients && dbClients.length > 0) {
@@ -91,6 +93,7 @@ const AIBuilderView: React.FC<AIBuilderViewProps> = ({ user, onBack, onDone }) =
 
   const handleFeedback = async (type: 'positive' | 'negative') => {
     setFeedback(type);
+    if (!isDemo) {
     await saveAIGenerationFeedback({
       feedback: type,
       source: 'ai_builder',
@@ -99,6 +102,7 @@ const AIBuilderView: React.FC<AIBuilderViewProps> = ({ user, onBack, onDone }) =
       optionLabel: workoutOptions[selectedOptionIndex]?.optionLabel,
       objective: result?.objective
     });
+    }
     void logFunnelEvent('ai_generation_feedback_submitted', {
       feedback: type,
       clientId: selectedClient?.id,
@@ -195,13 +199,14 @@ const AIBuilderView: React.FC<AIBuilderViewProps> = ({ user, onBack, onDone }) =
   }, [clients]);
 
   useEffect(() => {
+    if (isDemo) return;
     void flushAIGenerationFeedbackQueue();
     const onOnline = () => {
       void flushAIGenerationFeedbackQueue();
     };
     window.addEventListener('online', onOnline);
     return () => window.removeEventListener('online', onOnline);
-  }, []);
+  }, [isDemo]);
 
   useEffect(() => {
     if (!selectedClient?.id) {
@@ -457,6 +462,11 @@ const AIBuilderView: React.FC<AIBuilderViewProps> = ({ user, onBack, onDone }) =
       return;
     }
 
+    if (isDemo) {
+      setErrorToast('Salvamento está indisponível no modo demonstração.');
+      return;
+    }
+
     setLoading(true);
     // Use a loading message if available or just wait
 
@@ -633,10 +643,15 @@ const AIBuilderView: React.FC<AIBuilderViewProps> = ({ user, onBack, onDone }) =
             </div>
 
             <div className="mt-12 w-64 h-1.5 rounded-full overflow-hidden bg-[rgba(59,130,246,0.1)]">
-              <div
-                className="h-full transition-all duration-500 rounded-full bg-[linear-gradient(90deg,#1E3A8A,#3B82F6)]"
-                style={{ width: `${(loadingMessageIndex + 1) * 20}%` }}
-              ></div>
+              <svg viewBox="0 0 100 6" preserveAspectRatio="none" className="h-full w-full rounded-full">
+                <defs>
+                  <linearGradient id="ai-builder-loading-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stopColor="#1E3A8A" />
+                    <stop offset="100%" stopColor="#3B82F6" />
+                  </linearGradient>
+                </defs>
+                <rect x="0" y="0" width={(loadingMessageIndex + 1) * 20} height="6" rx="3" fill="url(#ai-builder-loading-gradient)" />
+              </svg>
             </div>
           </div>
         </div>

@@ -1,4 +1,5 @@
 import { supabase } from '../../supabaseCore';
+import { isSupabaseUuid } from '../utils/identifiers';
 
 export interface DBClient {
     id: string;
@@ -136,7 +137,7 @@ export async function getClients(
     coachId: string,
     options: ClientsQueryOptions = {}
 ): Promise<DBClient[]> {
-    if (!supabase) return [];
+    if (!supabase || !isSupabaseUuid(coachId)) return [];
 
     const limit = Math.min(Math.max(options.limit ?? 200, 1), 500);
     const offset = Math.max(options.offset ?? 0, 0);
@@ -168,7 +169,7 @@ export async function getClients(
 }
 
 export async function getClientById(clientId: string): Promise<DBClient | null> {
-    if (!supabase) return null;
+    if (!supabase || !isSupabaseUuid(clientId)) return null;
 
     const { data, error } = await supabase
         .from('clients')
@@ -204,7 +205,7 @@ export async function createClient(client: CreateClientInput): Promise<DBClient 
 }
 
 export async function updateClientById(clientId: string, updates: Partial<DBClient>): Promise<DBClient | null> {
-    if (!supabase) return null;
+    if (!supabase || !isSupabaseUuid(clientId)) return null;
 
     const { data, error } = await supabase
         .from('clients')
@@ -222,7 +223,7 @@ export async function updateClientById(clientId: string, updates: Partial<DBClie
 }
 
 export async function deleteClientCascade(clientId: string): Promise<boolean> {
-    if (!supabase) return false;
+    if (!supabase || !isSupabaseUuid(clientId)) return false;
 
     try {
         await supabase.from('assessments').delete().eq('client_id', clientId);

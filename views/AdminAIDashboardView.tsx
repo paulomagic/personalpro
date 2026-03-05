@@ -414,10 +414,9 @@ const AdminAIDashboardView: React.FC<AdminAIDashboardViewProps> = ({ onBack }) =
                                     <span className="text-xs text-slate-400 truncate max-w-[150px]">{model}</span>
                                     <div className="flex items-center gap-2">
                                         <div className="h-2 bg-blue-500/30 rounded-full w-24">
-                                            <div
-                                                className="h-full bg-blue-500 rounded-full transition-all"
-                                                style={{ width: `${Math.min(100, (count / metrics.totalLogs) * 100)}%` }}
-                                            />
+                                            <svg viewBox="0 0 100 8" preserveAspectRatio="none" className="h-full w-full rounded-full">
+                                                <rect x="0" y="0" width={Math.min(100, (count / metrics.totalLogs) * 100)} height="8" rx="4" fill="#3B82F6" />
+                                            </svg>
                                         </div>
                                         <span className="text-xs font-bold text-white w-10 text-right">{count}</span>
                                     </div>
@@ -497,10 +496,9 @@ const AdminAIDashboardView: React.FC<AdminAIDashboardViewProps> = ({ onBack }) =
                                         <span className="text-xs text-slate-400 capitalize">{action.replace(/_/g, ' ')}</span>
                                         <div className="flex items-center gap-2">
                                             <div className="h-2 bg-slate-700 rounded-full w-20">
-                                                <div
-                                                    className={`h-full rounded-full transition-all ${rate >= 70 ? 'bg-emerald-500' : rate >= 40 ? 'bg-blue-500' : 'bg-red-500'}`}
-                                                    style={{ width: `${rate}%` }}
-                                                />
+                                                <svg viewBox="0 0 100 8" preserveAspectRatio="none" className="h-full w-full rounded-full">
+                                                    <rect x="0" y="0" width={rate} height="8" rx="4" fill={rate >= 70 ? '#10B981' : rate >= 40 ? '#3B82F6' : '#EF4444'} />
+                                                </svg>
                                             </div>
                                             <span className={`text-xs font-bold w-10 text-right ${rate >= 70 ? 'text-emerald-400' : rate >= 40 ? 'text-blue-400' : 'text-red-400'}`}>
                                                 {rate}%
@@ -607,10 +605,9 @@ const AdminAIDashboardView: React.FC<AdminAIDashboardViewProps> = ({ onBack }) =
                                             <span className="text-slate-400 capitalize w-24">{dateStr}</span>
                                             <div className="flex-1 mx-3">
                                                 <div className="h-2 bg-slate-700 rounded-full">
-                                                    <div
-                                                        className="h-full bg-purple-500 rounded-full transition-all"
-                                                        style={{ width: `${Math.min(100, (data.total / 20) * 100)}%` }}
-                                                    />
+                                                    <svg viewBox="0 0 100 8" preserveAspectRatio="none" className="h-full w-full rounded-full">
+                                                        <rect x="0" y="0" width={Math.min(100, (data.total / 20) * 100)} height="8" rx="4" fill="#A855F7" />
+                                                    </svg>
                                                 </div>
                                             </div>
                                             <div className="flex items-center gap-2 w-28 justify-end">

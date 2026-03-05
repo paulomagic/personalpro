@@ -129,16 +129,10 @@ export function ClientPhysicalDataForm({
     if (compact) {
         return (
             <div
-                className="rounded-xl p-4"
-                style={isLightTheme
-                    ? {
-                        background: 'linear-gradient(160deg, rgba(224, 233, 248, 0.92), rgba(208, 220, 240, 0.9))',
-                        border: '1px solid rgba(130, 170, 235, 0.28)',
-                    }
-                    : {
-                        background: 'rgba(15, 23, 42, 0.5)',
-                        border: '1px solid rgba(51, 65, 85, 0.5)',
-                    }}
+                className={`rounded-xl p-4 border ${isLightTheme
+                    ? 'bg-[linear-gradient(160deg,rgba(224,233,248,0.92),rgba(208,220,240,0.9))] border-[rgba(130,170,235,0.28)]'
+                    : 'bg-[rgba(15,23,42,0.5)] border-[rgba(51,65,85,0.5)]'
+                    }`}
             >
                 <div className="flex items-center gap-2 mb-3">
                     <Activity className="w-4 h-4 text-blue-400" />
@@ -239,16 +233,10 @@ export function ClientPhysicalDataForm({
     // Versão completa (para perfil do cliente)
     return (
         <div
-            className="rounded-xl p-6"
-            style={isLightTheme
-                ? {
-                    background: 'linear-gradient(160deg, rgba(224, 233, 248, 0.92), rgba(208, 220, 240, 0.9))',
-                    border: '1px solid rgba(130, 170, 235, 0.28)',
-                }
-                : {
-                    background: 'rgba(15, 23, 42, 0.5)',
-                    border: '1px solid rgba(51, 65, 85, 0.5)',
-                }}
+            className={`rounded-xl p-6 border ${isLightTheme
+                ? 'bg-[linear-gradient(160deg,rgba(224,233,248,0.92),rgba(208,220,240,0.9))] border-[rgba(130,170,235,0.28)]'
+                : 'bg-[rgba(15,23,42,0.5)] border-[rgba(51,65,85,0.5)]'
+                }`}
         >
             <div className="flex items-center gap-2 mb-4">
                 <Activity className="w-4 h-4 text-blue-400" />

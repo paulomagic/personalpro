@@ -22,16 +22,20 @@ export const Skeleton: React.FC<SkeletonProps> = ({
         avatar: 'rounded-full size-12'
     };
 
-    const style = {
-        width: width || (variant === 'text' ? '100%' : undefined),
-        height: height || (variant === 'text' ? '16px' : undefined)
-    };
+    const resolvedWidth = width || (variant === 'text' ? '100%' : undefined);
+    const resolvedHeight = height || (variant === 'text' ? '16px' : undefined);
 
     return (
-        <div
+        <svg
             className={`${baseClasses} ${variantClasses[variant]} ${className}`}
-            style={style}
-        />
+            width={resolvedWidth}
+            height={resolvedHeight}
+            viewBox="0 0 100 100"
+            preserveAspectRatio="none"
+            aria-hidden="true"
+        >
+            <rect width="100" height="100" rx={variant === 'circle' || variant === 'avatar' ? 999 : 16} fill="currentColor" />
+        </svg>
     );
 };
 

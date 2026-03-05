@@ -81,6 +81,12 @@ export function createDemoUser(): AppSessionUser & { isDemo: true } {
     };
 }
 
+export function isDemoSessionUser(
+    user: Pick<AppSessionUser, 'id' | 'isDemo'> | null | undefined
+): boolean {
+    return Boolean(user?.isDemo || user?.id === 'demo-user-id');
+}
+
 export function canAccessAdminArea(user: Pick<AppUser, 'user_metadata' | 'profile'> | null | undefined): boolean {
     return isAdmin(user as AppUser);
 }

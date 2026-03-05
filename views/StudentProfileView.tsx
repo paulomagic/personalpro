@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useMemo } from 'react';
 import {
     ArrowLeft,
     User,
@@ -22,6 +23,8 @@ import {
 import { getUserProfile } from '../services/userProfileService';
 import { getClientById } from '../services/supabase/domains/clientsDomain';
 import { getCompletedWorkouts } from '../services/supabase/domains/completedWorkoutsDomain';
+import { getCurrentWorkoutByClient, type Workout } from '../services/supabase/domains/workoutsDomain';
+import { buildConsistencyRecommendation, deriveSmartGoals, deriveStudentConsistencyStats } from '../services/product/trainingConsistency';
 import { AppUser, Client, CompletedWorkout } from '../types';
 
 interface StudentProfileViewProps {
@@ -41,6 +44,7 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({
     const [clientData, setClientData] = useState<Client | null>(null);
     const [activeTab, setActiveTab] = useState<'bio' | 'goals' | 'history'>('bio');
     const [history, setHistory] = useState<CompletedWorkout[]>([]);
+    const [currentWorkout, setCurrentWorkout] = useState<Workout | null>(null);
 
     const studentName = user?.user_metadata?.name || user?.user_metadata?.full_name || 'Aluno';
 
@@ -62,6 +66,9 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({
                         // Load history
                         const workouts = await getCompletedWorkouts(profile.client_id);
                         setHistory(workouts);
+
+                        const activeWorkout = await getCurrentWorkoutByClient(profile.client_id);
+                        setCurrentWorkout(activeWorkout);
                     }
                 }
             } catch (error) {
@@ -103,21 +110,22 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({
             : '23.5'
     };
 
-    // Daily goals data
-    const dailyGoals = [
-        { id: 1, icon: Dumbbell, label: 'Treino', target: 1, current: 1, unit: 'sessão', color: 'blue' },
-        { id: 2, icon: Droplets, label: 'Água', target: 3, current: 2, unit: 'L', color: 'cyan' },
-        { id: 3, icon: Activity, label: 'Passos', target: 8000, current: 5420, unit: '', color: 'emerald' },
-        { id: 4, icon: Clock, label: 'Sono', target: 8, current: 7, unit: 'h', color: 'blue' },
-    ];
+    const weeklyStats = useMemo(() => deriveStudentConsistencyStats({
+        history,
+        client: clientData,
+        currentWorkout
+    }), [history, clientData, currentWorkout]);
 
-    // Weekly stats
-    const weeklyStats = {
-        workoutsCompleted: 4,
-        workoutsPlanned: 5,
-        totalMinutes: 200,
-        streak: 12
-    };
+    const smartGoals = useMemo(() => deriveSmartGoals({
+        history,
+        client: clientData,
+        currentWorkout
+    }), [history, clientData, currentWorkout]);
+
+    const consistencyRecommendation = useMemo(
+        () => buildConsistencyRecommendation(weeklyStats),
+        [weeklyStats]
+    );
 
     if (loading) {
         return (
@@ -296,7 +304,15 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({
                                             <span className="text-sm font-black text-white">{biometrics.hydration}<span className="text-[10px] text-slate-500">%</span></span>
                                         </div>
                                         <div className="h-2.5 bg-slate-900/50 rounded-full overflow-hidden border border-white/5">
-                                            <div className="h-full bg-gradient-to-r from-cyan-500 to-emerald-400 rounded-full shadow-[0_0_10px_rgba(0,255,136,0.3)]" style={{ width: `${biometrics.hydration}%` }} />
+                                            <svg viewBox="0 0 100 10" preserveAspectRatio="none" className="h-full w-full rounded-full">
+                                                <defs>
+                                                    <linearGradient id="student-hydration-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                                                        <stop offset="0%" stopColor="#06B6D4" />
+                                                        <stop offset="100%" stopColor="#34D399" />
+                                                    </linearGradient>
+                                                </defs>
+                                                <rect x="0" y="0" width={biometrics.hydration} height="10" rx="5" fill="url(#student-hydration-gradient)" />
+                                            </svg>
                                         </div>
                                     </div>
                                 </div>
@@ -328,21 +344,40 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({
                                         </div>
                                         <div className="flex-1">
                                             <div className="h-3 bg-white/20 rounded-full overflow-hidden">
-                                                <div
-                                                    className="h-full bg-gradient-to-r from-amber-400 to-amber-300 rounded-full transition-all duration-500"
-                                                    style={{ width: `${(weeklyStats.workoutsCompleted / weeklyStats.workoutsPlanned) * 100}%` }}
-                                                />
+                                                <svg viewBox="0 0 100 12" preserveAspectRatio="none" className="h-full w-full rounded-full">
+                                                    <defs>
+                                                        <linearGradient id="student-weekly-progress-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                                                            <stop offset="0%" stopColor="#FBBF24" />
+                                                            <stop offset="100%" stopColor="#FCD34D" />
+                                                        </linearGradient>
+                                                    </defs>
+                                                    <rect
+                                                        x="0"
+                                                        y="0"
+                                                        width={weeklyStats.workoutsPlanned > 0 ? (weeklyStats.workoutsCompleted / weeklyStats.workoutsPlanned) * 100 : 0}
+                                                        height="12"
+                                                        rx="6"
+                                                        fill="url(#student-weekly-progress-gradient)"
+                                                    />
+                                                </svg>
                                             </div>
                                         </div>
                                     </div>
+                                    <p className="text-xs text-blue-100/80 mt-4">
+                                        Score de consistência: <span className="font-black text-white">{weeklyStats.consistencyScore}/100</span>
+                                    </p>
                                 </div>
                                 <div className="absolute -right-8 -bottom-8 w-32 h-32 bg-white/10 rounded-full blur-2xl" />
                             </div>
 
-                            {/* Daily Goals */}
-                            <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest px-1">Metas de Hoje</h4>
+                            <div className="glass-card p-4 rounded-[20px] border border-blue-500/10">
+                                <p className="text-[10px] font-black text-blue-400 uppercase tracking-[0.15em] mb-2">Próxima recomendação</p>
+                                <p className="text-sm text-slate-200 leading-relaxed">{consistencyRecommendation}</p>
+                            </div>
+
+                            <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest px-1">Metas Inteligentes</h4>
                             <div className="space-y-3">
-                                {dailyGoals.map((goal) => {
+                                {smartGoals.map((goal) => {
                                     const progress = Math.min((goal.current / goal.target) * 100, 100);
                                     const isComplete = goal.current >= goal.target;
                                     const colorClasses: Record<string, { bg: string; text: string; progress: string }> = {
@@ -367,11 +402,19 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({
                                                             <span className={isComplete ? colors.text : "text-white"}>{goal.current.toLocaleString()}</span>/{goal.target.toLocaleString()}{goal.unit}
                                                         </span>
                                                     </div>
+                                                    <p className="text-[11px] text-slate-500 mb-2">{goal.hint}</p>
                                                     <div className="h-2 bg-slate-900/50 rounded-full overflow-hidden border border-white/5">
-                                                        <div
-                                                            className={`h-full bg-gradient-to-r ${colors.progress} rounded-full transition-all duration-1000 ease-out`}
-                                                            style={{ width: `${progress}%` }}
-                                                        />
+                                                        <svg viewBox="0 0 100 8" preserveAspectRatio="none" className="h-full w-full rounded-full">
+                                                            <defs>
+                                                                <linearGradient id={`student-goal-${goal.id}`} x1="0%" y1="0%" x2="100%" y2="0%">
+                                                                    {goal.color === 'blue' && (<><stop offset="0%" stopColor="#3B82F6" /><stop offset="100%" stopColor="#60A5FA" /></>)}
+                                                                    {goal.color === 'cyan' && (<><stop offset="0%" stopColor="#06B6D4" /><stop offset="100%" stopColor="#22D3EE" /></>)}
+                                                                    {goal.color === 'emerald' && (<><stop offset="0%" stopColor="#10B981" /><stop offset="100%" stopColor="#34D399" /></>)}
+                                                                    {goal.color === 'purple' && (<><stop offset="0%" stopColor="#3B82F6" /><stop offset="100%" stopColor="#06B6D4" /></>)}
+                                                                </linearGradient>
+                                                            </defs>
+                                                            <rect x="0" y="0" width={progress} height="8" rx="4" fill={`url(#student-goal-${goal.id})`} />
+                                                        </svg>
                                                     </div>
                                                 </div>
 
@@ -416,6 +459,19 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({
                                     </div>
                                     <p className="text-2xl font-black text-white tracking-tight">{weeklyStats.streak}<span className="text-xs text-slate-500 ml-1">d</span></p>
                                     <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mt-1">Dias Seguidos</p>
+                                </div>
+                            </div>
+
+                            <div className="glass-card p-4 rounded-[20px]">
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] mb-2">Resumo de consistência</p>
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <p className="text-2xl font-black text-white">{weeklyStats.consistencyScore}<span className="text-sm text-slate-500 ml-1">/100</span></p>
+                                        <p className="text-xs text-slate-500 mt-1">Combina aderência, frequência e execução recente.</p>
+                                    </div>
+                                    <div className="size-14 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
+                                        <TrendingUp size={22} className="text-blue-400" />
+                                    </div>
                                 </div>
                             </div>
 

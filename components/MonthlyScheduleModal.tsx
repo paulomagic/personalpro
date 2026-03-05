@@ -195,11 +195,10 @@ const MonthlyScheduleModal: React.FC<MonthlyScheduleModalProps> = ({
                                         onClick={() => handleClientSelect(client)}
                                         className="w-full glass-card rounded-3xl p-5 flex items-center gap-4 hover:bg-blue-600/10 hover:border-blue-500/30 active:scale-[0.98] transition-all"
                                     >
-                                        <div
-                                            className="size-14 rounded-2xl bg-cover bg-center border-2 border-white/10"
-                                            style={{
-                                                backgroundImage: `url(${client.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(client.name)}&background=3b82f6&color=fff`})`
-                                            }}
+                                        <img
+                                            className="size-14 rounded-2xl object-cover border-2 border-white/10"
+                                            src={client.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(client.name)}&background=3b82f6&color=fff`}
+                                            alt={client.name}
                                         />
                                         <div className="flex-1 text-left">
                                             <h4 className="font-black text-white text-base leading-tight">

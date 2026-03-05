@@ -145,15 +145,22 @@ const MetricsView: React.FC<MetricsViewProps> = ({ user, onBack }) => {
                         {metrics.weeklyLoad.map((height, i) => (
                             <div key={i} className="flex-1 flex flex-col items-center gap-2 group">
                                 <div className="relative w-full h-full flex items-end">
-                                    <div
-                                        className="w-full rounded-xl transition-all duration-700"
-                                        style={{
-                                            height: loading ? '15%' : `${height}%`,
-                                            background: 'linear-gradient(180deg, #3B82F6 0%, #1E3A8A 100%)',
-                                            boxShadow: `0 0 12px rgba(59, 130, 246,0.2)`,
-                                            opacity: loading ? 0.3 : 1,
-                                        }}
-                                    />
+                                    <svg viewBox="0 0 100 100" preserveAspectRatio="none" className={`w-full h-full rounded-xl transition-all duration-700 ${loading ? 'opacity-30' : 'opacity-100'}`}>
+                                        <defs>
+                                            <linearGradient id={`metrics-weekly-load-${i}`} x1="0%" y1="0%" x2="0%" y2="100%">
+                                                <stop offset="0%" stopColor="#3B82F6" />
+                                                <stop offset="100%" stopColor="#1E3A8A" />
+                                            </linearGradient>
+                                        </defs>
+                                        <rect
+                                            x="0"
+                                            y={100 - (loading ? 15 : height)}
+                                            width="100"
+                                            height={loading ? 15 : height}
+                                            rx="12"
+                                            fill={`url(#metrics-weekly-load-${i})`}
+                                        />
+                                    </svg>
                                 </div>
                                 <span className="text-[9px] font-black text-[#3D5A80]">
                                     {['S', 'T', 'Q', 'Q', 'S', 'S', 'D'][i]}

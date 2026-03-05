@@ -1,5 +1,6 @@
 import { getLatestFeedback } from './feedback';
 import type { AdaptiveTrainingSignal } from './adaptiveSignalTypes';
+import { isSupabaseUuid } from '../supabase/utils/identifiers';
 export type { AdaptiveTrainingSignal } from './adaptiveSignalTypes';
 
 function clamp(value: number, min: number, max: number): number {
@@ -18,25 +19,35 @@ function inferFatigueLevel(readinessScore: number): 'low' | 'moderate' | 'high' 
     return 'low';
 }
 
+function buildBaselineAdaptiveTrainingSignal(currentDaysPerWeek: number): AdaptiveTrainingSignal {
+    const safeDays = clamp(currentDaysPerWeek || 4, 2, 6);
+    return {
+        readinessScore: 65,
+        fatigueLevel: 'moderate',
+        recommendedVolumeDeltaPct: 0,
+        recommendedIntensityDeltaPct: 0,
+        recommendedDaysPerWeek: safeDays,
+        confidence: 0.25,
+        sourceSessions: 0,
+        rationale: 'Sem histórico suficiente; mantendo baseline com progressão conservadora.'
+    };
+}
+
 export async function getAdaptiveTrainingSignal(
     studentId: string,
     currentDaysPerWeek: number
 ): Promise<AdaptiveTrainingSignal> {
-    const safeDays = clamp(currentDaysPerWeek || 4, 2, 6);
+    if (!isSupabaseUuid(studentId)) {
+        return buildBaselineAdaptiveTrainingSignal(currentDaysPerWeek);
+    }
+
     const feedbacks = await getLatestFeedback(studentId, 12);
 
     if (!feedbacks.length) {
-        return {
-            readinessScore: 65,
-            fatigueLevel: 'moderate',
-            recommendedVolumeDeltaPct: 0,
-            recommendedIntensityDeltaPct: 0,
-            recommendedDaysPerWeek: safeDays,
-            confidence: 0.25,
-            sourceSessions: 0,
-            rationale: 'Sem histórico suficiente; mantendo baseline com progressão conservadora.'
-        };
+        return buildBaselineAdaptiveTrainingSignal(currentDaysPerWeek);
     }
+
+    const safeDays = clamp(currentDaysPerWeek || 4, 2, 6);
 
     const rpeValues = feedbacks.map(f => f.rpe).filter((v): v is number => typeof v === 'number');
     const rirValues = feedbacks.map(f => f.rir).filter((v): v is number => typeof v === 'number');

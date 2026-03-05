@@ -341,10 +341,9 @@ const TrainingExecutionView: React.FC<TrainingExecutionViewProps> = ({ workout, 
     <div data-testid="training-execution-screen" className="fixed inset-0 bg-slate-950 text-white flex flex-col overflow-hidden">
       {/* Progress Bar Top */}
       <div className="absolute top-0 left-0 right-0 h-1.5 bg-white/5 z-50">
-        <div
-          className="h-full bg-blue-500 shadow-glow transition-all duration-700 ease-out"
-          style={{ width: `${executionProgressPct}%` }}
-        ></div>
+        <svg viewBox="0 0 100 6" preserveAspectRatio="none" className="h-full w-full">
+          <rect x="0" y="0" width={executionProgressPct} height="6" rx="3" fill="#3B82F6" />
+        </svg>
       </div>
 
       {/* Background Image & Overlay */}

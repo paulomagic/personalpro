@@ -343,13 +343,22 @@ const ClientsView: React.FC<ClientsViewProps> = ({ user, onBack, onSelectClient 
                                     {/* Progress */}
                                     <div className="flex items-center gap-2">
                                         <div className="h-1 flex-1 rounded-full overflow-hidden bg-[rgba(59,130,246,0.06)] max-w-20">
-                                            <div
-                                                className={`h-full rounded-full ${client.adherence < 50
-                                                    ? 'bg-[#FFB800]'
-                                                    : 'bg-[linear-gradient(90deg,#0099FF,#00FF88)]'
-                                                    }`}
-                                                style={{ width: `${client.adherence}%` }}
-                                            />
+                                            <svg viewBox="0 0 100 4" preserveAspectRatio="none" className="h-full w-full rounded-full">
+                                                <defs>
+                                                    <linearGradient id={`client-adherence-${client.id}`} x1="0%" y1="0%" x2="100%" y2="0%">
+                                                        <stop offset="0%" stopColor="#0099FF" />
+                                                        <stop offset="100%" stopColor="#00FF88" />
+                                                    </linearGradient>
+                                                </defs>
+                                                <rect
+                                                    x="0"
+                                                    y="0"
+                                                    width={client.adherence}
+                                                    height="4"
+                                                    rx="2"
+                                                    fill={client.adherence < 50 ? '#FFB800' : `url(#client-adherence-${client.id})`}
+                                                />
+                                            </svg>
                                         </div>
                                         <span className={`text-[10px] font-black ${client.adherence < 50 ? 'text-[#FFB800]' : 'text-[#00FF88]'}`}>{client.adherence}%</span>
                                     </div>

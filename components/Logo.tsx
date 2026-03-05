@@ -12,12 +12,13 @@ const Logo: React.FC<LogoProps> = ({ className = "", size = 48, variant = 'defau
   const color = variant === 'white' ? '#ffffff' : '#3B5998';
 
   return (
-    <div className={`relative flex items-center justify-center ${className}`} style={{ width: size, height: size * 0.67 }}>
+    <div className={`relative inline-flex items-center justify-center ${className}`}>
       <svg
         viewBox="0 0 48 32"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
-        className="w-full h-full"
+        width={size}
+        height={size * 0.67}
       >
         {/* Infinity symbol */}
         <path

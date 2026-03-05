@@ -182,10 +182,9 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack, onNavigate }) => {
                                     <span className="text-xs text-slate-400">{model}</span>
                                     <div className="flex items-center gap-2">
                                         <div className="h-2 bg-blue-500/30 rounded-full w-20">
-                                            <div
-                                                className="h-full bg-blue-500 rounded-full"
-                                                style={{ width: `${Math.min(100, (count / aiMetrics.totalLogs) * 100)}%` }}
-                                            />
+                                            <svg viewBox="0 0 100 8" preserveAspectRatio="none" className="h-full w-full rounded-full">
+                                                <rect x="0" y="0" width={Math.min(100, (count / aiMetrics.totalLogs) * 100)} height="8" rx="4" fill="#3B82F6" />
+                                            </svg>
                                         </div>
                                         <span className="text-xs font-bold text-white w-8 text-right">{count}</span>
                                     </div>

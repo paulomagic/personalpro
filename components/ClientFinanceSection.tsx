@@ -129,17 +129,10 @@ const ClientFinanceSection: React.FC<ClientFinanceSectionProps> = ({ client, coa
         <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="rounded-[28px] p-5"
-            style={isLightTheme
-                ? {
-                    background: 'linear-gradient(160deg, rgba(224, 233, 248, 0.92), rgba(208, 220, 240, 0.9))',
-                    border: '1px solid rgba(130, 170, 235, 0.3)',
-                    boxShadow: 'inset 0 1px 0 rgba(240,248,255,0.5)',
-                }
-                : {
-                    background: 'rgba(30, 41, 59, 0.5)',
-                    border: '1px solid rgba(255,255,255,0.05)',
-                }}
+            className={`rounded-[28px] p-5 border ${isLightTheme
+                ? 'bg-[linear-gradient(160deg,rgba(224,233,248,0.92),rgba(208,220,240,0.9))] border-[rgba(130,170,235,0.3)] shadow-[inset_0_1px_0_rgba(240,248,255,0.5)]'
+                : 'bg-[rgba(30,41,59,0.5)] border-[rgba(255,255,255,0.05)]'
+                }`}
         >
             {/* Header */}
             <div className="flex items-center justify-between mb-4">
@@ -274,10 +267,10 @@ const ClientFinanceSection: React.FC<ClientFinanceSectionProps> = ({ client, coa
                     <div className="grid grid-cols-2 gap-3">
                         {/* Value Display */}
                         <div
-                            className="rounded-xl p-3"
-                            style={isLightTheme
-                                ? { background: 'rgba(45, 77, 130, 0.14)', border: '1px solid rgba(122, 162, 230, 0.25)' }
-                                : { background: 'rgba(15, 23, 42, 0.5)' }}
+                            className={`rounded-xl p-3 ${isLightTheme
+                                ? 'bg-[rgba(45,77,130,0.14)] border border-[rgba(122,162,230,0.25)]'
+                                : 'bg-[rgba(15,23,42,0.5)]'
+                                }`}
                         >
                             <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">
                                 {formData.payment_type === 'monthly' ? 'Mensalidade' : 'Por Sessão'}
@@ -289,10 +282,10 @@ const ClientFinanceSection: React.FC<ClientFinanceSectionProps> = ({ client, coa
 
                         {/* Payment Day / Type Display */}
                         <div
-                            className="rounded-xl p-3"
-                            style={isLightTheme
-                                ? { background: 'rgba(45, 77, 130, 0.14)', border: '1px solid rgba(122, 162, 230, 0.25)' }
-                                : { background: 'rgba(15, 23, 42, 0.5)' }}
+                            className={`rounded-xl p-3 ${isLightTheme
+                                ? 'bg-[rgba(45,77,130,0.14)] border border-[rgba(122,162,230,0.25)]'
+                                : 'bg-[rgba(15,23,42,0.5)]'
+                                }`}
                         >
                             <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">
                                 {formData.payment_type === 'monthly' ? 'Vencimento' : 'Tipo'}

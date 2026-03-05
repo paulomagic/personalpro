@@ -321,24 +321,13 @@ const ClientProfileView: React.FC<ClientProfileViewProps> = ({ client: initialCl
               key={tab}
               onClick={() => setActiveTab(tab)}
               className={`relative z-10 flex-1 py-3 px-2 rounded-[14px] flex items-center justify-center transition-all ${activeTab === tab
-                ? 'text-[var(--btn-primary-text)]'
+                ? 'text-[var(--btn-primary-text)] bg-[var(--btn-primary-bg)] border border-[var(--btn-primary-border)] shadow-[var(--btn-primary-shadow)]'
                 : 'text-slate-500 hover:text-slate-300'
                 }`}
             >
               <span className="text-[11px] font-black uppercase tracking-wider">{tab}</span>
             </button>
           ))}
-          {/* Active Background Pill */}
-          <motion.div
-            className="absolute top-1 bottom-1 rounded-[14px] z-0 bg-[var(--btn-primary-bg)] border border-[var(--btn-primary-border)] shadow-[var(--btn-primary-shadow)]"
-            style={{
-              width: `${100 / tabs.length}%`,
-            }}
-            animate={{
-              left: `calc(${(tabs.indexOf(activeTab) * (100 / tabs.length))}%)`
-            }}
-            transition={{ type: 'spring', stiffness: 300, damping: 25 }}
-          />
         </div>
       </div>
 

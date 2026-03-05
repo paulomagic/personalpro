@@ -1,9 +1,12 @@
 
 import { supabase } from './supabaseCore';
-import { hydrateWorkoutWithVideos } from './exerciseService';
 import {
     mapDBClientToClient as mapDBClientToClientFromDomain,
-    getClients as getClientsFromDomain
+    getClients as getClientsFromDomain,
+    getClientById as getClientByIdFromDomain,
+    createClient as createClientFromDomain,
+    updateClientById as updateClientByIdFromDomain,
+    deleteClientCascade as deleteClientCascadeFromDomain
 } from './supabase/domains/clientsDomain';
 import {
     getAppointments as getAppointmentsFromDomain,
@@ -25,8 +28,13 @@ import {
 } from './supabase/domains/paymentsDomain';
 import {
     getWorkoutsByClient as getWorkoutsByClientFromDomain,
-    saveAIWorkout as saveAIWorkoutFromDomain
+    saveAIWorkout as saveAIWorkoutFromDomain,
+    saveWorkout as saveWorkoutFromDomain,
+    getCurrentWorkoutByClient as getCurrentWorkoutByClientFromDomain
 } from './supabase/domains/workoutsDomain';
+import {
+    getAssessmentsByClient as getAssessmentsByClientFromDomain
+} from './supabase/domains/assessmentsDomain';
 import {
     createInvitation as createInvitationFromDomain,
     getInvitationByToken as getInvitationByTokenFromDomain,
@@ -63,41 +71,6 @@ export interface DBClient {
     payment_day?: number;
     payment_type?: 'monthly' | 'per_session';
     session_price?: number;
-}
-
-interface ClientSensitiveDataRpcRow {
-    client_id?: string;
-    injuries: string | null;
-    observations: string | null;
-    preferences: string | null;
-    bmi?: number | null;
-}
-
-function mergeClientSensitiveData(
-    client: DBClient,
-    sensitive: ClientSensitiveDataRpcRow | null
-): DBClient {
-    if (!sensitive) return client;
-    return {
-        ...client,
-        injuries: sensitive.injuries ?? client.injuries,
-        observations: sensitive.observations ?? client.observations,
-        preferences: sensitive.preferences ?? client.preferences
-    };
-}
-
-async function getClientSensitiveData(clientId: string): Promise<ClientSensitiveDataRpcRow | null> {
-    if (!supabase) return null;
-    const { data, error } = await supabase
-        .rpc('get_client_sensitive_data', { p_client_id: clientId })
-        .maybeSingle();
-
-    if (error) {
-        // Fallback silencioso para evitar regressão quando RPC não está disponível para o papel atual.
-        return null;
-    }
-
-    return (data as ClientSensitiveDataRpcRow | null) ?? null;
 }
 
 // Helper function to map DB snake_case to frontend camelCase
@@ -159,120 +132,19 @@ export async function getClients(
 }
 
 export async function getClient(clientId: string): Promise<DBClient | null> {
-    if (!supabase) return null;
-
-    const { data, error } = await supabase
-        .from('clients')
-        .select('*, avatar:avatar_url, avatar_url, body_fat')
-        .eq('id', clientId)
-        .single();
-
-    if (error) {
-        console.error('Error fetching client:', error);
-        return null;
-    }
-
-    const client = data as DBClient;
-    const sensitive = await getClientSensitiveData(client.id);
-    return mergeClientSensitiveData(client, sensitive);
+    return getClientByIdFromDomain(clientId);
 }
 
 export async function createClient(client: Omit<DBClient, 'id' | 'created_at'>): Promise<DBClient | null> {
-    if (!supabase) return null;
-
-    const { data, error } = await supabase
-        .from('clients')
-        .insert(client)
-        .select()
-        .single();
-
-    if (error) {
-        console.error('Error creating client:', error);
-        return null;
-    }
-
-    return data;
+    return createClientFromDomain(client);
 }
 
 export async function updateClient(clientId: string, updates: Partial<DBClient>): Promise<DBClient | null> {
-    if (!supabase) return null;
-
-    const { data, error } = await supabase
-        .from('clients')
-        .update(updates)
-        .eq('id', clientId)
-        .select()
-        .single();
-
-    if (error) {
-        console.error('[updateClient] Error:', error.message, error.code, error.details, error.hint);
-        return null;
-    }
-
-    return data;
+    return updateClientByIdFromDomain(clientId, updates);
 }
 
 export async function deleteClient(clientId: string): Promise<boolean> {
-    if (!supabase) return false;
-
-    try {
-        // 1. Delete assessments first (foreign key dependency)
-        const { error: assessError } = await supabase
-            .from('assessments')
-            .delete()
-            .eq('client_id', clientId);
-
-        if (assessError) {
-            console.error('Error deleting assessments:', assessError);
-            // Continue anyway - assessments might not exist
-        }
-
-        // 2. Delete payments
-        const { error: paymentError } = await supabase
-            .from('payments')
-            .delete()
-            .eq('client_id', clientId);
-
-        if (paymentError) {
-            console.error('Error deleting payments:', paymentError);
-        }
-
-        // 3. Delete workouts
-        const { error: workoutError } = await supabase
-            .from('workouts')
-            .delete()
-            .eq('client_id', clientId);
-
-        if (workoutError) {
-            console.error('Error deleting workouts:', workoutError);
-        }
-
-        // 4. Delete appointments
-        const { error: appointmentError } = await supabase
-            .from('appointments')
-            .delete()
-            .eq('client_id', clientId);
-
-        if (appointmentError) {
-            console.error('Error deleting appointments:', appointmentError);
-        }
-
-        // 5. Finally, delete the client
-        const { error: clientError } = await supabase
-            .from('clients')
-            .delete()
-            .eq('id', clientId);
-
-        if (clientError) {
-            console.error('Error deleting client:', clientError);
-            return false;
-        }
-
-        return true;
-    } catch (error) {
-        console.error('Error in deleteClient:', error);
-        return false;
-    }
+    return deleteClientCascadeFromDomain(clientId);
 }
 
 export interface Assessment {
@@ -287,20 +159,7 @@ export interface Assessment {
 }
 
 export async function getAssessments(clientId: string): Promise<Assessment[]> {
-    if (!supabase) return [];
-
-    const { data, error } = await supabase
-        .from('assessments')
-        .select('*')
-        .eq('client_id', clientId)
-        .order('date', { ascending: false });
-
-    if (error) {
-        console.error('Error fetching assessments:', error);
-        return [];
-    }
-
-    return data || [];
+    return getAssessmentsByClientFromDomain(clientId);
 }
 
 // ============ APPOINTMENTS ============
@@ -368,52 +227,12 @@ export async function getWorkouts(
 }
 
 export async function saveWorkout(workout: Omit<Workout, 'id' | 'created_at'>): Promise<Workout | null> {
-    if (!supabase) return null;
-
-    const { data, error } = await supabase
-        .from('workouts')
-        .insert(workout)
-        .select()
-        .single();
-
-    if (error) {
-        console.error('Error saving workout:', error);
-        return null;
-    }
-
-    return data;
+    return saveWorkoutFromDomain(workout);
 }
 
 // Buscar o treino atual do cliente (mais recente) com splits
 export async function getClientCurrentWorkout(clientId: string): Promise<Workout | null> {
-    if (!supabase) return null;
-
-    const { data, error } = await supabase
-        .from('workouts')
-        .select('*')
-        .eq('client_id', clientId)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .single();
-
-    if (error) {
-        // Não logar erro se for "not found" - é esperado se o cliente não tem treino
-        if (error.code !== 'PGRST116') {
-            console.error('Error fetching client workout:', error);
-        }
-        return null;
-    }
-
-    if (data) {
-        try {
-            return await hydrateWorkoutWithVideos(data);
-        } catch (err) {
-            console.error('Error hydrating workout:', err);
-            return data;
-        }
-    }
-
-    return data;
+    return getCurrentWorkoutByClientFromDomain(clientId);
 }
 
 // Save AI-generated workout with metadata

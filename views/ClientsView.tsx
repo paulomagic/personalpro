@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, Plus, Users, AlertTriangle, Pause, CheckCircle, ChevronRight, User } from 'lucide-react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Client } from '../types';
 import { getClients, createClient, DBClient, uploadAvatar } from '../services/supabaseClient';
 import { mockClients } from '../mocks/demoData';
@@ -15,73 +16,68 @@ interface ClientsViewProps {
 }
 
 const ClientsView: React.FC<ClientsViewProps> = ({ user, onBack, onSelectClient }) => {
-    const [clients, setClients] = useState<Client[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'at-risk' | 'paused'>('all');
     const [showFilters, setShowFilters] = useState(false);
     const [showAddModal, setShowAddModal] = useState(false);
-    const [loading, setLoading] = useState(true);
     const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+    const queryClient = useQueryClient();
 
     const showToast = (message: string, type: 'success' | 'error' = 'success') => {
         setToast({ message, type });
         setTimeout(() => setToast(null), 3000);
     };
 
-    // Fetch clients from Supabase
-    const fetchClients = async () => {
-        setLoading(true);
-        if (user?.isDemo || user?.id === 'demo-user-id') {
-            setClients(mockClients);
-            setLoading(false);
-            return;
-        }
+    const mapDbClients = (data: DBClient[]): Client[] => data.map(dbClient => ({
+        id: dbClient.id,
+        name: dbClient.name,
+        avatar: dbClient.avatar_url || undefined,
+        goal: dbClient.goal,
+        level: dbClient.level as any,
+        age: dbClient.age,
+        weight: dbClient.weight,
+        height: dbClient.height,
+        adherence: dbClient.adherence || 0,
+        lastTraining: 'Hoje',
+        status: dbClient.status as any,
+        startDate: dbClient.created_at,
+        email: dbClient.email,
+        phone: dbClient.phone,
+        observations: dbClient.observations,
+        injuries: dbClient.injuries,
+        preferences: dbClient.preferences,
+        missedClasses: [],
+        assessments: [],
+        paymentStatus: 'paid',
+        monthly_fee: dbClient.monthly_fee,
+        payment_day: dbClient.payment_day,
+        payment_type: dbClient.payment_type,
+        session_price: dbClient.session_price,
+    }));
 
-        if (!user?.id) {
-            setLoading(false);
-            return;
+    const {
+        data: clients = [],
+        isLoading: loading,
+        refetch: refetchClients
+    } = useQuery<Client[]>({
+        queryKey: ['clients', user?.id, user?.isDemo],
+        enabled: Boolean(user?.id || user?.isDemo),
+        queryFn: async () => {
+            if (user?.isDemo || user?.id === 'demo-user-id') {
+                return mockClients;
+            }
+            if (!user?.id) {
+                return [];
+            }
+            try {
+                const data = await getClients(user.id, { limit: 300 });
+                return mapDbClients(data);
+            } catch (error) {
+                console.error('Error loading clients:', error);
+                return [];
+            }
         }
-        try {
-            const data = await getClients(user.id, { limit: 300 });
-            // Map DBClient to Client type
-            const mappedClients: Client[] = data.map(dbClient => ({
-                id: dbClient.id,
-                name: dbClient.name,
-                avatar: dbClient.avatar_url || undefined,
-                goal: dbClient.goal,
-                level: dbClient.level as any,
-                age: dbClient.age,  // ✅ Incluído
-                weight: dbClient.weight,  // ✅ Incluído
-                height: dbClient.height,  // ✅ Incluído
-                adherence: dbClient.adherence || 0,
-                lastTraining: 'Hoje', // Placeholder for now
-                status: dbClient.status as any,
-                startDate: dbClient.created_at, // Map created_at to startDate
-                email: dbClient.email,
-                phone: dbClient.phone,
-                observations: dbClient.observations,
-                injuries: dbClient.injuries,  // ✅ Incluído
-                preferences: dbClient.preferences,  // ✅ Incluído
-                missedClasses: [],
-                assessments: [],
-                paymentStatus: 'paid', // Default
-                // Financial fields
-                monthly_fee: dbClient.monthly_fee,
-                payment_day: dbClient.payment_day,
-                payment_type: dbClient.payment_type,
-                session_price: dbClient.session_price,
-            }));
-            setClients(mappedClients);
-        } catch (error) {
-            console.error('Error loading clients:', error);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        fetchClients();
-    }, [user?.id]);
+    });
 
     // Handle new client
     const handleAddClient = async (newClientData: Partial<Client>) => {
@@ -145,7 +141,10 @@ const ClientsView: React.FC<ClientsViewProps> = ({ user, onBack, onSelectClient 
                 throw new Error('Create client failed');
             }
 
-            await fetchClients(); // Refresh list
+            if (user?.id) {
+                await queryClient.invalidateQueries({ queryKey: ['clients', user.id] });
+            }
+            await refetchClients();
             showToast('Aluno criado com sucesso!', 'success');
         } catch (error) {
             console.error('Error creating client:', error);
@@ -392,26 +391,22 @@ const ClientsView: React.FC<ClientsViewProps> = ({ user, onBack, onSelectClient 
                                 <button
                                     onClick={async () => {
                                         if (user?.id === 'demo-user-id' || user.isDemo) {
-                                            // Demo user already has mock clients, so this shouldn't be needed/visible, 
-                                            // but if they somehow get here with empty list:
-                                            setClients(mockClients);
+                                            await refetchClients();
                                             return;
                                         }
                                         if (!user?.id) {
                                             showToast('Faça login para usar este recurso', 'error');
                                             return;
                                         }
-                                        setLoading(true);
                                         try {
                                             const { seedDatabase } = await import('../services/seedDatabase');
                                             const count = await seedDatabase(user.id);
                                             showToast(`${count} alunos gerados com sucesso!`);
-                                            await fetchClients();
+                                            await queryClient.invalidateQueries({ queryKey: ['clients', user.id] });
+                                            await refetchClients();
                                         } catch (error) {
                                             console.error(error);
                                             showToast('Erro ao gerar dados', 'error');
-                                        } finally {
-                                            setLoading(false);
                                         }
                                     }}
                                     className="px-6 py-3 bg-slate-800 text-slate-400 font-bold text-xs rounded-xl border border-white/5 hover:bg-slate-700 hover:text-white transition-all w-full max-w-[200px]"

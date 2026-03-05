@@ -1,12 +1,23 @@
 
 import React from 'react';
 import ReactDOM from 'react-dom/client';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import './index.css';
 import App from './App';
 import { installChunkRecovery } from './utils/chunkRecovery';
 import { ThemeProvider } from './services/ThemeContext';
 
 installChunkRecovery();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 60 * 1000,
+      gcTime: 10 * 60 * 1000,
+      retry: 1,
+      refetchOnWindowFocus: false
+    }
+  }
+});
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
@@ -16,14 +27,25 @@ if (!rootElement) {
 const root = ReactDOM.createRoot(rootElement);
 root.render(
   <React.StrictMode>
-    <ThemeProvider>
-      <App />
-    </ThemeProvider>
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider>
+        <App />
+      </ThemeProvider>
+    </QueryClientProvider>
   </React.StrictMode>
 );
 
 
 if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.addEventListener('message', (event) => {
+    if (event.data?.type === 'SYNC_FEEDBACK_QUEUE') {
+      void import('./services/ai/feedback/feedbackService').then(({ flushQueuedFeedback }) => flushQueuedFeedback());
+    }
+    if (event.data?.type === 'SYNC_AI_GENERATION_FEEDBACK_QUEUE') {
+      void import('./services/ai/feedback/aiGenerationFeedbackService').then(({ flushAIGenerationFeedbackQueue }) => flushAIGenerationFeedbackQueue());
+    }
+  });
+
   if (import.meta.env.PROD) {
     window.addEventListener('load', () => {
       navigator.serviceWorker

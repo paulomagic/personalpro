@@ -40,6 +40,8 @@ export interface ClientsQueryOptions {
     status?: 'active' | 'inactive' | 'at-risk' | 'paused';
 }
 
+export interface CreateClientInput extends Omit<DBClient, 'id' | 'created_at'> {}
+
 function mergeClientSensitiveData(
     client: DBClient,
     sensitive: ClientSensitiveDataRpcRow | null
@@ -163,4 +165,84 @@ export async function getClients(
 
     const clients = (data || []) as DBClient[];
     return enrichClientsWithSensitiveData(clients);
+}
+
+export async function getClientById(clientId: string): Promise<DBClient | null> {
+    if (!supabase) return null;
+
+    const { data, error } = await supabase
+        .from('clients')
+        .select('*, avatar:avatar_url, avatar_url, body_fat')
+        .eq('id', clientId)
+        .single();
+
+    if (error) {
+        console.error('Error fetching client:', error);
+        return null;
+    }
+
+    const client = data as DBClient;
+    const sensitive = await getClientSensitiveData(client.id);
+    return mergeClientSensitiveData(client, sensitive);
+}
+
+export async function createClient(client: CreateClientInput): Promise<DBClient | null> {
+    if (!supabase) return null;
+
+    const { data, error } = await supabase
+        .from('clients')
+        .insert(client)
+        .select()
+        .single();
+
+    if (error) {
+        console.error('Error creating client:', error);
+        return null;
+    }
+
+    return data as DBClient;
+}
+
+export async function updateClientById(clientId: string, updates: Partial<DBClient>): Promise<DBClient | null> {
+    if (!supabase) return null;
+
+    const { data, error } = await supabase
+        .from('clients')
+        .update(updates)
+        .eq('id', clientId)
+        .select()
+        .single();
+
+    if (error) {
+        console.error('[updateClient] Error:', error.message, error.code, error.details, error.hint);
+        return null;
+    }
+
+    return data as DBClient;
+}
+
+export async function deleteClientCascade(clientId: string): Promise<boolean> {
+    if (!supabase) return false;
+
+    try {
+        await supabase.from('assessments').delete().eq('client_id', clientId);
+        await supabase.from('payments').delete().eq('client_id', clientId);
+        await supabase.from('workouts').delete().eq('client_id', clientId);
+        await supabase.from('appointments').delete().eq('client_id', clientId);
+
+        const { error: clientError } = await supabase
+            .from('clients')
+            .delete()
+            .eq('id', clientId);
+
+        if (clientError) {
+            console.error('Error deleting client:', clientError);
+            return false;
+        }
+
+        return true;
+    } catch (error) {
+        console.error('Error in deleteClientCascade:', error);
+        return false;
+    }
 }

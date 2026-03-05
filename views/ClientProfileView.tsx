@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Settings, Play, Pause, AlertTriangle, CheckCircle, Calendar, FileText, TrendingUp, Camera, Dumbbell, Clock, Phone, Mail, Edit, Save, X, PlusCircle, User, Zap, Sparkles, UserPlus, Trash2 } from 'lucide-react';
 import { Client, MissedClass } from '../types';
-import { analyzeClientProgress } from '../services/geminiService';
+import { analyzeClientProgressWithRouter } from '../services/ai/aiRouter';
 import { updateClient, deleteClient, supabase, getAssessments, getWorkouts, getClient, uploadAvatar } from '../services/supabaseClient';
 import { mapAssessmentsToClientShape, buildClientPhysicalUpdatePayload } from '../services/clientProfileUtils';
 import InviteStudentModal from '../components/InviteStudentModal';
@@ -115,7 +115,7 @@ const ClientProfileView: React.FC<ClientProfileViewProps> = ({ client: initialCl
   const handleAnalyzeProgress = async () => {
     if (client.assessments && client.assessments.length > 0) {
       setLoadingAnalysis(true);
-      const analysis = await analyzeClientProgress({
+      const analysis = await analyzeClientProgressWithRouter({
         name: client.name,
         assessments: client.assessments.map(a => ({
           date: a.date,

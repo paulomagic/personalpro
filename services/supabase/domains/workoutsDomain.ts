@@ -1,4 +1,5 @@
 import { supabase } from '../../supabaseCore';
+import { hydrateWorkoutWithVideos } from '../../exerciseService';
 
 export interface AIWorkoutMetadata {
     model: string;
@@ -99,4 +100,49 @@ export async function saveAIWorkout(
     }
 
     return data;
+}
+
+export async function saveWorkout(workout: Omit<Workout, 'id' | 'created_at'>): Promise<Workout | null> {
+    if (!supabase) return null;
+
+    const { data, error } = await supabase
+        .from('workouts')
+        .insert(workout)
+        .select()
+        .single();
+
+    if (error) {
+        console.error('Error saving workout:', error);
+        return null;
+    }
+
+    return data as Workout;
+}
+
+export async function getCurrentWorkoutByClient(clientId: string): Promise<Workout | null> {
+    if (!supabase) return null;
+
+    const { data, error } = await supabase
+        .from('workouts')
+        .select('*')
+        .eq('client_id', clientId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+
+    if (error) {
+        if ((error as any)?.code !== 'PGRST116') {
+            console.error('Error fetching client workout:', error);
+        }
+        return null;
+    }
+
+    if (!data) return null;
+
+    try {
+        return await hydrateWorkoutWithVideos(data);
+    } catch (hydrateError) {
+        console.error('Error hydrating workout:', hydrateError);
+        return data as Workout;
+    }
 }

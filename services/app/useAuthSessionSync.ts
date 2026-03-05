@@ -5,7 +5,7 @@ import { getUserProfile, type DBUserProfile } from '../userProfileService';
 import type { AppSessionUser } from '../auth/authFlow';
 
 interface UseAuthSessionSyncParams {
-    setShowRecoveryModal: Dispatch<SetStateAction<boolean>>;
+    onPasswordRecovery: () => void;
     setUser: Dispatch<SetStateAction<AppSessionUser | null>>;
     setUserProfile: Dispatch<SetStateAction<DBUserProfile | null>>;
     setCurrentView: Dispatch<SetStateAction<View>>;
@@ -13,7 +13,7 @@ interface UseAuthSessionSyncParams {
 }
 
 export function useAuthSessionSync({
-    setShowRecoveryModal,
+    onPasswordRecovery,
     setUser,
     setUserProfile,
     setCurrentView,
@@ -25,7 +25,7 @@ export function useAuthSessionSync({
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
             (event, session) => {
                 if (event === 'PASSWORD_RECOVERY') {
-                    setShowRecoveryModal(true);
+                    onPasswordRecovery();
                 }
 
                 if (event === 'SIGNED_OUT' || !session) {
@@ -51,8 +51,8 @@ export function useAuthSessionSync({
         return () => subscription.unsubscribe();
     }, [
         requestServiceWorkerUserCachePurge,
+        onPasswordRecovery,
         setCurrentView,
-        setShowRecoveryModal,
         setUser,
         setUserProfile
     ]);

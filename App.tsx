@@ -1,11 +1,12 @@
-import React, { useState, useEffect, Suspense, lazy, useCallback } from 'react';
+import React, { useState, Suspense, lazy, useCallback } from 'react';
 import { View, Client, Workout } from './types';
 import { supabase } from './services/supabaseCore';
-import { getUserProfile, countPendingRescheduleRequests, type DBUserProfile } from './services/userProfileService';
+import { getUserProfile, type DBUserProfile } from './services/userProfileService';
 import LoginView from './views/LoginView';
 import UpdateBanner from './components/UpdateBanner';
 import AppErrorBoundary from './components/AppErrorBoundary';
 import AppContentRouter from './components/AppContentRouter';
+import PasswordRecoveryModal from './components/PasswordRecoveryModal';
 import {
   resolveViewFromPath,
 } from './services/navigation/historyNavigation';
@@ -22,6 +23,9 @@ import { useAuthSessionSync } from './services/app/useAuthSessionSync';
 import { useServiceWorkerUpdates } from './services/app/useServiceWorkerUpdates';
 import { useHistoryNavigationSync } from './services/app/useHistoryNavigationSync';
 import { useDeepLinkHydration } from './services/app/useDeepLinkHydration';
+import { useFrontendErrorCapture } from './services/app/useFrontendErrorCapture';
+import { usePendingRequestsPolling } from './services/app/usePendingRequestsPolling';
+import { usePasswordRecovery } from './services/app/usePasswordRecovery';
 
 const Layout = lazy(() => import('./components/Layout'));
 
@@ -46,13 +50,15 @@ function App() {
   const [userProfile, setUserProfile] = useState<DBUserProfile | null>(null);
   const [loading, setLoading] = useState(false);
   const [routeHydrating, setRouteHydrating] = useState(false);
-  const [pendingRequests, setPendingRequests] = useState(0);  // Reschedule requests count
-
-  // Password Recovery State
-  const [showRecoveryModal, setShowRecoveryModal] = useState(false);
-  const [newPassword, setNewPassword] = useState('');
-  const [recoveryError, setRecoveryError] = useState<string | null>(null);
-  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
+  const {
+    showRecoveryModal,
+    newPassword,
+    recoveryError,
+    isUpdatingPassword,
+    setNewPassword,
+    openPasswordRecoveryModal,
+    handleUpdatePassword
+  } = usePasswordRecovery();
   const requestServiceWorkerUserCachePurge = useCallback(() => {
     if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return;
     navigator.serviceWorker.ready
@@ -67,74 +73,21 @@ function App() {
   }, []);
 
   useAuthSessionSync({
-    setShowRecoveryModal,
+    onPasswordRecovery: openPasswordRecoveryModal,
     setUser,
     setUserProfile,
     setCurrentView,
     requestServiceWorkerUserCachePurge
   });
 
-  // Global frontend error capture to improve production diagnostics.
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-
-    const onError = (event: ErrorEvent) => {
-      void logFrontendError({
-        type: 'runtime_error',
-        message: event.message || 'Unknown runtime error',
-        stack: event.error?.stack,
-        source: event.filename,
-        line: event.lineno,
-        column: event.colno
-      });
-    };
-
-    const onUnhandledRejection = (event: PromiseRejectionEvent) => {
-      const reason = event.reason;
-      const message = reason instanceof Error
-        ? reason.message
-        : typeof reason === 'string'
-          ? reason
-          : JSON.stringify(reason);
-
-      void logFrontendError({
-        type: 'promise_rejection',
-        message,
-        stack: reason instanceof Error ? reason.stack : undefined
-      });
-    };
-
-    window.addEventListener('error', onError);
-    window.addEventListener('unhandledrejection', onUnhandledRejection);
-
-    return () => {
-      window.removeEventListener('error', onError);
-      window.removeEventListener('unhandledrejection', onUnhandledRejection);
-    };
-  }, []);
+  useFrontendErrorCapture();
 
   const {
     updateAvailable,
     setUpdateAvailable,
     handleUpdate
   } = useServiceWorkerUpdates();
-
-  // Fetch pending reschedule requests count for coaches
-  useEffect(() => {
-    const fetchPendingRequests = async () => {
-      if (user && userProfile?.role === 'coach') {
-        const count = await countPendingRescheduleRequests(user.id);
-        setPendingRequests(count);
-      } else {
-        setPendingRequests(0);
-      }
-    };
-
-    fetchPendingRequests();
-    // Refresh count every 30 seconds while app is open
-    const interval = setInterval(fetchPendingRequests, 30000);
-    return () => clearInterval(interval);
-  }, [user, userProfile]);
+  const pendingRequests = usePendingRequestsPolling({ user, userProfile });
 
   useHistoryNavigationSync({
     currentView,
@@ -263,67 +216,6 @@ function App() {
     }
   };
 
-  const handleUpdatePassword = async () => {
-    if (!newPassword || newPassword.length < 6) {
-      setRecoveryError('A senha deve ter pelo menos 6 caracteres');
-      return;
-    }
-    setIsUpdatingPassword(true);
-    setRecoveryError(null);
-    try {
-      if (!supabase) return;
-      const { error } = await supabase.auth.updateUser({ password: newPassword });
-      if (error) {
-        setRecoveryError(error.message);
-      } else {
-        setShowRecoveryModal(false);
-        setNewPassword('');
-        // Remove hash from URL to prevent infinite loops on reload
-        window.history.replaceState({}, document.title, window.location.pathname);
-      }
-    } catch {
-      setRecoveryError('Erro ao atualizar senha. Tente novamente.');
-    } finally {
-      setIsUpdatingPassword(false);
-    }
-  };
-
-  const renderRecoveryModal = (description: string) => {
-    if (!showRecoveryModal) return null;
-
-    return (
-      <div className="fixed inset-0 z-[100] bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
-        <div className="bg-slate-900 border border-white/10 p-6 rounded-3xl max-w-sm w-full shadow-2xl relative">
-          <h2 className="text-xl font-black text-white mb-2 text-center">Definir Nova Senha</h2>
-          <p className="text-sm text-slate-400 text-center mb-6">{description}</p>
-
-          {recoveryError && (
-            <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-xl">
-              <p className="text-red-400 text-xs text-center font-medium">{recoveryError}</p>
-            </div>
-          )}
-
-          <div className="space-y-4">
-            <input
-              type="password"
-              placeholder="Sua nova senha"
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              className="w-full h-12 px-4 rounded-xl border border-white/10 bg-white/5 text-white placeholder:text-slate-500 focus:border-blue-500/50 outline-none transition-all font-medium"
-            />
-            <button
-              onClick={handleUpdatePassword}
-              disabled={isUpdatingPassword}
-              className="w-full h-12 bg-blue-600 hover:bg-blue-500 active:scale-95 text-white rounded-xl font-bold transition-all disabled:opacity-50"
-            >
-              {isUpdatingPassword ? 'Salvando...' : 'Salvar Senha'}
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
   const renderWithBoundary = (content: React.ReactNode) => (
     <AppErrorBoundary
       onError={(error, errorInfo) => {
@@ -370,7 +262,17 @@ function App() {
     return renderWithBoundary(
       <div className="max-w-md mx-auto min-h-screen bg-slate-950">
         <LoginView onLogin={handleLoginSuccess} />
-        {renderRecoveryModal('Digite sua nova senha de acesso abaixo.')}
+        <PasswordRecoveryModal
+          show={showRecoveryModal}
+          description="Digite sua nova senha de acesso abaixo."
+          newPassword={newPassword}
+          recoveryError={recoveryError}
+          isUpdatingPassword={isUpdatingPassword}
+          onPasswordChange={setNewPassword}
+          onSubmit={() => {
+            void handleUpdatePassword();
+          }}
+        />
       </div>
     );
   }
@@ -408,7 +310,17 @@ function App() {
         </Layout>
       </Suspense>
 
-      {renderRecoveryModal('Você está redefinindo sua senha de acesso. Digite a nova senha abaixo.')}
+      <PasswordRecoveryModal
+        show={showRecoveryModal}
+        description="Você está redefinindo sua senha de acesso. Digite a nova senha abaixo."
+        newPassword={newPassword}
+        recoveryError={recoveryError}
+        isUpdatingPassword={isUpdatingPassword}
+        onPasswordChange={setNewPassword}
+        onSubmit={() => {
+          void handleUpdatePassword();
+        }}
+      />
     </div>
   );
 };

@@ -1,4 +1,4 @@
-import { supabase } from './supabaseClient';
+import { supabase } from './supabaseCore';
 
 // ============================================
 // AI Logging Service
@@ -41,6 +41,10 @@ function redactSensitiveText(value?: string | null): string | null {
     return value
         .replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, '[REDACTED_EMAIL]')
         .replace(/\b(?:\+?55\s?)?(?:\(?\d{2}\)?\s?)?\d{4,5}-?\d{4}\b/g, '[REDACTED_PHONE]')
+        .replace(/\b\d{3}\.?\d{3}\.?\d{3}-?\d{2}\b/g, '[REDACTED_CPF]')
+        .replace(/\b[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\b/gi, '[REDACTED_UUID]')
+        .replace(/\b(?:nome|name|cliente|aluno)\s*[:=]\s*([^\n,;]+)/gi, '[REDACTED_PERSON]')
+        .replace(/\bclient(?:_id)?\s*[:=]\s*([^\n,;]+)/gi, 'client:[REDACTED_ID]')
         .slice(0, 2000);
 }
 

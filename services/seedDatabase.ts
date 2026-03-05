@@ -1,4 +1,4 @@
-import { supabase } from './supabaseClient';
+import { supabase } from './supabaseCore';
 import { Client } from '../types';
 
 // ============ SEED DATA GENERATOR ============

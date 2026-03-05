@@ -102,6 +102,12 @@ export function sanitizeCoachObservations(observations?: string, maxLength = 220
     return normalized.slice(0, maxLength);
 }
 
+export function sanitizePromptText(value?: string, maxLength = 220): string {
+    const normalized = stripPersonalIdentifiers(value || '');
+    if (!normalized) return '';
+    return normalized.slice(0, maxLength);
+}
+
 export function sanitizeWorkoutHistoryEntry(value?: string, maxLength = 80): string {
     if (!value) return '';
     return stripPersonalIdentifiers(value).slice(0, maxLength);

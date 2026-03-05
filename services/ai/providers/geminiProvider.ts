@@ -2,7 +2,7 @@
 // Used for progress analysis, complex insights
 
 import type { AIProvider, ProviderRequest, ProviderResponse } from '../types';
-import { supabase } from '../../supabaseClient';
+import { supabase } from '../../supabaseCore';
 import { buildEdgeAuthHeaders } from './edgeHeaders';
 
 // Supabase URL for Edge Function

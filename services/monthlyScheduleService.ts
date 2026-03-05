@@ -1,4 +1,4 @@
-import { supabase } from './supabaseClient';
+import { supabase } from './supabaseCore';
 import { MonthlyScheduleConfig, MonthlyScheduleBatch, ConflictInfo } from '../types';
 
 /**

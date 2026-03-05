@@ -15,9 +15,9 @@ import { DEFAULT_ROUTING, validateIntentResponse, parseInjuries } from './types'
 import { groqProvider } from './providers/groqProvider';
 import { geminiProvider } from './providers/geminiProvider';
 import { localProvider } from './providers/localProvider';
-import { supabase } from '../supabaseClient';
+import { supabase } from '../supabaseCore';
 import { resolveExercise, type Exercise, type Equipment } from '../exerciseService';
-import { classifyInjuryConstraints, pseudonymizeClientName, summarizePreferenceTags } from './promptPrivacy';
+import { classifyInjuryConstraints, pseudonymizeClientName, sanitizePromptText, summarizePreferenceTags } from './promptPrivacy';
 import {
     ExerciseReplacementSchema,
     extractLikelyJson,
@@ -40,6 +40,10 @@ function redactSensitiveText(value?: string | null): string | null {
     return value
         .replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, '[REDACTED_EMAIL]')
         .replace(/\b(?:\+?55\s?)?(?:\(?\d{2}\)?\s?)?\d{4,5}-?\d{4}\b/g, '[REDACTED_PHONE]')
+        .replace(/\b\d{3}\.?\d{3}\.?\d{3}-?\d{2}\b/g, '[REDACTED_CPF]')
+        .replace(/\b[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\b/gi, '[REDACTED_UUID]')
+        .replace(/\b(?:nome|name|cliente|aluno)\s*[:=]\s*([^\n,;]+)/gi, '[REDACTED_PERSON]')
+        .replace(/\bclient(?:_id)?\s*[:=]\s*([^\n,;]+)/gi, 'client:[REDACTED_ID]')
         .slice(0, 2000);
 }
 
@@ -398,6 +402,38 @@ function mapEquipmentToResolver(equipment?: string[]): Equipment[] | undefined {
     return mapped.size > 0 ? Array.from(mapped) : undefined;
 }
 
+function sanitizeWorkoutForPrompt(workout: any): any {
+    if (!workout || typeof workout !== 'object') return workout;
+
+    const safeSplits = Array.isArray(workout.splits)
+        ? workout.splits.slice(0, 7).map((split: any) => ({
+            name: sanitizePromptText(split?.name, 80),
+            focus: sanitizePromptText(split?.focus, 80),
+            exercises: Array.isArray(split?.exercises)
+                ? split.exercises.slice(0, 10).map((exercise: any) => ({
+                    name: sanitizePromptText(exercise?.name, 80),
+                    sets: Number(exercise?.sets) || 3,
+                    reps: sanitizePromptText(exercise?.reps, 40),
+                    rest: sanitizePromptText(exercise?.rest, 30),
+                    targetMuscle: sanitizePromptText(exercise?.targetMuscle, 60),
+                    method: sanitizePromptText(exercise?.method, 40),
+                    technique: sanitizePromptText(exercise?.technique, 120),
+                    notes: sanitizePromptText(exercise?.notes, 120)
+                }))
+                : []
+        }))
+        : [];
+
+    return {
+        title: sanitizePromptText(workout.title, 100),
+        objective: sanitizePromptText(workout.objective, 160),
+        splits: safeSplits,
+        personalNotes: Array.isArray(workout.personalNotes)
+            ? workout.personalNotes.slice(0, 10).map((note: any) => sanitizePromptText(String(note), 140)).filter(Boolean)
+            : []
+    };
+}
+
 /**
  * Generate training intent
  * IA returns intentions → system resolves to exercises
@@ -433,6 +469,9 @@ export async function generateTrainingIntent(
     const preferenceProfile = summarizePreferenceTags(preferences);
 
     const parsedInjuries = parseInjuries(injuries);
+    const injuryAvoidanceProfile = parsedInjuries.length > 0
+        ? parsedInjuries.join(', ')
+        : injuryProfile;
 
     const prompt = `Você é um personal trainer de elite. Crie um programa de treino PERSONALIZADO.
 
@@ -467,7 +506,7 @@ Padrões de movimento disponíveis:
 Músculos principais:
 - peito, ombro, costas, quadriceps, posterior_coxa, gluteos, core
 
-EVITE padrões que agravam: ${injuries}
+EVITE padrões que agravam: ${injuryAvoidanceProfile}
 
 Responda APENAS com JSON puro:
 {
@@ -641,13 +680,15 @@ export async function refineWorkoutWithRouter(
     currentWorkout: any,
     instruction: string
 ): Promise<any | null> {
+    const sanitizedWorkout = sanitizeWorkoutForPrompt(currentWorkout);
+    const sanitizedInstruction = sanitizePromptText(instruction, 220);
     const prompt = `Você é um editor técnico de treinos.
 
 TREINO_ATUAL_JSON:
-${JSON.stringify(currentWorkout)}
+${JSON.stringify(sanitizedWorkout)}
 
 INSTRUCAO:
-${instruction}
+${sanitizedInstruction}
 
 Ajuste o treino sem quebrar a estrutura.
 Retorne APENAS JSON:
@@ -660,8 +701,11 @@ Retorne APENAS JSON:
         prompt,
         metadata: {
             mode: 'refine_workout',
-            instruction,
-            currentWorkout,
+            instruction: sanitizedInstruction,
+            splitCount: Array.isArray(currentWorkout?.splits) ? currentWorkout.splits.length : 0,
+            exerciseCount: Array.isArray(currentWorkout?.splits)
+                ? currentWorkout.splits.reduce((acc: number, split: any) => acc + (Array.isArray(split?.exercises) ? split.exercises.length : 0), 0)
+                : 0,
             responseStyle: 'structured'
         }
     });

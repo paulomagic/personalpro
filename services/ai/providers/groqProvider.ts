@@ -2,7 +2,7 @@
 // Default provider for transactional AI tasks
 
 import type { AIProvider, ProviderRequest, ProviderResponse } from '../types';
-import { supabase } from '../../supabaseClient';
+import { supabase } from '../../supabaseCore';
 import { buildEdgeAuthHeaders } from './edgeHeaders';
 
 // Supabase URL for Edge Function

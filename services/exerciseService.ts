@@ -2,7 +2,7 @@
 // Consulta tabela exercises por movement_pattern + muscle
 // Nunca por nome de exercício
 
-import { supabase } from './supabaseClient';
+import { supabase } from './supabaseCore';
 import { evaluateExerciseTier } from './ai/knowledge/exerciseTiering';
 
 const isDev = import.meta.env.DEV;

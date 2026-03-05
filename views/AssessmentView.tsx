@@ -2,7 +2,8 @@ import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Camera, Ruler, Save, Calendar, Trash2, CheckCircle2 } from 'lucide-react';
 import { Client, Assessment } from '../types';
-import { uploadAssessmentPhoto, createAssessment } from '../services/supabaseClient';
+import { uploadAssessmentPhoto } from '../services/supabase/domains/storageDomain';
+import { createAssessment } from '../services/supabase/domains/assessmentsDomain';
 import PageHeader from '../components/PageHeader';
 
 interface AssessmentViewProps {

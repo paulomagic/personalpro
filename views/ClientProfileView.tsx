@@ -3,7 +3,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Settings, Play, Pause, AlertTriangle, CheckCircle, Calendar, FileText, TrendingUp, Camera, Dumbbell, Clock, Phone, Mail, Edit, Save, X, PlusCircle, User, Zap, Sparkles, UserPlus, Trash2 } from 'lucide-react';
 import { Client, MissedClass } from '../types';
 import { analyzeClientProgressWithRouter } from '../services/ai/aiRouter';
-import { updateClient, deleteClient, supabase, getAssessments, getWorkouts, getClient, uploadAvatar } from '../services/supabaseClient';
+import { getClientById, updateClientById, deleteClientCascade } from '../services/supabase/domains/clientsDomain';
+import { getAssessmentsByClient } from '../services/supabase/domains/assessmentsDomain';
+import { getWorkoutsByClient } from '../services/supabase/domains/workoutsDomain';
+import { uploadAvatar } from '../services/supabase/domains/storageDomain';
 import { mapAssessmentsToClientShape, buildClientPhysicalUpdatePayload } from '../services/clientProfileUtils';
 import InviteStudentModal from '../components/InviteStudentModal';
 import ClientFinanceSection from '../components/ClientFinanceSection';
@@ -50,9 +53,9 @@ const ClientProfileView: React.FC<ClientProfileViewProps> = ({ client: initialCl
     const loadFullData = async () => {
       try {
         const [clientData, assessmentsData, workoutsData] = await Promise.all([
-          getClient(client.id),
-          getAssessments(client.id),
-          getWorkouts(client.id, { limit: 50 })
+          getClientById(client.id),
+          getAssessmentsByClient(client.id),
+          getWorkoutsByClient(client.id, { limit: 50 })
         ]);
 
         // Map backend snake_case to frontend camelCase
@@ -132,7 +135,7 @@ const ClientProfileView: React.FC<ClientProfileViewProps> = ({ client: initialCl
 
   const handleSaveNotes = async () => {
     try {
-      await updateClient(client.id, {
+      await updateClientById(client.id, {
         observations: editedObservations,
         injuries: editedInjuries,
         preferences: editedPreferences
@@ -157,7 +160,7 @@ const ClientProfileView: React.FC<ClientProfileViewProps> = ({ client: initialCl
         suspensionReason: reason,
       };
 
-      await updateClient(client.id, updates);
+      await updateClientById(client.id, updates);
 
       setClient(prev => ({
         ...prev,
@@ -199,7 +202,7 @@ const ClientProfileView: React.FC<ClientProfileViewProps> = ({ client: initialCl
 
   const handleDeleteClient = async () => {
     setIsDeleting(true);
-    const success = await deleteClient(client.id);
+    const success = await deleteClientCascade(client.id);
     setIsDeleting(false);
 
     if (success) {
@@ -213,23 +216,14 @@ const ClientProfileView: React.FC<ClientProfileViewProps> = ({ client: initialCl
 
   const handleSaveContact = async () => {
     try {
-      if (!supabase) {
-        console.warn('Supabase não configurado - dados não salvos');
-        return;
-      }
-
       const updates: Partial<Client> = {
         email: editedEmail || null,
         phone: editedPhone || null
       };
 
-      const { error } = await supabase
-        .from('clients')
-        .update(updates)
-        .eq('id', client.id);
-
-      if (error) {
-        console.error('Erro ao atualizar contato:', error);
+      const updateResult = await updateClientById(client.id, updates as any);
+      if (!updateResult) {
+        console.error('Erro ao atualizar contato: updateClientById retornou null');
         alert('Erro ao salvar dados de contato. Tente novamente.');
         return;
       }
@@ -262,7 +256,7 @@ const ClientProfileView: React.FC<ClientProfileViewProps> = ({ client: initialCl
       console.log('[handleAvatarChange] URL retornada:', publicUrl);
       if (publicUrl) {
         // Atualizar no banco
-        const updateResult = await updateClient(client.id, { avatar_url: publicUrl });
+        const updateResult = await updateClientById(client.id, { avatar_url: publicUrl } as any);
         console.log('[handleAvatarChange] updateClient result:', updateResult);
         // ✅ Atualizar estado local — key prop no img garante re-render correto
         setClient(prev => ({ ...prev, avatar: publicUrl, avatar_url: publicUrl }));
@@ -946,11 +940,6 @@ const ClientProfileView: React.FC<ClientProfileViewProps> = ({ client: initialCl
                   setClient(prev => ({ ...prev, ...data }));
 
                   // Atualiza no Supabase
-                  if (!supabase) {
-                    console.warn('Supabase não configurado - dados não salvos');
-                    return;
-                  }
-
                   try {
                     // Converte undefined para null (Supabase não aceita undefined)
                     const updateData = buildClientPhysicalUpdatePayload(data);
@@ -958,13 +947,9 @@ const ClientProfileView: React.FC<ClientProfileViewProps> = ({ client: initialCl
                     // Só atualiza se houver dados para atualizar
                     if (Object.keys(updateData).length === 0) return;
 
-                    const { error } = await supabase
-                      .from('clients')
-                      .update(updateData)
-                      .eq('id', client.id);
-
-                    if (error) {
-                      console.error('🔴 Erro ao atualizar dados físicos:', error);
+                    const updateResult = await updateClientById(client.id, updateData as any);
+                    if (!updateResult) {
+                      console.error('🔴 Erro ao atualizar dados físicos: updateClientById retornou null');
                     }
                   } catch (err) {
                     console.error('🔴 Erro ao salvar dados físicos:', err);

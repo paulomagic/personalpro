@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Plus, Dumbbell, Timer, Zap, Layers, Trash2, Save, Heart, Activity, Mountain, Footprints, Sparkles, Copy, FileText, Star } from 'lucide-react';
 import { Client, ExerciseCategory, TrainingMethod, WorkoutExercise, ExerciseSet, WorkoutTemplate } from '../types';
 import { mockExercises, mockTemplates, mockCustomMethods } from '../mocks/demoData';
-import { saveWorkout } from '../services/supabaseClient';
+import { saveWorkout } from '../services/supabase/domains/workoutsDomain';
 
 interface WorkoutBuilderViewProps {
     user: any;

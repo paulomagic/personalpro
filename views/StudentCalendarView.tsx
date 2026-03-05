@@ -13,7 +13,8 @@ import {
     CheckCircle2,
     AlertCircle
 } from 'lucide-react';
-import { getStudentAppointments, getUserProfile, Appointment } from '../services/supabaseClient';
+import { getUserProfile } from '../services/userProfileService';
+import { getStudentAppointmentsByClient, Appointment } from '../services/supabase/domains/appointmentsDomain';
 import { AppUser } from '../types';
 import RescheduleRequestModal from '../components/RescheduleRequestModal';
 
@@ -42,7 +43,7 @@ const StudentCalendarView: React.FC<StudentCalendarViewProps> = ({ user, onBack 
             const profile = await getUserProfile(user.id);
             if (profile?.client_id) {
                 setClientId(profile.client_id);
-                const data = await getStudentAppointments(profile.client_id);
+                const data = await getStudentAppointmentsByClient(profile.client_id);
                 setAppointments(data);
             }
         } catch (error) {

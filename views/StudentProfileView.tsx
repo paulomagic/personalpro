@@ -19,7 +19,9 @@ import {
     Heart,
     Droplets
 } from 'lucide-react';
-import { getUserProfile, getClient, getCompletedWorkouts } from '../services/supabaseClient';
+import { getUserProfile } from '../services/userProfileService';
+import { getClientById } from '../services/supabase/domains/clientsDomain';
+import { getCompletedWorkouts } from '../services/supabase/domains/completedWorkoutsDomain';
 import { AppUser, Client, CompletedWorkout } from '../types';
 
 interface StudentProfileViewProps {
@@ -48,7 +50,7 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({
             try {
                 const profile = await getUserProfile(user.id);
                 if (profile?.client_id) {
-                    const client = await getClient(profile.client_id);
+                    const client = await getClientById(profile.client_id);
                     if (client) {
                         // Map body_fat from DB to bodyFat in frontend
                         const mappedClient: Client = {

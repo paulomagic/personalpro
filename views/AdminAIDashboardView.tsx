@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { motion } from 'framer-motion';
+import { useQuery } from '@tanstack/react-query';
 import {
     ArrowLeft,
     Brain,
@@ -20,19 +21,17 @@ interface AdminAIDashboardViewProps {
 }
 
 const AdminAIDashboardView: React.FC<AdminAIDashboardViewProps> = ({ onBack }) => {
-    const [metrics, setMetrics] = useState<any>(null);
-    const [loading, setLoading] = useState(true);
-
-    const fetchMetrics = async () => {
-        setLoading(true);
-        const data = await getAIMetrics();
-        setMetrics(data);
-        setLoading(false);
-    };
-
-    useEffect(() => {
-        fetchMetrics();
-    }, []);
+    const {
+        data: metrics,
+        isLoading,
+        isFetching,
+        refetch: fetchMetrics
+    } = useQuery({
+        queryKey: ['admin-ai-metrics'],
+        queryFn: getAIMetrics,
+        staleTime: 30_000
+    });
+    const loading = isLoading || isFetching;
 
     const formatNumber = (num: number) => {
         return num.toLocaleString('pt-BR');

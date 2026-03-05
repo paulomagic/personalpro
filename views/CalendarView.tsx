@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Plus, Trash2 } from 'lucide-react';
 import { getClients, DBClient } from '../services/supabase/domains/clientsDomain';
 import {
@@ -47,6 +48,7 @@ const demoAppointments: DisplayAppointment[] = [
 ];
 
 const CalendarView: React.FC<CalendarViewProps> = ({ user, onBack, onSelectClient }) => {
+    const queryClient = useQueryClient();
     const [selectedDate, setSelectedDate] = useState(new Date());
     const [viewMode, setViewMode] = useState<'day' | 'week'>('day');
     const [showNewModal, setShowNewModal] = useState(false);
@@ -55,8 +57,8 @@ const CalendarView: React.FC<CalendarViewProps> = ({ user, onBack, onSelectClien
     const [monthlyBatchesCount, setMonthlyBatchesCount] = useState(0);
     const [appointments, setAppointments] = useState<DisplayAppointment[]>(demoAppointments);
     const [clients, setClients] = useState<DBClient[]>([]);
-    const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
+    const [cleaningUp, setCleaningUp] = useState(false);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
     // New appointment form state
@@ -68,61 +70,62 @@ const CalendarView: React.FC<CalendarViewProps> = ({ user, onBack, onSelectClien
     });
 
     const isDemo = user?.isDemo || !user?.id;
-
-    // Fetch data on mount
-    useEffect(() => {
-        const fetchData = async () => {
-            if (isDemo) {
-                // Use demo data
-                setAppointments(demoAppointments);
-                setClients(mockClients as unknown as DBClient[]);
-                return;
+    const dateStr = selectedDate.toISOString().split('T')[0];
+    const calendarQuery = useQuery({
+        queryKey: ['calendar-data', user?.id, isDemo, dateStr],
+        staleTime: 30_000,
+        queryFn: async () => {
+            if (isDemo || !user?.id) {
+                return {
+                    clients: mockClients as unknown as DBClient[],
+                    appointments: demoAppointments,
+                    monthlyBatchesCount: 0
+                };
             }
 
-            setLoading(true);
             try {
-                // Fetch real clients
-                const clientsData = await getClients(user.id, { limit: 300 });
-                setClients(clientsData);
+                const [clientsData, appointmentsData, batches] = await Promise.all([
+                    getClients(user.id, { limit: 300 }),
+                    getAppointments(user.id, dateStr, { limit: 300 }),
+                    getAllBatchesForCoach(user.id, selectedDate.getFullYear(), selectedDate.getMonth() + 1)
+                ]);
 
-                // Fetch real appointments for selected date
-                const dateStr = selectedDate.toISOString().split('T')[0];
-                const appointmentsData = await getAppointments(user.id, dateStr, { limit: 300 });
+                const mappedAppointments: DisplayAppointment[] = appointmentsData.map((apt: any) => ({
+                    id: apt.id,
+                    clientId: apt.client_id,
+                    clientName: apt.clients?.name || 'Cliente',
+                    clientAvatar: apt.clients?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(apt.clients?.name || 'C')}&background=3b82f6&color=fff`,
+                    time: (apt.time || '').slice(0, 5) || '00:00',
+                    duration: apt.duration,
+                    type: apt.type,
+                    status: apt.status,
+                    phone: apt.clients?.phone,
+                }));
 
-                if (appointmentsData.length > 0) {
-                    // Map DB appointments to display format
-                    const mapped = appointmentsData.map((apt: any) => ({
-                        id: apt.id,
-                        clientId: apt.client_id,
-                        clientName: apt.clients?.name || 'Cliente',
-                        clientAvatar: apt.clients?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(apt.clients?.name || 'C')}&background=3b82f6&color=fff`,
-                        time: (apt.time || '').slice(0, 5) || '00:00',
-                        duration: apt.duration,
-                        type: apt.type,
-                        status: apt.status,
-                        phone: apt.clients?.phone,
-                    }));
-                    setAppointments(mapped);
-                } else {
-                    // No appointments for this date, show empty
-                    setAppointments([]);
-                }
-
-                // Fetch monthly batches count for current month
-                const month = selectedDate.getMonth() + 1;
-                const year = selectedDate.getFullYear();
-                const batches = await getAllBatchesForCoach(user.id, year, month);
-                setMonthlyBatchesCount(batches.reduce((sum, b) => sum + b.total_sessions, 0));
+                return {
+                    clients: clientsData,
+                    appointments: mappedAppointments,
+                    monthlyBatchesCount: batches.reduce((sum, b) => sum + b.total_sessions, 0)
+                };
             } catch (error) {
                 console.error('Error fetching calendar data:', error);
-                setAppointments(demoAppointments);
-            } finally {
-                setLoading(false);
+                return {
+                    clients: mockClients as unknown as DBClient[],
+                    appointments: demoAppointments,
+                    monthlyBatchesCount: 0
+                };
             }
-        };
+        }
+    });
 
-        fetchData();
-    }, [user, selectedDate, isDemo]);
+    useEffect(() => {
+        if (!calendarQuery.data) return;
+        setClients(calendarQuery.data.clients);
+        setAppointments(calendarQuery.data.appointments);
+        setMonthlyBatchesCount(calendarQuery.data.monthlyBatchesCount);
+    }, [calendarQuery.data]);
+
+    const loading = calendarQuery.isLoading || cleaningUp;
 
     // Generate week days
     const getWeekDays = () => {
@@ -204,6 +207,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({ user, onBack, onSelectClien
     const handleConfirmAppointment = async (apt: DisplayAppointment) => {
         if (!isDemo && apt.id) {
             await updateAppointment(apt.id, { status: 'confirmed' });
+            void queryClient.invalidateQueries({ queryKey: ['calendar-data', user?.id, isDemo] });
         }
         setAppointments(prev => prev.map(a =>
             a.id === apt.id ? { ...a, status: 'confirmed' as const } : a
@@ -219,6 +223,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({ user, onBack, onSelectClien
                 alert('Erro ao excluir agendamento. Tente novamente.');
                 return;
             }
+            void queryClient.invalidateQueries({ queryKey: ['calendar-data', user?.id, isDemo] });
         }
         setAppointments(prev => prev.filter(a => a.id !== apt.id));
         setShowDetailModal(null);
@@ -279,7 +284,6 @@ const CalendarView: React.FC<CalendarViewProps> = ({ user, onBack, onSelectClien
             setAppointments(prev => [...prev, newApt].sort((a, b) => a.time.localeCompare(b.time)));
         } else {
             // Create in Supabase
-            const dateStr = selectedDate.toISOString().split('T')[0];
             const created = await createAppointment({
                 client_id: newAppointment.clientId,
                 coach_id: user.id,
@@ -303,6 +307,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({ user, onBack, onSelectClien
                     phone: selectedClient?.phone,
                 };
                 setAppointments(prev => [...prev, newApt].sort((a, b) => a.time.localeCompare(b.time)));
+                void queryClient.invalidateQueries({ queryKey: ['calendar-data', user?.id, isDemo] });
             }
         }
 
@@ -321,13 +326,12 @@ const CalendarView: React.FC<CalendarViewProps> = ({ user, onBack, onSelectClien
         const confirmCleanup = confirm('⚠️ Isso irá EXCLUIR TODOS os agendamentos deste mês.\n\nDeseja continuar?');
         if (!confirmCleanup) return;
 
-        setLoading(true);
+        setCleaningUp(true);
         try {
             const allAppts = await getAllAppointmentsForCoach(user.id);
 
             if (allAppts.length === 0) {
                 alert('Nenhum agendamento encontrado.');
-                setLoading(false);
                 return;
             }
 
@@ -337,14 +341,16 @@ const CalendarView: React.FC<CalendarViewProps> = ({ user, onBack, onSelectClien
             if (deleted) {
                 alert(`✅ ${idsToDelete.length} agendamentos excluídos com sucesso!`);
                 setAppointments([]);
+                void queryClient.invalidateQueries({ queryKey: ['calendar-data', user?.id, isDemo] });
             } else {
                 alert('Erro ao excluir agendamentos. Tente novamente.');
             }
         } catch (error) {
             console.error('Error in cleanup:', error);
             alert('Erro ao limpar agendamentos.');
+        } finally {
+            setCleaningUp(false);
         }
-        setLoading(false);
     };
 
     return (
@@ -361,11 +367,12 @@ const CalendarView: React.FC<CalendarViewProps> = ({ user, onBack, onSelectClien
                         {!isDemo && (
                             <button
                                 onClick={handleCleanupDuplicates}
-                                className="size-10 rounded-2xl flex items-center justify-center active:scale-90 transition-all"
+                                disabled={cleaningUp}
+                                className="size-10 rounded-2xl flex items-center justify-center active:scale-90 transition-all disabled:opacity-60"
                                 style={{ background: 'rgba(255,51,102,0.08)', border: '1px solid rgba(255,51,102,0.15)' }}
                                 title="Limpar Agendamentos"
                             >
-                                <Trash2 size={15} style={{ color: '#FF3366' }} />
+                                <Trash2 size={15} style={{ color: '#FF3366' }} className={cleaningUp ? 'animate-spin' : ''} />
                             </button>
                         )}
                         <button

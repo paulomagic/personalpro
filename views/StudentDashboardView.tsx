@@ -11,7 +11,9 @@ import {
     Clock,
     Flame
 } from 'lucide-react';
-import { getClientCurrentWorkout, getClient, getUserProfile } from '../services/supabaseClient';
+import { getCurrentWorkoutByClient } from '../services/supabase/domains/workoutsDomain';
+import { getClientById } from '../services/supabase/domains/clientsDomain';
+import { getUserProfile } from '../services/userProfileService';
 import { AppUser, Client, Workout } from '../types';
 
 interface StudentDashboardViewProps {
@@ -43,13 +45,13 @@ const StudentDashboardView: React.FC<StudentDashboardViewProps> = ({
 
                 if (profile?.client_id) {
                     // Get client data
-                    const client = await getClient(profile.client_id);
+                    const client = await getClientById(profile.client_id);
                     if (client) {
                         setClientData(client as any);
                     }
 
                     // Get current workout
-                    const workout = await getClientCurrentWorkout(profile.client_id);
+                    const workout = await getCurrentWorkoutByClient(profile.client_id);
                     if (workout) {
                         setCurrentWorkout(workout);
                     }

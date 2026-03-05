@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Check, Clock, Dumbbell, ChevronRight, Play, Pause, RotateCcw, Trophy, Flame, Timer as TimerIcon, ArrowLeft, Layers, AlertCircle } from 'lucide-react';
 import { WorkoutExercise, ExerciseSet, WorkoutSplit } from '../types';
-import { getClientCurrentWorkout, saveCompletedWorkout } from '../services/supabaseClient';
+import { getCurrentWorkoutByClient } from '../services/supabase/domains/workoutsDomain';
+import { saveCompletedWorkout } from '../services/supabase/domains/completedWorkoutsDomain';
 import { saveSessionFeedbackWithRetry, flushQueuedFeedback } from '../services/ai/feedback';
 import type { SessionFeedback } from '../services/ai/feedback/types';
 import { logFunnelEvent } from '../services/loggingService';
@@ -99,7 +100,7 @@ const StudentView: React.FC<StudentViewProps> = ({
 
             if (clientId) {
                 try {
-                    const workoutData = await getClientCurrentWorkout(clientId);
+                    const workoutData = await getCurrentWorkoutByClient(clientId);
 
                     if (workoutData && workoutData.splits && Array.isArray(workoutData.splits) && workoutData.splits.length > 0) {
                         setWorkout({

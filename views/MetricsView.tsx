@@ -1,5 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { getClients, supabase } from '../services/supabaseClient';
+import React, { useMemo, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { getClients } from '../services/supabase/domains/clientsDomain';
+import { supabase } from '../services/supabaseCore';
 import PageHeader from '../components/PageHeader';
 import { Users, Dumbbell, Activity, TrendingUp } from 'lucide-react';
 
@@ -10,31 +12,31 @@ interface MetricsViewProps {
 
 const MetricsView: React.FC<MetricsViewProps> = ({ user, onBack }) => {
     const [activePeriod, setActivePeriod] = useState('30D');
-    const [loading, setLoading] = useState(true);
-    const [metrics, setMetrics] = useState({
+
+    const emptyMetrics = useMemo(() => ({
         totalClients: 0,
         activeClients: 0,
         totalWorkouts: 0,
         avgAdherence: 0,
         weeklyLoad: [0, 0, 0, 0, 0, 0, 0]
-    });
+    }), []);
 
     const periods = ['7D', '30D', '90D', 'Ano'];
 
-    useEffect(() => {
-        const fetchMetrics = async () => {
-            if (!user?.id) return;
-            setLoading(true);
+    const { data: metrics = emptyMetrics, isLoading: loading } = useQuery({
+        queryKey: ['metrics', user?.id, activePeriod, user?.isDemo],
+        enabled: Boolean(user?.id),
+        staleTime: 60_000,
+        queryFn: async () => {
+            if (!user?.id) return emptyMetrics;
 
             try {
-                // Fetch clients
                 const clients = await getClients(user.id);
                 const activeClients = clients.filter((c: any) => c.status === 'active').length;
                 const avgAdherence = clients.length > 0
                     ? Math.round(clients.reduce((sum: number, c: any) => sum + (c.adherence || 0), 0) / clients.length)
                     : 0;
 
-                // Fetch workouts count
                 let workoutsCount = 0;
                 if (supabase) {
                     const { count } = await supabase
@@ -44,7 +46,7 @@ const MetricsView: React.FC<MetricsViewProps> = ({ user, onBack }) => {
                     workoutsCount = count || 0;
                 }
 
-                // Generate weekly load based on actual appointments or random for demo
+                // Lightweight synthetic weekly load until appointment-derived metric is introduced.
                 const weeklyLoad = [
                     Math.floor(Math.random() * 60) + 20,
                     Math.floor(Math.random() * 60) + 20,
@@ -55,22 +57,21 @@ const MetricsView: React.FC<MetricsViewProps> = ({ user, onBack }) => {
                     Math.floor(Math.random() * 30) + 10
                 ];
 
-                setMetrics({
+                return {
                     totalClients: clients.length,
                     activeClients,
                     totalWorkouts: workoutsCount,
                     avgAdherence,
                     weeklyLoad
-                });
+                };
             } catch (error) {
                 console.error('Error fetching metrics:', error);
+                return emptyMetrics;
             } finally {
-                setLoading(false);
+                // no-op
             }
-        };
-
-        fetchMetrics();
-    }, [user, activePeriod]);
+        }
+    });
 
     const LoadingValue = () => (
         <div className="h-8 w-16 bg-slate-700/50 rounded-lg animate-pulse"></div>

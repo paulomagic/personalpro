@@ -114,6 +114,27 @@ export async function getAllAppointmentsForCoach(
     return data || [];
 }
 
+export async function getStudentAppointmentsByClient(clientId: string): Promise<Appointment[]> {
+    if (!supabase) return [];
+
+    const now = new Date();
+    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+
+    const { data, error } = await supabase
+        .from('appointments')
+        .select('*')
+        .eq('client_id', clientId)
+        .gte('date', today)
+        .order('date', { ascending: true });
+
+    if (error) {
+        console.error('Error fetching student appointments:', error);
+        return [];
+    }
+
+    return (data || []) as Appointment[];
+}
+
 export async function deleteAppointmentsBulk(ids: string[]): Promise<boolean> {
     if (!supabase || ids.length === 0) return false;
     const { error } = await supabase.from('appointments').delete().in('id', ids);

@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { getSafeAvatarUrl } from '../utils/validation';
-import { supabase } from '../services/supabaseClient';
+import { supabase } from '../services/supabaseCore';
 import PageHeader from '../components/PageHeader';
 import { BottomSheet } from '../components/BottomSheet';
 import { User, Bell, Palette, Shield, CreditCard, HelpCircle, ChevronRight, Edit3, LogOut } from 'lucide-react';

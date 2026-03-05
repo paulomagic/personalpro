@@ -1,5 +1,6 @@
 import React, { Suspense, lazy, useCallback, useEffect, useState } from 'react';
 import { TrendingUp, Download, CheckCircle, AlertCircle, Clock, ChevronRight } from 'lucide-react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getPayments, updatePayment } from '../services/supabase/domains/paymentsDomain';
 import { getClients } from '../services/supabase/domains/clientsDomain';
 import { mockClients } from '../mocks/demoData';
@@ -29,16 +30,18 @@ interface Payment {
 }
 
 const FinanceView: React.FC<FinanceViewProps> = ({ user, onBack }) => {
+    const queryClient = useQueryClient();
     const [activeTab, setActiveTab] = useState<'overview' | 'pending' | 'history'>('overview');
     const [showPaymentModal, setShowPaymentModal] = useState<Payment | null>(null);
     const [showStatusModal, setShowStatusModal] = useState<Payment | null>(null);
     const [showSuccessToast, setShowSuccessToast] = useState<string | null>(null);
-    const [loading, setLoading] = useState(true);
     const [payments, setPayments] = useState<Payment[]>([]);
+    const [showFallbackWhileLoading, setShowFallbackWhileLoading] = useState(false);
     const [enableHeavyUI, setEnableHeavyUI] = useState(false);
     const buildFallbackPayments = useCallback(
         () => mockClients.slice(0, 5).map((c: any, i: number) => ({
             id: `demo-${i}`,
+            clientId: c.id || `demo-client-${i}`,
             clientName: c.name,
             clientAvatar: c.avatar || c.avatar_url || '',
             amount: 350 + i * 50,
@@ -55,49 +58,39 @@ const FinanceView: React.FC<FinanceViewProps> = ({ user, onBack }) => {
         return () => window.clearTimeout(timer);
     }, []);
 
-    // Fetch payments from Supabase
-    useEffect(() => {
-        const withTimeout = async <T,>(promise: Promise<T>, timeoutMs = 10000): Promise<T> => {
-            return await Promise.race([
-                promise,
-                new Promise<T>((_, reject) =>
-                    window.setTimeout(() => reject(new Error('Finance fetch timeout')), timeoutMs)
-                )
-            ]);
-        };
+    const withTimeout = async <T,>(promise: Promise<T>, timeoutMs = 10000): Promise<T> => {
+        return await Promise.race([
+            promise,
+            new Promise<T>((_, reject) =>
+                window.setTimeout(() => reject(new Error('Finance fetch timeout')), timeoutMs)
+            )
+        ]);
+    };
 
-        const fetchPayments = async () => {
-            if (!user?.id) {
-                // Demo fallback sem user.id
-                setPayments(buildFallbackPayments());
-                setLoading(false);
-                return;
-            }
-            setLoading(true);
+    const financeQuery = useQuery<Payment[]>({
+        queryKey: ['finance-payments', user?.id, user?.isDemo],
+        staleTime: 60_000,
+        queryFn: async () => {
+            if (!user?.id) return buildFallbackPayments();
 
             try {
-                // Demo Mode handling
                 if (user.isDemo) {
-                    const demoPayments = mockClients.slice(0, 5).map((c: any, i: number) => ({
+                    return mockClients.slice(0, 5).map((c: any, i: number) => ({
                         id: `demo-${i}`,
+                        clientId: c.id || `demo-client-${i}`,
                         clientName: c.name,
                         clientAvatar: c.avatar || c.avatar_url || '',
                         amount: 350,
                         dueDate: new Date(new Date().setDate(15 + i)).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }),
-                        status: i % 3 === 0 ? 'paid' : i % 3 === 1 ? 'pending' : 'overdue' as any,
+                        status: i % 3 === 0 ? 'paid' : i % 3 === 1 ? 'pending' : 'overdue' as const,
                         plan: 'Premium',
                         phone: c.phone || ''
                     }));
-                    setPayments(demoPayments);
-                    setLoading(false);
-                    return;
                 }
 
-                    const dbPayments = await withTimeout(getPayments(user.id));
-
+                const dbPayments = await withTimeout(getPayments(user.id));
                 if (dbPayments.length > 0) {
-                    // Map DB payments to our interface
-                    const mapped = dbPayments.map((p: any) => ({
+                    return dbPayments.map((p: any) => ({
                         id: p.id,
                         clientId: p.client_id,
                         clientName: p.clients?.name || 'Cliente',
@@ -108,46 +101,47 @@ const FinanceView: React.FC<FinanceViewProps> = ({ user, onBack }) => {
                         plan: p.plan || 'Mensal',
                         phone: p.clients?.phone || ''
                     }));
-                    setPayments(mapped);
-                } else {
-                    // Fallback: Generate demo payments from clients
-                        const clients = await withTimeout(getClients(user.id, { limit: 120 }));
-                    if (clients.length > 0) {
-                        const demoPayments = clients.slice(0, 5).map((c: any, i: number) => ({
-                            id: `demo-${i}`,
-                            clientId: c.id,
-                            clientName: c.name,
-                            clientAvatar: c.avatar_url || '',
-                            amount: 350,
-                            dueDate: `${15 + i}/12`,
-                            status: i % 3 === 0 ? 'paid' : i % 3 === 1 ? 'pending' : 'overdue' as any,
-                            plan: 'Premium',
-                            phone: c.phone || ''
-                        }));
-                        setPayments(demoPayments);
-                    }
                 }
+
+                const clients = await withTimeout(getClients(user.id, { limit: 120 }));
+                if (clients.length > 0) {
+                    return clients.slice(0, 5).map((c: any, i: number) => ({
+                        id: `demo-${i}`,
+                        clientId: c.id || `demo-client-${i}`,
+                        clientName: c.name,
+                        clientAvatar: c.avatar_url || '',
+                        amount: 350,
+                        dueDate: `${15 + i}/12`,
+                        status: i % 3 === 0 ? 'paid' : i % 3 === 1 ? 'pending' : 'overdue' as const,
+                        plan: 'Premium',
+                        phone: c.phone || ''
+                    }));
+                }
+
+                return buildFallbackPayments();
             } catch (error) {
                 console.error('Error fetching payments:', error);
-                // Fallback para evitar tela vazia caso a rede trave
-                setPayments(buildFallbackPayments());
-            } finally {
-                setLoading(false);
+                return buildFallbackPayments();
             }
-        };
+        }
+    });
 
-        fetchPayments();
-    }, [user, buildFallbackPayments]);
-
-    // Failsafe visual: evita tela "vazia" se a request travar
     useEffect(() => {
-        if (!loading) return;
+        if (!financeQuery.data) return;
+        setPayments(financeQuery.data);
+        setShowFallbackWhileLoading(false);
+    }, [financeQuery.data]);
+
+    useEffect(() => {
+        if (!financeQuery.isLoading) return;
         const timer = window.setTimeout(() => {
             setPayments((prev) => (prev.length > 0 ? prev : buildFallbackPayments()));
-            setLoading(false);
+            setShowFallbackWhileLoading(true);
         }, 4000);
         return () => window.clearTimeout(timer);
-    }, [loading, buildFallbackPayments]);
+    }, [financeQuery.isLoading, buildFallbackPayments]);
+
+    const loading = financeQuery.isLoading && !showFallbackWhileLoading && payments.length === 0;
 
     const paidPayments = payments.filter(p => p.status === 'paid');
     const pendingPayments = payments.filter(p => p.status === 'pending' || p.status === 'overdue');
@@ -196,6 +190,7 @@ const FinanceView: React.FC<FinanceViewProps> = ({ user, onBack }) => {
             });
             if (result) {
                 showToast(`Pagamento de ${payment.clientName} salvo!`);
+                void queryClient.invalidateQueries({ queryKey: ['finance-payments', user?.id, user?.isDemo] });
             } else {
                 showToast(`Pagamento registrado localmente`);
             }
@@ -224,6 +219,7 @@ const FinanceView: React.FC<FinanceViewProps> = ({ user, onBack }) => {
             const result = await updatePayment(id, updateData);
             if (result) {
                 showToast(`Status de ${payment.clientName} atualizado!`);
+                void queryClient.invalidateQueries({ queryKey: ['finance-payments', user?.id, user?.isDemo] });
             }
         } else {
             showToast(`Status atualizado!`);

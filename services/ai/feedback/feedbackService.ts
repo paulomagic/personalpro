@@ -8,6 +8,7 @@ import { analyzeSessionFeedback, analyzeTrend, DEFAULT_PROGRESSION_CONFIG } from
 import type { ProgressionAdjustment } from './types';
 import { logAIAction } from '../../loggingService';
 import { buildProgressionPrecisionReport, resolvePrecisionProfile } from '../progressionPrecisionService';
+import { readQueueWithFallback, writeQueueWithFallback } from '../../offline/queueStorage';
 
 const isDev = import.meta.env.DEV;
 const debugLog = (...args: unknown[]) => {
@@ -15,6 +16,7 @@ const debugLog = (...args: unknown[]) => {
 };
 
 const FEEDBACK_QUEUE_STORAGE_KEY = 'personalpro_feedback_queue_v1';
+const FEEDBACK_QUEUE_INDEXEDDB_KEY = 'ai_feedback_queue_v1';
 const PRECISION_TELEMETRY_LAST_RUN_KEY = 'personalpro_precision_telemetry_last_run_v1';
 const PRECISION_TELEMETRY_MIN_INTERVAL_MS = 4 * 60 * 1000;
 const MAX_QUEUED_FEEDBACK_ITEMS = 80;
@@ -138,16 +140,16 @@ async function captureProgressionPrecisionTelemetry(studentId: string): Promise<
     }
 }
 
-function readFeedbackQueue(): QueuedFeedbackItem[] {
-    if (!canUseStorage()) return [];
+async function readFeedbackQueue(): Promise<QueuedFeedbackItem[]> {
+    if (typeof window === 'undefined') return [];
     try {
-        const raw = window.localStorage.getItem(FEEDBACK_QUEUE_STORAGE_KEY);
-        if (!raw) return [];
-        const parsed = JSON.parse(raw);
-        const queue = Array.isArray(parsed) ? parsed : [];
+        const queue = await readQueueWithFallback<QueuedFeedbackItem>(
+            FEEDBACK_QUEUE_INDEXEDDB_KEY,
+            FEEDBACK_QUEUE_STORAGE_KEY
+        );
         const pruned = pruneQueuedFeedbackItems(queue);
         if (pruned.length !== queue.length) {
-            writeFeedbackQueue(pruned);
+            await writeFeedbackQueue(pruned);
         }
         return pruned;
     } catch (error) {
@@ -156,23 +158,26 @@ function readFeedbackQueue(): QueuedFeedbackItem[] {
     }
 }
 
-function writeFeedbackQueue(items: QueuedFeedbackItem[]): boolean {
-    if (!canUseStorage()) return false;
+async function writeFeedbackQueue(items: QueuedFeedbackItem[]): Promise<boolean> {
+    if (typeof window === 'undefined') return false;
     try {
         const pruned = pruneQueuedFeedbackItems(items);
-        window.localStorage.setItem(FEEDBACK_QUEUE_STORAGE_KEY, JSON.stringify(pruned));
-        return true;
+        return await writeQueueWithFallback(
+            FEEDBACK_QUEUE_INDEXEDDB_KEY,
+            pruned,
+            FEEDBACK_QUEUE_STORAGE_KEY
+        );
     } catch (error) {
         console.warn('[FeedbackService] Failed to write feedback queue:', error);
         return false;
     }
 }
 
-function pushFeedbackToQueue(
+async function pushFeedbackToQueue(
     feedback: Omit<SessionFeedback, 'session_date'>,
     errorMessage?: string
-): { queued: boolean; queueSize: number } {
-    const queue = readFeedbackQueue();
+): Promise<{ queued: boolean; queueSize: number }> {
+    const queue = await readFeedbackQueue();
     queue.push({
         id: `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
         feedback: sanitizeFeedbackForQueue(feedback),
@@ -181,7 +186,10 @@ function pushFeedbackToQueue(
         lastError: errorMessage
     });
     const normalizedQueue = pruneQueuedFeedbackItems(queue);
-    const queued = writeFeedbackQueue(normalizedQueue);
+    const queued = await writeFeedbackQueue(normalizedQueue);
+    if (queued) {
+        requestBackgroundSync();
+    }
     return {
         queued,
         queueSize: normalizedQueue.length
@@ -201,13 +209,27 @@ function scheduleQueuedFeedbackFlush(delayMs = 5000): void {
     }, delayMs);
 }
 
+function requestBackgroundSync(): void {
+    if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return;
+    navigator.serviceWorker.ready
+        .then((registration: ServiceWorkerRegistration) => {
+            if (!('sync' in registration)) return;
+            return (registration as ServiceWorkerRegistration & {
+                sync: { register: (tag: string) => Promise<void> };
+            }).sync.register('flush-feedback-queue');
+        })
+        .catch(() => {
+            // noop
+        });
+}
+
 export async function flushQueuedFeedback(maxItems = 20): Promise<{
     processed: number;
     success: number;
     failed: number;
     remaining: number;
 }> {
-    const queue = readFeedbackQueue();
+    const queue = await readFeedbackQueue();
     if (queue.length === 0) {
         return { processed: 0, success: 0, failed: 0, remaining: 0 };
     }
@@ -244,10 +266,11 @@ export async function flushQueuedFeedback(maxItems = 20): Promise<{
         });
     }
 
-    writeFeedbackQueue(kept);
+    await writeFeedbackQueue(kept);
 
     if (kept.length > 0) {
         scheduleQueuedFeedbackFlush(15000);
+        requestBackgroundSync();
     }
 
     return {
@@ -312,7 +335,7 @@ export async function saveSessionFeedbackWithRetry(
     const online = typeof navigator === 'undefined' ? true : navigator.onLine;
 
     if (!online || !supabase) {
-        const queueResult = pushFeedbackToQueue(feedback, !supabase ? 'Supabase indisponível' : 'Offline');
+        const queueResult = await pushFeedbackToQueue(feedback, !supabase ? 'Supabase indisponível' : 'Offline');
         return queueResult.queued
             ? { success: true, queued: true, queueSize: queueResult.queueSize }
             : { success: false, error: 'Falha ao enfileirar feedback offline' };
@@ -324,7 +347,7 @@ export async function saveSessionFeedbackWithRetry(
         return result;
     }
 
-    const queueResult = pushFeedbackToQueue(feedback, result.error);
+    const queueResult = await pushFeedbackToQueue(feedback, result.error);
     if (queueResult.queued) {
         scheduleQueuedFeedbackFlush();
         return {

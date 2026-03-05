@@ -1,6 +1,8 @@
 import { supabase } from '../../supabaseCore';
+import { readQueueWithFallback, writeQueueWithFallback } from '../../offline/queueStorage';
 
 const QUEUE_KEY = 'personalpro_ai_generation_feedback_queue_v1';
+const QUEUE_INDEXEDDB_KEY = 'ai_generation_feedback_queue_v1';
 const MAX_QUEUED_ITEMS = 60;
 const QUEUE_RETENTION_MS = 14 * 24 * 60 * 60 * 1000;
 const MAX_QUEUE_ATTEMPTS = 6;
@@ -36,20 +38,13 @@ function pruneQueue(items: QueuedItem[]): QueuedItem[] {
     return filtered.slice(-MAX_QUEUED_ITEMS);
 }
 
-function canUseStorage(): boolean {
-    return typeof window !== 'undefined' && typeof window.localStorage !== 'undefined';
-}
-
-function readQueue(): QueuedItem[] {
-    if (!canUseStorage()) return [];
+async function readQueue(): Promise<QueuedItem[]> {
+    if (typeof window === 'undefined') return [];
     try {
-        const raw = window.localStorage.getItem(QUEUE_KEY);
-        if (!raw) return [];
-        const parsed = JSON.parse(raw);
-        const queue = Array.isArray(parsed) ? parsed : [];
+        const queue = await readQueueWithFallback<QueuedItem>(QUEUE_INDEXEDDB_KEY, QUEUE_KEY);
         const pruned = pruneQueue(queue);
         if (pruned.length !== queue.length) {
-            writeQueue(pruned);
+            await writeQueue(pruned);
         }
         return pruned;
     } catch {
@@ -57,13 +52,27 @@ function readQueue(): QueuedItem[] {
     }
 }
 
-function writeQueue(items: QueuedItem[]): void {
-    if (!canUseStorage()) return;
+async function writeQueue(items: QueuedItem[]): Promise<void> {
+    if (typeof window === 'undefined') return;
     try {
-        window.localStorage.setItem(QUEUE_KEY, JSON.stringify(pruneQueue(items)));
+        await writeQueueWithFallback(QUEUE_INDEXEDDB_KEY, pruneQueue(items), QUEUE_KEY);
     } catch {
         // noop
     }
+}
+
+function requestBackgroundSync(): void {
+    if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return;
+    navigator.serviceWorker.ready
+        .then((registration: ServiceWorkerRegistration) => {
+            if (!('sync' in registration)) return;
+            return (registration as ServiceWorkerRegistration & {
+                sync: { register: (tag: string) => Promise<void> };
+            }).sync.register('flush-ai-generation-feedback-queue');
+        })
+        .catch(() => {
+            // noop
+        });
 }
 
 async function insertFeedbackLog(payload: AIGenerationFeedbackPayload): Promise<boolean> {
@@ -100,33 +109,35 @@ export async function saveAIGenerationFeedback(
 ): Promise<{ success: boolean; queued?: boolean }> {
     const online = typeof navigator === 'undefined' ? true : navigator.onLine;
     if (!online || !supabase) {
-        const queue = readQueue();
+        const queue = await readQueue();
         queue.push({
             id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
             payload,
             createdAt: new Date().toISOString(),
             attempts: 0
         });
-        writeQueue(queue);
+        await writeQueue(queue);
+        requestBackgroundSync();
         return { success: true, queued: true };
     }
 
     const persisted = await insertFeedbackLog(payload);
     if (persisted) return { success: true };
 
-    const queue = readQueue();
+    const queue = await readQueue();
     queue.push({
         id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
         payload,
         createdAt: new Date().toISOString(),
         attempts: 0
     });
-    writeQueue(queue);
+    await writeQueue(queue);
+    requestBackgroundSync();
     return { success: true, queued: true };
 }
 
 export async function flushAIGenerationFeedbackQueue(maxItems = 20): Promise<{ processed: number; remaining: number }> {
-    const queue = readQueue();
+    const queue = await readQueue();
     if (!queue.length || !supabase) {
         return { processed: 0, remaining: queue.length };
     }
@@ -148,6 +159,9 @@ export async function flushAIGenerationFeedbackQueue(maxItems = 20): Promise<{ p
         }
     }
 
-    writeQueue([...failed, ...rest]);
+    await writeQueue([...failed, ...rest]);
+    if (failed.length + rest.length > 0) {
+        requestBackgroundSync();
+    }
     return { processed, remaining: failed.length + rest.length };
 }

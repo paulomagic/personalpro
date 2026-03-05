@@ -5,13 +5,13 @@ import { getUserProfile, countPendingRescheduleRequests, type DBUserProfile } fr
 import LoginView from './views/LoginView';
 import UpdateBanner from './components/UpdateBanner';
 import AppErrorBoundary from './components/AppErrorBoundary';
+import AppContentRouter from './components/AppContentRouter';
 import {
   buildNavigationUrl,
   isView,
   resolveViewFromPath,
 } from './services/navigation/historyNavigation';
 import {
-  canAccessAdminArea,
   createDemoUser,
   resolveNavigationView,
   resolvePostLoginView,
@@ -21,29 +21,6 @@ import {
 } from './services/auth/authFlow';
 import { logFrontendError } from './services/loggingService';
 
-// Lazy load heavy views to reduce initial bundle size
-const AIBuilderView = lazy(() => import('./views/AIBuilderView'));
-const DashboardView = lazy(() => import('./views/DashboardView'));
-const ClientProfileView = lazy(() => import('./views/ClientProfileView'));
-const TrainingExecutionView = lazy(() => import('./views/TrainingExecutionView'));
-const ClientsView = lazy(() => import('./views/ClientsView'));
-const SettingsView = lazy(() => import('./views/SettingsView'));
-const CalendarView = lazy(() => import('./views/CalendarView'));
-const MetricsView = lazy(() => import('./views/MetricsView'));
-const FinanceView = lazy(() => import('./views/FinanceView'));
-const WorkoutBuilderView = lazy(() => import('./views/WorkoutBuilderView'));
-const AssessmentView = lazy(() => import('./views/AssessmentView'));
-const StudentView = lazy(() => import('./views/StudentView'));
-const SportTrainingView = lazy(() => import('./views/SportTrainingView'));
-const AdminView = lazy(() => import('./views/AdminView'));
-const AdminUsersView = lazy(() => import('./views/AdminUsersView'));
-const AdminAILogsView = lazy(() => import('./views/AdminAILogsView'));
-const AdminAIDashboardView = lazy(() => import('./views/AdminAIDashboardView'));
-const AdminActivityLogsView = lazy(() => import('./views/AdminActivityLogsView'));
-const AdminSettingsView = lazy(() => import('./views/AdminSettingsView'));
-const StudentDashboardView = lazy(() => import('./views/StudentDashboardView'));
-const StudentProfileView = lazy(() => import('./views/StudentProfileView'));
-const StudentCalendarView = lazy(() => import('./views/StudentCalendarView'));
 const Layout = lazy(() => import('./components/Layout'));
 
 // Loading fallback component
@@ -585,202 +562,20 @@ function App() {
     );
   }
 
-  const renderContent = () => {
-    switch (currentView) {
-      case View.LOGIN:
-        return <LoginView onLogin={handleLoginSuccess} />;
-      case View.DASHBOARD:
-        return (
-          <DashboardView
-            user={user}
-            onSelectClient={(client) => navigateTo(View.CLIENT_PROFILE, client)}
-            onOpenAI={() => navigateTo(View.AI_BUILDER)}
-            onNavigate={handleNavigation}
-          />
-        );
-      case View.AI_BUILDER:
-        return <AIBuilderView user={user} onBack={() => navigateTo(View.DASHBOARD)} onDone={() => navigateTo(View.DASHBOARD)} />;
-      case View.CLIENT_PROFILE:
-        if (!selectedClient) {
-          return (
-            <DashboardView
-              user={user}
-              onSelectClient={(client) => navigateTo(View.CLIENT_PROFILE, client)}
-              onOpenAI={() => navigateTo(View.AI_BUILDER)}
-              onNavigate={handleNavigation}
-            />
-          );
-        }
-        return <ClientProfileView
-          client={selectedClient}
-          coachId={user?.id}
-          onBack={() => navigateTo(View.DASHBOARD)}
-          onStartWorkout={(workout) => navigateTo(View.TRAINING_EXECUTION, workout)}
-          onStartAssessment={() => navigateTo(View.ASSESSMENT)}
-          onCreateWorkout={() => navigateTo(View.WORKOUT_BUILDER)}
-          onStudentView={() => navigateTo(View.STUDENT)}
-          onSportTraining={() => navigateTo(View.SPORT_TRAINING)}
-        />;
-      case View.TRAINING_EXECUTION:
-        if (!activeWorkout) {
-          return (
-            <DashboardView
-              user={user}
-              onSelectClient={(client) => navigateTo(View.CLIENT_PROFILE, client)}
-              onOpenAI={() => navigateTo(View.AI_BUILDER)}
-              onNavigate={handleNavigation}
-            />
-          );
-        }
-        return <TrainingExecutionView workout={activeWorkout} onFinish={() => navigateTo(userProfile?.role === 'student' ? View.STUDENT : View.DASHBOARD)} />;
-      case View.CLIENTS:
-        return <ClientsView user={user} onBack={() => navigateTo(View.DASHBOARD)} onSelectClient={(client) => navigateTo(View.CLIENT_PROFILE, client)} />;
-      case View.METRICS:
-        return <MetricsView user={user} onBack={() => navigateTo(userProfile?.role === 'student' ? View.STUDENT : View.DASHBOARD)} />;
-      case View.SETTINGS:
-        return <SettingsView user={user} onBack={() => navigateTo(userProfile?.role === 'student' ? View.STUDENT : View.DASHBOARD)} onLogout={handleLogout} />;
-      case View.CALENDAR:
-        // Students see their own appointments with reschedule option
-        if (userProfile?.role === 'student') {
-          return <StudentCalendarView user={user} onBack={() => navigateTo(View.STUDENT)} />;
-        }
-        // Coaches see full calendar management
-        return <CalendarView user={user} onBack={() => navigateTo(View.DASHBOARD)} />;
-      case View.FINANCE:
-        return <FinanceView user={user} onBack={() => navigateTo(userProfile?.role === 'student' ? View.STUDENT : View.DASHBOARD)} />;
-      case View.WORKOUT_BUILDER:
-        return (
-          <WorkoutBuilderView
-            user={user}
-            client={selectedClient}
-            onBack={() => navigateTo(View.DASHBOARD)}
-            onSave={() => {
-              navigateTo(View.DASHBOARD);
-            }}
-          />
-        );
-      case View.ASSESSMENT:
-        if (!selectedClient) {
-          return <DashboardView user={user} onSelectClient={setSelectedClient} onOpenAI={() => navigateTo(View.AI_BUILDER)} onNavigate={handleNavigation} />;
-        }
-        return (
-          <AssessmentView
-            user={user}
-            client={selectedClient}
-            onBack={() => navigateTo(View.CLIENT_PROFILE, selectedClient)}
-            onSave={(assessment) => {
-              navigateTo(View.CLIENT_PROFILE, selectedClient);
-            }}
-          />
-        );
-      case View.STUDENT:
-        // If user is actually a student (logged in student), show StudentDashboardView
-        if (userProfile?.role === 'student') {
-          return (
-            <StudentDashboardView
-              user={user}
-              onStartWorkout={(workout) => navigateTo(View.TRAINING_EXECUTION, workout)}
-              onNavigate={handleNavigation}
-              onLogout={handleLogout}
-            />
-          );
-        }
-        // Otherwise, this is a coach previewing student view for a client
-        return (
-          <StudentView
-            clientId={selectedClient?.id}
-            studentName={selectedClient?.name || 'Aluno Demo'}
-            coachName={user?.user_metadata?.name || 'Personal'}
-            onCompleteWorkout={() => navigateTo(View.DASHBOARD)}
-            onBack={() => selectedClient ? navigateTo(View.CLIENT_PROFILE, selectedClient) : navigateTo(View.DASHBOARD)}
-          />
-        );
-      case View.STUDENT_PROFILE:
-        return (
-          <StudentProfileView
-            user={user}
-            onBack={() => navigateTo(View.STUDENT)}
-            onSettings={() => navigateTo(View.SETTINGS)}
-          />
-        );
-      case View.STUDENT_WORKOUTS:
-        // Student viewing their workout list
-        return (
-          <StudentView
-            clientId={userProfile?.client_id || undefined}
-            studentName={user?.user_metadata?.name || user?.user_metadata?.full_name || 'Aluno'}
-            coachName="Seu Personal"
-            onCompleteWorkout={() => navigateTo(View.STUDENT)}
-            onBack={() => navigateTo(View.STUDENT)}
-          />
-        );
-      case View.SPORT_TRAINING:
-        return (
-          <SportTrainingView
-            clientName={selectedClient?.name}
-            onBack={() => navigateTo(View.DASHBOARD)}
-            onSave={(workout) => {
-              navigateTo(View.DASHBOARD);
-            }}
-          />
-        );
-      // Admin Views - Protected by role check
-      case View.ADMIN:
-      case View.ADMIN_USERS:
-      case View.ADMIN_AI_LOGS:
-      case View.ADMIN_AI_DASHBOARD:
-      case View.ADMIN_ACTIVITY_LOGS:
-      case View.ADMIN_SETTINGS:
-        // Security: Verify admin permission before rendering any admin view
-        if (!canAccessAdminArea(user)) {
-          console.warn('🔒 Acesso negado: usuário não é admin');
-          // Redirect to dashboard for non-admin users
-          return (
-            <DashboardView
-              user={user}
-              onSelectClient={(client) => navigateTo(View.CLIENT_PROFILE, client)}
-              onOpenAI={() => navigateTo(View.AI_BUILDER)}
-              onNavigate={handleNavigation}
-            />
-          );
-        }
-        // Render the appropriate admin view
-        if (currentView === View.ADMIN) {
-          return (
-            <AdminView
-              onBack={() => navigateTo(View.DASHBOARD)}
-              onNavigate={(subView) => {
-                switch (subView) {
-                  case 'users': navigateTo(View.ADMIN_USERS); break;
-                  case 'ai-dashboard': navigateTo(View.ADMIN_AI_DASHBOARD); break;
-                  case 'ai-logs': navigateTo(View.ADMIN_AI_LOGS); break;
-                  case 'activity-logs': navigateTo(View.ADMIN_ACTIVITY_LOGS); break;
-                  case 'settings': navigateTo(View.ADMIN_SETTINGS); break;
-                }
-              }}
-            />
-          );
-        }
-        if (currentView === View.ADMIN_USERS) {
-          return <AdminUsersView onBack={() => navigateTo(View.ADMIN)} />;
-        }
-        if (currentView === View.ADMIN_AI_LOGS) {
-          return <AdminAILogsView onBack={() => navigateTo(View.ADMIN)} />;
-        }
-        if (currentView === View.ADMIN_AI_DASHBOARD) {
-          return <AdminAIDashboardView onBack={() => navigateTo(View.ADMIN)} />;
-        }
-        if (currentView === View.ADMIN_ACTIVITY_LOGS) {
-          return <AdminActivityLogsView onBack={() => navigateTo(View.ADMIN)} />;
-        }
-        if (currentView === View.ADMIN_SETTINGS) {
-          return <AdminSettingsView onBack={() => navigateTo(View.ADMIN)} />;
-        }
-        return null;
-      default:
-        return <LoginView onLogin={handleLoginSuccess} />;
-    }
-  };
+  const renderContent = () => (
+    <AppContentRouter
+      currentView={currentView}
+      user={user}
+      userProfile={userProfile}
+      selectedClient={selectedClient}
+      activeWorkout={activeWorkout}
+      navigateTo={navigateTo}
+      handleNavigation={handleNavigation}
+      handleLogout={handleLogout}
+      handleLoginSuccess={handleLoginSuccess}
+      setSelectedClient={setSelectedClient}
+    />
+  );
 
   if (currentView === View.LOGIN) {
     return renderWithBoundary(

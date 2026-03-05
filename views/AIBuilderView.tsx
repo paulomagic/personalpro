@@ -545,6 +545,32 @@ const AIBuilderView: React.FC<AIBuilderViewProps> = ({ user, onBack, onDone }) =
   const [refinementInput, setRefinementInput] = useState('');
   const [isRefining, setIsRefining] = useState(false);
   const [errorToast, setErrorToast] = useState<string | null>(null);
+  const [wizardStep, setWizardStep] = useState<1 | 2 | 3>(1);
+
+  const canAdvanceFromProfileStep = Boolean(selectedClient && selectedGoal);
+  const canAdvanceFromRiskStep = Boolean(selectedClient);
+
+  const goToWizardStep = (step: 1 | 2 | 3) => {
+    if (step === 2 && !canAdvanceFromProfileStep) return;
+    if (step === 3 && !canAdvanceFromRiskStep) return;
+    setWizardStep(step);
+  };
+
+  const handleContinueFromProfile = () => {
+    if (!canAdvanceFromProfileStep) {
+      setErrorToast('Selecione o aluno e o objetivo para continuar.');
+      return;
+    }
+    setWizardStep(2);
+  };
+
+  const handleContinueFromRisk = () => {
+    if (!canAdvanceFromRiskStep) {
+      setErrorToast('Selecione um aluno para continuar.');
+      return;
+    }
+    setWizardStep(3);
+  };
 
   // Auto-hide error toast after 5 seconds
   useEffect(() => {
@@ -1109,189 +1135,298 @@ const AIBuilderView: React.FC<AIBuilderViewProps> = ({ user, onBack, onDone }) =
       />
 
       <div className="px-6 space-y-8 pb-32">
-        {/* Client Selection */}
-        <section className="space-y-6">
-          <div>
-            <div className="flex items-center gap-2 mb-4 px-1">
-              <span className="material-symbols-outlined text-blue-400 text-xl">person_search</span>
-              <h3 className="font-black text-white tracking-tight">Selecione o Aluno</h3>
+        <section className="glass-card rounded-[26px] p-4 border border-white/10 bg-white/[0.02]">
+          <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-3">Wizard IA</p>
+          <div className="grid grid-cols-3 gap-2">
+            {[
+              { step: 1 as const, label: 'Perfil', icon: 'person' },
+              { step: 2 as const, label: 'Riscos', icon: 'health_and_safety' },
+              { step: 3 as const, label: 'Gerar', icon: 'bolt' }
+            ].map(item => {
+              const isActive = wizardStep === item.step;
+              const isEnabled = item.step === 1
+                || (item.step === 2 && canAdvanceFromProfileStep)
+                || (item.step === 3 && canAdvanceFromRiskStep);
+
+              return (
+                <button
+                  key={item.step}
+                  onClick={() => goToWizardStep(item.step)}
+                  disabled={!isEnabled}
+                  className={`rounded-2xl p-3 text-left transition-all border ${isActive
+                    ? 'bg-blue-600/20 border-blue-500/60'
+                    : 'bg-white/[0.02] border-white/10'
+                    } disabled:opacity-40`}
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className={`material-symbols-outlined text-base ${isActive ? 'text-blue-300' : 'text-slate-500'}`}>{item.icon}</span>
+                    <span className={`text-[10px] font-black uppercase tracking-widest ${isActive ? 'text-blue-300' : 'text-slate-500'}`}>Etapa {item.step}</span>
+                  </div>
+                  <p className={`text-xs font-bold ${isActive ? 'text-white' : 'text-slate-400'}`}>{item.label}</p>
+                </button>
+              );
+            })}
+          </div>
+        </section>
+
+        {wizardStep === 1 && (
+          <section className="space-y-6">
+            <div>
+              <div className="flex items-center gap-2 mb-4 px-1">
+                <span className="material-symbols-outlined text-blue-400 text-xl">person_search</span>
+                <h3 className="font-black text-white tracking-tight">Selecione o Aluno</h3>
+              </div>
+              {fetchingClients ? (
+                <div className="h-24 glass-card rounded-[24px] animate-pulse bg-white/5" />
+              ) : (
+                <div className="flex gap-4 overflow-x-auto pb-2 no-scrollbar">
+                  {clients.map(client => (
+                    <button
+                      key={client.id}
+                      onClick={() => setSelectedClient(client)}
+                      className={`min-w-[100px] flex flex-col items-center gap-3 p-4 rounded-[24px] transition-all duration-300 relative overflow-hidden group ${selectedClient?.id === client.id
+                        ? 'glass-card border border-blue-500/50 bg-blue-500/10 shadow-glow scale-105'
+                        : 'glass-card border border-white/5 opacity-60 hover:opacity-100 hover:border-blue-500/30'
+                        }`}
+                    >
+                      {selectedClient?.id === client.id && (
+                        <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/20 rounded-full blur-2xl pointer-events-none" />
+                      )}
+                      <div
+                        className={`size-[60px] rounded-[20px] bg-cover bg-center border-2 relative z-10 ${selectedClient?.id === client.id ? 'border-blue-400 shadow-lg shadow-blue-500/30' : 'border-white/10 group-hover:border-blue-400/50'
+                          } transition-colors`}
+                        style={{ backgroundImage: client.avatar ? `url(${client.avatar})` : 'none' }}
+                      >
+                        {!client.avatar && <span className="material-symbols-outlined text-slate-500 flex h-full items-center justify-center">person</span>}
+                      </div>
+                      <span className={`text-[10px] font-black uppercase tracking-widest relative z-10 ${selectedClient?.id === client.id ? 'text-blue-400' : 'text-slate-500'
+                        }`}>{client.name.split(' ')[0]}</span>
+                    </button>
+                  ))}
+                  {clients.length === 0 && (
+                    <p className="text-xs text-slate-500 font-bold px-2 italic">Nenhum aluno cadastrado.</p>
+                  )}
+                </div>
+              )}
             </div>
-            {fetchingClients ? (
-              <div className="h-24 glass-card rounded-[24px] animate-pulse bg-white/5" />
-            ) : (
-              <div className="flex gap-4 overflow-x-auto pb-2 no-scrollbar">
-                {clients.map(client => (
+
+            <div>
+              <div className="flex items-center gap-2 mb-4 px-1">
+                <span className="material-symbols-outlined text-indigo-400 text-xl">target</span>
+                <h3 className="font-black text-white tracking-tight">Objetivo Principal</h3>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                {['Hipertrofia', 'Emagrecimento', 'Resistência', 'Saúde'].map(goal => (
                   <button
-                    key={client.id}
-                    onClick={() => setSelectedClient(client)}
-                    className={`min-w-[100px] flex flex-col items-center gap-3 p-4 rounded-[24px] transition-all duration-300 relative overflow-hidden group ${selectedClient?.id === client.id
-                      ? 'glass-card border border-blue-500/50 bg-blue-500/10 shadow-glow scale-105'
-                      : 'glass-card border border-white/5 opacity-60 hover:opacity-100 hover:border-blue-500/30'
+                    key={goal}
+                    onClick={() => setSelectedGoal(goal)}
+                    className={`px-4 py-4 rounded-[20px] text-[10px] font-black uppercase tracking-widest transition-all duration-300 relative overflow-hidden group ${selectedGoal === goal
+                      ? 'bg-blue-600 border border-blue-400 text-white shadow-glow translate-y-[-2px]'
+                      : 'glass-card border border-white/5 text-slate-400 hover:border-blue-500/30 hover:text-white'
                       }`}
                   >
-                    {selectedClient?.id === client.id && (
-                      <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/20 rounded-full blur-2xl pointer-events-none" />
-                    )}
-                    <div
-                      className={`size-[60px] rounded-[20px] bg-cover bg-center border-2 relative z-10 ${selectedClient?.id === client.id ? 'border-blue-400 shadow-lg shadow-blue-500/30' : 'border-white/10 group-hover:border-blue-400/50'
-                        } transition-colors`}
-                      style={{ backgroundImage: client.avatar ? `url(${client.avatar})` : 'none' }}
-                    >
-                      {!client.avatar && <span className="material-symbols-outlined text-slate-500 flex h-full items-center justify-center">person</span>}
-                    </div>
-                    <span className={`text-[10px] font-black uppercase tracking-widest relative z-10 ${selectedClient?.id === client.id ? 'text-blue-400' : 'text-slate-500'
-                      }`}>{client.name.split(' ')[0]}</span>
+                    {goal}
                   </button>
                 ))}
-                {clients.length === 0 && (
-                  <p className="text-xs text-slate-500 font-bold px-2 italic">Nenhum aluno cadastrado.</p>
-                )}
               </div>
-            )}
-          </div>
-
-          <div>
-            <div className="flex items-center gap-2 mb-4 px-1">
-              <span className="material-symbols-outlined text-indigo-400 text-xl">target</span>
-              <h3 className="font-black text-white tracking-tight">Objetivo Principal</h3>
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              {['Hipertrofia', 'Emagrecimento', 'Resistência', 'Saúde'].map(goal => (
+
+            <div>
+              <div className="flex items-center gap-2 mb-4 px-1">
+                <span className="material-symbols-outlined text-cyan-400 text-xl">calendar_month</span>
+                <h3 className="font-black text-white tracking-tight">Dias por Semana</h3>
+              </div>
+              <div className="grid grid-cols-5 gap-2">
+                {[2, 3, 4, 5, 6].map(dayCount => (
+                  <button
+                    key={dayCount}
+                    onClick={() => setSelectedDays(dayCount)}
+                    className={`rounded-2xl py-3 text-sm font-black transition-all border ${selectedDays === dayCount
+                      ? 'bg-cyan-500/20 border-cyan-400/50 text-cyan-200'
+                      : 'bg-white/[0.02] border-white/10 text-slate-400 hover:text-white'
+                      }`}
+                  >
+                    {dayCount}d
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <button
+              onClick={handleContinueFromProfile}
+              disabled={!canAdvanceFromProfileStep}
+              className="w-full h-14 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-black uppercase tracking-widest transition-all disabled:opacity-40"
+            >
+              Continuar para Riscos
+            </button>
+          </section>
+        )}
+
+        {wizardStep === 2 && (
+          <section>
+            <div className="flex items-center gap-2 mb-4 px-1">
+              <span className="material-symbols-outlined text-blue-400 text-xl">notes</span>
+              <h3 className="font-black text-white tracking-tight">Observações</h3>
+            </div>
+
+            <div className="glass-card rounded-[28px] p-4 mb-4 border border-white/5 focus-within:border-blue-500/50 transition-all relative overflow-hidden group">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full blur-3xl pointer-events-none transition-all group-focus-within:bg-blue-500/10" />
+              <textarea
+                placeholder="Ex: Aluno com lesão no ombro, focar em bíceps..."
+                value={observations}
+                onChange={(e) => setObservations(e.target.value)}
+                className="w-full bg-transparent text-white placeholder:text-slate-500 text-sm outline-none min-h-[120px] resize-none font-medium relative z-10"
+              />
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              {quickTags.map(tag => (
                 <button
-                  key={goal}
-                  onClick={() => setSelectedGoal(goal)}
-                  className={`px-4 py-4 rounded-[20px] text-[10px] font-black uppercase tracking-widest transition-all duration-300 relative overflow-hidden group ${selectedGoal === goal
-                    ? 'bg-blue-600 border border-blue-400 text-white shadow-glow translate-y-[-2px]'
-                    : 'glass-card border border-white/5 text-slate-400 hover:border-blue-500/30 hover:text-white'
-                    }`}
+                  key={tag}
+                  onClick={() => setObservations(prev => prev ? `${prev}, ${tag}` : tag)}
+                  className="px-4 py-2 rounded-full glass-card border-white/5 text-[10px] font-black text-slate-400 uppercase tracking-widest hover:bg-white/5 active:scale-95 transition-all"
                 >
-                  {goal}
+                  {tag}
                 </button>
               ))}
             </div>
-          </div>
-        </section>
 
-        <section>
-          <div className="flex items-center gap-2 mb-4 px-1">
-            <span className="material-symbols-outlined text-blue-400 text-xl">notes</span>
-            <h3 className="font-black text-white tracking-tight">Observações</h3>
-          </div>
+            {selectedClient && (observations || selectedClient.injuries || selectedClient.observations) && (
+              <div className="mt-4">
+                <Suspense fallback={<div className="h-24 glass-card rounded-2xl animate-pulse bg-white/5" />}>
+                  <DetectionFeedback
+                    observations={`${observations} ${selectedClient.observations || ''}`}
+                    injuries={selectedClient.injuries}
+                    age={selectedClient.age}
+                    weight={selectedClient.weight}
+                    height={selectedClient.height}
+                    compact={false}
+                  />
+                </Suspense>
+              </div>
+            )}
 
-          <div className="glass-card rounded-[28px] p-4 mb-4 border border-white/5 focus-within:border-blue-500/50 transition-all relative overflow-hidden group">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full blur-3xl pointer-events-none transition-all group-focus-within:bg-blue-500/10" />
-            <textarea
-              placeholder="Ex: Aluno com lesão no ombro, focar em bíceps..."
-              value={observations}
-              onChange={(e) => setObservations(e.target.value)}
-              className="w-full bg-transparent text-white placeholder:text-slate-500 text-sm outline-none min-h-[120px] resize-none font-medium relative z-10"
-            />
-          </div>
+            {selectedClient && (
+              <div className="mt-4 glass-card rounded-[24px] p-4 border border-blue-500/20 bg-blue-500/5">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-blue-400">IA Adaptativa</p>
+                  <p className="text-[10px] text-slate-400">
+                    {loadingAdaptiveSignal ? 'analisando...' : adaptiveSignal ? `${adaptiveSignal.sourceSessions} sessões` : 'sem dados'}
+                  </p>
+                </div>
+                {adaptiveSignal ? (
+                  <div className="space-y-2">
+                    <p className="text-sm text-white font-bold">
+                      Readiness: <span className="text-blue-300">{adaptiveSignal.readinessScore}/100</span> · Fadiga: <span className="uppercase">{adaptiveSignal.fatigueLevel}</span>
+                    </p>
+                    <p className="text-xs text-slate-300">
+                      Ajuste sugerido: {adaptiveSignal.recommendedVolumeDeltaPct >= 0 ? '+' : ''}{adaptiveSignal.recommendedVolumeDeltaPct}% volume, {adaptiveSignal.recommendedIntensityDeltaPct >= 0 ? '+' : ''}{adaptiveSignal.recommendedIntensityDeltaPct}% intensidade, {adaptiveSignal.recommendedDaysPerWeek} dias/semana.
+                    </p>
+                    <p className="text-[11px] text-slate-400">{adaptiveSignal.rationale}</p>
+                  </div>
+                ) : (
+                  <p className="text-xs text-slate-400">Sem histórico suficiente. A IA usa baseline conservador.</p>
+                )}
+              </div>
+            )}
 
-          <div className="flex flex-wrap gap-2">
-            {quickTags.map(tag => (
-              <button
-                key={tag}
-                onClick={() => setObservations(prev => prev ? `${prev}, ${tag}` : tag)}
-                className="px-4 py-2 rounded-full glass-card border-white/5 text-[10px] font-black text-slate-400 uppercase tracking-widest hover:bg-white/5 active:scale-95 transition-all"
-              >
-                {tag}
-              </button>
-            ))}
-          </div>
-
-          {/* NOVO: Feedback de condições detectadas */}
-          {selectedClient && (observations || selectedClient.injuries || selectedClient.observations) && (
-            <div className="mt-4">
-              <Suspense fallback={<div className="h-24 glass-card rounded-2xl animate-pulse bg-white/5" />}>
-                <DetectionFeedback
-                  observations={`${observations} ${selectedClient.observations || ''}`}
-                  injuries={selectedClient.injuries}
-                  age={selectedClient.age}
-                  weight={selectedClient.weight}
-                  height={selectedClient.height}
-                  compact={false}
-                />
-              </Suspense>
-            </div>
-          )}
-
-          {selectedClient && (
-            <div className="mt-4 glass-card rounded-[24px] p-4 border border-blue-500/20 bg-blue-500/5">
-              <div className="flex items-center justify-between mb-2">
-                <p className="text-[10px] font-black uppercase tracking-widest text-blue-400">IA Adaptativa</p>
-                <p className="text-[10px] text-slate-400">
-                  {loadingAdaptiveSignal ? 'analisando...' : adaptiveSignal ? `${adaptiveSignal.sourceSessions} sessões` : 'sem dados'}
+            {selectedClient && injuryRisk && (
+              <div className={`mt-4 glass-card rounded-[24px] p-4 border ${injuryRisk.level === 'critical'
+                ? 'border-red-500/40 bg-red-500/10'
+                : injuryRisk.level === 'high'
+                  ? 'border-amber-500/40 bg-amber-500/10'
+                  : 'border-emerald-500/30 bg-emerald-500/10'
+                }`}>
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-[10px] font-black uppercase tracking-widest">Risco de Lesão</p>
+                  <p className="text-xs font-black">{injuryRisk.score}/100 · {injuryRisk.level.toUpperCase()}</p>
+                </div>
+                {injuryRisk.factors.length > 0 && (
+                  <p className="text-xs text-slate-200 mb-2">{injuryRisk.factors[0]}</p>
+                )}
+                <p className="text-[11px] text-slate-300">
+                  {injuryRisk.blockGeneration
+                    ? 'Geração bloqueada preventivamente. Revise lesões/dor e reduza risco antes de prosseguir.'
+                    : injuryRisk.conservativeMode
+                      ? 'Planner em modo conservador: IA reduzirá estímulo e progressão.'
+                      : 'Risco controlado: progressão padrão com monitoramento.'}
                 </p>
               </div>
-              {adaptiveSignal ? (
-                <div className="space-y-2">
-                  <p className="text-sm text-white font-bold">
-                    Readiness: <span className="text-blue-300">{adaptiveSignal.readinessScore}/100</span> · Fadiga: <span className="uppercase">{adaptiveSignal.fatigueLevel}</span>
-                  </p>
-                  <p className="text-xs text-slate-300">
-                    Ajuste sugerido: {adaptiveSignal.recommendedVolumeDeltaPct >= 0 ? '+' : ''}{adaptiveSignal.recommendedVolumeDeltaPct}% volume, {adaptiveSignal.recommendedIntensityDeltaPct >= 0 ? '+' : ''}{adaptiveSignal.recommendedIntensityDeltaPct}% intensidade, {adaptiveSignal.recommendedDaysPerWeek} dias/semana.
-                  </p>
-                  <p className="text-[11px] text-slate-400">{adaptiveSignal.rationale}</p>
+            )}
+
+            {selectedClient && precisionProfile && (
+              <div className="mt-4 glass-card rounded-[24px] p-4 border border-indigo-500/30 bg-indigo-500/10">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-indigo-300">Precisão da IA</p>
+                  <p className="text-[10px] text-indigo-100">{precisionProfile.segment}</p>
                 </div>
-              ) : (
-                <p className="text-xs text-slate-400">Sem histórico suficiente. A IA usa baseline conservador.</p>
-              )}
-            </div>
-          )}
-
-          {selectedClient && injuryRisk && (
-            <div className={`mt-4 glass-card rounded-[24px] p-4 border ${injuryRisk.level === 'critical'
-              ? 'border-red-500/40 bg-red-500/10'
-              : injuryRisk.level === 'high'
-                ? 'border-amber-500/40 bg-amber-500/10'
-                : 'border-emerald-500/30 bg-emerald-500/10'
-              }`}>
-              <div className="flex items-center justify-between mb-2">
-                <p className="text-[10px] font-black uppercase tracking-widest">Risco de Lesão</p>
-                <p className="text-xs font-black">{injuryRisk.score}/100 · {injuryRisk.level.toUpperCase()}</p>
+                <p className="text-sm text-white font-bold mb-1">{precisionProfile.label}</p>
+                <p className="text-xs text-slate-300 mb-2">{precisionProfile.rationale}</p>
+                <p className="text-[11px] text-indigo-100">
+                  Meta: {precisionProfile.target.targetPrecisionScore}/100 · erro RPE ≤ {precisionProfile.target.maxMeanRpeError} · erro RIR ≤ {precisionProfile.target.maxMeanRirError}
+                </p>
               </div>
-              {injuryRisk.factors.length > 0 && (
-                <p className="text-xs text-slate-200 mb-2">{injuryRisk.factors[0]}</p>
-              )}
-              <p className="text-[11px] text-slate-300">
-                {injuryRisk.blockGeneration
-                  ? 'Geração bloqueada preventivamente. Revise lesões/dor e reduza risco antes de prosseguir.'
-                  : injuryRisk.conservativeMode
-                    ? 'Planner em modo conservador: IA reduzirá estímulo e progressão.'
-                    : 'Risco controlado: progressão padrão com monitoramento.'}
-              </p>
-            </div>
-          )}
+            )}
 
-          {selectedClient && precisionProfile && (
-            <div className="mt-4 glass-card rounded-[24px] p-4 border border-indigo-500/30 bg-indigo-500/10">
-              <div className="flex items-center justify-between mb-2">
-                <p className="text-[10px] font-black uppercase tracking-widest text-indigo-300">Precisão da IA</p>
-                <p className="text-[10px] text-indigo-100">{precisionProfile.segment}</p>
+            <div className="grid grid-cols-2 gap-3 mt-6">
+              <button
+                onClick={() => setWizardStep(1)}
+                className="h-12 rounded-2xl border border-white/10 text-slate-300 font-bold"
+              >
+                Voltar
+              </button>
+              <button
+                onClick={handleContinueFromRisk}
+                disabled={!canAdvanceFromRiskStep}
+                className="h-12 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-black uppercase tracking-widest disabled:opacity-40"
+              >
+                Continuar
+              </button>
+            </div>
+          </section>
+        )}
+
+        {wizardStep === 3 && (
+          <section className="space-y-5">
+            <div className="glass-card rounded-[26px] p-5 border border-blue-500/20 bg-blue-500/5">
+              <p className="text-[10px] font-black uppercase tracking-widest text-blue-300 mb-3">Resumo de Geração</p>
+              <div className="space-y-2 text-sm">
+                <p><span className="text-slate-400">Aluno:</span> <span className="text-white font-bold">{selectedClient?.name || 'não definido'}</span></p>
+                <p><span className="text-slate-400">Objetivo:</span> <span className="text-white font-bold">{selectedGoal}</span></p>
+                <p><span className="text-slate-400">Frequência:</span> <span className="text-white font-bold">{selectedDays} dias/semana</span></p>
+                <p><span className="text-slate-400">Risco:</span> <span className="text-white font-bold">{injuryRisk ? `${injuryRisk.score}/100 (${injuryRisk.level})` : 'sem dados'}</span></p>
               </div>
-              <p className="text-sm text-white font-bold mb-1">{precisionProfile.label}</p>
-              <p className="text-xs text-slate-300 mb-2">{precisionProfile.rationale}</p>
-              <p className="text-[11px] text-indigo-100">
-                Meta: {precisionProfile.target.targetPrecisionScore}/100 · erro RPE ≤ {precisionProfile.target.maxMeanRpeError} · erro RIR ≤ {precisionProfile.target.maxMeanRirError}
-              </p>
             </div>
-          )}
-        </section>
 
-        <div className="pt-6">
-          <button
-            onClick={handleGenerate}
-            disabled={!selectedClient || !selectedGoal || loading || Boolean(injuryRisk?.blockGeneration)}
-            className="w-full h-[68px] glass-card rounded-[24px] relative overflow-hidden group disabled:opacity-30 disabled:grayscale transition-all active:scale-[0.98] border border-blue-500/30 hover:border-blue-400 shadow-xl shadow-blue-900/20"
-          >
-            <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-indigo-600 opacity-90 transition-all group-hover:opacity-100" />
-            <div className="absolute inset-0 flex items-center justify-center gap-3 z-10">
-              <span className="material-symbols-outlined text-white">bolt</span>
-              <span className="text-white font-black uppercase tracking-[0.2em] text-[13px] text-shadow-sm">Forjar Protocolo de Elite</span>
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                onClick={() => setWizardStep(2)}
+                className="h-12 rounded-2xl border border-white/10 text-slate-300 font-bold"
+              >
+                Voltar
+              </button>
+              <button
+                onClick={handleGenerate}
+                disabled={!selectedClient || !selectedGoal || loading || Boolean(injuryRisk?.blockGeneration)}
+                className="h-12 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-black uppercase tracking-widest disabled:opacity-40"
+              >
+                Gerar Treino
+              </button>
             </div>
-          </button>
-        </div>
+
+            <button
+              onClick={handleGenerate}
+              disabled={!selectedClient || !selectedGoal || loading || Boolean(injuryRisk?.blockGeneration)}
+              className="w-full h-[68px] glass-card rounded-[24px] relative overflow-hidden group disabled:opacity-30 disabled:grayscale transition-all active:scale-[0.98] border border-blue-500/30 hover:border-blue-400 shadow-xl shadow-blue-900/20"
+            >
+              <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-indigo-600 opacity-90 transition-all group-hover:opacity-100" />
+              <div className="absolute inset-0 flex items-center justify-center gap-3 z-10">
+                <span className="material-symbols-outlined text-white">bolt</span>
+                <span className="text-white font-black uppercase tracking-[0.2em] text-[13px] text-shadow-sm">Forjar Protocolo de Elite</span>
+              </div>
+            </button>
+          </section>
+        )}
       </div>
 
       {/* Result Modal */}
@@ -1544,7 +1679,7 @@ const AIBuilderView: React.FC<AIBuilderViewProps> = ({ user, onBack, onDone }) =
                 <div className="mt-8 mb-6 glass-card p-4 rounded-2xl border border-blue-500/20 bg-blue-500/5">
                   <div className="flex items-center gap-2 mb-3">
                     <span className="material-symbols-outlined text-blue-400 text-lg">auto_fix_high</span>
-                    <p className="text-xs font-black text-blue-400 uppercase tracking-widest">Refinar com Gemini AI</p>
+                    <p className="text-xs font-black text-blue-400 uppercase tracking-widest">Refinar com IA</p>
                   </div>
                   <div className="flex gap-2">
                     <input

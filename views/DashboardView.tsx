@@ -477,7 +477,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                   onClick={(e) => {
                     e.stopPropagation();
                     const p = atRiskClient.phone?.replace(/\D/g, '');
-                    if (p) window.open(`https://wa.me/55${p}`, '_blank');
+                    if (p) window.open(`https://wa.me/55${p}`, '_blank', 'noopener,noreferrer');
                   }}
                   className="mt-2.5 flex items-center gap-1.5 text-[11px] font-bold py-1.5 px-3 rounded-xl transition-all active:scale-95"
                   style={{

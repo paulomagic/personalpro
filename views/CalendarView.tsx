@@ -227,7 +227,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({ user, onBack, onSelectClien
     const handleSendReminder = (apt: DisplayAppointment) => {
         const message = `Olá ${apt.clientName}! 👋\n\nLembrete do seu treino amanhã:\n📅 ${selectedDate.toLocaleDateString('pt-BR')}\n⏰ ${apt.time}\n\nTe vejo lá! 💪`;
         const encoded = encodeURIComponent(message);
-        window.open(`https://wa.me/${apt.phone}?text=${encoded}`, '_blank');
+        window.open(`https://wa.me/${apt.phone}?text=${encoded}`, '_blank', 'noopener,noreferrer');
     };
 
     const handleCreateAppointment = async () => {

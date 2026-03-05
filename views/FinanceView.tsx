@@ -175,7 +175,7 @@ const FinanceView: React.FC<FinanceViewProps> = ({ user, onBack }) => {
         const message = `Olá ${payment.clientName}! 🏋️‍♂️\n\nPassando para lembrar que sua fatura do *Plano ${payment.plan}* (vencimento ${payment.dueDate}) no valor de R$ ${payment.amount} está pendente.\n\nQualquer dúvida estou à disposição!`;
 
         const link = `https://wa.me/55${phone}?text=${encodeURIComponent(message)}`;
-        window.open(link, '_blank');
+        window.open(link, '_blank', 'noopener,noreferrer');
 
         showToast(`WhatsApp aberto para cobrança de ${payment.clientName}!`);
         setShowPaymentModal(null);

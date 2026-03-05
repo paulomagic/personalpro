@@ -25,6 +25,7 @@ import { validateNoDuplicatesInDay, validateMuscleCoverage, removeDuplicatesFrom
 // v3.2: Exercise Blacklist - Contexto de treino (academia vs. casa)
 import { filterByContext, prioritizeByContext, type ContextFilterOptions } from './knowledge/exerciseBlacklist';
 import { evaluateExerciseTier } from './knowledge/exerciseTiering';
+import { classifyInjuryConstraints, pseudonymizeClientName, sanitizeCoachObservations } from './promptPrivacy';
 
 const isDev = import.meta.env.DEV;
 const debugLog = (...args: unknown[]) => {
@@ -276,11 +277,11 @@ export async function generateWorkout(params: {
     // v3.0: Setar contexto completo para o sistema neuro-simbólico
 
     setWorkoutContext({
-        clientName: name,
+        clientName: pseudonymizeClientName(name),
         level,
         goal,
-        injuries: injuries || '',
-        observations: observations || '',
+        injuries: classifyInjuryConstraints(injuries),
+        observations: sanitizeCoachObservations(observations),
         specialConditions,
         // v3.0: Campos expandidos para arquitetura neuro-simbólica
         age: clientAge,

@@ -17,6 +17,13 @@ import { geminiProvider } from './providers/geminiProvider';
 import { localProvider } from './providers/localProvider';
 import { supabase } from '../supabaseClient';
 import { resolveExercise, type Exercise, type Equipment } from '../exerciseService';
+import { classifyInjuryConstraints, pseudonymizeClientName, summarizePreferenceTags } from './promptPrivacy';
+import {
+    ExerciseReplacementSchema,
+    extractLikelyJson,
+    formatSchemaError,
+    RefinedWorkoutSchema
+} from './responseSchemas';
 
 // ============ PROVIDER REGISTRY ============
 const providers: Record<string, AIProvider> = {
@@ -104,7 +111,7 @@ const GROQ_MODELS = {
     )
 } as const;
 
-const TRAINING_ACTIONS = new Set<ActionType>(['training_intent', 'refine']);
+const TRAINING_ACTIONS = new Set<ActionType>(['training_intent', 'refine', 'regenerate_exercise']);
 
 export class AIRouter {
     private routing: RoutingRule[];
@@ -420,13 +427,16 @@ export async function generateTrainingIntent(
     const adherence = clientData.adherence || 80;
     const equipment = clientData.equipment?.join(', ') || 'Academia completa';
     const sessionDuration = clientData.sessionDuration || 60;
+    const clientAlias = pseudonymizeClientName(clientData.name);
+    const injuryProfile = classifyInjuryConstraints(injuries);
+    const preferenceProfile = summarizePreferenceTags(preferences);
 
     const parsedInjuries = parseInjuries(injuries);
 
     const prompt = `Você é um personal trainer de elite. Crie um programa de treino PERSONALIZADO.
 
 ===== PERFIL =====
-NOME: ${clientData.name}
+ID_ALUNO: ${clientAlias}
 OBJETIVO: ${clientData.goal}
 NÍVEL: ${clientData.level}
 FREQUÊNCIA: ${clientData.days} dias/semana
@@ -434,8 +444,8 @@ ADERÊNCIA: ${adherence}%
 DURAÇÃO: ${sessionDuration} min
 
 ===== RESTRIÇÕES =====
-LESÕES: ${injuries}
-PREFERÊNCIAS: ${preferences}
+CATEGORIAS_DE_RESTRIÇÃO: ${injuryProfile}
+PREFERÊNCIAS_CATEGORIZADAS: ${preferenceProfile}
 EQUIPAMENTOS: ${equipment}
 
 ===== INSTRUÇÕES CRÍTICAS =====
@@ -487,9 +497,11 @@ Crie ${clientData.days} splits com 5-7 intenções cada.`;
         action: 'training_intent',
         prompt,
         metadata: {
-            clientName: clientData.name,
+            clientName: clientAlias,
             goal: clientData.goal,
-            days: clientData.days
+            days: clientData.days,
+            injuryProfile,
+            preferenceProfile
         }
     });
 
@@ -620,6 +632,108 @@ Crie ${clientData.days} splits com 5-7 intenções cada.`;
             rejection_reason: `JSON_PARSE_ERROR: ${parseError.message}`,
             fallback_used: result.fallbackUsed
         });
+        return null;
+    }
+}
+
+export async function refineWorkoutWithRouter(
+    currentWorkout: any,
+    instruction: string
+): Promise<any | null> {
+    const prompt = `Você é um editor técnico de treinos.
+
+TREINO_ATUAL_JSON:
+${JSON.stringify(currentWorkout)}
+
+INSTRUCAO:
+${instruction}
+
+Ajuste o treino sem quebrar a estrutura.
+Retorne APENAS JSON:
+{
+  "splits": [ ... ]
+}`;
+
+    const result = await aiRouter.execute({
+        action: 'refine',
+        prompt,
+        metadata: {
+            mode: 'refine_workout',
+            instruction,
+            currentWorkout,
+            responseStyle: 'structured'
+        }
+    });
+
+    if (!result.success || !result.text) return null;
+
+    try {
+        const cleanText = extractLikelyJson(result.text);
+        const parsed = JSON.parse(cleanText);
+        const schemaResult = RefinedWorkoutSchema.safeParse(parsed);
+        if (!schemaResult.success) {
+            console.warn('[AIRouter] refine schema failed:', formatSchemaError(schemaResult.error));
+            return null;
+        }
+        return schemaResult.data;
+    } catch {
+        return null;
+    }
+}
+
+export async function regenerateExerciseWithRouter(params: {
+    currentExercise: string;
+    targetMuscle: string;
+    goal: string;
+    injuries?: string;
+    equipment?: string;
+}): Promise<any | null> {
+    const injuryProfile = classifyInjuryConstraints(params.injuries);
+    const equipment = params.equipment || 'academia_completa';
+    const prompt = `Você é um especialista em substituição de exercícios.
+
+CONTEXTO:
+- EXERCICIO_ATUAL: ${params.currentExercise}
+- MUSCULO_ALVO: ${params.targetMuscle}
+- OBJETIVO: ${params.goal}
+- RESTRICOES_CATEGORIZADAS: ${injuryProfile}
+- EQUIPAMENTO: ${equipment}
+
+Retorne APENAS JSON:
+{
+  "name": "Nome do exercício",
+  "sets": 4,
+  "reps": "8-12",
+  "rest": "60s",
+  "targetMuscle": "${params.targetMuscle}",
+  "technique": "Dica curta"
+}`;
+
+    const result = await aiRouter.execute({
+        action: 'regenerate_exercise',
+        prompt,
+        metadata: {
+            mode: 'regenerate_exercise',
+            currentExercise: params.currentExercise,
+            targetMuscle: params.targetMuscle,
+            goal: params.goal,
+            injuryProfile,
+            responseStyle: 'structured'
+        }
+    });
+
+    if (!result.success || !result.text) return null;
+
+    try {
+        const cleanText = extractLikelyJson(result.text);
+        const parsed = JSON.parse(cleanText);
+        const schemaResult = ExerciseReplacementSchema.safeParse(parsed);
+        if (!schemaResult.success) {
+            console.warn('[AIRouter] regenerate schema failed:', formatSchemaError(schemaResult.error));
+            return null;
+        }
+        return schemaResult.data;
+    } catch {
         return null;
     }
 }

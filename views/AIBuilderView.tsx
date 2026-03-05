@@ -33,7 +33,6 @@ interface MockExercise {
 }
 
 const loadDemoData = () => import('../mocks/demoData');
-const loadGeminiService = () => import('../services/geminiService');
 const loadTrainingEngine = () => import('../services/ai/trainingEngine');
 const loadAIRouter = () => import('../services/ai/aiRouter');
 const loadClientsDomain = () => import('../services/supabase/domains/clientsDomain');
@@ -377,14 +376,14 @@ const AIBuilderView: React.FC<AIBuilderViewProps> = ({ user, onBack, onDone }) =
     setRegeneratingId(id);
 
     try {
-      const { regenerateExerciseWithAI } = await loadGeminiService();
-      const newExercise = await regenerateExerciseWithAI(
-        currentExercise.name,
-        currentExercise.targetMuscle,
-        selectedClient.goal,
-        selectedClient.injuries,
-        'Academia completa'
-      );
+      const { regenerateExerciseWithRouter } = await loadAIRouter();
+      const newExercise = await regenerateExerciseWithRouter({
+        currentExercise: currentExercise.name,
+        targetMuscle: currentExercise.targetMuscle,
+        goal: selectedClient.goal,
+        injuries: selectedClient.injuries,
+        equipment: 'Academia completa'
+      });
 
       if (newExercise) {
         const newResult = { ...result };
@@ -561,8 +560,8 @@ const AIBuilderView: React.FC<AIBuilderViewProps> = ({ user, onBack, onDone }) =
     setErrorToast(null);
 
     try {
-      const { refineWorkoutWithAI, handleAIError } = await loadGeminiService();
-      const refinedResult = await refineWorkoutWithAI(result, refinementInput);
+      const { refineWorkoutWithRouter } = await loadAIRouter();
+      const refinedResult = await refineWorkoutWithRouter(result, refinementInput);
 
       if (refinedResult) {
         const localExercises = await ensureExerciseCatalog();
@@ -579,10 +578,8 @@ const AIBuilderView: React.FC<AIBuilderViewProps> = ({ user, onBack, onDone }) =
         setErrorToast('🤖 Não foi possível refinar. Tente novamente.');
       }
     } catch (error: any) {
-      const { handleAIError } = await loadGeminiService();
-      const aiError = handleAIError(error);
-      setErrorToast(aiError.userMessage);
-      console.error('Error refining workout:', aiError.message);
+      setErrorToast('🤖 Erro ao refinar treino. Tente novamente.');
+      console.error('Error refining workout:', error?.message || error);
     } finally {
       setIsRefining(false);
     }
@@ -709,24 +706,6 @@ const AIBuilderView: React.FC<AIBuilderViewProps> = ({ user, onBack, onDone }) =
       precisionSegment: precisionProfile?.segment
     });
 
-    const clientExtendedData = {
-      injuries: selectedClient.injuries,
-      preferences: selectedClient.preferences,
-      adherence: selectedClient.adherence,
-      equipment: ['Academia completa', 'Halteres', 'Barras', 'Máquinas'],
-      sessionDuration: coldStartMode ? 50 : 60,
-      previousWorkouts: [],
-      recentProgress: observations || '',
-      adaptiveSignal: effectiveAdaptiveSignal,
-      injuryRisk: preRisk,
-      precisionProfile: precisionProfile
-        ? {
-          segment: precisionProfile.segment,
-          targetScore: precisionProfile.target.targetPrecisionScore
-        }
-        : null
-    };
-
     try {
       // NEW: Deterministic Training Engine with slot-based templates
       if (USE_NEW_AI_ROUTER) {
@@ -803,74 +782,77 @@ const AIBuilderView: React.FC<AIBuilderViewProps> = ({ user, onBack, onDone }) =
         }
       }
 
-      // FALLBACK: Old generation method (Gemini)
-      const variationPrompts = [
-        combinedObservations || observations, // Original
-        `${combinedObservations}. Foco em métodos avançados como drop sets e supersets.`, // Variation 2
-        `${combinedObservations}. Priorize exercícios funcionais e compostos.` // Variation 3
-      ];
-      const { generateWorkoutWithAI } = await loadGeminiService();
+      // FALLBACK 1: Router by intention (single call, centralized providers + logging)
+      const { generateTrainingIntent } = await loadAIRouter();
+      const intentResult = await generateTrainingIntent({
+        name: selectedClient.name,
+        goal: effectiveGoal,
+        level: selectedClient.level,
+        days: adaptiveDays,
+        injuries: selectedClient.injuries,
+        preferences: selectedClient.preferences,
+        adherence: selectedClient.adherence,
+        equipment: ['Academia completa', 'Halteres', 'Barras', 'Máquinas'],
+        sessionDuration: coldStartMode ? 50 : 60
+      });
 
-      const results = await Promise.all(
-        variationPrompts.map(obs =>
-          generateWorkoutWithAI(
-            selectedClient.name,
-            effectiveGoal,
-            selectedClient.level,
-            adaptiveDays,
-            obs,
-            clientExtendedData
-          ).catch(() => null)
-        )
-      );
+      if (intentResult && Array.isArray(intentResult.splits) && intentResult.splits.length > 0) {
+        const localExercises = await ensureExerciseCatalog();
+        const mappedResult = mapToLocalExercises({
+          title: intentResult.title,
+          objective: intentResult.objective,
+          splits: intentResult.splits.map(split => ({
+            name: split.name,
+            focus: split.focus,
+            exercises: split.exercises.map(item => ({
+              name: item.exercise?.name || 'Exercício',
+              sets: item.sets,
+              reps: item.reps,
+              rest: item.rest,
+              targetMuscle: item.exercise?.primary_muscle || 'Geral',
+              technique: item.notes || item.exercise?.execution_tips || ''
+            }))
+          }))
+        }, localExercises);
 
-      // Filter successful results and add metadata
-      const localExercises = await ensureExerciseCatalog();
-      const successfulCount = results.filter(r => r).length;
-      const successfulResults = results
-        .filter(r => r !== null)
-        .map((aiResult, idx) => {
-          // Map to local DB for hybrid validation
-          const mappedResult = mapToLocalExercises(aiResult, localExercises);
+        const personalNotes = [
+          `🤖 Treino gerado pelo AIRouter (${intentResult.provider})`,
+          intentResult.fallbackUsed ? '🛟 Fallback automático ativado para garantir resposta.' : '✅ Pipeline IA principal estável.'
+        ];
+        if (selectedClient.injuries && selectedClient.injuries.toLowerCase() !== 'nenhuma') {
+          personalNotes.push(`⚠️ Considerando: ${selectedClient.injuries.split('-')[0].trim()}`);
+        }
+        if (selectedClient.adherence >= 85) {
+          personalNotes.push(`🔥 Volume otimizado: aderência excelente (${selectedClient.adherence}%)`);
+        }
+        if (selectedClient.preferences) {
+          personalNotes.push(`❤️ Preferências: ${selectedClient.preferences.split('.')[0]}`);
+        }
+        if (effectiveAdaptiveSignal) {
+          personalNotes.push(`🧠 Readiness ${effectiveAdaptiveSignal.readinessScore}/100 • ${effectiveAdaptiveSignal.fatigueLevel === 'high' ? 'fadiga alta' : effectiveAdaptiveSignal.fatigueLevel === 'moderate' ? 'fadiga moderada' : 'fadiga baixa'}`);
+        }
+        if (precisionProfile) {
+          personalNotes.push(`🎯 Política de precisão: ${precisionProfile.label} (meta ${precisionProfile.target.targetPrecisionScore}/100).`);
+        }
 
-          const personalNotes = [
-            '🤖 Treino gerado por Gemini 2.5 Flash',
-            `📋 Opção ${idx + 1} de ${successfulCount}`
-          ];
-          if (selectedClient.injuries && selectedClient.injuries.toLowerCase() !== 'nenhuma') {
-            personalNotes.push(`⚠️ Considerando: ${selectedClient.injuries.split('-')[0].trim()}`);
-          }
-          if (selectedClient.adherence >= 85) {
-            personalNotes.push(`🔥 Volume otimizado: aderência excelente (${selectedClient.adherence}%)`);
-          }
-          if (selectedClient.preferences) {
-            personalNotes.push(`❤️ Preferências: ${selectedClient.preferences.split('.')[0]}`);
-          }
-          if (effectiveAdaptiveSignal) {
-            personalNotes.push(`🧠 Readiness ${effectiveAdaptiveSignal.readinessScore}/100 • ${effectiveAdaptiveSignal.fatigueLevel === 'high' ? 'fadiga alta' : effectiveAdaptiveSignal.fatigueLevel === 'moderate' ? 'fadiga moderada' : 'fadiga baixa'}`);
-          }
-          if (precisionProfile) {
-            personalNotes.push(`🎯 Política de precisão: ${precisionProfile.label} (meta ${precisionProfile.target.targetPrecisionScore}/100).`);
-          }
-          const resultWithNotes = { ...mappedResult, personalNotes, optionLabel: idx === 0 ? 'Clássico' : idx === 1 ? 'Avançado' : 'Funcional' };
-          const withColdStart = coldStartMode ? applyColdStartProtocol(resultWithNotes) : resultWithNotes;
-          return applyMicrocycle(withColdStart);
-        });
+        const withNotes = { ...mappedResult, personalNotes, optionLabel: 'Router' };
+        const withColdStart = coldStartMode ? applyColdStartProtocol(withNotes) : withNotes;
+        const finalResult = applyMicrocycle(withColdStart);
 
-      if (successfulResults.length > 0) {
-        setWorkoutOptions(successfulResults);
-        setResult(successfulResults[0]);
+        setWorkoutOptions([finalResult]);
+        setResult(finalResult);
         void logFunnelEvent('workout_generation_succeeded', {
-          provider: 'gemini',
+          provider: `ai_router:${intentResult.provider}`,
           clientId: selectedClient.id,
-          optionsCount: successfulResults.length,
+          optionsCount: 1,
           coldStartMode,
+          fallbackUsed: intentResult.fallbackUsed,
           adaptiveReadiness: effectiveAdaptiveSignal?.readinessScore,
           injuryRiskScore: preRisk.score,
           precisionSegment: precisionProfile?.segment
         });
       } else {
-        // Fallback to local generation
+        // FALLBACK 2: Local deterministic generation
         const localExercisesForFallback = await ensureExerciseCatalog();
         let workout = generateSmartWorkout(selectedClient, observations, localExercisesForFallback);
         if (coldStartMode) {
@@ -1011,8 +993,13 @@ const AIBuilderView: React.FC<AIBuilderViewProps> = ({ user, onBack, onDone }) =
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#39;');
 
-    const printWindow = window.open('', '_blank');
+    const printWindow = window.open('', '_blank', 'noopener,noreferrer');
     if (printWindow) {
+      try {
+        printWindow.opener = null;
+      } catch {
+        // noop
+      }
       printWindow.document.write(`
         <html>
           <head>
@@ -1076,7 +1063,7 @@ const AIBuilderView: React.FC<AIBuilderViewProps> = ({ user, onBack, onDone }) =
     message += `\n💪 Bom treino, ${selectedClient?.name}!`;
 
     const encoded = encodeURIComponent(message);
-    window.open(`https://wa.me/?text=${encoded}`, '_blank');
+    window.open(`https://wa.me/?text=${encoded}`, '_blank', 'noopener,noreferrer');
   };
 
   if (loading) {

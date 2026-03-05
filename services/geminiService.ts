@@ -13,6 +13,13 @@ import {
   RefinedWorkoutSchema,
   WorkoutProgramSchema
 } from './ai/responseSchemas';
+import {
+  classifyInjuryConstraints,
+  pseudonymizeClientName,
+  sanitizeCoachObservations,
+  sanitizeWorkoutHistoryEntry,
+  summarizePreferenceTags
+} from './ai/promptPrivacy';
 
 // Supabase URL for Edge Function
 const SUPABASE_URL = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SUPABASE_URL) || '';
@@ -184,16 +191,20 @@ export async function generateWorkoutWithAI(
     const equipment = extendedData?.equipment?.join(', ') || 'Academia completa';
     const sessionDuration = extendedData?.sessionDuration || 60;
     const previousWorkouts = extendedData?.previousWorkouts?.slice(0, 3) || [];
-    const recentProgress = extendedData?.recentProgress || '';
+    const recentProgress = sanitizeCoachObservations(extendedData?.recentProgress || '', 120);
+    const clientAlias = pseudonymizeClientName(clientName);
+    const injuryProfile = classifyInjuryConstraints(injuries);
+    const preferenceProfile = summarizePreferenceTags(preferences);
+    const safeObservations = sanitizeCoachObservations(observations, 200);
 
     const historyContext = previousWorkouts.length > 0
-      ? `HISTÓRICO RECENTE:\n${previousWorkouts.map(w => `- ${w.name} (${w.date})`).join('\n')}`
+      ? `HISTÓRICO RECENTE (ABSTRATO):\n${previousWorkouts.map(w => `- ${sanitizeWorkoutHistoryEntry(w.name)} (${w.date})`).join('\n')}`
       : '';
 
     const prompt = `Você é um personal trainer de elite com 15 anos de experiência. Crie um programa de treino ALTAMENTE PERSONALIZADO.
 
 ===== PERFIL DO CLIENTE =====
-NOME: ${clientName}
+ID_CLIENTE: ${clientAlias}
 OBJETIVO PRINCIPAL: ${goal}
 NÍVEL DE CONDICIONAMENTO: ${level}
 FREQUÊNCIA SEMANAL: ${days} dias
@@ -201,10 +212,10 @@ TAXA DE ADERÊNCIA: ${adherence}%
 DURAÇÃO DA SESSÃO: ${sessionDuration} minutos
 
 ===== CONSIDERAÇÕES ESPECIAIS =====
-LESÕES/LIMITAÇÕES: ${injuries}
-PREFERÊNCIAS DE TREINO: ${preferences}
+CATEGORIAS_DE_RESTRIÇÃO: ${injuryProfile}
+PREFERÊNCIAS_CATEGORIZADAS: ${preferenceProfile}
 EQUIPAMENTOS DISPONÍVEIS: ${equipment}
-OBSERVAÇÕES DO PERSONAL: ${observations || 'Nenhuma'}
+OBSERVAÇÕES DO PERSONAL: ${safeObservations}
 
 ${historyContext}
 ${recentProgress ? `PROGRESSO RECENTE: ${recentProgress}` : ''}
@@ -212,13 +223,13 @@ ${recentProgress ? `PROGRESSO RECENTE: ${recentProgress}` : ''}
 ===== INSTRUÇÕES =====
 1. Crie ${days} splits otimizados para o objetivo
 2. Adapte o volume baseado na aderência (${adherence}% = ${adherence >= 85 ? 'volume alto' : adherence >= 70 ? 'volume moderado' : 'volume conservador'})
-3. EVITE exercícios que agravam: ${injuries}
-4. PRIORIZE exercícios que o cliente gosta: ${preferences}
+3. EVITE exercícios que agravem as categorias: ${injuryProfile}
+4. PRIORIZE preferências categorizadas: ${preferenceProfile}
 5. Cada sessão deve durar aprox. ${sessionDuration} minutos
 
 Responda APENAS com JSON puro (sem markdown, sem comentários, sem vírgulas extras):
 {
-  "title": "Protocolo ${goal} - ${clientName}",
+  "title": "Protocolo ${goal} - ${clientAlias}",
   "objective": "Descrição detalhada da estratégia e benefícios esperados",
   "duration": "${sessionDuration} min por sessão",
   "periodization": "Resumo da estratégia de periodização",
@@ -262,7 +273,7 @@ Crie exercícios específicos, variados e adequados ao perfil. Seja criativo nos
         tokens_output: 0,
         success: false,
         error_message: 'API failed',
-        metadata: { clientName, goal, level, days }
+        metadata: { clientAlias, goal, level, days, injuryProfile, preferenceProfile }
       });
       return null; // API failed, trigger local fallback
     }
@@ -283,7 +294,7 @@ Crie exercícios específicos, variados e adequados ao perfil. Seja criativo nos
           tokens_output: tokensOutput,
           success: false,
           error_message: `Schema validation failed: ${formatSchemaError(schemaResult.error)}`,
-          metadata: { clientName, goal, level, days }
+          metadata: { clientAlias, goal, level, days, injuryProfile, preferenceProfile }
         });
         return null;
       }
@@ -308,7 +319,7 @@ Crie exercícios específicos, variados e adequados ao perfil. Seja criativo nos
           tokens_output: tokensOutput,
           success: false,
           error_message: 'Empty exercises array',
-          metadata: { clientName, goal, level, days }
+          metadata: { clientAlias, goal, level, days, injuryProfile, preferenceProfile }
         });
         return null; // Force local fallback
       }
@@ -323,7 +334,7 @@ Crie exercícios específicos, variados e adequados ao perfil. Seja criativo nos
         tokens_input: tokensInput,
         tokens_output: tokensOutput,
         success: true,
-        metadata: { clientName, goal, level, days }
+        metadata: { clientAlias, goal, level, days, injuryProfile, preferenceProfile }
       });
 
       return parsedResult;
@@ -339,7 +350,7 @@ Crie exercícios específicos, variados e adequados ao perfil. Seja criativo nos
         latency_ms: latencyMs,
         success: false,
         error_message: 'JSON Parse Error',
-        metadata: { clientName, goal, level, days }
+        metadata: { clientAlias, goal, level, days, injuryProfile, preferenceProfile }
       });
 
       // KEY FIX: Return null to force AIBuilderView to use the local generator fallback
@@ -705,6 +716,9 @@ export async function generateWorkoutByIntention(
     const adherence = clientData.adherence || 80;
     const equipment = clientData.equipment?.join(', ') || 'Academia completa';
     const sessionDuration = clientData.sessionDuration || 60;
+    const clientAlias = pseudonymizeClientName(clientData.name);
+    const injuryProfile = classifyInjuryConstraints(injuries);
+    const preferenceProfile = summarizePreferenceTags(preferences);
 
     // Parse injuries for resolution
     const parsedInjuries = parseClientInjuries(injuries);
@@ -712,7 +726,7 @@ export async function generateWorkoutByIntention(
     const prompt = `Você é um personal trainer de elite. Crie um programa de treino PERSONALIZADO.
 
 ===== PERFIL =====
-NOME: ${clientData.name}
+ID_ALUNO: ${clientAlias}
 OBJETIVO: ${clientData.goal}
 NÍVEL: ${clientData.level}
 FREQUÊNCIA: ${clientData.days} dias/semana
@@ -720,8 +734,8 @@ ADERÊNCIA: ${adherence}%
 DURAÇÃO: ${sessionDuration} min
 
 ===== RESTRIÇÕES =====
-LESÕES: ${injuries}
-PREFERÊNCIAS: ${preferences}
+CATEGORIAS_DE_RESTRIÇÃO: ${injuryProfile}
+PREFERÊNCIAS_CATEGORIZADAS: ${preferenceProfile}
 EQUIPAMENTOS: ${equipment}
 
 ===== INSTRUÇÕES CRÍTICAS =====
@@ -740,7 +754,7 @@ Padrões de movimento disponíveis:
 Músculos principais:
 - peito, ombro, costas, quadriceps, posterior_coxa, gluteos, core
 
-EVITE padrões que agravam: ${injuries}
+EVITE padrões que agravem: ${injuryProfile}
 
 Responda APENAS com JSON puro:
 {
@@ -780,7 +794,7 @@ Crie ${clientData.days} splits com 5-7 intenções cada.`;
         tokens_output: 0,
         success: false,
         error_message: 'API failed',
-        metadata: { clientName: clientData.name, goal: clientData.goal }
+        metadata: { clientAlias, goal: clientData.goal, injuryProfile, preferenceProfile }
       });
       return null;
     }
@@ -801,7 +815,7 @@ Crie ${clientData.days} splits com 5-7 intenções cada.`;
           tokens_output: tokensOutput,
           success: false,
           error_message: `Schema validation failed: ${formatSchemaError(schemaResult.error)}`,
-          metadata: { clientName: clientData.name }
+          metadata: { clientAlias, injuryProfile, preferenceProfile }
         });
         return null;
       }
@@ -863,7 +877,7 @@ Crie ${clientData.days} splits com 5-7 intenções cada.`;
           tokens_output: tokensOutput,
           success: false,
           error_message: 'No exercises resolved from intentions',
-          metadata: { clientName: clientData.name }
+          metadata: { clientAlias, injuryProfile, preferenceProfile }
         });
         return null;
       }
@@ -879,7 +893,9 @@ Crie ${clientData.days} splits com 5-7 intenções cada.`;
         tokens_output: tokensOutput,
         success: true,
         metadata: {
-          clientName: clientData.name,
+          clientAlias,
+          injuryProfile,
+          preferenceProfile,
           intentionsCount: aiResponse.splits.reduce((acc, s) => acc + s.intentions.length, 0),
           resolvedCount: resolvedSplits.reduce((acc, s) => acc + s.exercises.length, 0)
         }

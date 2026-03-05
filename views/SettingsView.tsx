@@ -35,17 +35,27 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user, onBack, onLogout }) =
         }
     }, [activeModal, selectedTheme]);
 
+    React.useEffect(() => {
+        if (activeModal === 'security') return;
+        setNewPassword('');
+        setConfirmPassword('');
+        setSecuritySaving(false);
+    }, [activeModal]);
+
     // States for Profile Editing
     const [profileName, setProfileName] = React.useState(coachName);
     const [saving, setSaving] = React.useState(false);
 
     // States for Notifications
     const [notifState, setNotifState] = React.useState({
-        push: true,
+        push: false,
         email: false,
         sms: true,
         promo: false
     });
+    const [newPassword, setNewPassword] = React.useState('');
+    const [confirmPassword, setConfirmPassword] = React.useState('');
+    const [securitySaving, setSecuritySaving] = React.useState(false);
 
     // States for Toast
     const [toastMessage, setToastMessage] = React.useState<string | null>(null);
@@ -58,8 +68,11 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user, onBack, onLogout }) =
     };
 
     const toggleNotif = (key: keyof typeof notifState) => {
+        if (key === 'push') {
+            showToast('Push notifications em breve.', 'error');
+            return;
+        }
         setNotifState(prev => ({ ...prev, [key]: !prev[key] }));
-        // Haptic feedback simulation via toast or just verify visually
     };
 
     const menuItems = [
@@ -99,9 +112,53 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user, onBack, onLogout }) =
 
     // Save notification preferences (stored in localStorage for now)
     const handleSaveNotifications = () => {
-        localStorage.setItem('apex_notifications', JSON.stringify(notifState));
-        showToast('Preferências de notificação salvas!');
+        const persisted = { ...notifState, push: false };
+        localStorage.setItem('apex_notifications', JSON.stringify(persisted));
+        showToast('Preferências salvas. Push será liberado em breve.');
         setActiveModal(null);
+    };
+
+    const handleSaveSecurity = async () => {
+        if (isDemo) {
+            showToast('Modo demo: alteração de senha indisponível', 'error');
+            return;
+        }
+
+        if (!newPassword || !confirmPassword) {
+            showToast('Preencha e confirme a nova senha', 'error');
+            return;
+        }
+
+        if (newPassword.length < 8) {
+            showToast('A senha deve ter pelo menos 8 caracteres', 'error');
+            return;
+        }
+
+        if (newPassword !== confirmPassword) {
+            showToast('As senhas não coincidem', 'error');
+            return;
+        }
+
+        if (!supabase) {
+            showToast('Supabase indisponível para alterar senha', 'error');
+            return;
+        }
+
+        setSecuritySaving(true);
+        try {
+            const { error } = await supabase.auth.updateUser({ password: newPassword });
+            if (error) throw error;
+
+            showToast('Senha atualizada com sucesso!');
+            setNewPassword('');
+            setConfirmPassword('');
+            setActiveModal(null);
+        } catch (error: any) {
+            const message = typeof error?.message === 'string' ? error.message : 'Erro ao atualizar senha';
+            showToast(message, 'error');
+        } finally {
+            setSecuritySaving(false);
+        }
     };
 
     // Generic save handler based on current modal
@@ -110,6 +167,8 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user, onBack, onLogout }) =
             handleSaveProfile();
         } else if (activeModal === 'notifications') {
             handleSaveNotifications();
+        } else if (activeModal === 'security') {
+            handleSaveSecurity();
         } else {
             setActiveModal(null);
             showToast('Alterações salvas com sucesso');
@@ -277,23 +336,25 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user, onBack, onLogout }) =
                         </div>
                         <div className="space-y-3 mb-8">
                             {[
-                                { key: 'push', label: 'Push Notifications', sub: 'Alertas no celular' },
+                                { key: 'push', label: 'Push Notifications', sub: 'Alertas no celular', comingSoon: true },
                                 { key: 'email', label: 'Emails', sub: 'Resumos e relatórios' },
                                 { key: 'sms', label: 'SMS', sub: 'Avisos urgentes' },
                                 { key: 'promo', label: 'Marketing', sub: 'Novidades e ofertas' }
                             ].map((item) => (
-                                <div key={item.key} onClick={() => toggleNotif(item.key as any)} className="bg-white/5 rounded-2xl p-4 border border-white/5 flex items-center justify-between active:scale-[0.99] transition-all cursor-pointer hover:bg-white/10">
+                                <div key={item.key} onClick={() => toggleNotif(item.key as keyof typeof notifState)} className={`bg-white/5 rounded-2xl p-4 border border-white/5 flex items-center justify-between active:scale-[0.99] transition-all cursor-pointer hover:bg-white/10 ${item.comingSoon ? 'opacity-80' : ''}`}>
                                     <div className="flex items-center gap-4">
-                                        <div className={`size-10 rounded-xl flex items-center justify-center transition-colors ${notifState[item.key as keyof typeof notifState] ? 'bg-blue-500 text-white shadow-glow' : 'bg-slate-800 text-slate-500'}`}>
-                                            <span className="material-symbols-outlined text-sm">{notifState[item.key as keyof typeof notifState] ? 'check' : 'close'}</span>
+                                        <div className={`size-10 rounded-xl flex items-center justify-center transition-colors ${item.comingSoon ? 'bg-slate-800 text-slate-500' : notifState[item.key as keyof typeof notifState] ? 'bg-blue-500 text-white shadow-glow' : 'bg-slate-800 text-slate-500'}`}>
+                                            <span className="material-symbols-outlined text-sm">{item.comingSoon ? 'schedule' : notifState[item.key as keyof typeof notifState] ? 'check' : 'close'}</span>
                                         </div>
                                         <div>
                                             <p className="text-sm font-black text-white">{item.label}</p>
-                                            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">{item.sub}</p>
+                                            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                                                {item.comingSoon ? `${item.sub} • Em breve` : item.sub}
+                                            </p>
                                         </div>
                                     </div>
-                                    <div className={`w-12 h-7 rounded-full relative transition-colors ${notifState[item.key as keyof typeof notifState] ? 'bg-blue-500' : 'bg-slate-700'}`}>
-                                        <div className={`absolute top-1 size-5 rounded-full bg-white shadow-sm transition-all ${notifState[item.key as keyof typeof notifState] ? 'left-6' : 'left-1'}`}></div>
+                                    <div className={`w-12 h-7 rounded-full relative transition-colors ${item.comingSoon ? 'bg-slate-700' : notifState[item.key as keyof typeof notifState] ? 'bg-blue-500' : 'bg-slate-700'}`}>
+                                        <div className={`absolute top-1 size-5 rounded-full bg-white shadow-sm transition-all ${item.comingSoon ? 'left-1' : notifState[item.key as keyof typeof notifState] ? 'left-6' : 'left-1'}`}></div>
                                     </div>
                                 </div>
                             ))}
@@ -316,26 +377,38 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user, onBack, onLogout }) =
                         </div>
                         <div className="space-y-4 mb-8">
                             <div className="bg-white/5 rounded-2xl p-4 border border-white/5">
-                                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Senha Atual</p>
-                                <div className="flex items-center gap-3">
-                                    <span className="material-symbols-outlined text-slate-500">lock</span>
-                                    <input type="password" placeholder="••••••••" className="bg-transparent text-white font-bold w-full outline-none placeholder:text-slate-600" />
-                                </div>
-                            </div>
-                            <div className="bg-white/5 rounded-2xl p-4 border border-white/5">
                                 <p className="text-[10px] font-bold text-blue-400 uppercase tracking-widest mb-1">Nova Senha</p>
                                 <div className="flex items-center gap-3">
                                     <span className="material-symbols-outlined text-blue-400">key</span>
-                                    <input type="password" placeholder="Digite a nova senha" className="bg-transparent text-white font-bold w-full outline-none placeholder:text-slate-600" />
+                                    <input
+                                        type="password"
+                                        placeholder="Mínimo 8 caracteres"
+                                        value={newPassword}
+                                        onChange={(e) => setNewPassword(e.target.value)}
+                                        className="bg-transparent text-white font-bold w-full outline-none placeholder:text-slate-600"
+                                    />
                                 </div>
                             </div>
-                            <div className="flex items-center justify-between p-2">
+                            <div className="bg-white/5 rounded-2xl p-4 border border-white/5">
+                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Confirmar Nova Senha</p>
+                                <div className="flex items-center gap-3">
+                                    <span className="material-symbols-outlined text-slate-400">password</span>
+                                    <input
+                                        type="password"
+                                        placeholder="Repita a senha"
+                                        value={confirmPassword}
+                                        onChange={(e) => setConfirmPassword(e.target.value)}
+                                        className="bg-transparent text-white font-bold w-full outline-none placeholder:text-slate-600"
+                                    />
+                                </div>
+                            </div>
+                            <div className="flex items-center justify-between p-3 rounded-2xl bg-white/5 border border-white/5">
                                 <span className="text-xs font-bold text-slate-400">Autenticação em 2 Etapas (2FA)</span>
-                                <div className="w-10 h-6 bg-slate-700 rounded-full relative opacity-50"><div className="absolute top-1 left-1 size-4 bg-white rounded-full"></div></div>
+                                <span className="text-[10px] font-black uppercase tracking-widest text-amber-300">Em breve</span>
                             </div>
                         </div>
-                        <button onClick={handleSave} className="w-full h-16 bg-emerald-600 hover:bg-emerald-500 text-white font-black rounded-3xl active:scale-[0.98] transition-all uppercase tracking-widest shadow-[0_0_20px_rgba(16,185,129,0.3)]">
-                            Atualizar Segurança
+                        <button onClick={handleSave} disabled={securitySaving} className="w-full h-16 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-black rounded-3xl active:scale-[0.98] transition-all uppercase tracking-widest shadow-[0_0_20px_rgba(16,185,129,0.3)]">
+                            {securitySaving ? 'Atualizando...' : 'Atualizar Senha'}
                         </button>
                     </>
                 )}

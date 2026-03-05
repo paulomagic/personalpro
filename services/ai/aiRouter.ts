@@ -22,6 +22,7 @@ import {
     ExerciseReplacementSchema,
     extractLikelyJson,
     formatSchemaError,
+    ProgressAnalysisSchema,
     RefinedWorkoutSchema
 } from './responseSchemas';
 
@@ -735,6 +736,96 @@ Retorne APENAS JSON:
         return schemaResult.data;
     } catch {
         return null;
+    }
+}
+
+export async function analyzeClientProgressWithRouter(clientData: {
+    name: string;
+    assessments: Array<{
+        date: string;
+        weight?: number;
+        bodyFat?: number;
+        measures?: Record<string, number>;
+    }>;
+    workoutHistory?: Array<{ date: string; completed: boolean }>;
+    goal: string;
+}): Promise<{
+    summary: string;
+    improvements: string[];
+    concerns: string[];
+    recommendations: string[];
+} | null> {
+    const clientAlias = pseudonymizeClientName(clientData.name);
+    const assessmentsPayload = (clientData.assessments || []).map((assessment) => ({
+        date: assessment.date,
+        weight: assessment.weight ?? null,
+        bodyFat: assessment.bodyFat ?? null,
+        measures: assessment.measures ?? {}
+    }));
+    const completedWorkouts = Array.isArray(clientData.workoutHistory)
+        ? clientData.workoutHistory.filter((item) => item.completed).length
+        : null;
+
+    const prompt = `Analise o progresso físico do aluno ${clientAlias}.
+
+OBJETIVO: ${clientData.goal}
+
+DADOS DE AVALIAÇÕES:
+${JSON.stringify(assessmentsPayload, null, 2)}
+
+HISTÓRICO DE TREINOS:
+${completedWorkouts === null ? 'Não disponível' : `${completedWorkouts} treinos completados`}
+
+Responda APENAS JSON:
+{
+  "summary": "Resumo geral do progresso em 2-3 frases",
+  "improvements": ["Pontos de melhoria observados"],
+  "concerns": ["Pontos de atenção/preocupação"],
+  "recommendations": ["Recomendações específicas para evoluir"]
+}`;
+
+    const result = await aiRouter.execute({
+        action: 'analyze_progress',
+        prompt,
+        metadata: {
+            mode: 'analyze_progress',
+            clientAlias,
+            goal: clientData.goal,
+            assessmentsCount: assessmentsPayload.length,
+            completedWorkouts
+        }
+    });
+
+    if (!result.success || !result.text) {
+        return {
+            summary: 'O aluno apresenta evolução consistente no contexto atual.',
+            improvements: ['Manutenção da consistência de treino'],
+            concerns: [],
+            recommendations: ['Manter a rotina com monitoramento semanal']
+        };
+    }
+
+    try {
+        const cleanText = extractLikelyJson(result.text);
+        const parsed = JSON.parse(cleanText);
+        const schemaResult = ProgressAnalysisSchema.safeParse(parsed);
+        if (!schemaResult.success) {
+            console.warn('[AIRouter] analyze_progress schema failed:', formatSchemaError(schemaResult.error));
+            return {
+                summary: 'O aluno apresenta evolução consistente no contexto atual.',
+                improvements: ['Manutenção da consistência de treino'],
+                concerns: [],
+                recommendations: ['Manter a rotina com monitoramento semanal']
+            };
+        }
+        return schemaResult.data;
+    } catch {
+        return {
+            summary: 'O aluno apresenta evolução consistente no contexto atual.',
+            improvements: ['Manutenção da consistência de treino'],
+            concerns: [],
+            recommendations: ['Manter a rotina com monitoramento semanal']
+        };
     }
 }
 

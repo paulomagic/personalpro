@@ -1,6 +1,6 @@
-import React, { Suspense, lazy, useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Client } from '../types';
-import { ThumbsUp, ThumbsDown, RefreshCw, Download } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 import { logFunnelEvent } from '../services/loggingService';
 import { flushAIGenerationFeedbackQueue, saveAIGenerationFeedback } from '../services/ai/feedback/aiGenerationFeedbackService';
 import { getAdaptiveTrainingSignal, type AdaptiveTrainingSignal } from '../services/ai/adaptiveSignalsService';
@@ -11,9 +11,20 @@ import {
   buildPrecisionPromptContext,
   resolvePrecisionProfile
 } from '../services/ai/progressionPrecisionService';
+import { useAIBuilderWorkoutEditing } from '../services/ai/hooks/useAIBuilderWorkoutEditing';
+import {
+  applyColdStartProtocol,
+  generateSmartWorkout,
+  isColdStartClient,
+  type AIBuilderExercise
+} from '../services/ai/aiBuilderWorkoutUtils';
 import PageHeader from '../components/PageHeader';
-
-const DetectionFeedback = lazy(() => import('../components/DetectionFeedback'));
+import AIBuilderWizardHeader from '../components/aiBuilder/AIBuilderWizardHeader';
+import AIBuilderWizardStepProfile from '../components/aiBuilder/AIBuilderWizardStepProfile';
+import AIBuilderWizardStepRisk from '../components/aiBuilder/AIBuilderWizardStepRisk';
+import AIBuilderWizardStepGenerate from '../components/aiBuilder/AIBuilderWizardStepGenerate';
+import AIBuilderErrorToast from '../components/aiBuilder/AIBuilderErrorToast';
+import AIBuilderResultModal from '../components/aiBuilder/AIBuilderResultModal';
 
 // Feature flag: use new AI Router (Groq + intention-based)
 const USE_NEW_AI_ROUTER = true;
@@ -24,13 +35,7 @@ interface AIBuilderViewProps {
   onDone: () => void;
 }
 
-interface MockExercise {
-  id?: string;
-  name: string;
-  targetMuscle?: string;
-  category?: string;
-  sets?: Array<{ reps?: string }>;
-}
+type MockExercise = AIBuilderExercise;
 
 const loadDemoData = () => import('../mocks/demoData');
 const loadTrainingEngine = () => import('../services/ai/trainingEngine');
@@ -38,264 +43,10 @@ const loadAIRouter = () => import('../services/ai/aiRouter');
 const loadClientsDomain = () => import('../services/supabase/domains/clientsDomain');
 const loadWorkoutsDomain = () => import('../services/supabase/domains/workoutsDomain');
 
-const hasMeaningfulLastTraining = (value?: string): boolean => {
-  if (!value) return false;
-  const normalized = value.trim().toLowerCase();
-  if (!normalized) return false;
-  return !normalized.includes('não registrado') && !normalized.includes('iniciando');
-};
-
-const isColdStartClient = (client: Client): boolean => {
-  const hasAssessments = Array.isArray(client.assessments) && client.assessments.length > 0;
-  const hasCompletedClasses = (client.completedClasses || 0) > 0;
-  const hasTrainingHistory = hasMeaningfulLastTraining(client.lastTraining);
-  return !hasAssessments && !hasCompletedClasses && !hasTrainingHistory;
-};
-
-const parseRestToSeconds = (rest: string | number | undefined): number => {
-  if (typeof rest === 'number') return rest;
-  if (!rest) return 90;
-  const asText = String(rest).trim().toLowerCase();
-
-  const mmss = asText.match(/^(\d+):(\d{1,2})$/);
-  if (mmss) {
-    return Number(mmss[1]) * 60 + Number(mmss[2]);
-  }
-
-  if (asText.includes('min')) {
-    const match = asText.match(/(\d+)/);
-    if (match) return Number(match[1]) * 60;
-  }
-
-  const match = String(rest).match(/(\d+)/);
-  return match ? Number(match[1]) : 90;
-};
-
-const formatRestSeconds = (seconds: number): string => `${Math.max(45, Math.round(seconds))}s`;
-
-const applyColdStartProtocol = (workout: any) => {
-  if (!workout?.splits) return workout;
-
-  const tunedSplits = workout.splits.map((split: any) => ({
-    ...split,
-    exercises: (split.exercises || []).map((exercise: any) => {
-      const tuneRest = (value: string | number | undefined) => formatRestSeconds(parseRestToSeconds(value) + 15);
-
-      let tunedSets: any = Math.max(2, Number(exercise.sets || 3) - 1);
-      if (Array.isArray(exercise.sets)) {
-        const targetCount = Math.max(2, exercise.sets.length - 1);
-        tunedSets = exercise.sets.slice(0, targetCount).map((setItem: any) => ({
-          ...setItem,
-          rest: tuneRest(setItem?.rest ?? exercise.rest)
-        }));
-      }
-
-      const tunedRest = tuneRest(exercise.rest);
-      return {
-        ...exercise,
-        sets: tunedSets,
-        rest: tunedRest
-      };
-    })
-  }));
-
-  const existingNotes: string[] = Array.isArray(workout.personalNotes) ? workout.personalNotes : [];
-  const coldStartNotes = [
-    '🧭 Cold Start ativo: volume inicial reduzido para calibrar resposta individual.',
-    '📈 Sessão 1: validar técnica, dor e tolerância de carga.',
-    '📈 Sessão 2: manter carga e ajustar reps com base no RPE/RIR.',
-    '📈 Sessão 3: iniciar progressão de carga se execução estiver estável.',
-    '📝 Obrigatório coletar feedback pós-treino (RPE, dor, dificuldade, conclusão).'
-  ];
-
-  return {
-    ...workout,
-    splits: tunedSplits,
-    coldStartMode: true,
-    calibrationPlan: {
-      sessions: 3,
-      objectives: [
-        'Baseline técnico',
-        'Calibração de esforço percebido',
-        'Início de progressão segura'
-      ]
-    },
-    personalNotes: [...existingNotes, ...coldStartNotes]
-  };
-};
-
-// ============ PERSONALIZED AI WORKOUT GENERATOR ============
-const generateSmartWorkout = (client: Client, observations: string, exerciseCatalog: MockExercise[]) => {
-  const { name, goal, level, adherence, injuries, preferences } = client;
-
-  // 1. FILTER EXERCISES BY INJURIES
-  const injuryKeywords = extractKeywords(injuries || '');
-  const filteredExercises = exerciseCatalog.filter(ex => {
-    const exName = ex.name.toLowerCase();
-    const exMuscle = (ex.targetMuscle || '').toLowerCase();
-
-    // Check if exercise conflicts with any injury
-    for (const keyword of injuryKeywords) {
-      if (keyword.includes('joelho') && (exName.includes('agachamento') || exName.includes('leg press'))) return false;
-      if (keyword.includes('ombro') && (exName.includes('desenvolvimento') || exName.includes('elevação') || exName.includes('supino inclinado'))) return false;
-      if (keyword.includes('coluna') || keyword.includes('hérnia') || keyword.includes('disco')) {
-        if (exName.includes('stiff') || exName.includes('terra') || exName.includes('agachamento livre') || exName.includes('good morning')) return false;
-      }
-      if (keyword.includes('pulso') && (exName.includes('rosca') || exName.includes('flexão'))) return false;
-    }
-    return true;
-  });
-
-  // 2. PRIORITIZE PREFERRED EXERCISES
-  const preferenceKeywords = extractKeywords(preferences || '');
-  const prioritizedExercises = [...filteredExercises].sort((a, b) => {
-    const aScore = preferenceKeywords.some(k => a.name.toLowerCase().includes(k)) ? -1 : 0;
-    const bScore = preferenceKeywords.some(k => b.name.toLowerCase().includes(k)) ? -1 : 0;
-    return aScore - bScore;
-  });
-
-  // 3. ADJUST VOLUME BY ADHERENCE
-  let exercisesPerSplit = 5;
-  let setsPerExercise = 4;
-  if (adherence >= 85) {
-    exercisesPerSplit = 6;
-    setsPerExercise = 4;
-  } else if (adherence >= 70) {
-    exercisesPerSplit = 5;
-    setsPerExercise = 4;
-  } else if (adherence >= 50) {
-    exercisesPerSplit = 4;
-    setsPerExercise = 3;
-  } else {
-    exercisesPerSplit = 3;
-    setsPerExercise = 3;
-  }
-
-  // 4. ADJUST COMPLEXITY BY LEVEL
-  const methodsByLevel: { [key: string]: string[] } = {
-    'Iniciante': ['simples'],
-    'Intermediário': ['simples', 'piramide', 'biset'],
-    'Avançado': ['simples', 'piramide', 'biset', 'dropset', 'restPause'],
-    'Atleta': ['simples', 'piramide', 'biset', 'dropset', 'restPause', 'cluster', 'myo']
-  };
-  const allowedMethods = methodsByLevel[level] || methodsByLevel['Intermediário'];
-
-  // Helper to get exercises by muscle with personalization
-  const getEx = (muscle: string, count: number) => {
-    return prioritizedExercises
-      .filter(e => (e.targetMuscle?.includes(muscle) ?? false) || (muscle === 'Cardio' && e.category === 'cardio'))
-      .slice(0, count)
-      .map(e => ({
-        name: e.name,
-        sets: setsPerExercise,
-        reps: e.sets?.[0]?.reps || '12',
-        rest: level === 'Iniciante' ? '90s' : level === 'Avançado' || level === 'Atleta' ? '60s' : '75s',
-        targetMuscle: e.targetMuscle || 'Geral',
-        method: allowedMethods[Math.floor(Math.random() * allowedMethods.length)]
-      }));
-  };
-
-  // 5. BUILD SPLITS BASED ON GOAL
-  let splits: any[] = [];
-  let title = '';
-  let objective = '';
-  let personalNotes: string[] = [];
-
-  // Generate personal notes
-  if (injuries && injuries.toLowerCase() !== 'nenhuma') {
-    personalNotes.push(`⚠️ Evitando exercícios que afetam: ${injuries.split('-')[0].trim()}`);
-  }
-  if (adherence < 60) {
-    personalNotes.push(`📉 Treino reduzido: aderência em ${adherence}% - foco em consistência`);
-  } else if (adherence >= 85) {
-    personalNotes.push(`🔥 Volume aumentado: aderência excelente (${adherence}%)`);
-  }
-  if (preferences) {
-    personalNotes.push(`❤️ Priorizando: ${preferences.split('.')[0]}`);
-  }
-  if (observations) {
-    personalNotes.push(`📝 ${observations}`);
-  }
-
-  if (goal.toLowerCase().includes('hipertrofia') || goal.toLowerCase().includes('glúteo')) {
-    title = `Protocolo Hipertrofia - ${name}`;
-    objective = `Foco em tensão mecânica e volume progressivo. ${level === 'Iniciante' ? 'Ênfase em técnica.' : 'Métodos avançados aplicados.'}`;
-
-    const isGlutesFocus = goal.toLowerCase().includes('glúteo');
-
-    if (isGlutesFocus) {
-      splits = [
-        { name: 'A - Glúteo & Posterior', exercises: [...getEx('Glúteo', 3), ...getEx('Posterior de Coxa', 2)] },
-        { name: 'B - Superior Completo', exercises: [...getEx('Costas', 2), ...getEx('Peito', 2), ...getEx('Ombro', 1)] },
-        { name: 'C - Quadríceps & Panturrilha', exercises: [...getEx('Quadríceps', 3), ...getEx('Panturrilha', 1), ...getEx('Cardio', 1)] }
-      ];
-    } else {
-      splits = [
-        { name: 'A - Empurrar (Push)', exercises: [...getEx('Peito', 2), ...getEx('Ombro', 2), ...getEx('Tríceps', 1)] },
-        { name: 'B - Puxar (Pull)', exercises: [...getEx('Costas', 3), ...getEx('Bíceps', 2)] },
-        { name: 'C - Pernas Completo', exercises: [...getEx('Quadríceps', 2), ...getEx('Posterior de Coxa', 1), ...getEx('Glúteo', 1), ...getEx('Panturrilha', 1)] }
-      ];
-    }
-  } else if (goal.toLowerCase().includes('perda') || goal.toLowerCase().includes('emagrecimento')) {
-    title = `Protocolo Fat Burn - ${name}`;
-    objective = `Alta densidade metabólica. Descansos curtos. ${adherence < 60 ? 'Adaptado ao seu ritmo.' : 'Intensidade máxima.'}`;
-
-    splits = [
-      { name: 'A - Full Body Metabólico', exercises: [...getEx('Quadríceps', 1), ...getEx('Peito', 1), ...getEx('Costas', 1), ...getEx('Cardio', 2)] },
-      { name: 'B - Inferior + HIIT', exercises: [...getEx('Glúteo', 2), ...getEx('Posterior de Coxa', 1), ...getEx('Cardio', 2)] }
-    ];
-  } else if (goal.toLowerCase().includes('força')) {
-    title = `Protocolo Força Máxima - ${name}`;
-    objective = `Foco em cargas altas e descansos longos para máxima força. Métodos: ${allowedMethods.slice(0, 2).join(', ')}.`;
-
-    splits = [
-      { name: 'A - Supino & Acessórios', exercises: [...getEx('Peito', 2), ...getEx('Tríceps', 2), ...getEx('Ombro', 1)] },
-      { name: 'B - Agachamento & Posterior', exercises: [...getEx('Quadríceps', 2), ...getEx('Posterior de Coxa', 2), ...getEx('Panturrilha', 1)] },
-      { name: 'C - Terra & Costas', exercises: [...getEx('Costas', 3), ...getEx('Bíceps', 2)] }
-    ];
-  } else if (goal.toLowerCase().includes('condicionamento')) {
-    title = `Protocolo Condicionamento - ${name}`;
-    objective = `Treino funcional e metabólico para condicionamento geral.`;
-
-    splits = [
-      { name: 'A - Funcional Full Body', exercises: [...getEx('Full Body', 3), ...getEx('Cardio', 2)] },
-      { name: 'B - Força & Resistência', exercises: [...getEx('Quadríceps', 1), ...getEx('Costas', 1), ...getEx('Peito', 1), ...getEx('Cardio', 2)] }
-    ];
-  } else {
-    // Default / Bem-estar / Other
-    title = `Protocolo Personalizado - ${name}`;
-    objective = `Treino equilibrado para saúde e bem-estar geral.`;
-
-    splits = [
-      { name: 'Treino Adaptativo', exercises: [...getEx('Quadríceps', 1), ...getEx('Peito', 1), ...getEx('Costas', 1), ...getEx('Cardio', 1)] }
-    ];
-  }
-
-  return {
-    title,
-    objective,
-    splits,
-    personalNotes,
-    clientLevel: level,
-    adherenceScore: adherence
-  };
-};
-
-// Helper: Extract keywords from text
-const extractKeywords = (text: string): string[] => {
-  if (!text) return [];
-  return text.toLowerCase()
-    .replace(/[.,;:!?]/g, ' ')
-    .split(' ')
-    .filter(word => word.length > 3)
-    .filter(word => !['para', 'como', 'mais', 'muito', 'pouco', 'evitar', 'cuidado', 'lesão', 'antiga', 'prefere', 'gosta'].includes(word));
-};
 
 const AIBuilderView: React.FC<AIBuilderViewProps> = ({ user, onBack, onDone }) => {
   const [loading, setLoading] = useState(false);
-  const [fetchingClients, setFetchingClients] = useState(true);
   const [loadingMessageIndex, setLoadingMessageIndex] = useState(0);
-  const [clients, setClients] = useState<Client[]>([]);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [selectedGoal, setSelectedGoal] = useState('Hipertrofia');
   const [selectedDays, setSelectedDays] = useState(4);
@@ -326,6 +77,29 @@ const AIBuilderView: React.FC<AIBuilderViewProps> = ({ user, onBack, onDone }) =
     const { mockClients } = await loadDemoData();
     return mockClients as Client[];
   };
+
+  const {
+    data: clients = [],
+    isLoading: fetchingClients
+  } = useQuery<Client[]>({
+    queryKey: ['ai-builder-clients', user?.id, user?.isDemo],
+    enabled: Boolean(user?.id || user?.isDemo),
+    queryFn: async () => {
+      try {
+        if (user?.id) {
+          const { getClients, mapDBClientToClient } = await loadClientsDomain();
+          const dbClients = await getClients(user.id, { limit: 100 });
+          if (dbClients && dbClients.length > 0) {
+            return dbClients.map(mapDBClientToClient) as Client[];
+          }
+        }
+        return await loadFallbackClients();
+      } catch (error) {
+        console.error('Error fetching clients:', error);
+        return await loadFallbackClients();
+      }
+    }
+  });
 
   const handleFeedback = async (type: 'positive' | 'negative') => {
     setFeedback(type);
@@ -366,38 +140,6 @@ const AIBuilderView: React.FC<AIBuilderViewProps> = ({ user, onBack, onDone }) =
     const newResult = { ...result };
     newResult.splits[splitIdx].exercises[exIdx][field] = value;
     setResult(newResult);
-  };
-
-  const [regeneratingId, setRegeneratingId] = useState<string | null>(null);
-
-  const handleRegenerateExercise = async (splitIdx: number, exIdx: number, currentExercise: any) => {
-    if (!selectedClient) return;
-    const id = `${splitIdx}-${exIdx}`;
-    setRegeneratingId(id);
-
-    try {
-      const { regenerateExerciseWithRouter } = await loadAIRouter();
-      const newExercise = await regenerateExerciseWithRouter({
-        currentExercise: currentExercise.name,
-        targetMuscle: currentExercise.targetMuscle,
-        goal: selectedClient.goal,
-        injuries: selectedClient.injuries,
-        equipment: 'Academia completa'
-      });
-
-      if (newExercise) {
-        const newResult = { ...result };
-        newResult.splits[splitIdx].exercises[exIdx] = {
-          ...newExercise,
-          regenerated: true // Flag to show animation or label
-        };
-        setResult(newResult);
-      }
-    } catch (error) {
-      console.error('Error regenerating exercise:', error);
-    } finally {
-      setRegeneratingId(null);
-    }
   };
 
   // Remove exercise
@@ -451,45 +193,18 @@ const AIBuilderView: React.FC<AIBuilderViewProps> = ({ user, onBack, onDone }) =
     "Finalizando protocolo de elite..."
   ];
 
-
   useEffect(() => {
-    const fetchClients = async () => {
-      setFetchingClients(true);
-      try {
-        const { getClients, mapDBClientToClient } = await loadClientsDomain();
+    if (!clients.length) {
+      setSelectedClient(null);
+      return;
+    }
 
-        // Buscar clientes reais do banco de dados
-        if (user?.id) {
-          const dbClients = await getClients(user.id, { limit: 100 });
-          if (dbClients && dbClients.length > 0) {
-            const mappedClients = dbClients.map(mapDBClientToClient) as Client[];
-            setClients(mappedClients);
-            setSelectedClient(mappedClients[0]);
-          } else {
-            // Fallback para mockClients se não houver clientes no banco
-            const mockClients = await loadFallbackClients();
-            setClients(mockClients);
-            setSelectedClient(mockClients[0]);
-          }
-        } else {
-          // Sem user logado - usar mockClients
-          const mockClients = await loadFallbackClients();
-          setClients(mockClients);
-          setSelectedClient(mockClients[0]);
-        }
-      } catch (error) {
-        console.error('Error fetching clients:', error);
-        // Fallback para mockClients em caso de erro
-        const mockClients = await loadFallbackClients();
-        setClients(mockClients);
-        setSelectedClient(mockClients[0]);
-      } finally {
-        setFetchingClients(false);
-      }
-    };
-
-    fetchClients();
-  }, [user?.id]);
+    setSelectedClient((current) => {
+      if (!current) return clients[0];
+      const stillExists = clients.find((client) => client.id === current.id);
+      return stillExists || clients[0];
+    });
+  }, [clients]);
 
   useEffect(() => {
     void flushAIGenerationFeedbackQueue();
@@ -542,8 +257,6 @@ const AIBuilderView: React.FC<AIBuilderViewProps> = ({ user, onBack, onDone }) =
     setInjuryRisk(risk);
   }, [selectedClient, observations, adaptiveSignal]);
 
-  const [refinementInput, setRefinementInput] = useState('');
-  const [isRefining, setIsRefining] = useState(false);
   const [errorToast, setErrorToast] = useState<string | null>(null);
   const [wizardStep, setWizardStep] = useState<1 | 2 | 3>(1);
 
@@ -579,37 +292,6 @@ const AIBuilderView: React.FC<AIBuilderViewProps> = ({ user, onBack, onDone }) =
       return () => clearTimeout(timer);
     }
   }, [errorToast]);
-
-  const handleRefine = async () => {
-    if (!refinementInput || !result) return;
-    setIsRefining(true);
-    setErrorToast(null);
-
-    try {
-      const { refineWorkoutWithRouter } = await loadAIRouter();
-      const refinedResult = await refineWorkoutWithRouter(result, refinementInput);
-
-      if (refinedResult) {
-        const localExercises = await ensureExerciseCatalog();
-        // Re-apply local verification
-        const mappedResult = mapToLocalExercises(refinedResult, localExercises);
-
-        // Preserve or add notes
-        const currentNotes = result.personalNotes || [];
-        mappedResult.personalNotes = [...currentNotes, `✨ Ajuste: "${refinementInput}"`];
-
-        setResult(mappedResult);
-        setRefinementInput('');
-      } else {
-        setErrorToast('🤖 Não foi possível refinar. Tente novamente.');
-      }
-    } catch (error: any) {
-      setErrorToast('🤖 Erro ao refinar treino. Tente novamente.');
-      console.error('Error refining workout:', error?.message || error);
-    } finally {
-      setIsRefining(false);
-    }
-  };
 
   useEffect(() => {
     let interval: ReturnType<typeof setInterval> | undefined;
@@ -655,6 +337,22 @@ const AIBuilderView: React.FC<AIBuilderViewProps> = ({ user, onBack, onDone }) =
 
     return { ...aiResult, splits: mappedSplits };
   };
+
+  const {
+    regeneratingId,
+    refinementInput,
+    isRefining,
+    setRefinementInput,
+    handleRegenerateExercise,
+    handleRefine
+  } = useAIBuilderWorkoutEditing({
+    selectedClient,
+    result,
+    setResult,
+    ensureExerciseCatalog,
+    mapToLocalExercises,
+    setErrorToast
+  });
 
   const handleGenerate = async () => {
     if (!selectedClient) return;
@@ -1134,644 +832,98 @@ const AIBuilderView: React.FC<AIBuilderViewProps> = ({ user, onBack, onDone }) =
         accentColor="blue"
       />
 
-      <div className="px-6 space-y-8 pb-32">
-        <section className="glass-card rounded-[26px] p-4 border border-white/10 bg-white/[0.02]">
-          <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-3">Wizard IA</p>
-          <div className="grid grid-cols-3 gap-2">
-            {[
-              { step: 1 as const, label: 'Perfil', icon: 'person' },
-              { step: 2 as const, label: 'Riscos', icon: 'health_and_safety' },
-              { step: 3 as const, label: 'Gerar', icon: 'bolt' }
-            ].map(item => {
-              const isActive = wizardStep === item.step;
-              const isEnabled = item.step === 1
-                || (item.step === 2 && canAdvanceFromProfileStep)
-                || (item.step === 3 && canAdvanceFromRiskStep);
+      {errorToast && (
+        <AIBuilderErrorToast message={errorToast} onClose={() => setErrorToast(null)} />
+      )}
 
-              return (
-                <button
-                  key={item.step}
-                  onClick={() => goToWizardStep(item.step)}
-                  disabled={!isEnabled}
-                  className={`rounded-2xl p-3 text-left transition-all border ${isActive
-                    ? 'bg-blue-600/20 border-blue-500/60'
-                    : 'bg-white/[0.02] border-white/10'
-                    } disabled:opacity-40`}
-                >
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className={`material-symbols-outlined text-base ${isActive ? 'text-blue-300' : 'text-slate-500'}`}>{item.icon}</span>
-                    <span className={`text-[10px] font-black uppercase tracking-widest ${isActive ? 'text-blue-300' : 'text-slate-500'}`}>Etapa {item.step}</span>
-                  </div>
-                  <p className={`text-xs font-bold ${isActive ? 'text-white' : 'text-slate-400'}`}>{item.label}</p>
-                </button>
-              );
-            })}
-          </div>
-        </section>
+      <div className="px-6 space-y-8 pb-32">
+        <AIBuilderWizardHeader
+          wizardStep={wizardStep}
+          canAdvanceFromProfileStep={canAdvanceFromProfileStep}
+          canAdvanceFromRiskStep={canAdvanceFromRiskStep}
+          goToWizardStep={goToWizardStep}
+        />
 
         {wizardStep === 1 && (
-          <section className="space-y-6">
-            <div>
-              <div className="flex items-center gap-2 mb-4 px-1">
-                <span className="material-symbols-outlined text-blue-400 text-xl">person_search</span>
-                <h3 className="font-black text-white tracking-tight">Selecione o Aluno</h3>
-              </div>
-              {fetchingClients ? (
-                <div className="h-24 glass-card rounded-[24px] animate-pulse bg-white/5" />
-              ) : (
-                <div className="flex gap-4 overflow-x-auto pb-2 no-scrollbar">
-                  {clients.map(client => (
-                    <button
-                      key={client.id}
-                      onClick={() => setSelectedClient(client)}
-                      className={`min-w-[100px] flex flex-col items-center gap-3 p-4 rounded-[24px] transition-all duration-300 relative overflow-hidden group ${selectedClient?.id === client.id
-                        ? 'glass-card border border-blue-500/50 bg-blue-500/10 shadow-glow scale-105'
-                        : 'glass-card border border-white/5 opacity-60 hover:opacity-100 hover:border-blue-500/30'
-                        }`}
-                    >
-                      {selectedClient?.id === client.id && (
-                        <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/20 rounded-full blur-2xl pointer-events-none" />
-                      )}
-                      <div
-                        className={`size-[60px] rounded-[20px] bg-cover bg-center border-2 relative z-10 ${selectedClient?.id === client.id ? 'border-blue-400 shadow-lg shadow-blue-500/30' : 'border-white/10 group-hover:border-blue-400/50'
-                          } transition-colors`}
-                        style={{ backgroundImage: client.avatar ? `url(${client.avatar})` : 'none' }}
-                      >
-                        {!client.avatar && <span className="material-symbols-outlined text-slate-500 flex h-full items-center justify-center">person</span>}
-                      </div>
-                      <span className={`text-[10px] font-black uppercase tracking-widest relative z-10 ${selectedClient?.id === client.id ? 'text-blue-400' : 'text-slate-500'
-                        }`}>{client.name.split(' ')[0]}</span>
-                    </button>
-                  ))}
-                  {clients.length === 0 && (
-                    <p className="text-xs text-slate-500 font-bold px-2 italic">Nenhum aluno cadastrado.</p>
-                  )}
-                </div>
-              )}
-            </div>
-
-            <div>
-              <div className="flex items-center gap-2 mb-4 px-1">
-                <span className="material-symbols-outlined text-indigo-400 text-xl">target</span>
-                <h3 className="font-black text-white tracking-tight">Objetivo Principal</h3>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                {['Hipertrofia', 'Emagrecimento', 'Resistência', 'Saúde'].map(goal => (
-                  <button
-                    key={goal}
-                    onClick={() => setSelectedGoal(goal)}
-                    className={`px-4 py-4 rounded-[20px] text-[10px] font-black uppercase tracking-widest transition-all duration-300 relative overflow-hidden group ${selectedGoal === goal
-                      ? 'bg-blue-600 border border-blue-400 text-white shadow-glow translate-y-[-2px]'
-                      : 'glass-card border border-white/5 text-slate-400 hover:border-blue-500/30 hover:text-white'
-                      }`}
-                  >
-                    {goal}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <div className="flex items-center gap-2 mb-4 px-1">
-                <span className="material-symbols-outlined text-cyan-400 text-xl">calendar_month</span>
-                <h3 className="font-black text-white tracking-tight">Dias por Semana</h3>
-              </div>
-              <div className="grid grid-cols-5 gap-2">
-                {[2, 3, 4, 5, 6].map(dayCount => (
-                  <button
-                    key={dayCount}
-                    onClick={() => setSelectedDays(dayCount)}
-                    className={`rounded-2xl py-3 text-sm font-black transition-all border ${selectedDays === dayCount
-                      ? 'bg-cyan-500/20 border-cyan-400/50 text-cyan-200'
-                      : 'bg-white/[0.02] border-white/10 text-slate-400 hover:text-white'
-                      }`}
-                  >
-                    {dayCount}d
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <button
-              onClick={handleContinueFromProfile}
-              disabled={!canAdvanceFromProfileStep}
-              className="w-full h-14 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-black uppercase tracking-widest transition-all disabled:opacity-40"
-            >
-              Continuar para Riscos
-            </button>
-          </section>
+          <AIBuilderWizardStepProfile
+            fetchingClients={fetchingClients}
+            clients={clients}
+            selectedClient={selectedClient}
+            selectedGoal={selectedGoal}
+            selectedDays={selectedDays}
+            setSelectedClient={setSelectedClient}
+            setSelectedGoal={setSelectedGoal}
+            setSelectedDays={setSelectedDays}
+            handleContinueFromProfile={handleContinueFromProfile}
+            canAdvanceFromProfileStep={canAdvanceFromProfileStep}
+          />
         )}
 
         {wizardStep === 2 && (
-          <section>
-            <div className="flex items-center gap-2 mb-4 px-1">
-              <span className="material-symbols-outlined text-blue-400 text-xl">notes</span>
-              <h3 className="font-black text-white tracking-tight">Observações</h3>
-            </div>
-
-            <div className="glass-card rounded-[28px] p-4 mb-4 border border-white/5 focus-within:border-blue-500/50 transition-all relative overflow-hidden group">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full blur-3xl pointer-events-none transition-all group-focus-within:bg-blue-500/10" />
-              <textarea
-                placeholder="Ex: Aluno com lesão no ombro, focar em bíceps..."
-                value={observations}
-                onChange={(e) => setObservations(e.target.value)}
-                className="w-full bg-transparent text-white placeholder:text-slate-500 text-sm outline-none min-h-[120px] resize-none font-medium relative z-10"
-              />
-            </div>
-
-            <div className="flex flex-wrap gap-2">
-              {quickTags.map(tag => (
-                <button
-                  key={tag}
-                  onClick={() => setObservations(prev => prev ? `${prev}, ${tag}` : tag)}
-                  className="px-4 py-2 rounded-full glass-card border-white/5 text-[10px] font-black text-slate-400 uppercase tracking-widest hover:bg-white/5 active:scale-95 transition-all"
-                >
-                  {tag}
-                </button>
-              ))}
-            </div>
-
-            {selectedClient && (observations || selectedClient.injuries || selectedClient.observations) && (
-              <div className="mt-4">
-                <Suspense fallback={<div className="h-24 glass-card rounded-2xl animate-pulse bg-white/5" />}>
-                  <DetectionFeedback
-                    observations={`${observations} ${selectedClient.observations || ''}`}
-                    injuries={selectedClient.injuries}
-                    age={selectedClient.age}
-                    weight={selectedClient.weight}
-                    height={selectedClient.height}
-                    compact={false}
-                  />
-                </Suspense>
-              </div>
-            )}
-
-            {selectedClient && (
-              <div className="mt-4 glass-card rounded-[24px] p-4 border border-blue-500/20 bg-blue-500/5">
-                <div className="flex items-center justify-between mb-2">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-blue-400">IA Adaptativa</p>
-                  <p className="text-[10px] text-slate-400">
-                    {loadingAdaptiveSignal ? 'analisando...' : adaptiveSignal ? `${adaptiveSignal.sourceSessions} sessões` : 'sem dados'}
-                  </p>
-                </div>
-                {adaptiveSignal ? (
-                  <div className="space-y-2">
-                    <p className="text-sm text-white font-bold">
-                      Readiness: <span className="text-blue-300">{adaptiveSignal.readinessScore}/100</span> · Fadiga: <span className="uppercase">{adaptiveSignal.fatigueLevel}</span>
-                    </p>
-                    <p className="text-xs text-slate-300">
-                      Ajuste sugerido: {adaptiveSignal.recommendedVolumeDeltaPct >= 0 ? '+' : ''}{adaptiveSignal.recommendedVolumeDeltaPct}% volume, {adaptiveSignal.recommendedIntensityDeltaPct >= 0 ? '+' : ''}{adaptiveSignal.recommendedIntensityDeltaPct}% intensidade, {adaptiveSignal.recommendedDaysPerWeek} dias/semana.
-                    </p>
-                    <p className="text-[11px] text-slate-400">{adaptiveSignal.rationale}</p>
-                  </div>
-                ) : (
-                  <p className="text-xs text-slate-400">Sem histórico suficiente. A IA usa baseline conservador.</p>
-                )}
-              </div>
-            )}
-
-            {selectedClient && injuryRisk && (
-              <div className={`mt-4 glass-card rounded-[24px] p-4 border ${injuryRisk.level === 'critical'
-                ? 'border-red-500/40 bg-red-500/10'
-                : injuryRisk.level === 'high'
-                  ? 'border-amber-500/40 bg-amber-500/10'
-                  : 'border-emerald-500/30 bg-emerald-500/10'
-                }`}>
-                <div className="flex items-center justify-between mb-2">
-                  <p className="text-[10px] font-black uppercase tracking-widest">Risco de Lesão</p>
-                  <p className="text-xs font-black">{injuryRisk.score}/100 · {injuryRisk.level.toUpperCase()}</p>
-                </div>
-                {injuryRisk.factors.length > 0 && (
-                  <p className="text-xs text-slate-200 mb-2">{injuryRisk.factors[0]}</p>
-                )}
-                <p className="text-[11px] text-slate-300">
-                  {injuryRisk.blockGeneration
-                    ? 'Geração bloqueada preventivamente. Revise lesões/dor e reduza risco antes de prosseguir.'
-                    : injuryRisk.conservativeMode
-                      ? 'Planner em modo conservador: IA reduzirá estímulo e progressão.'
-                      : 'Risco controlado: progressão padrão com monitoramento.'}
-                </p>
-              </div>
-            )}
-
-            {selectedClient && precisionProfile && (
-              <div className="mt-4 glass-card rounded-[24px] p-4 border border-indigo-500/30 bg-indigo-500/10">
-                <div className="flex items-center justify-between mb-2">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-indigo-300">Precisão da IA</p>
-                  <p className="text-[10px] text-indigo-100">{precisionProfile.segment}</p>
-                </div>
-                <p className="text-sm text-white font-bold mb-1">{precisionProfile.label}</p>
-                <p className="text-xs text-slate-300 mb-2">{precisionProfile.rationale}</p>
-                <p className="text-[11px] text-indigo-100">
-                  Meta: {precisionProfile.target.targetPrecisionScore}/100 · erro RPE ≤ {precisionProfile.target.maxMeanRpeError} · erro RIR ≤ {precisionProfile.target.maxMeanRirError}
-                </p>
-              </div>
-            )}
-
-            <div className="grid grid-cols-2 gap-3 mt-6">
-              <button
-                onClick={() => setWizardStep(1)}
-                className="h-12 rounded-2xl border border-white/10 text-slate-300 font-bold"
-              >
-                Voltar
-              </button>
-              <button
-                onClick={handleContinueFromRisk}
-                disabled={!canAdvanceFromRiskStep}
-                className="h-12 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-black uppercase tracking-widest disabled:opacity-40"
-              >
-                Continuar
-              </button>
-            </div>
-          </section>
+          <AIBuilderWizardStepRisk
+            selectedClient={selectedClient}
+            observations={observations}
+            setObservations={setObservations}
+            quickTags={quickTags}
+            loadingAdaptiveSignal={loadingAdaptiveSignal}
+            adaptiveSignal={adaptiveSignal}
+            injuryRisk={injuryRisk}
+            precisionProfile={precisionProfile}
+            canAdvanceFromRiskStep={canAdvanceFromRiskStep}
+            handleContinueFromRisk={handleContinueFromRisk}
+            onBack={() => setWizardStep(1)}
+          />
         )}
 
         {wizardStep === 3 && (
-          <section className="space-y-5">
-            <div className="glass-card rounded-[26px] p-5 border border-blue-500/20 bg-blue-500/5">
-              <p className="text-[10px] font-black uppercase tracking-widest text-blue-300 mb-3">Resumo de Geração</p>
-              <div className="space-y-2 text-sm">
-                <p><span className="text-slate-400">Aluno:</span> <span className="text-white font-bold">{selectedClient?.name || 'não definido'}</span></p>
-                <p><span className="text-slate-400">Objetivo:</span> <span className="text-white font-bold">{selectedGoal}</span></p>
-                <p><span className="text-slate-400">Frequência:</span> <span className="text-white font-bold">{selectedDays} dias/semana</span></p>
-                <p><span className="text-slate-400">Risco:</span> <span className="text-white font-bold">{injuryRisk ? `${injuryRisk.score}/100 (${injuryRisk.level})` : 'sem dados'}</span></p>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                onClick={() => setWizardStep(2)}
-                className="h-12 rounded-2xl border border-white/10 text-slate-300 font-bold"
-              >
-                Voltar
-              </button>
-              <button
-                onClick={handleGenerate}
-                disabled={!selectedClient || !selectedGoal || loading || Boolean(injuryRisk?.blockGeneration)}
-                className="h-12 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-black uppercase tracking-widest disabled:opacity-40"
-              >
-                Gerar Treino
-              </button>
-            </div>
-
-            <button
-              onClick={handleGenerate}
-              disabled={!selectedClient || !selectedGoal || loading || Boolean(injuryRisk?.blockGeneration)}
-              className="w-full h-[68px] glass-card rounded-[24px] relative overflow-hidden group disabled:opacity-30 disabled:grayscale transition-all active:scale-[0.98] border border-blue-500/30 hover:border-blue-400 shadow-xl shadow-blue-900/20"
-            >
-              <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-indigo-600 opacity-90 transition-all group-hover:opacity-100" />
-              <div className="absolute inset-0 flex items-center justify-center gap-3 z-10">
-                <span className="material-symbols-outlined text-white">bolt</span>
-                <span className="text-white font-black uppercase tracking-[0.2em] text-[13px] text-shadow-sm">Forjar Protocolo de Elite</span>
-              </div>
-            </button>
-          </section>
+          <AIBuilderWizardStepGenerate
+            selectedClient={selectedClient}
+            selectedGoal={selectedGoal}
+            selectedDays={selectedDays}
+            injuryRisk={injuryRisk}
+            loading={loading}
+            onBack={() => setWizardStep(2)}
+            onGenerate={handleGenerate}
+          />
         )}
       </div>
 
+
       {/* Result Modal */}
       {result && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'var(--bg-void)' }}>
-          <div className="w-full max-w-md h-full flex flex-col animate-fade-in relative" style={{ background: 'var(--bg-void)' }}>
-            <div className="absolute inset-0 z-0 opacity-15">
-              <div className="absolute top-0 right-0 size-96 rounded-full blur-[120px]" style={{ background: '#1E3A8A' }}></div>
-              <div className="absolute bottom-0 left-0 size-96 rounded-full blur-[120px]" style={{ background: '#3B82F6' }}></div>
-            </div>
-
-            {/* Error Toast */}
-            {errorToast && (
-              <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[60] animate-fade-in">
-                <div className="bg-red-500/90 backdrop-blur-md text-white px-6 py-3 rounded-2xl shadow-2xl border border-red-400/30 flex items-center gap-3">
-                  <span className="text-sm font-medium">{errorToast}</span>
-                  <button onClick={() => setErrorToast(null)} className="text-white/80 hover:text-white">
-                    <span className="material-symbols-outlined text-sm">close</span>
-                  </button>
-                </div>
-              </div>
-            )}
-
-            <header className="relative z-10 px-6 pt-14 pb-6 glass-card bg-slate-950/50 border-0 border-b border-white/10 rounded-0">
-              <div className="flex justify-between items-center">
-                <button onClick={() => setResult(null)} className="size-10 rounded-full glass-card flex items-center justify-center hover:bg-white/10 transition-colors">
-                  <span className="material-symbols-outlined">close</span>
-                </button>
-
-                <div className="text-center">
-                  <h3 className="text-lg font-black text-white tracking-tight">{result.title}</h3>
-                  <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest">{selectedClient?.name}</p>
-                </div>
-
-                <div className="flex gap-2">
-                  <button onClick={handleExportPDF} className="size-10 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20 flex items-center justify-center hover:bg-blue-500/20 transition-all active:scale-95" title="Exportar PDF/Imprimir">
-                    <Download size={18} />
-                  </button>
-                  <button onClick={handleSendWhatsApp} className="size-10 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center justify-center hover:bg-emerald-500/20 transition-all active:scale-95" title="Enviar no WhatsApp">
-                    <span className="material-symbols-outlined">share</span>
-                  </button>
-                </div>
-              </div>
-            </header>
-
-            <main className="relative z-10 flex-1 overflow-y-auto px-6 py-6 no-scrollbar pb-44">
-              <div className="glass-card rounded-[32px] p-6 mb-4 border-l-4 border-blue-500">
-                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Estratégia de Treino</p>
-                <p className="text-white font-medium leading-relaxed">{result.objective}</p>
-              </div>
-
-              {/* Mesocycle Periodization */}
-              {result.mesocycle && result.mesocycle.length > 0 && (
-                <div className="mb-6">
-                  <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3">📅 Periodização (Mesociclo 4 Semanas)</p>
-                  <div className="grid grid-cols-2 gap-3">
-                    {result.mesocycle.map((week: any, idx: number) => (
-                      <div key={idx} className="glass-card p-3 rounded-2xl bg-white/5 border border-white/5 hover:border-blue-500/30 transition-colors">
-                        <div className="flex justify-between mb-1">
-                          <span className="text-[9px] font-bold text-blue-400 uppercase">Semana {week.week}</span>
-                          <span className="text-[9px] font-bold text-white bg-white/10 px-2 py-0.5 rounded-full">{week.phase}</span>
-                        </div>
-                        <p className="text-white text-xs font-bold mb-1">{week.focus}</p>
-                        <p className="text-[10px] text-slate-400 leading-tight">{week.instruction || 'Aumentar carga progressivamente.'}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Workout Options Selector */}
-              {workoutOptions.length > 1 && (
-                <div className="mb-6">
-                  <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3">🎯 Escolha uma Variação</p>
-                  <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2">
-                    {workoutOptions.map((option, idx) => (
-                      <button
-                        key={idx}
-                        onClick={() => selectWorkoutOption(idx)}
-                        className={`flex-shrink-0 px-5 py-3 rounded-2xl text-xs font-black uppercase tracking-widest transition-all ${selectedOptionIndex === idx
-                          ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-900/30'
-                          : 'glass-card text-slate-400 hover:text-white'
-                          }`}
-                      >
-                        <span className="block">{option.optionLabel || `Opção ${idx + 1}`}</span>
-                        <span className="text-[8px] opacity-70 mt-1 block">{option.title?.split(' - ')[0] || ''}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Feedback Loop */}
-              {result && (
-                <div className="flex items-center justify-between mb-4 px-2">
-                  <p className="text-[10px] uppercase tracking-widest text-slate-500">Avalie este resultado</p>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => handleFeedback('positive')}
-                      className={`p-2 rounded-full transition-colors ${feedback === 'positive' ? 'bg-green-500/20 text-green-400' : 'hover:bg-slate-800 text-slate-400'}`}
-                    >
-                      <ThumbsUp size={16} />
-                    </button>
-                    <button
-                      onClick={() => handleFeedback('negative')}
-                      className={`p-2 rounded-full transition-colors ${feedback === 'negative' ? 'bg-red-500/20 text-red-400' : 'hover:bg-slate-800 text-slate-400'}`}
-                    >
-                      <ThumbsDown size={16} />
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* Personal Notes - IA Insights */}
-              {result.personalNotes && result.personalNotes.length > 0 && (
-                <div className="glass-card rounded-[32px] p-4 mb-8 border border-blue-500/20 bg-blue-500/5">
-                  <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-3">🤖 Personalização Aplicada</p>
-                  <div className="space-y-2">
-                    {result.personalNotes.map((note: string, idx: number) => (
-                      <p key={idx} className="text-sm text-slate-300">{note}</p>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              <div className="flex gap-3 overflow-x-auto pb-6 no-scrollbar">
-                {result.splits?.map((split: any, idx: number) => (
-                  <button
-                    key={idx}
-                    onClick={() => setActiveTabIndex(idx)}
-                    className={`px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTabIndex === idx ? 'bg-blue-600 text-white shadow-glow' : 'glass-card text-slate-500'}`}
-                  >
-                    {split.name}
-                  </button>
-                ))}
-              </div>
-
-              <div className="space-y-4">
-                {(result.splits?.[activeTabIndex]?.exercises || []).length === 0 ? (
-                  <div className="text-center py-10 text-slate-500">
-                    <p>Nenhum exercício gerado para este treino.</p>
-                  </div>
-                ) : (
-                  (result.splits?.[activeTabIndex]?.exercises || []).map((ex: any, idx: number) => {
-                    const isEditing = editingExercise?.splitIdx === activeTabIndex && editingExercise?.exIdx === idx;
-
-                    return (
-                      <div key={idx} className={`glass-card rounded-3xl p-5 transition-all ${isEditing ? 'border border-blue-500/50 bg-blue-500/5' : 'hover:border-blue-500/30'}`}>
-                        <div className="flex justify-between items-start mb-4">
-                          <div className="size-8 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-400 text-xs font-black">{idx + 1}</div>
-                          <div className="flex gap-2 items-center">
-                            {ex.isVerified && (
-                              <span className="text-[9px] font-black text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded-full uppercase tracking-widest flex items-center gap-1">
-                                <span className="material-symbols-outlined text-[10px]">database</span>
-                                Validado
-                              </span>
-                            )}
-                            <span className="text-[9px] font-black text-blue-400 bg-blue-500/5 px-2 py-1 rounded-full uppercase tracking-widest">{ex.targetMuscle}</span>
-                            <button
-                              onClick={() => handleRegenerateExercise(activeTabIndex, idx, ex)}
-                              disabled={regeneratingId === `${activeTabIndex}-${idx}`}
-                              className={`size-7 rounded-lg flex items-center justify-center transition-all bg-white/5 text-slate-400 hover:text-blue-400 hover:bg-blue-500/10`}
-                              title="Regenerar com IA"
-                            >
-                              <RefreshCw size={14} className={regeneratingId === `${activeTabIndex}-${idx}` ? "animate-spin text-blue-500" : ""} />
-                            </button>
-                            <button
-                              onClick={() => setEditingExercise(isEditing ? null : { splitIdx: activeTabIndex, exIdx: idx })}
-                              className={`size-7 rounded-lg flex items-center justify-center transition-all ${isEditing ? 'bg-blue-500 text-white' : 'bg-white/5 text-slate-400 hover:text-white'}`}
-                            >
-                              <span className="material-symbols-outlined text-sm">{isEditing ? 'check' : 'edit'}</span>
-                            </button>
-                          </div>
-                        </div>
-
-                        <h4 className="text-white font-black text-lg mb-3 tracking-tight">{ex.name}</h4>
-
-                        {isEditing ? (
-                          /* Edit Mode */
-                          <div className="space-y-4">
-                            <div className="grid grid-cols-3 gap-3">
-                              <div>
-                                <label className="text-[8px] font-black text-slate-500 uppercase tracking-widest block mb-1">Séries</label>
-                                <input
-                                  type="number"
-                                  value={ex.sets}
-                                  onChange={(e) => updateExercise(activeTabIndex, idx, 'sets', parseInt(e.target.value) || 0)}
-                                  className="w-full bg-slate-800 border border-white/10 rounded-xl px-3 py-2 text-white font-bold text-center outline-none focus:border-blue-500"
-                                />
-                              </div>
-                              <div>
-                                <label className="text-[8px] font-black text-slate-500 uppercase tracking-widest block mb-1">Reps</label>
-                                <input
-                                  type="text"
-                                  value={ex.reps}
-                                  onChange={(e) => updateExercise(activeTabIndex, idx, 'reps', e.target.value)}
-                                  className="w-full bg-slate-800 border border-white/10 rounded-xl px-3 py-2 text-white font-bold text-center outline-none focus:border-blue-500"
-                                />
-                              </div>
-                              <div>
-                                <label className="text-[8px] font-black text-slate-500 uppercase tracking-widest block mb-1">Descanso</label>
-                                <input
-                                  type="text"
-                                  value={ex.rest}
-                                  onChange={(e) => updateExercise(activeTabIndex, idx, 'rest', e.target.value)}
-                                  className="w-full bg-slate-800 border border-white/10 rounded-xl px-3 py-2 text-indigo-400 font-bold text-center outline-none focus:border-blue-500"
-                                />
-                              </div>
-                            </div>
-                            <button
-                              onClick={() => removeExercise(activeTabIndex, idx)}
-                              className="w-full py-2 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-bold uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-red-500/20 transition-colors"
-                            >
-                              <span className="material-symbols-outlined text-sm">delete</span>
-                              Remover Exercício
-                            </button>
-                          </div>
-                        ) : (
-                          /* View Mode */
-                          <div className="flex gap-4">
-                            <div className="bg-white/5 rounded-xl px-3 py-2">
-                              <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Séries</p>
-                              <p className="text-white font-black">{ex.sets}</p>
-                            </div>
-                            <div className="bg-white/5 rounded-xl px-3 py-2">
-                              <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Reps</p>
-                              <p className="text-white font-black">{ex.reps}</p>
-                            </div>
-                            <div className="bg-white/5 rounded-xl px-3 py-2">
-                              <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Descanso</p>
-                              <p className="text-indigo-400 font-black">{ex.rest}</p>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })
-                )}
-
-                {/* Add Exercise Button */}
-                <button
-                  onClick={openAddExerciseModal}
-                  className="w-full py-4 rounded-2xl border-2 border-dashed border-white/20 text-slate-400 font-bold flex items-center justify-center gap-2 hover:border-blue-500/50 hover:text-blue-400 transition-all active:scale-98"
-                >
-                  <span className="material-symbols-outlined">add_circle</span>
-                  Adicionar Exercício
-                </button>
-
-                {/* AI Refinement Input */}
-                <div className="mt-8 mb-6 glass-card p-4 rounded-2xl border border-blue-500/20 bg-blue-500/5">
-                  <div className="flex items-center gap-2 mb-3">
-                    <span className="material-symbols-outlined text-blue-400 text-lg">auto_fix_high</span>
-                    <p className="text-xs font-black text-blue-400 uppercase tracking-widest">Refinar com IA</p>
-                  </div>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={refinementInput}
-                      onChange={(e) => setRefinementInput(e.target.value)}
-                      placeholder="Ex: Troque agachamento por leg press..."
-                      className="flex-1 bg-slate-900/50 border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-blue-500 transition-colors"
-                      onKeyDown={(e) => e.key === 'Enter' && handleRefine()}
-                    />
-                    <button
-                      onClick={handleRefine}
-                      disabled={isRefining || !refinementInput}
-                      className="size-12 rounded-xl bg-blue-600 text-white flex items-center justify-center hover:bg-blue-500 active:scale-95 transition-all disabled:opacity-50 disabled:grayscale shadow-lg shadow-blue-900/20"
-                    >
-                      {isRefining ? <span className="material-symbols-outlined animate-spin">sync</span> : <span className="material-symbols-outlined">send</span>}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </main>
-
-            {/* Add Exercise Modal */}
-            {showAddExercise && (
-              <div className="fixed inset-0 z-50 bg-slate-950/95 backdrop-blur-xl flex flex-col animate-fade-in">
-                <header className="px-6 pt-14 pb-4">
-                  <div className="flex justify-between items-center mb-6">
-                    <button
-                      onClick={() => { setShowAddExercise(false); setExerciseSearch(''); }}
-                      className="size-10 rounded-full glass-card flex items-center justify-center"
-                    >
-                      <span className="material-symbols-outlined">close</span>
-                    </button>
-                    <h3 className="text-lg font-black text-white">Adicionar Exercício</h3>
-                    <div className="size-10"></div>
-                  </div>
-
-                  <div className="glass-card rounded-2xl px-4 py-3 flex items-center gap-3">
-                    <span className="material-symbols-outlined text-slate-500">search</span>
-                    <input
-                      type="text"
-                      placeholder="Buscar exercício ou músculo..."
-                      value={exerciseSearch}
-                      onChange={(e) => setExerciseSearch(e.target.value)}
-                      className="flex-1 bg-transparent text-white placeholder:text-slate-500 outline-none"
-                      autoFocus
-                    />
-                  </div>
-                </header>
-
-                <div className="flex-1 overflow-y-auto px-6 pb-6">
-                  <div className="space-y-3">
-                    {loadingExerciseCatalog && (
-                      <div className="space-y-3">
-                        <div className="h-20 rounded-2xl bg-white/5 animate-pulse" />
-                        <div className="h-20 rounded-2xl bg-white/5 animate-pulse" />
-                        <div className="h-20 rounded-2xl bg-white/5 animate-pulse" />
-                      </div>
-                    )}
-                    {filteredExercisesForAdd.map((ex, idx) => (
-                      <button
-                        key={idx}
-                        onClick={() => addExercise(ex)}
-                        className="w-full glass-card rounded-2xl p-4 text-left hover:border-blue-500/30 transition-all active:scale-98 flex items-center justify-between"
-                      >
-                        <div>
-                          <p className="text-white font-bold">{ex.name}</p>
-                          <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">{ex.targetMuscle}</p>
-                        </div>
-                        <span className="material-symbols-outlined text-blue-500">add</span>
-                      </button>
-                    ))}
-                    {!loadingExerciseCatalog && filteredExercisesForAdd.length === 0 && (
-                      <p className="text-center text-slate-500 py-8">Nenhum exercício encontrado</p>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            <footer className="fixed bottom-20 left-0 right-0 p-4 px-6 max-w-md mx-auto z-20">
-              <button
-                onClick={handleSaveWorkout}
-                className="w-full h-14 text-white font-black rounded-2xl flex items-center justify-center gap-3 uppercase tracking-widest active:scale-95 transition-all"
-                style={{ background: 'linear-gradient(135deg,#1E3A8A,#3B82F6)', boxShadow: '0 8px 32px rgba(30, 58, 138,0.35)' }}
-              >
-                <span className="material-symbols-outlined">check_circle</span>
-                Salvar Protocolo
-              </button>
-            </footer>
-          </div>
-        </div>
+        <AIBuilderResultModal
+          result={result}
+          selectedClientName={selectedClient?.name}
+          activeTabIndex={activeTabIndex}
+          setActiveTabIndex={setActiveTabIndex}
+          workoutOptions={workoutOptions}
+          selectedOptionIndex={selectedOptionIndex}
+          selectWorkoutOption={selectWorkoutOption}
+          feedback={feedback}
+          onFeedback={handleFeedback}
+          editingExercise={editingExercise}
+          setEditingExercise={setEditingExercise}
+          handleRegenerateExercise={handleRegenerateExercise}
+          regeneratingId={regeneratingId}
+          updateExercise={updateExercise}
+          removeExercise={removeExercise}
+          openAddExerciseModal={openAddExerciseModal}
+          refinementInput={refinementInput}
+          setRefinementInput={setRefinementInput}
+          handleRefine={handleRefine}
+          isRefining={isRefining}
+          showAddExercise={showAddExercise}
+          setShowAddExercise={setShowAddExercise}
+          exerciseSearch={exerciseSearch}
+          setExerciseSearch={setExerciseSearch}
+          filteredExercisesForAdd={filteredExercisesForAdd}
+          loadingExerciseCatalog={loadingExerciseCatalog}
+          addExercise={addExercise}
+          onClose={() => setResult(null)}
+          handleExportPDF={handleExportPDF}
+          handleSendWhatsApp={handleSendWhatsApp}
+          handleSaveWorkout={handleSaveWorkout}
+        />
       )}
     </div>
   );

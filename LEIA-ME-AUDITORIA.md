@@ -43,8 +43,9 @@ auditoria-apex-20260215.zip
 │   └── supabase/migrations/             ← Migrations versionadas
 │
 ├── 🔌 Services (Lógica de Negócio)
-│   ├── services/supabaseClient.ts       ← Cliente Supabase + CRUD
-│   ├── services/geminiService.ts        ← Serviço de IA
+│   ├── services/supabaseCore.ts         ← Cliente Supabase base
+│   ├── services/supabase/domains/       ← Domínios de acesso a dados
+│   ├── services/ai/providers/           ← Providers de IA
 │   ├── services/loggingService.ts       ← Logging de ações
 │   └── services/ai/                     ← Engine de IA
 │
@@ -79,7 +80,8 @@ auditoria-apex-20260215.zip
 - **Foco**: Escalação de privilégios, bypass de autenticação
 
 #### C. Database Access
-- **Arquivo**: `services/supabaseClient.ts`
+- **Arquivos**: `services/supabaseCore.ts`
+- **Arquivos**: `services/supabase/domains/*.ts`
 - **Arquivos**: `supabase/*.sql` (schemas e RLS policies)
 - **Foco**: SQL Injection, RLS (Row Level Security), Validação de dados
 
@@ -88,12 +90,12 @@ auditoria-apex-20260215.zip
 ### 2️⃣ **PRIORIDADE ALTA**
 
 #### D. Serviço de IA
-- **Arquivo**: `services/geminiService.ts`
 - **Arquivo**: `services/ai/aiRouter.ts`
+- **Arquivos**: `services/ai/providers/*.ts`
 - **Foco**: Dados sensíveis em prompts, XSS via resposta da IA, validação de JSON
 
 #### E. Upload de Arquivos
-- **Arquivo**: `services/supabaseClient.ts` (função `uploadAssessmentPhoto`)
+- **Arquivo**: `services/supabase/domains/storageDomain.ts` (função `uploadAssessmentPhoto`)
 - **Arquivo**: `supabase/storage_policies.sql`
 - **Foco**: Upload de arquivos maliciosos, validação de tipo MIME
 

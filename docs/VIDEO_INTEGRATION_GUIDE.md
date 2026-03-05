@@ -202,7 +202,7 @@ WHERE slug IN ('agachamento-livre', 'supino-inclinado', 'rosca-direta');
 
 ### Arquivos Modificados
 - `services/exerciseService.ts` - Função `hydrateWorkoutWithVideos()`
-- `services/supabaseClient.ts` - Chamada da hydration em `getClientCurrentWorkout()`
+- `services/supabase/domains/workoutsDomain.ts` - Chamada da hydration em `getCurrentWorkoutByClient()`
 - `views/StudentView.tsx` - Renderização do botão "Ver Execução"
 - `components/VideoPlayerModal.tsx` - Modal de exibição
 

@@ -26,6 +26,7 @@ import { useDeepLinkHydration } from './services/app/useDeepLinkHydration';
 import { useFrontendErrorCapture } from './services/app/useFrontendErrorCapture';
 import { usePendingRequestsPolling } from './services/app/usePendingRequestsPolling';
 import { usePasswordRecovery } from './services/app/usePasswordRecovery';
+import { appShellActions, useAppShellStore } from './services/appShellStore';
 
 const Layout = lazy(() => import('./components/Layout'));
 
@@ -40,16 +41,20 @@ const ViewLoader = () => (
 );
 
 function App() {
-  const [currentView, setCurrentView] = useState<View>(() => {
-    if (typeof window === 'undefined') return View.LOGIN;
-    return resolveViewFromPath(window.location.pathname) || View.LOGIN;
-  });
-  const [selectedClient, setSelectedClient] = useState<Client | null>(null);
-  const [activeWorkout, setActiveWorkout] = useState<Workout | null>(null);
+  const currentView = useAppShellStore((snapshot) => snapshot.currentView);
+  const selectedClient = useAppShellStore((snapshot) => snapshot.selectedClient);
+  const activeWorkout = useAppShellStore((snapshot) => snapshot.activeWorkout);
+  const routeHydrating = useAppShellStore((snapshot) => snapshot.routeHydrating);
+  const {
+    setCurrentView,
+    setSelectedClient,
+    setActiveWorkout,
+    setRouteHydrating,
+    resetNavigation
+  } = appShellActions;
   const [user, setUser] = useState<AppSessionUser | null>(null);
   const [userProfile, setUserProfile] = useState<DBUserProfile | null>(null);
   const [loading, setLoading] = useState(false);
-  const [routeHydrating, setRouteHydrating] = useState(false);
   const {
     showRecoveryModal,
     newPassword,
@@ -157,7 +162,7 @@ function App() {
     }
     setUser(null);
     setUserProfile(null);
-    setCurrentView(View.LOGIN);
+    resetNavigation();
   };
 
   const handleLoginSuccess = async (loggedUser: AppSessionUser | null) => {

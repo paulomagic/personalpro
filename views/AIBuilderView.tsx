@@ -5,19 +5,12 @@ import { logFunnelEvent } from '../services/loggingService';
 import { flushAIGenerationFeedbackQueue, saveAIGenerationFeedback } from '../services/ai/feedback/aiGenerationFeedbackService';
 import { getAdaptiveTrainingSignal, type AdaptiveTrainingSignal } from '../services/ai/adaptiveSignalsService';
 import { assessInjuryRisk, type InjuryRiskAssessment } from '../services/ai/injuryRiskService';
-import { buildWeeklyMicrocyclePlan } from '../services/ai/weeklyProgressionEngine';
 import {
-  applyPrecisionGuardrailsToMicrocycle,
-  buildPrecisionPromptContext,
   resolvePrecisionProfile
 } from '../services/ai/progressionPrecisionService';
 import { useAIBuilderWorkoutEditing } from '../services/ai/hooks/useAIBuilderWorkoutEditing';
-import {
-  applyColdStartProtocol,
-  generateSmartWorkout,
-  isColdStartClient,
-  type AIBuilderExercise
-} from '../services/ai/aiBuilderWorkoutUtils';
+import { type AIBuilderExercise } from '../services/ai/aiBuilderWorkoutUtils';
+import { buildLocalFallbackWorkout, generateWorkoutWithPipeline } from '../services/ai/workoutGenerationOrchestrator';
 import PageHeader from '../components/PageHeader';
 import AIBuilderWizardHeader from '../components/aiBuilder/AIBuilderWizardHeader';
 import AIBuilderWizardStepProfile from '../components/aiBuilder/AIBuilderWizardStepProfile';
@@ -25,9 +18,6 @@ import AIBuilderWizardStepRisk from '../components/aiBuilder/AIBuilderWizardStep
 import AIBuilderWizardStepGenerate from '../components/aiBuilder/AIBuilderWizardStepGenerate';
 import AIBuilderErrorToast from '../components/aiBuilder/AIBuilderErrorToast';
 import AIBuilderResultModal from '../components/aiBuilder/AIBuilderResultModal';
-
-// Feature flag: use new AI Router (Groq + intention-based)
-const USE_NEW_AI_ROUTER = true;
 
 interface AIBuilderViewProps {
   user: any;
@@ -38,8 +28,6 @@ interface AIBuilderViewProps {
 type MockExercise = AIBuilderExercise;
 
 const loadDemoData = () => import('../mocks/demoData');
-const loadTrainingEngine = () => import('../services/ai/trainingEngine');
-const loadAIRouter = () => import('../services/ai/aiRouter');
 const loadClientsDomain = () => import('../services/supabase/domains/clientsDomain');
 const loadWorkoutsDomain = () => import('../services/supabase/domains/workoutsDomain');
 
@@ -376,246 +364,79 @@ const AIBuilderView: React.FC<AIBuilderViewProps> = ({ user, onBack, onDone }) =
     setLoadingMessageIndex(0);
     setWorkoutOptions([]);
     setSelectedOptionIndex(0);
-    const effectiveAdaptiveSignal = adaptiveSignal && adaptiveSignal.confidence >= 0.35 ? adaptiveSignal : null;
-    const adaptiveDaysBase = effectiveAdaptiveSignal?.recommendedDaysPerWeek || selectedDays;
-    const riskAwareDays = preRisk.conservativeMode ? Math.max(2, adaptiveDaysBase - 1) : adaptiveDaysBase;
-    const adaptiveDays = riskAwareDays;
-    const adaptiveBrief = effectiveAdaptiveSignal
-      ? `SINAL_ADAPTATIVO: readiness=${effectiveAdaptiveSignal.readinessScore}; fatigue=${effectiveAdaptiveSignal.fatigueLevel}; volume_delta=${effectiveAdaptiveSignal.recommendedVolumeDeltaPct}%; intensity_delta=${effectiveAdaptiveSignal.recommendedIntensityDeltaPct}%; dias_semana=${adaptiveDays}; confianca=${effectiveAdaptiveSignal.confidence}`
-      : '';
-    const riskBrief = `RISCO_LESAO: score=${preRisk.score}; level=${preRisk.level}; conservative=${preRisk.conservativeMode}; constraints=${preRisk.recommendedConstraints.join(' | ')}`;
-    const precisionBrief = precisionProfile ? buildPrecisionPromptContext(precisionProfile) : '';
-    const coldStartMode = isColdStartClient(selectedClient);
     const effectiveGoal = selectedGoal || selectedClient.goal;
-    const combinedObservations = [selectedClient.observations, observations, adaptiveBrief, riskBrief, precisionBrief]
-      .filter(Boolean)
-      .join(' | ');
-    const weeklyMicrocycle = buildWeeklyMicrocyclePlan({
-      goal: effectiveGoal,
-      daysPerWeek: adaptiveDays,
-      adaptiveSignal: effectiveAdaptiveSignal,
-      injuryRiskScore: preRisk.score,
-      coldStartMode
-    });
-    const guardedMicrocycleWeeks = precisionProfile
-      ? applyPrecisionGuardrailsToMicrocycle(weeklyMicrocycle.weeks, precisionProfile.segment)
-      : weeklyMicrocycle.weeks;
-    const applyMicrocycle = (baseWorkout: any) => ({
-      ...baseWorkout,
-      mesocycle: guardedMicrocycleWeeks.map(week => ({
-        week: week.week,
-        phase: week.phase,
-        focus: week.focus,
-        instruction: week.instruction,
-        volumeDeltaPct: week.volumeDeltaPct,
-        intensityDeltaPct: week.intensityDeltaPct
-      })),
-      personalNotes: [
-        ...(Array.isArray(baseWorkout.personalNotes) ? baseWorkout.personalNotes : []),
-        `📅 Microciclo automático (${guardedMicrocycleWeeks.length} semanas) calibrado por sinais reais.`,
-        `🛡️ Risco de lesão: ${preRisk.score}/100 (${preRisk.level}).`,
-        precisionProfile ? `🎯 Perfil de precisão IA: ${precisionProfile.label} (meta ${precisionProfile.target.targetPrecisionScore}/100).` : ''
-      ].filter(Boolean)
-    });
-
     void logFunnelEvent('workout_generation_started', {
       clientId: selectedClient.id,
       goal: effectiveGoal,
       daysPerWeek: selectedDays,
-      adjustedDaysPerWeek: adaptiveDays,
-      coldStartMode,
-      adaptiveReadiness: effectiveAdaptiveSignal?.readinessScore,
       injuryRiskScore: preRisk.score,
       injuryRiskLevel: preRisk.level,
       precisionSegment: precisionProfile?.segment
     });
 
     try {
-      // NEW: Deterministic Training Engine with slot-based templates
-      if (USE_NEW_AI_ROUTER) {
-        const [{ generateWorkout: generateWithEngine }, { isAIAvailable: isNewAIAvailable }] = await Promise.all([
-          loadTrainingEngine(),
-          loadAIRouter()
-        ]);
-
-        const engineResult = await generateWithEngine({
-          name: selectedClient.name,
-          goal: effectiveGoal,
-          level: selectedClient.level,
-          daysPerWeek: adaptiveDays,
-          injuries: selectedClient.injuries,
-          observations: combinedObservations,          // Usa observações do cliente + input do coach
-          birthDate: selectedClient.birthDate,        // NOVO: calcula idade para idoso/adolescente
-          age: selectedClient.age,                     // NOVO: ou usa idade direta se disponível
-          weight: selectedClient.weight,
-          height: selectedClient.height,
-          useAI: isNewAIAvailable() // Reativado: bug de age mapeado corrigido
-        });
-
-        if (engineResult && engineResult.days.length > 0) {
-          // Convert engine result to existing UI format
-          let aiResult = {
-            title: `${engineResult.template_name} - ${selectedClient.name}`,
-            objective: `Template ${engineResult.template_id} otimizado para ${effectiveGoal}`,
-            splits: engineResult.days.map(day => ({
-              name: day.label,
-              focus: day.label,
-              exercises: day.slots
-                .filter(slot => slot.selected)
-                .map(slot => ({
-                  name: slot.selected!.name,
-                  sets: slot.sets,
-                  reps: slot.reps,
-                  rest: slot.rest,
-                  targetMuscle: slot.selected!.primary_muscle,
-                  method: 'simples',
-                  technique: ''
-                }))
-            })),
-            personalNotes: [
-              `🎯 Template: ${engineResult.template_name}`,
-              `📊 Arquitetura determinística com slots`,
-              effectiveAdaptiveSignal
-                ? `🧠 Readiness ${effectiveAdaptiveSignal.readinessScore}/100 | ajuste ${effectiveAdaptiveSignal.recommendedVolumeDeltaPct >= 0 ? '+' : ''}${effectiveAdaptiveSignal.recommendedVolumeDeltaPct}% volume`
-                : '',
-              selectedClient.injuries && selectedClient.injuries.toLowerCase() !== 'nenhuma'
-                ? `⚠️ Considerando: ${selectedClient.injuries.split('-')[0].trim()}`
-                : '',
-              precisionProfile ? `🎯 Política de precisão: ${precisionProfile.label}` : ''
-            ].filter(Boolean),
-            optionLabel: 'Engine'
-          };
-          if (coldStartMode) {
-            aiResult = applyColdStartProtocol(aiResult);
-          }
-          aiResult = applyMicrocycle(aiResult);
-
-          setWorkoutOptions([aiResult]);
-          setResult(aiResult);
-          void logFunnelEvent('workout_generation_succeeded', {
-            provider: 'training_engine',
-            clientId: selectedClient.id,
-            optionsCount: 1,
-            coldStartMode,
-            injuryRiskScore: preRisk.score,
-            precisionSegment: precisionProfile?.segment
-          });
-          setLoading(false);
-          setActiveTabIndex(0);
-          return;
-        }
-      }
-
-      // FALLBACK 1: Router by intention (single call, centralized providers + logging)
-      const { generateTrainingIntent } = await loadAIRouter();
-      const intentResult = await generateTrainingIntent({
-        name: selectedClient.name,
+      const pipelineResult = await generateWorkoutWithPipeline({
+        client: selectedClient,
         goal: effectiveGoal,
-        level: selectedClient.level,
-        days: adaptiveDays,
-        injuries: selectedClient.injuries,
-        preferences: selectedClient.preferences,
-        adherence: selectedClient.adherence,
-        equipment: ['Academia completa', 'Halteres', 'Barras', 'Máquinas'],
-        sessionDuration: coldStartMode ? 50 : 60
+        selectedDays,
+        observations,
+        adaptiveSignal,
+        injuryRisk: preRisk,
+        precisionProfile,
+        ensureExerciseCatalog,
+        mapToLocalExercises
       });
 
-      if (intentResult && Array.isArray(intentResult.splits) && intentResult.splits.length > 0) {
-        const localExercises = await ensureExerciseCatalog();
-        const mappedResult = mapToLocalExercises({
-          title: intentResult.title,
-          objective: intentResult.objective,
-          splits: intentResult.splits.map(split => ({
-            name: split.name,
-            focus: split.focus,
-            exercises: split.exercises.map(item => ({
-              name: item.exercise?.name || 'Exercício',
-              sets: item.sets,
-              reps: item.reps,
-              rest: item.rest,
-              targetMuscle: item.exercise?.primary_muscle || 'Geral',
-              technique: item.notes || item.exercise?.execution_tips || ''
-            }))
-          }))
-        }, localExercises);
+      setWorkoutOptions([pipelineResult.workout]);
+      setResult(pipelineResult.workout);
 
-        const personalNotes = [
-          `🤖 Treino gerado pelo AIRouter (${intentResult.provider})`,
-          intentResult.fallbackUsed ? '🛟 Fallback automático ativado para garantir resposta.' : '✅ Pipeline IA principal estável.'
-        ];
-        if (selectedClient.injuries && selectedClient.injuries.toLowerCase() !== 'nenhuma') {
-          personalNotes.push(`⚠️ Considerando: ${selectedClient.injuries.split('-')[0].trim()}`);
-        }
-        if (selectedClient.adherence >= 85) {
-          personalNotes.push(`🔥 Volume otimizado: aderência excelente (${selectedClient.adherence}%)`);
-        }
-        if (selectedClient.preferences) {
-          personalNotes.push(`❤️ Preferências: ${selectedClient.preferences.split('.')[0]}`);
-        }
-        if (effectiveAdaptiveSignal) {
-          personalNotes.push(`🧠 Readiness ${effectiveAdaptiveSignal.readinessScore}/100 • ${effectiveAdaptiveSignal.fatigueLevel === 'high' ? 'fadiga alta' : effectiveAdaptiveSignal.fatigueLevel === 'moderate' ? 'fadiga moderada' : 'fadiga baixa'}`);
-        }
-        if (precisionProfile) {
-          personalNotes.push(`🎯 Política de precisão: ${precisionProfile.label} (meta ${precisionProfile.target.targetPrecisionScore}/100).`);
-        }
-
-        const withNotes = { ...mappedResult, personalNotes, optionLabel: 'Router' };
-        const withColdStart = coldStartMode ? applyColdStartProtocol(withNotes) : withNotes;
-        const finalResult = applyMicrocycle(withColdStart);
-
-        setWorkoutOptions([finalResult]);
-        setResult(finalResult);
-        void logFunnelEvent('workout_generation_succeeded', {
-          provider: `ai_router:${intentResult.provider}`,
-          clientId: selectedClient.id,
-          optionsCount: 1,
-          coldStartMode,
-          fallbackUsed: intentResult.fallbackUsed,
-          adaptiveReadiness: effectiveAdaptiveSignal?.readinessScore,
-          injuryRiskScore: preRisk.score,
-          precisionSegment: precisionProfile?.segment
-        });
-      } else {
-        // FALLBACK 2: Local deterministic generation
-        const localExercisesForFallback = await ensureExerciseCatalog();
-        let workout = generateSmartWorkout(selectedClient, observations, localExercisesForFallback);
-        if (coldStartMode) {
-          workout = applyColdStartProtocol(workout);
-        }
-        workout = applyMicrocycle(workout);
-        setWorkoutOptions([workout]);
-        setResult(workout);
-        void logFunnelEvent('workout_generation_fallback_local', {
-          clientId: selectedClient.id,
-          coldStartMode,
-          adaptiveReadiness: effectiveAdaptiveSignal?.readinessScore,
-          injuryRiskScore: preRisk.score,
-          precisionSegment: precisionProfile?.segment
-        });
-      }
+      const eventName = pipelineResult.metadata.source === 'local'
+        ? 'workout_generation_fallback_local'
+        : 'workout_generation_succeeded';
+      void logFunnelEvent(eventName, {
+        provider: pipelineResult.metadata.provider,
+        clientId: selectedClient.id,
+        optionsCount: 1,
+        coldStartMode: pipelineResult.metadata.coldStartMode,
+        fallbackUsed: pipelineResult.metadata.fallbackUsed,
+        adjustedDaysPerWeek: pipelineResult.metadata.adjustedDaysPerWeek,
+        adaptiveReadiness: pipelineResult.metadata.adaptiveReadiness,
+        injuryRiskScore: pipelineResult.metadata.injuryRiskScore,
+        injuryRiskLevel: pipelineResult.metadata.injuryRiskLevel,
+        precisionSegment: pipelineResult.metadata.precisionSegment
+      });
     } catch (error) {
       console.error('Error generating workout:', error);
       void logFunnelEvent('workout_generation_failed', {
         clientId: selectedClient.id,
-        coldStartMode,
-        adaptiveReadiness: effectiveAdaptiveSignal?.readinessScore,
+        coldStartMode: false,
+        adaptiveReadiness: adaptiveSignal?.readinessScore,
         precisionSegment: precisionProfile?.segment,
         error: error instanceof Error ? error.message : 'unknown_error'
       });
-      const localExercisesForFallback = await ensureExerciseCatalog();
-      let workout = generateSmartWorkout(selectedClient, observations, localExercisesForFallback);
-      if (coldStartMode) {
-        workout = applyColdStartProtocol(workout);
-      }
-      workout = applyMicrocycle(workout);
-      setWorkoutOptions([workout]);
-      setResult(workout);
+      const fallbackResult = await buildLocalFallbackWorkout({
+        client: selectedClient,
+        observations,
+        injuryRisk: preRisk,
+        adaptiveSignal,
+        precisionProfile,
+        selectedDays,
+        goal: effectiveGoal,
+        ensureExerciseCatalog
+      });
+      setWorkoutOptions([fallbackResult.workout]);
+      setResult(fallbackResult.workout);
       void logFunnelEvent('workout_generation_fallback_local', {
+        provider: fallbackResult.metadata.provider,
         clientId: selectedClient.id,
-        coldStartMode,
-        adaptiveReadiness: effectiveAdaptiveSignal?.readinessScore,
-        injuryRiskScore: preRisk.score,
-        precisionSegment: precisionProfile?.segment
+        optionsCount: 1,
+        coldStartMode: fallbackResult.metadata.coldStartMode,
+        fallbackUsed: fallbackResult.metadata.fallbackUsed,
+        adjustedDaysPerWeek: fallbackResult.metadata.adjustedDaysPerWeek,
+        adaptiveReadiness: fallbackResult.metadata.adaptiveReadiness,
+        injuryRiskScore: fallbackResult.metadata.injuryRiskScore,
+        injuryRiskLevel: fallbackResult.metadata.injuryRiskLevel,
+        precisionSegment: fallbackResult.metadata.precisionSegment
       });
     } finally {
       setLoading(false);
@@ -650,7 +471,7 @@ const AIBuilderView: React.FC<AIBuilderViewProps> = ({ user, onBack, onDone }) =
         const { saveAIWorkout } = await loadWorkoutsDomain();
         // Prepare metadata
         const metadata = {
-          model: 'gemini-2.5-flash',
+          model: result?.generationMeta?.provider || 'local',
           optionSelected: workoutOptions[selectedOptionIndex]?.optionLabel || 'default',
           generatedAt: new Date().toISOString(),
           coldStartMode: !!result?.coldStartMode,

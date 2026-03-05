@@ -66,8 +66,8 @@
 3. **Foque nas áreas críticas**:
    - Edge Functions (`supabase/functions/`)
    - Autenticação (`types.ts`, `views/LoginView.tsx`)
-   - Database Access (`services/supabaseClient.ts`)
-   - Serviço de IA (`services/geminiService.ts`)
+   - Database Access (`services/supabase/domains/*.ts`, `services/supabaseCore.ts`)
+   - Serviço de IA (`services/ai/aiRouter.ts`, `services/ai/providers/*.ts`)
 
 4. **Execute análise estática**:
    ```bash

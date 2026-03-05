@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { DollarSign, Calendar, Edit, Save, X, Repeat, Plus, Clock, CheckCircle, AlertTriangle, ChevronDown, ChevronUp } from 'lucide-react';
-import { updateClient } from '../services/supabaseClient';
-import { DBClient } from '../services/supabase/domains/clientsDomain';
+import { DBClient, updateClientById } from '../services/supabase/domains/clientsDomain';
 import { createPayment, getPaymentsByClient, Payment } from '../services/supabase/domains/paymentsDomain';
 import { useTheme } from '../services/ThemeContext';
 
@@ -48,7 +47,7 @@ const ClientFinanceSection: React.FC<ClientFinanceSectionProps> = ({ client, coa
     const handleSave = async () => {
         setSaving(true);
         try {
-            const result = await updateClient(client.id, formData);
+            const result = await updateClientById(client.id, formData);
             if (result && onUpdate) {
                 onUpdate(formData);
             }

@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v35';
+const CACHE_VERSION = 'v36';
 const STATIC_CACHE = `personalpro-static-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `personalpro-runtime-${CACHE_VERSION}`;
 const API_CACHE = `personalpro-api-${CACHE_VERSION}`;

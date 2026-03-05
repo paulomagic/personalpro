@@ -5,7 +5,7 @@ import WeeklyPatternSelector from './WeeklyPatternSelector';
 import MonthlyReviewScreen from './MonthlyReviewScreen';
 import { createMonthlyScheduleBatch } from '../services/monthlyScheduleService';
 import { MonthlyScheduleConfig } from '../types';
-import { getClients, DBClient } from '../services/supabaseClient';
+import { getClients, DBClient } from '../services/supabase/domains/clientsDomain';
 
 interface MonthlyScheduleModalProps {
     coachId: string;

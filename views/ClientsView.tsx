@@ -206,14 +206,12 @@ const ClientsView: React.FC<ClientsViewProps> = ({ user, onBack, onSelectClient 
             {toast && (
                 <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[60] animate-slide-down w-max max-w-[90%]">
                     <div
-                        className="px-6 py-3 rounded-full flex items-center gap-3"
-                        style={{
-                            background: toast.type === 'error' ? 'rgba(255,51,102,0.12)' : 'rgba(59, 130, 246,0.1)',
-                            border: `1px solid ${toast.type === 'error' ? 'rgba(255,51,102,0.2)' : 'rgba(59, 130, 246,0.15)'}`,
-                            backdropFilter: 'blur(20px)',
-                        }}
+                        className={`px-6 py-3 rounded-full flex items-center gap-3 backdrop-blur-xl border ${toast.type === 'error'
+                            ? 'bg-[rgba(255,51,102,0.12)] border-[rgba(255,51,102,0.2)]'
+                            : 'bg-[rgba(59,130,246,0.1)] border-[rgba(59,130,246,0.15)]'
+                            }`}
                     >
-                        <div className="size-3 rounded-full" style={{ background: toast.type === 'error' ? '#FF3366' : '#3B82F6' }} />
+                        <div className={`size-3 rounded-full ${toast.type === 'error' ? 'bg-[#FF3366]' : 'bg-[#3B82F6]'}`} />
                         <span className="text-[10px] font-black uppercase tracking-widest text-white">{toast.message}</span>
                     </div>
                 </div>
@@ -228,8 +226,7 @@ const ClientsView: React.FC<ClientsViewProps> = ({ user, onBack, onSelectClient 
                 rightSlot={
                     <button
                         onClick={() => setShowAddModal(true)}
-                        className="size-10 rounded-2xl flex items-center justify-center active:scale-90 transition-all"
-                        style={{ background: 'linear-gradient(135deg,#1E3A8A,#3B82F6)', boxShadow: '0 4px 16px rgba(30, 58, 138,0.35)' }}
+                        className="size-10 rounded-2xl flex items-center justify-center active:scale-90 transition-all bg-[linear-gradient(135deg,#1E3A8A,#3B82F6)] shadow-[0_4px_16px_rgba(30,58,138,0.35)]"
                     >
                         <Plus size={18} color="white" />
                     </button>
@@ -239,25 +236,24 @@ const ClientsView: React.FC<ClientsViewProps> = ({ user, onBack, onSelectClient 
             {/* Stats Row */}
             <motion.div variants={itemVariants} className="px-5 grid grid-cols-4 gap-2 mb-5">
                 {[
-                    { tab: 'all', label: 'Total', value: stats.total, icon: Users, color: '#3B82F6', activeBg: 'rgba(59, 130, 246,0.1)', activeBorder: 'rgba(59, 130, 246,0.25)' },
-                    { tab: 'active', label: 'Ativos', value: stats.active, icon: CheckCircle, color: '#00FF88', activeBg: 'rgba(0,255,136,0.1)', activeBorder: 'rgba(0,255,136,0.25)' },
-                    { tab: 'at-risk', label: 'Alerta', value: stats.atRisk, icon: AlertTriangle, color: '#FFB800', activeBg: 'rgba(255,184,0,0.1)', activeBorder: 'rgba(255,184,0,0.25)' },
-                    { tab: 'paused', label: 'Pausa', value: stats.paused, icon: Pause, color: '#3D5A80', activeBg: 'rgba(61,90,128,0.15)', activeBorder: 'rgba(61,90,128,0.3)' },
-                ].map(({ tab, label, value, icon: Icon, color, activeBg, activeBorder }) => {
+                    { tab: 'all', label: 'Total', value: stats.total, icon: Users, activeClassName: 'bg-[rgba(59,130,246,0.1)] border-[rgba(59,130,246,0.25)]', iconClassName: 'text-[#3B82F6]', valueActiveClassName: 'text-[#3B82F6]' },
+                    { tab: 'active', label: 'Ativos', value: stats.active, icon: CheckCircle, activeClassName: 'bg-[rgba(0,255,136,0.1)] border-[rgba(0,255,136,0.25)]', iconClassName: 'text-[#00FF88]', valueActiveClassName: 'text-[#00FF88]' },
+                    { tab: 'at-risk', label: 'Alerta', value: stats.atRisk, icon: AlertTriangle, activeClassName: 'bg-[rgba(255,184,0,0.1)] border-[rgba(255,184,0,0.25)]', iconClassName: 'text-[#FFB800]', valueActiveClassName: 'text-[#FFB800]' },
+                    { tab: 'paused', label: 'Pausa', value: stats.paused, icon: Pause, activeClassName: 'bg-[rgba(61,90,128,0.15)] border-[rgba(61,90,128,0.3)]', iconClassName: 'text-[#3D5A80]', valueActiveClassName: 'text-[#3D5A80]' },
+                ].map(({ tab, label, value, icon: Icon, activeClassName, iconClassName, valueActiveClassName }) => {
                     const isActive = statusFilter === tab;
                     return (
                         <button
                             key={tab}
                             onClick={() => setStatusFilter(tab as any)}
-                            className="rounded-2xl p-3 text-center transition-all"
-                            style={isActive
-                                ? { background: activeBg, border: `1px solid ${activeBorder}` }
-                                : { background: 'rgba(59, 130, 246,0.03)', border: '1px solid rgba(59, 130, 246,0.06)' }
-                            }
+                            className={`rounded-2xl p-3 text-center transition-all border ${isActive
+                                ? activeClassName
+                                : 'bg-[rgba(59,130,246,0.03)] border-[rgba(59,130,246,0.06)]'
+                                }`}
                         >
-                            <Icon size={15} className="mx-auto mb-1" style={{ color: isActive ? color : '#3D5A80' }} />
-                            <p className="text-base font-black" style={{ color: isActive ? color : '#7A9FCC' }}>{value}</p>
-                            <p className="text-[8px] font-black uppercase tracking-widest" style={{ color: '#3D5A80' }}>{label}</p>
+                            <Icon size={15} className={`mx-auto mb-1 ${isActive ? iconClassName : 'text-[#3D5A80]'}`} />
+                            <p className={`text-base font-black ${isActive ? valueActiveClassName : 'text-[#7A9FCC]'}`}>{value}</p>
+                            <p className="text-[8px] font-black uppercase tracking-widest text-[#3D5A80]">{label}</p>
                         </button>
                     );
                 })}
@@ -266,7 +262,7 @@ const ClientsView: React.FC<ClientsViewProps> = ({ user, onBack, onSelectClient 
             {/* Search */}
             <motion.div variants={itemVariants} className="px-5 mb-5">
                 <div className="relative">
-                    <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2" style={{ color: '#3D5A80' }} />
+                    <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#3D5A80]" />
                     <input
                         type="text"
                         placeholder="Buscar aluno..."
@@ -321,22 +317,19 @@ const ClientsView: React.FC<ClientsViewProps> = ({ user, onBack, onSelectClient 
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: index * 0.04 }}
                                 onClick={() => onSelectClient(client)}
-                                className="w-full rounded-2xl p-4 flex items-center gap-3.5 active:scale-[0.99] transition-all group text-left"
-                                style={{ background: 'rgba(59, 130, 246,0.03)', border: '1px solid rgba(59, 130, 246,0.06)' }}
+                                className="w-full rounded-2xl p-4 flex items-center gap-3.5 active:scale-[0.99] transition-all group text-left bg-[rgba(59,130,246,0.03)] border border-[rgba(59,130,246,0.06)]"
                             >
                                 {/* Avatar */}
                                 <div className="relative shrink-0">
                                     {client.avatar ? (
-                                        <div
-                                            className="size-13 rounded-2xl bg-cover bg-center"
-                                            style={{ width: 52, height: 52, backgroundImage: `url(${client.avatar})`, border: '1.5px solid rgba(59, 130, 246,0.1)' }}
+                                        <img
+                                            className="w-[52px] h-[52px] rounded-2xl object-cover border-[1.5px] border-[rgba(59,130,246,0.1)]"
+                                            src={client.avatar}
+                                            alt={client.name}
                                         />
                                     ) : (
-                                        <div
-                                            className="flex items-center justify-center"
-                                            style={{ width: 52, height: 52, borderRadius: 16, background: 'rgba(59, 130, 246,0.07)', border: '1px solid rgba(59, 130, 246,0.1)' }}
-                                        >
-                                            <User size={20} style={{ color: '#3D5A80' }} />
+                                        <div className="flex items-center justify-center w-[52px] h-[52px] rounded-2xl bg-[rgba(59,130,246,0.07)] border border-[rgba(59,130,246,0.1)]">
+                                            <User size={20} className="text-[#3D5A80]" />
                                         </div>
                                     )}
                                     <StatusBadge status={client.status} />
@@ -346,12 +339,12 @@ const ClientsView: React.FC<ClientsViewProps> = ({ user, onBack, onSelectClient 
                                 <div className="flex-1 min-w-0">
                                     <div className="flex items-center gap-2 mb-0.5">
                                         <h4 className="font-black text-white text-sm tracking-tight truncate">{client.name}</h4>
-                                        <span className="px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-widest shrink-0" style={{ background: 'rgba(59, 130, 246,0.07)', color: '#3D5A80' }}>{client.level}</span>
+                                        <span className="px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-widest shrink-0 bg-[rgba(59,130,246,0.07)] text-[#3D5A80]">{client.level}</span>
                                     </div>
-                                    <p className="text-[10px] font-black uppercase tracking-wider truncate mb-1.5" style={{ color: '#3B82F6', opacity: 0.7 }}>{client.goal}</p>
+                                    <p className="text-[10px] font-black uppercase tracking-wider truncate mb-1.5 text-[#3B82F6]/70">{client.goal}</p>
                                     {/* Progress */}
                                     <div className="flex items-center gap-2">
-                                        <div className="h-1 flex-1 rounded-full overflow-hidden" style={{ background: 'rgba(59, 130, 246,0.06)', maxWidth: 80 }}>
+                                        <div className="h-1 flex-1 rounded-full overflow-hidden bg-[rgba(59,130,246,0.06)] max-w-20">
                                             <div
                                                 className="h-full rounded-full"
                                                 style={{
@@ -360,11 +353,11 @@ const ClientsView: React.FC<ClientsViewProps> = ({ user, onBack, onSelectClient 
                                                 }}
                                             />
                                         </div>
-                                        <span className="text-[10px] font-black" style={{ color: client.adherence < 50 ? '#FFB800' : '#00FF88' }}>{client.adherence}%</span>
+                                        <span className={`text-[10px] font-black ${client.adherence < 50 ? 'text-[#FFB800]' : 'text-[#00FF88]'}`}>{client.adherence}%</span>
                                     </div>
                                 </div>
 
-                                <ChevronRight size={13} style={{ color: '#3D5A80', flexShrink: 0 }} />
+                                <ChevronRight size={13} className="shrink-0 text-[#3D5A80]" />
                             </motion.button>
                         ))}
                     </AnimatePresence>

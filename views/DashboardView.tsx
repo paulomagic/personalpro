@@ -76,10 +76,10 @@ const item = {
 
 // ── Quick Actions ──────────────────────────────────────────────────────────
 const QUICK_ACTIONS = [
-  { icon: CalendarDays, label: 'Agenda', color: '#3B82F6', bg: 'rgba(59, 130, 246,0.1)', action: 'calendar' },
-  { icon: Users, label: 'Alunos', color: '#0099FF', bg: 'rgba(0,153,255,0.1)', action: 'clients' },
-  { icon: Wallet, label: 'Financeiro', color: '#00FF88', bg: 'rgba(0,255,136,0.1)', action: 'finance' },
-  { icon: BarChart2, label: 'Métricas', color: '#FFB800', bg: 'rgba(255,184,0,0.1)', action: 'metrics' },
+  { icon: CalendarDays, label: 'Agenda', chipClassName: 'bg-[rgba(59,130,246,0.1)]', iconClassName: 'text-[#3B82F6]', action: 'calendar' },
+  { icon: Users, label: 'Alunos', chipClassName: 'bg-[rgba(0,153,255,0.1)]', iconClassName: 'text-[#0099FF]', action: 'clients' },
+  { icon: Wallet, label: 'Financeiro', chipClassName: 'bg-[rgba(0,255,136,0.1)]', iconClassName: 'text-[#00FF88]', action: 'finance' },
+  { icon: BarChart2, label: 'Métricas', chipClassName: 'bg-[rgba(255,184,0,0.1)]', iconClassName: 'text-[#FFB800]', action: 'metrics' },
 ];
 
 // ══════════════════════════════════════════════════════════════════════════
@@ -156,21 +156,17 @@ const DashboardView: React.FC<DashboardViewProps> = ({
   const atRiskClient = clients.find((c) => c.status === 'at-risk' || c.adherence < 60) || clients[0];
   const nextAppointment = appointments[0];
   const activeClients = clients.filter((c) => c.status === 'active').length || clients.length;
-  const heroTextPrimary = isLightTheme ? '#F4F8FF' : '#FFFFFF';
-  const heroTextSecondary = isLightTheme ? 'rgba(229,239,255,0.8)' : 'rgba(255,255,255,0.7)';
-  const heroTextMuted = isLightTheme ? 'rgba(214,228,255,0.75)' : 'rgba(255,255,255,0.6)';
-  const heroCardGradient = isLightTheme
-    ? 'linear-gradient(135deg, #1E3A8A 0%, #2455C9 46%, #3B82F6 100%)'
-    : 'linear-gradient(135deg, #172554 0%, #1E3A8A 40%, #1D4ED8 80%, #3B82F6 100%)';
-  const heroCardShadow = isLightTheme
-    ? '0 16px 42px -10px rgba(30, 58, 138,0.35), 0 0 0 1px rgba(59, 130, 246,0.2)'
-    : '0 20px 60px -10px rgba(30, 58, 138,0.45), 0 0 0 1px rgba(59, 130, 246,0.15)';
-  const aiCtaGradient = isLightTheme
-    ? 'linear-gradient(135deg, #1E3A8A 0%, #2455C9 48%, #3B82F6 100%)'
-    : 'linear-gradient(135deg, #172554 0%, #1E3A8A 45%, #1D4ED8 80%, #3B82F6 100%)';
-  const aiCtaShadow = isLightTheme
-    ? '0 10px 34px -6px rgba(30, 58, 138,0.35), 0 0 0 1px rgba(59, 130, 246,0.18)'
-    : '0 12px 40px -6px rgba(30, 58, 138,0.5), 0 0 0 1px rgba(59, 130, 246,0.15)';
+  const heroTextPrimaryClassName = isLightTheme ? 'text-[#F4F8FF]' : 'text-white';
+  const heroTextSecondaryClassName = isLightTheme ? 'text-[rgba(229,239,255,0.8)]' : 'text-[rgba(255,255,255,0.7)]';
+  const heroTextMutedClassName = isLightTheme ? 'text-[rgba(214,228,255,0.75)]' : 'text-[rgba(255,255,255,0.6)]';
+  const heroCardClassName = isLightTheme
+    ? 'bg-[linear-gradient(135deg,#1E3A8A_0%,#2455C9_46%,#3B82F6_100%)] shadow-[0_16px_42px_-10px_rgba(30,58,138,0.35),0_0_0_1px_rgba(59,130,246,0.2)]'
+    : 'bg-[linear-gradient(135deg,#172554_0%,#1E3A8A_40%,#1D4ED8_80%,#3B82F6_100%)] shadow-[0_20px_60px_-10px_rgba(30,58,138,0.45),0_0_0_1px_rgba(59,130,246,0.15)]';
+  const heroGlassButtonClassName = isLightTheme ? 'bg-[rgba(255,255,255,0.16)]' : 'bg-[rgba(255,255,255,0.1)]';
+  const aiCtaClassName = isLightTheme
+    ? 'bg-[linear-gradient(135deg,#1E3A8A_0%,#2455C9_48%,#3B82F6_100%)] shadow-[0_10px_34px_-6px_rgba(30,58,138,0.35),0_0_0_1px_rgba(59,130,246,0.18)]'
+    : 'bg-[linear-gradient(135deg,#172554_0%,#1E3A8A_45%,#1D4ED8_80%,#3B82F6_100%)] shadow-[0_12px_40px_-6px_rgba(30,58,138,0.5),0_0_0_1px_rgba(59,130,246,0.15)]';
+  const aiCtaChipClassName = isLightTheme ? 'bg-[rgba(255,255,255,0.18)]' : 'bg-[rgba(255,255,255,0.12)]';
 
   // ════════════════════════════════════════════════════════════════════════
   return (
@@ -186,24 +182,17 @@ const DashboardView: React.FC<DashboardViewProps> = ({
         <div>
           {/* AI Chip */}
           <div
-            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full mb-2"
-            style={{
-              background: 'rgba(59, 130, 246,0.07)',
-              border: '1px solid rgba(59, 130, 246,0.15)',
-            }}
+            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full mb-2 bg-[rgba(59,130,246,0.07)] border border-[rgba(59,130,246,0.15)]"
           >
-            <Cpu size={10} style={{ color: '#3B82F6' }} />
-            <span
-              className="text-[10px] font-black uppercase tracking-[0.15em]"
-              style={{ color: '#3B82F6' }}
-            >
+            <Cpu size={10} className="text-[#3B82F6]" />
+            <span className="text-[10px] font-black uppercase tracking-[0.15em] text-[#3B82F6]">
               Apex AI
             </span>
           </div>
           <h1 className="text-[26px] font-black text-white tracking-tight leading-tight">
             {timeOfDay()}, {firstName} 👋
           </h1>
-          <p className="text-[12px] mt-0.5" style={{ color: '#3D5A80' }}>
+          <p className="text-[12px] mt-0.5 text-[#3D5A80]">
             {new Date().toLocaleDateString('pt-BR', {
               weekday: 'long',
               day: 'numeric',
@@ -217,21 +206,16 @@ const DashboardView: React.FC<DashboardViewProps> = ({
             <motion.button
               whileTap={{ scale: 0.88 }}
               onClick={() => onNavigate?.('admin')}
-              className="size-10 rounded-2xl flex items-center justify-center"
-              style={{
-                background: 'rgba(255,184,0,0.08)',
-                border: '1px solid rgba(255,184,0,0.18)',
-              }}
+              className="size-10 rounded-2xl flex items-center justify-center bg-[rgba(255,184,0,0.08)] border border-[rgba(255,184,0,0.18)]"
               title="Área Admin"
             >
-              <Shield size={17} style={{ color: '#FFB800' }} />
+              <Shield size={17} className="text-[#FFB800]" />
             </motion.button>
           )}
           <motion.button
             whileTap={{ scale: 0.88 }}
             onClick={() => onNavigate?.('settings')}
-            className="size-10 rounded-2xl overflow-hidden"
-            style={{ border: '1.5px solid rgba(59, 130, 246,0.12)', background: 'rgba(59, 130, 246,0.04)' }}
+            className="size-10 rounded-2xl overflow-hidden border-[1.5px] border-[rgba(59,130,246,0.12)] bg-[rgba(59,130,246,0.04)]"
             aria-label="Abrir perfil"
           >
             {user?.user_metadata?.avatar_url ? (
@@ -241,7 +225,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                 className="w-full h-full object-cover"
               />
             ) : (
-              <User size={18} className="m-auto" style={{ color: '#3D5A80', display: 'block', margin: 'auto', marginTop: '7px' }} />
+              <User size={18} className="block mx-auto mt-[7px] text-[#3D5A80]" />
             )}
           </motion.button>
         </div>
@@ -255,22 +239,12 @@ const DashboardView: React.FC<DashboardViewProps> = ({
               key={i}
               whileTap={{ scale: 0.9 }}
               onClick={() => onNavigate?.(qa.action)}
-              className="flex flex-col items-center gap-2 py-3.5 px-1 rounded-2xl transition-all"
-              style={{
-                background: 'rgba(59, 130, 246,0.03)',
-                border: '1px solid rgba(59, 130, 246,0.07)',
-              }}
+              className="flex flex-col items-center gap-2 py-3.5 px-1 rounded-2xl transition-all bg-[rgba(59,130,246,0.03)] border border-[rgba(59,130,246,0.07)]"
             >
-              <div
-                className="size-10 rounded-xl flex items-center justify-center"
-                style={{ background: qa.bg }}
-              >
-                <qa.icon size={18} color={qa.color} strokeWidth={2} />
+              <div className={`size-10 rounded-xl flex items-center justify-center ${qa.chipClassName}`}>
+                <qa.icon size={18} className={qa.iconClassName} strokeWidth={2} />
               </div>
-              <span
-                className="text-[10px] font-bold leading-none"
-                style={{ color: '#7A9FCC' }}
-              >
+              <span className="text-[10px] font-bold leading-none text-[#7A9FCC]">
                 {qa.label}
               </span>
             </motion.button>
@@ -281,45 +255,32 @@ const DashboardView: React.FC<DashboardViewProps> = ({
       {/* ─── Hero: Agenda Card ────────────────────────────────────────── */}
       <motion.div variants={item} className="px-5 mb-4">
         <div
-          className="relative overflow-hidden rounded-3xl p-5"
-          style={{
-            background: heroCardGradient,
-            boxShadow: heroCardShadow,
-          }}
+          className={`relative overflow-hidden rounded-3xl p-5 ${heroCardClassName}`}
         >
           {/* Atmospheric orbs */}
           <div
-            className="absolute -top-10 -right-10 size-48 rounded-full pointer-events-none"
-            style={{ background: 'rgba(59, 130, 246,0.15)', filter: 'blur(40px)' }}
+            className="absolute -top-10 -right-10 size-48 rounded-full pointer-events-none bg-[rgba(59,130,246,0.15)] blur-[40px]"
           />
           <div
-            className="absolute -bottom-8 -left-8 size-36 rounded-full pointer-events-none"
-            style={{ background: 'rgba(0,60,200,0.3)', filter: 'blur(32px)' }}
+            className="absolute -bottom-8 -left-8 size-36 rounded-full pointer-events-none bg-[rgba(0,60,200,0.3)] blur-[32px]"
           />
           {/* Grid overlay */}
-          <div
-            className="absolute inset-0 pointer-events-none rounded-3xl"
-            style={{
-              backgroundImage:
-                'linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px)',
-              backgroundSize: '24px 24px',
-            }}
-          />
+          <div className="absolute inset-0 pointer-events-none rounded-3xl bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[length:24px_24px]" />
 
           <div className="relative z-10">
             <div className="flex justify-between items-start mb-4">
               <div>
                 <div className="flex items-center gap-1.5 mb-2">
-                  <Activity size={10} style={{ color: heroTextMuted }} />
-                  <span className="text-[10px] font-black uppercase tracking-[0.15em]" style={{ color: heroTextMuted }}>
+                  <Activity size={10} className={heroTextMutedClassName} />
+                  <span className={`text-[10px] font-black uppercase tracking-[0.15em] ${heroTextMutedClassName}`}>
                     Protocolo do Dia
                   </span>
                 </div>
                 <div className="flex items-end gap-2">
-                  <span className="text-6xl font-black leading-none" style={{ color: heroTextPrimary }}>
+                  <span className={`text-6xl font-black leading-none ${heroTextPrimaryClassName}`}>
                     {appointments.length}
                   </span>
-                  <span className="text-sm font-semibold mb-2 leading-tight" style={{ color: heroTextSecondary }}>
+                  <span className={`text-sm font-semibold mb-2 leading-tight ${heroTextSecondaryClassName}`}>
                     {appointments.length === 1 ? 'sessão\nagendada' : 'sessões\nagendadas'}
                   </span>
                 </div>
@@ -327,20 +288,15 @@ const DashboardView: React.FC<DashboardViewProps> = ({
 
               {nextAppointment && (
                 <div
-                  className="rounded-2xl px-3.5 py-3 text-center min-w-[80px]"
-                  style={{
-                    background: 'rgba(0,0,0,0.22)',
-                    backdropFilter: 'blur(12px)',
-                    border: '1px solid rgba(255,255,255,0.1)',
-                  }}
+                  className="rounded-2xl px-3.5 py-3 text-center min-w-[80px] bg-[rgba(0,0,0,0.22)] backdrop-blur-[12px] border border-[rgba(255,255,255,0.1)]"
                 >
-                  <p className="text-[9px] font-black uppercase tracking-wider mb-1" style={{ color: heroTextMuted }}>
+                  <p className={`text-[9px] font-black uppercase tracking-wider mb-1 ${heroTextMutedClassName}`}>
                     Próximo
                   </p>
-                  <p className="text-2xl font-black leading-none" style={{ color: heroTextPrimary }}>
+                  <p className={`text-2xl font-black leading-none ${heroTextPrimaryClassName}`}>
                     {nextAppointment.time}
                   </p>
-                  <p className="text-[9px] mt-1 truncate max-w-[72px]" style={{ color: heroTextMuted }}>
+                  <p className={`text-[9px] mt-1 truncate max-w-[72px] ${heroTextMutedClassName}`}>
                     {nextAppointment.clientName.split(' ')[0]}
                   </p>
                 </div>
@@ -353,12 +309,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                 {appointments.map((a) => (
                   <span
                     key={a.id}
-                    className="text-[10px] font-bold px-2.5 py-1 rounded-full"
-                    style={{
-                      color: heroTextSecondary,
-                      background: 'rgba(255,255,255,0.1)',
-                      border: '1px solid rgba(255,255,255,0.08)',
-                    }}
+                    className={`text-[10px] font-bold px-2.5 py-1 rounded-full bg-[rgba(255,255,255,0.1)] border border-[rgba(255,255,255,0.08)] ${heroTextSecondaryClassName}`}
                   >
                     {a.time} · {a.clientName.split(' ')[0]}
                   </span>
@@ -369,13 +320,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
             <motion.button
               whileTap={{ scale: 0.97 }}
               onClick={() => onNavigate?.('calendar')}
-              className="w-full py-3 rounded-2xl font-bold text-sm flex items-center justify-center gap-2"
-              style={{
-                color: heroTextPrimary,
-                background: isLightTheme ? 'rgba(255,255,255,0.16)' : 'rgba(255,255,255,0.1)',
-                backdropFilter: 'blur(8px)',
-                border: '1px solid rgba(255,255,255,0.12)',
-              }}
+              className={`w-full py-3 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 backdrop-blur-[8px] border border-[rgba(255,255,255,0.12)] ${heroTextPrimaryClassName} ${heroGlassButtonClassName}`}
             >
               Ver agenda completa <ArrowRight size={14} />
             </motion.button>
@@ -388,51 +333,41 @@ const DashboardView: React.FC<DashboardViewProps> = ({
         <div className="grid grid-cols-2 gap-3">
           {/* Revenue */}
           <div
-            className="p-4 rounded-2xl"
-            style={{
-              background: 'rgba(0,255,136,0.04)',
-              border: '1px solid rgba(0,255,136,0.1)',
-            }}
+            className="p-4 rounded-2xl bg-[rgba(0,255,136,0.04)] border border-[rgba(0,255,136,0.1)]"
           >
             <div
-              className="size-9 rounded-xl flex items-center justify-center mb-3"
-              style={{ background: 'rgba(0,255,136,0.1)', border: '1px solid rgba(0,255,136,0.15)' }}
+              className="size-9 rounded-xl flex items-center justify-center mb-3 bg-[rgba(0,255,136,0.1)] border border-[rgba(0,255,136,0.15)]"
             >
-              <Wallet size={17} style={{ color: '#00FF88' }} />
+              <Wallet size={17} className="text-[#00FF88]" />
             </div>
-            <p className="text-[10px] font-bold uppercase tracking-wider mb-0.5" style={{ color: '#3D5A80' }}>
+            <p className="text-[10px] font-bold uppercase tracking-wider mb-0.5 text-[#3D5A80]">
               {revenueMonthLabel}
             </p>
             <p className="text-lg font-black text-white leading-tight">
               R$ {(revenue / 1000).toFixed(1)}k
             </p>
             <div className="flex items-center gap-1 mt-1">
-              <TrendingUp size={10} style={{ color: '#00FF88' }} />
-              <span className="text-[10px] font-black" style={{ color: '#00FF88' }}>+18%</span>
+              <TrendingUp size={10} className="text-[#00FF88]" />
+              <span className="text-[10px] font-black text-[#00FF88]">+18%</span>
             </div>
           </div>
 
           {/* Active Students */}
           <div
-            className="p-4 rounded-2xl"
-            style={{
-              background: 'rgba(59, 130, 246,0.04)',
-              border: '1px solid rgba(59, 130, 246,0.1)',
-            }}
+            className="p-4 rounded-2xl bg-[rgba(59,130,246,0.04)] border border-[rgba(59,130,246,0.1)]"
           >
             <div
-              className="size-9 rounded-xl flex items-center justify-center mb-3"
-              style={{ background: 'rgba(59, 130, 246,0.1)', border: '1px solid rgba(59, 130, 246,0.15)' }}
+              className="size-9 rounded-xl flex items-center justify-center mb-3 bg-[rgba(59,130,246,0.1)] border border-[rgba(59,130,246,0.15)]"
             >
-              <Users size={17} style={{ color: '#3B82F6' }} />
+              <Users size={17} className="text-[#3B82F6]" />
             </div>
-            <p className="text-[10px] font-bold uppercase tracking-wider mb-0.5" style={{ color: '#3D5A80' }}>
+            <p className="text-[10px] font-bold uppercase tracking-wider mb-0.5 text-[#3D5A80]">
               Alunos Ativos
             </p>
             <p className="text-lg font-black text-white leading-tight">{activeClients}</p>
             <div className="flex items-center gap-1 mt-1">
-              <Zap size={10} style={{ color: '#3B82F6' }} />
-              <span className="text-[10px] font-black" style={{ color: '#3B82F6' }}>Sincronizado</span>
+              <Zap size={10} className="text-[#3B82F6]" />
+              <span className="text-[10px] font-black text-[#3B82F6]">Sincronizado</span>
             </div>
           </div>
         </div>
@@ -443,31 +378,25 @@ const DashboardView: React.FC<DashboardViewProps> = ({
         <motion.div variants={item} className="px-5 mb-4">
           <div
             onClick={() => onSelectClient(atRiskClient)}
-            className="p-4 rounded-2xl cursor-pointer transition-all active:scale-[0.99] group"
-            style={{
-              background: 'rgba(255,184,0,0.04)',
-              border: '1px solid rgba(255,184,0,0.15)',
-            }}
+            className="p-4 rounded-2xl cursor-pointer transition-all active:scale-[0.99] group bg-[rgba(255,184,0,0.04)] border border-[rgba(255,184,0,0.15)]"
           >
             <div className="flex items-start gap-3">
               <div
-                className="size-10 rounded-xl flex items-center justify-center shrink-0 mt-0.5"
-                style={{ background: 'rgba(255,184,0,0.1)' }}
+                className="size-10 rounded-xl flex items-center justify-center shrink-0 mt-0.5 bg-[rgba(255,184,0,0.1)]"
               >
-                <ShieldAlert size={18} style={{ color: '#FFB800' }} />
+                <ShieldAlert size={18} className="text-[#FFB800]" />
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1">
                   <p className="text-xs font-black text-white">Alerta Neural</p>
                   <span
-                    className="px-1.5 py-0.5 text-[9px] font-black rounded uppercase tracking-wider"
-                    style={{ background: '#FFB800', color: '#030712' }}
+                    className="px-1.5 py-0.5 text-[9px] font-black rounded uppercase tracking-wider bg-[#FFB800] text-[#030712]"
                   >
                     IA
                   </span>
-                  <ChevronRight size={12} style={{ color: '#3D5A80', marginLeft: 'auto' }} className="ml-auto shrink-0" />
+                  <ChevronRight size={12} className="ml-auto shrink-0 text-[#3D5A80]" />
                 </div>
-                <p className="text-xs leading-relaxed" style={{ color: '#7A9FCC' }}>
+                <p className="text-xs leading-relaxed text-[#7A9FCC]">
                   <span className="text-white font-semibold">{atRiskClient.name}</span>{' '}
                   {(atRiskClient.status === 'at-risk' || atRiskClient.adherence < 50)
                     ? 'não treina há dias — risco de evasão detectado.'
@@ -479,12 +408,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                     const p = atRiskClient.phone?.replace(/\D/g, '');
                     if (p) window.open(`https://wa.me/55${p}`, '_blank', 'noopener,noreferrer');
                   }}
-                  className="mt-2.5 flex items-center gap-1.5 text-[11px] font-bold py-1.5 px-3 rounded-xl transition-all active:scale-95"
-                  style={{
-                    background: 'rgba(37,211,102,0.08)',
-                    border: '1px solid rgba(37,211,102,0.18)',
-                    color: '#25D366',
-                  }}
+                  className="mt-2.5 flex items-center gap-1.5 text-[11px] font-bold py-1.5 px-3 rounded-xl transition-all active:scale-95 bg-[rgba(37,211,102,0.08)] border border-[rgba(37,211,102,0.18)] text-[#25D366]"
                 >
                   <MessageCircle size={12} /> Enviar mensagem
                 </button>
@@ -500,8 +424,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
           <h3 className="text-[15px] font-black text-white tracking-tight">Base de Alunos</h3>
           <button
             onClick={() => onNavigate?.('clients')}
-            className="text-[11px] font-black uppercase tracking-wider transition-colors"
-            style={{ color: '#3B82F6' }}
+            className="text-[11px] font-black uppercase tracking-wider transition-colors text-[#3B82F6]"
           >
             Ver todos →
           </button>
@@ -522,11 +445,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                 transition={{ delay: i * 0.06, duration: 0.3 }}
                 onClick={() => onSelectClient(client)}
                 data-testid={`dashboard-client-card-${client.id}`}
-                className="flex items-center gap-3 p-3 rounded-2xl cursor-pointer transition-all active:scale-[0.99]"
-                style={{
-                  background: 'rgba(59, 130, 246,0.03)',
-                  border: '1px solid rgba(59, 130, 246,0.06)',
-                }}
+                className="flex items-center gap-3 p-3 rounded-2xl cursor-pointer transition-all active:scale-[0.99] bg-[rgba(59,130,246,0.03)] border border-[rgba(59,130,246,0.06)]"
               >
                 {/* Avatar */}
                 <div className="relative shrink-0">
@@ -534,31 +453,23 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                     <img
                       src={client.avatar}
                       alt={client.name}
-                      className="size-11 rounded-2xl object-cover"
-                      style={{ border: '1.5px solid rgba(59, 130, 246,0.1)' }}
+                      className="size-11 rounded-2xl object-cover border-[1.5px] border-[rgba(59,130,246,0.1)]"
                     />
                   ) : (
                     <div
-                      className="size-11 rounded-2xl flex items-center justify-center"
-                      style={{
-                        background: 'rgba(59, 130, 246,0.07)',
-                        border: '1px solid rgba(59, 130, 246,0.1)',
-                      }}
+                      className="size-11 rounded-2xl flex items-center justify-center bg-[rgba(59,130,246,0.07)] border border-[rgba(59,130,246,0.1)]"
                     >
-                      <User size={18} style={{ color: '#3D5A80' }} />
+                      <User size={18} className="text-[#3D5A80]" />
                     </div>
                   )}
                   <div
-                    className="absolute -bottom-0.5 -right-0.5 size-3 rounded-full border-2"
-                    style={{
-                      borderColor: 'var(--bg-void)',
-                      background:
-                        client.status === 'active'
-                          ? '#00FF88'
-                          : client.status === 'at-risk'
-                            ? '#FFB800'
-                            : '#3D5A80',
-                    }}
+                    className={`absolute -bottom-0.5 -right-0.5 size-3 rounded-full border-2 border-[var(--bg-void)] ${
+                      client.status === 'active'
+                        ? 'bg-[#00FF88]'
+                        : client.status === 'at-risk'
+                          ? 'bg-[#FFB800]'
+                          : 'bg-[#3D5A80]'
+                    }`}
                   />
                 </div>
 
@@ -567,38 +478,29 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                   <div className="flex justify-between items-center mb-1">
                     <h4 className="font-black text-white text-sm truncate">{client.name}</h4>
                     <span
-                      className="text-xs font-black ml-2 shrink-0"
-                      style={{
-                        color: client.adherence < 50 ? '#FFB800' : '#00FF88',
-                      }}
+                      className={`text-xs font-black ml-2 shrink-0 ${client.adherence < 50 ? 'text-[#FFB800]' : 'text-[#00FF88]'}`}
                     >
                       {client.adherence}%
                     </span>
                   </div>
-                  <p className="text-[11px] truncate mb-1.5" style={{ color: '#3D5A80' }}>
+                  <p className="text-[11px] truncate mb-1.5 text-[#3D5A80]">
                     {client.goal} · {client.lastTraining || 'Iniciando'}
                   </p>
                   {/* Progress bar */}
-                  <div
-                    className="h-[3px] w-full rounded-full overflow-hidden"
-                    style={{ background: 'rgba(59, 130, 246,0.06)' }}
-                  >
+                  <div className="h-[3px] w-full rounded-full overflow-hidden bg-[rgba(59,130,246,0.06)]">
                     <motion.div
                       initial={{ width: 0 }}
                       animate={{ width: `${client.adherence}%` }}
                       transition={{ delay: i * 0.08 + 0.2, duration: 0.7, ease: 'easeOut' }}
-                      className="h-full rounded-full"
-                      style={{
-                        background:
-                          client.adherence < 50
-                            ? 'linear-gradient(90deg, #FF8C00, #FFB800)'
-                            : 'linear-gradient(90deg, #1D4ED8, #00FF88)',
-                      }}
+                      className={`h-full rounded-full ${client.adherence < 50
+                        ? 'bg-[linear-gradient(90deg,#FF8C00,#FFB800)]'
+                        : 'bg-[linear-gradient(90deg,#1D4ED8,#00FF88)]'
+                        }`}
                     />
                   </div>
                 </div>
 
-                <ChevronRight size={13} style={{ color: '#3D5A80', flexShrink: 0 }} />
+                <ChevronRight size={13} className="shrink-0 text-[#3D5A80]" />
               </motion.div>
             ))
           ) : (
@@ -619,34 +521,15 @@ const DashboardView: React.FC<DashboardViewProps> = ({
         <motion.button
           whileTap={{ scale: 0.97 }}
           onClick={onOpenAI}
-          className="w-full py-4 rounded-2xl font-black uppercase tracking-wider flex items-center justify-center gap-3 relative overflow-hidden"
-          style={{
-            color: heroTextPrimary,
-            background: aiCtaGradient,
-            boxShadow: aiCtaShadow,
-          }}
+          className={`w-full py-4 rounded-2xl font-black uppercase tracking-wider flex items-center justify-center gap-3 relative overflow-hidden ${heroTextPrimaryClassName} ${aiCtaClassName}`}
         >
           {/* Shimmer */}
-          <div
-            className="absolute inset-0 pointer-events-none"
-            style={{
-              background:
-                'linear-gradient(105deg, transparent 30%, rgba(255,255,255,0.07) 50%, transparent 70%)',
-            }}
-          />
+          <div className="absolute inset-0 pointer-events-none bg-[linear-gradient(105deg,transparent_30%,rgba(255,255,255,0.07)_50%,transparent_70%)]" />
           {/* Grid overlay */}
-          <div
-            className="absolute inset-0 pointer-events-none rounded-2xl"
-            style={{
-              backgroundImage:
-                'linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px)',
-              backgroundSize: '20px 20px',
-            }}
-          />
+          <div className="absolute inset-0 pointer-events-none rounded-2xl bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[length:20px_20px]" />
           <div className="relative flex items-center gap-2.5 text-sm">
             <div
-              className="size-7 rounded-xl flex items-center justify-center"
-              style={{ background: isLightTheme ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.12)' }}
+              className={`size-7 rounded-xl flex items-center justify-center ${aiCtaChipClassName}`}
             >
               <Brain size={15} />
             </div>

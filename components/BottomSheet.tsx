@@ -12,12 +12,12 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({ isOpen, onClose, title
     // Prevent scrolling when open
     useEffect(() => {
         if (isOpen) {
-            document.body.style.overflow = 'hidden';
+            document.body.classList.add('body-lock-scroll');
         } else {
-            document.body.style.overflow = 'unset';
+            document.body.classList.remove('body-lock-scroll');
         }
         return () => {
-            document.body.style.overflow = 'unset';
+            document.body.classList.remove('body-lock-scroll');
         };
     }, [isOpen]);
 
@@ -48,8 +48,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({ isOpen, onClose, title
                                 onClose();
                             }
                         }}
-                        className="fixed bottom-0 left-0 right-0 z-50 border-t border-white/10 rounded-t-[32px] overflow-hidden shadow-2xl safe-area-bottom w-full max-w-md mx-auto"
-                        style={{ background: 'var(--bg-surface)' }}
+                        className="fixed bottom-0 left-0 right-0 z-50 border-t border-white/10 rounded-t-[32px] overflow-hidden shadow-2xl safe-area-bottom w-full max-w-md mx-auto bg-[var(--bg-surface)]"
                     >
                         {/* Drag Handle */}
                         <div className="w-full flex justify-center py-4 cursor-grab active:cursor-grabbing">

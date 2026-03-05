@@ -21,7 +21,7 @@ import {
 import { logFrontendError } from './services/loggingService';
 import { useAuthSessionSync } from './services/app/useAuthSessionSync';
 import { useServiceWorkerUpdates } from './services/app/useServiceWorkerUpdates';
-import { useHistoryNavigationSync } from './services/app/useHistoryNavigationSync';
+import { useRouterNavigationSync } from './services/app/useRouterNavigationSync';
 import { useDeepLinkHydration } from './services/app/useDeepLinkHydration';
 import { useFrontendErrorCapture } from './services/app/useFrontendErrorCapture';
 import { usePendingRequestsPolling } from './services/app/usePendingRequestsPolling';
@@ -94,7 +94,7 @@ function App() {
   } = useServiceWorkerUpdates();
   const pendingRequests = usePendingRequestsPolling({ user, userProfile });
 
-  useHistoryNavigationSync({
+  useRouterNavigationSync({
     currentView,
     selectedClient,
     activeWorkout,

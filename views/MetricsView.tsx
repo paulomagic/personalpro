@@ -78,7 +78,7 @@ const MetricsView: React.FC<MetricsViewProps> = ({ user, onBack }) => {
     );
 
     return (
-        <div className="max-w-md mx-auto min-h-screen text-white selection:bg-cyan-500/20 pb-12" style={{ background: 'var(--bg-void)' }}>
+        <div className="max-w-md mx-auto min-h-screen text-white selection:bg-cyan-500/20 pb-12 bg-[var(--bg-void)]">
 
             {/* AI Header */}
             <PageHeader
@@ -91,18 +91,16 @@ const MetricsView: React.FC<MetricsViewProps> = ({ user, onBack }) => {
             <main className="px-5 space-y-5">
                 {/* Period Selector */}
                 <div
-                    className="flex rounded-2xl p-1"
-                    style={{ background: 'rgba(59, 130, 246,0.04)', border: '1px solid rgba(59, 130, 246,0.08)' }}
+                    className="flex rounded-2xl p-1 bg-[rgba(59,130,246,0.04)] border border-[rgba(59,130,246,0.08)]"
                 >
                     {periods.map((period) => (
                         <button
                             key={period}
                             onClick={() => setActivePeriod(period)}
-                            className="flex-1 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all"
-                            style={period === activePeriod
-                                ? { background: 'linear-gradient(135deg,#1E3A8A,#3B82F6)', color: 'white', boxShadow: '0 4px 16px rgba(30, 58, 138,0.3)' }
-                                : { color: '#3D5A80' }
-                            }
+                            className={`flex-1 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${period === activePeriod
+                                ? 'bg-[linear-gradient(135deg,#1E3A8A,#3B82F6)] text-white shadow-[0_4px_16px_rgba(30,58,138,0.3)]'
+                                : 'text-[#3D5A80]'
+                                }`}
                         >
                             {period}
                         </button>
@@ -112,39 +110,36 @@ const MetricsView: React.FC<MetricsViewProps> = ({ user, onBack }) => {
                 {/* Stats Grid */}
                 <div className="grid grid-cols-2 gap-3">
                     {[
-                        { icon: Users, label: 'Alunos Ativos', value: loading ? null : metrics.activeClients, color: '#3B82F6', bg: 'rgba(59, 130, 246,0.05)', border: 'rgba(59, 130, 246,0.12)' },
-                        { icon: Dumbbell, label: 'Treinos Criados', value: loading ? null : metrics.totalWorkouts, color: '#00FF88', bg: 'rgba(0,255,136,0.05)', border: 'rgba(0,255,136,0.12)' },
-                        { icon: Activity, label: 'Aderência Média', value: loading ? null : `${metrics.avgAdherence}%`, color: '#FFB800', bg: 'rgba(255,184,0,0.05)', border: 'rgba(255,184,0,0.12)' },
-                        { icon: TrendingUp, label: 'Total Alunos', value: loading ? null : metrics.totalClients, color: '#0099FF', bg: 'rgba(0,153,255,0.05)', border: 'rgba(0,153,255,0.12)' },
+                        { icon: Users, label: 'Alunos Ativos', value: loading ? null : metrics.activeClients, cardClassName: 'bg-[rgba(59,130,246,0.05)] border-[rgba(59,130,246,0.12)]', chipClassName: 'bg-[#3B82F614] border-[#3B82F622]', iconClassName: 'text-[#3B82F6]' },
+                        { icon: Dumbbell, label: 'Treinos Criados', value: loading ? null : metrics.totalWorkouts, cardClassName: 'bg-[rgba(0,255,136,0.05)] border-[rgba(0,255,136,0.12)]', chipClassName: 'bg-[#00FF8814] border-[#00FF8822]', iconClassName: 'text-[#00FF88]' },
+                        { icon: Activity, label: 'Aderência Média', value: loading ? null : `${metrics.avgAdherence}%`, cardClassName: 'bg-[rgba(255,184,0,0.05)] border-[rgba(255,184,0,0.12)]', chipClassName: 'bg-[#FFB80014] border-[#FFB80022]', iconClassName: 'text-[#FFB800]' },
+                        { icon: TrendingUp, label: 'Total Alunos', value: loading ? null : metrics.totalClients, cardClassName: 'bg-[rgba(0,153,255,0.05)] border-[rgba(0,153,255,0.12)]', chipClassName: 'bg-[#0099FF14] border-[#0099FF22]', iconClassName: 'text-[#0099FF]' },
                     ].map((stat, i) => (
                         <div
                             key={i}
-                            className="p-5 rounded-2xl"
-                            style={{ background: stat.bg, border: `1px solid ${stat.border}` }}
+                            className={`p-5 rounded-2xl border ${stat.cardClassName}`}
                         >
                             <div
-                                className="size-9 rounded-xl flex items-center justify-center mb-3"
-                                style={{ background: `${stat.color}14`, border: `1px solid ${stat.color}22` }}
+                                className={`size-9 rounded-xl flex items-center justify-center mb-3 border ${stat.chipClassName}`}
                             >
-                                <stat.icon size={17} style={{ color: stat.color }} />
+                                <stat.icon size={17} className={stat.iconClassName} />
                             </div>
                             {loading
-                                ? <div className="h-7 w-16 rounded-lg animate-pulse" style={{ background: 'rgba(255,255,255,0.05)' }} />
+                                ? <div className="h-7 w-16 rounded-lg animate-pulse bg-[rgba(255,255,255,0.05)]" />
                                 : <p className="text-2xl font-black text-white tabular-nums">{stat.value}</p>
                             }
-                            <p className="text-[9px] font-black uppercase tracking-widest mt-1" style={{ color: '#3D5A80' }}>{stat.label}</p>
+                            <p className="text-[9px] font-black uppercase tracking-widest mt-1 text-[#3D5A80]">{stat.label}</p>
                         </div>
                     ))}
                 </div>
 
                 {/* Weekly Chart */}
                 <div
-                    className="rounded-3xl p-6 pb-8"
-                    style={{ background: 'rgba(59, 130, 246,0.03)', border: '1px solid rgba(59, 130, 246,0.08)' }}
+                    className="rounded-3xl p-6 pb-8 bg-[rgba(59,130,246,0.03)] border border-[rgba(59,130,246,0.08)]"
                 >
                     <div className="flex items-center justify-between mb-6">
                         <h3 className="text-sm font-black text-white uppercase tracking-wider">Carga Semanal</h3>
-                        <div className="size-2 rounded-full animate-pulse" style={{ background: '#3B82F6', boxShadow: '0 0 8px #3B82F6' }} />
+                        <div className="size-2 rounded-full animate-pulse bg-[#3B82F6] shadow-[0_0_8px_#3B82F6]" />
                     </div>
                     <div className="h-44 flex items-end justify-between gap-2">
                         {metrics.weeklyLoad.map((height, i) => (
@@ -160,7 +155,7 @@ const MetricsView: React.FC<MetricsViewProps> = ({ user, onBack }) => {
                                         }}
                                     />
                                 </div>
-                                <span className="text-[9px] font-black" style={{ color: '#3D5A80' }}>
+                                <span className="text-[9px] font-black text-[#3D5A80]">
                                     {['S', 'T', 'Q', 'Q', 'S', 'S', 'D'][i]}
                                 </span>
                             </div>

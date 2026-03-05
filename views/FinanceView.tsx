@@ -29,6 +29,24 @@ interface Payment {
     paymentMethod?: string;
 }
 
+const paymentStatusBadgeClassName: Record<Payment['status'], string> = {
+    paid: 'bg-[rgba(0,255,136,0.1)] text-[#00FF88]',
+    overdue: 'bg-[rgba(255,51,102,0.1)] text-[#FF3366]',
+    pending: 'bg-[rgba(255,184,0,0.1)] text-[#FFB800]'
+};
+
+const paymentStatusDotClassName: Record<Payment['status'], string> = {
+    paid: 'bg-[#00FF88]',
+    overdue: 'bg-[#FF3366]',
+    pending: 'bg-[#FFB800]'
+};
+
+const paymentStatusIconClassName: Record<Payment['status'], string> = {
+    paid: 'text-[#030712]',
+    overdue: 'text-white',
+    pending: 'text-[#030712]'
+};
+
 const FinanceView: React.FC<FinanceViewProps> = ({ user, onBack }) => {
     const queryClient = useQueryClient();
     const [activeTab, setActiveTab] = useState<'overview' | 'pending' | 'history'>('overview');
@@ -246,16 +264,14 @@ const FinanceView: React.FC<FinanceViewProps> = ({ user, onBack }) => {
 
     return (
         <div
-            className="max-w-md mx-auto min-h-screen text-white pb-32"
-            style={{ background: 'var(--bg-void)' }}
+            className="max-w-md mx-auto min-h-screen text-white pb-32 bg-[var(--bg-void)]"
         >
             {showSuccessToast && (
                 <div className="fixed top-4 left-4 right-4 max-w-md mx-auto z-50 animate-slide-down">
                     <div
-                        className="px-5 py-3 rounded-2xl flex items-center gap-3"
-                        style={{ background: 'rgba(0,255,136,0.08)', border: '1px solid rgba(0,255,136,0.15)', backdropFilter: 'blur(20px)' }}
+                        className="px-5 py-3 rounded-2xl flex items-center gap-3 bg-[rgba(0,255,136,0.08)] border border-[rgba(0,255,136,0.15)] backdrop-blur-xl"
                     >
-                        <CheckCircle size={16} style={{ color: '#00FF88' }} />
+                        <CheckCircle size={16} className="text-[#00FF88]" />
                         <span className="font-black text-xs uppercase tracking-widest text-white">{showSuccessToast}</span>
                     </div>
                 </div>
@@ -270,10 +286,9 @@ const FinanceView: React.FC<FinanceViewProps> = ({ user, onBack }) => {
                 rightSlot={
                     <button
                         onClick={handleGenerateReport}
-                        className="size-10 rounded-2xl flex items-center justify-center active:scale-90 transition-all"
-                        style={{ background: 'rgba(0,255,136,0.07)', border: '1px solid rgba(0,255,136,0.12)' }}
+                        className="size-10 rounded-2xl flex items-center justify-center active:scale-90 transition-all bg-[rgba(0,255,136,0.07)] border border-[rgba(0,255,136,0.12)]"
                     >
-                        <Download size={15} style={{ color: '#00FF88' }} />
+                        <Download size={15} className="text-[#00FF88]" />
                     </button>
                 }
             />
@@ -281,50 +296,43 @@ const FinanceView: React.FC<FinanceViewProps> = ({ user, onBack }) => {
             {loading ? (
                 <div className="px-5 space-y-4">
                     <div
-                        className="rounded-3xl p-6 flex items-center gap-3 animate-pulse"
-                        style={{ background: 'rgba(59, 130, 246,0.06)', border: '1px solid rgba(59, 130, 246,0.12)' }}
+                        className="rounded-3xl p-6 flex items-center gap-3 animate-pulse bg-[rgba(59,130,246,0.06)] border border-[rgba(59,130,246,0.12)]"
                     >
                         <div className="size-5 rounded-full border-2 border-blue-500/30 border-t-blue-500 animate-spin" />
-                        <p className="text-xs font-black uppercase tracking-widest" style={{ color: '#3D5A80' }}>
+                        <p className="text-xs font-black uppercase tracking-widest text-[#3D5A80]">
                             Carregando Financeiro...
                         </p>
                     </div>
-                    <div className="h-44 rounded-3xl animate-pulse" style={{ background: 'rgba(59, 130, 246,0.06)', border: '1px solid rgba(59, 130, 246,0.1)' }} />
+                    <div className="h-44 rounded-3xl animate-pulse bg-[rgba(59,130,246,0.06)] border border-[rgba(59,130,246,0.1)]" />
                     <PaymentCardSkeleton />
                     <PaymentCardSkeleton />
                     <PaymentCardSkeleton />
                 </div>
             ) : payments.length === 0 ? (
                 <div className="px-5 py-20 flex flex-col items-center text-center">
-                    <div className="size-16 rounded-2xl flex items-center justify-center mb-4" style={{ background: 'rgba(0,255,136,0.07)', border: '1px solid rgba(0,255,136,0.12)' }}>
-                        <span className="material-symbols-outlined text-2xl" style={{ color: '#00FF88' }}>receipt_long</span>
+                    <div className="size-16 rounded-2xl flex items-center justify-center mb-4 bg-[rgba(0,255,136,0.07)] border border-[rgba(0,255,136,0.12)]">
+                        <span className="material-symbols-outlined text-2xl text-[#00FF88]">receipt_long</span>
                     </div>
                     <p className="font-black text-white mb-1">Nenhuma transação</p>
-                    <p className="text-xs" style={{ color: '#3D5A80' }}>Adicione pagamentos para acompanhar o fluxo de caixa.</p>
+                    <p className="text-xs text-[#3D5A80]">Adicione pagamentos para acompanhar o fluxo de caixa.</p>
                 </div>
             ) : (
                 <>
                     {/* Revenue Hero Card */}
                     <div
-                        className="mx-5 relative overflow-hidden rounded-3xl p-6 mb-5"
-                        style={{
-                            background: 'rgba(0,255,136,0.04)',
-                            border: '1px solid rgba(0,255,136,0.12)',
-                            boxShadow: '0 0 60px -20px rgba(0,255,136,0.15)',
-                        }}
+                        className="mx-5 relative overflow-hidden rounded-3xl p-6 mb-5 bg-[rgba(0,255,136,0.04)] border border-[rgba(0,255,136,0.12)] shadow-[0_0_60px_-20px_rgba(0,255,136,0.15)]"
                     >
                         {/* Glow orb */}
-                        <div className="absolute -top-10 -right-10 size-40 rounded-full pointer-events-none" style={{ background: 'radial-gradient(circle, rgba(0,255,136,0.1) 0%, transparent 70%)', filter: 'blur(30px)' }} />
+                        <div className="absolute -top-10 -right-10 size-40 rounded-full pointer-events-none bg-[radial-gradient(circle,rgba(0,255,136,0.1)_0%,transparent_70%)] blur-[30px]" />
 
                         <div className="relative z-10">
-                            <p className="text-[10px] font-black uppercase tracking-[0.2em] mb-1" style={{ color: '#00FF88' }}>Receita Confirmada</p>
+                            <p className="text-[10px] font-black uppercase tracking-[0.2em] mb-1 text-[#00FF88]">Receita Confirmada</p>
                             <div className="flex items-end gap-3 mb-1">
                                 <h2 className="text-4xl font-black text-white leading-none">
                                     R$ {stats.monthlyRevenue.toLocaleString('pt-BR')}
                                 </h2>
                                 <span
-                                    className="mb-1 text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full flex items-center gap-1"
-                                    style={{ background: 'rgba(0,255,136,0.1)', color: '#00FF88', border: '1px solid rgba(0,255,136,0.15)' }}
+                                    className="mb-1 text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full flex items-center gap-1 bg-[rgba(0,255,136,0.1)] text-[#00FF88] border border-[rgba(0,255,136,0.15)]"
                                 >
                                     <TrendingUp size={10} /> Live
                                 </span>
@@ -333,26 +341,23 @@ const FinanceView: React.FC<FinanceViewProps> = ({ user, onBack }) => {
                             {/* Mini stats */}
                             <div className="flex gap-4 mt-4">
                                 <div>
-                                    <p className="text-[9px] font-black uppercase tracking-widest" style={{ color: '#3D5A80' }}>Pendente</p>
-                                    <p className="text-sm font-black" style={{ color: '#FFB800' }}>R$ {stats.pending.toLocaleString('pt-BR')}</p>
+                                    <p className="text-[9px] font-black uppercase tracking-widest text-[#3D5A80]">Pendente</p>
+                                    <p className="text-sm font-black text-[#FFB800]">R$ {stats.pending.toLocaleString('pt-BR')}</p>
                                 </div>
-                                <div
-                                    className="w-px"
-                                    style={{ background: 'rgba(59, 130, 246,0.08)' }}
-                                />
+                                <div className="w-px bg-[rgba(59,130,246,0.08)]" />
                                 <div>
-                                    <p className="text-[9px] font-black uppercase tracking-widest" style={{ color: '#3D5A80' }}>Atrasado</p>
-                                    <p className="text-sm font-black" style={{ color: '#FF3366' }}>R$ {stats.overdue.toLocaleString('pt-BR')}</p>
+                                    <p className="text-[9px] font-black uppercase tracking-widest text-[#3D5A80]">Atrasado</p>
+                                    <p className="text-sm font-black text-[#FF3366]">R$ {stats.overdue.toLocaleString('pt-BR')}</p>
                                 </div>
                             </div>
 
                             <div className="h-36 w-full min-w-0 mt-2">
                                 {enableHeavyUI ? (
-                                    <Suspense fallback={<div className="h-full rounded-2xl animate-pulse" style={{ background: 'rgba(0,255,136,0.04)' }} />}>
+                                    <Suspense fallback={<div className="h-full rounded-2xl animate-pulse bg-[rgba(0,255,136,0.04)]" />}>
                                         <FinanceOverviewChart data={financeData} />
                                     </Suspense>
                                 ) : (
-                                    <div className="h-full rounded-2xl animate-pulse" style={{ background: 'rgba(0,255,136,0.04)' }} />
+                                    <div className="h-full rounded-2xl animate-pulse bg-[rgba(0,255,136,0.04)]" />
                                 )}
                             </div>
                         </div>
@@ -364,18 +369,16 @@ const FinanceView: React.FC<FinanceViewProps> = ({ user, onBack }) => {
                     </div>
                     <div className="px-5 mb-5">
                         <div
-                            className="flex rounded-2xl p-1 relative"
-                            style={{ background: 'rgba(59, 130, 246,0.04)', border: '1px solid rgba(59, 130, 246,0.08)' }}
+                            className="flex rounded-2xl p-1 relative bg-[rgba(59,130,246,0.04)] border border-[rgba(59,130,246,0.08)]"
                         >
                             {['overview', 'pending', 'history'].map((tab) => (
                                 <button
                                     key={tab}
                                     onClick={() => setActiveTab(tab as any)}
-                                    className="flex-1 py-2.5 text-[10px] font-black uppercase tracking-wider rounded-xl transition-all"
-                                    style={activeTab === tab
-                                        ? { background: 'linear-gradient(135deg,#1E3A8A,#3B82F6)', color: 'white' }
-                                        : { color: '#3D5A80' }
-                                    }
+                                    className={`flex-1 py-2.5 text-[10px] font-black uppercase tracking-wider rounded-xl transition-all ${activeTab === tab
+                                        ? 'bg-[linear-gradient(135deg,#1E3A8A,#3B82F6)] text-white'
+                                        : 'text-[#3D5A80]'
+                                        }`}
                                 >
                                     {tab === 'overview' ? 'Geral' : tab === 'pending' ? 'Cobranças' : 'Histórico'}
                                 </button>
@@ -389,48 +392,39 @@ const FinanceView: React.FC<FinanceViewProps> = ({ user, onBack }) => {
                             displayPayments.map((payment) => (
                                 <div
                                     key={payment.id}
-                                    className="rounded-2xl p-4 flex items-center gap-3.5 active:scale-[0.98] transition-all cursor-pointer"
-                                    style={{ background: 'rgba(59, 130, 246,0.03)', border: '1px solid rgba(59, 130, 246,0.06)' }}
+                                    className="rounded-2xl p-4 flex items-center gap-3.5 active:scale-[0.98] transition-all cursor-pointer bg-[rgba(59,130,246,0.03)] border border-[rgba(59,130,246,0.06)]"
                                     onClick={() => setShowPaymentModal(payment)}
                                 >
                                     <div className="relative shrink-0">
                                         {payment.clientAvatar ? (
-                                            <div className="size-12 rounded-xl bg-cover bg-center" style={{ backgroundImage: `url(${payment.clientAvatar})`, border: '1px solid rgba(59, 130, 246,0.1)' }} />
+                                            <img className="size-12 rounded-xl object-cover border border-[rgba(59,130,246,0.1)]" src={payment.clientAvatar} alt={payment.clientName} />
                                         ) : (
-                                            <div className="size-12 rounded-xl flex items-center justify-center" style={{ background: 'rgba(59, 130, 246,0.07)', border: '1px solid rgba(59, 130, 246,0.1)' }}>
-                                                <span className="material-symbols-outlined text-sm" style={{ color: '#3D5A80' }}>person</span>
+                                            <div className="size-12 rounded-xl flex items-center justify-center bg-[rgba(59,130,246,0.07)] border border-[rgba(59,130,246,0.1)]">
+                                                <span className="material-symbols-outlined text-sm text-[#3D5A80]">person</span>
                                             </div>
                                         )}
                                         <div
-                                            className="absolute -bottom-1 -right-1 size-4 rounded-full flex items-center justify-center"
-                                            style={{
-                                                background: payment.status === 'paid' ? '#00FF88' : payment.status === 'overdue' ? '#FF3366' : '#FFB800',
-                                                border: '2px solid var(--bg-void)',
-                                            }}
+                                            className={`absolute -bottom-1 -right-1 size-4 rounded-full flex items-center justify-center border-2 border-[var(--bg-void)] ${paymentStatusDotClassName[payment.status]}`}
                                         >
                                             {payment.status === 'paid'
-                                                ? <CheckCircle size={8} style={{ color: '#030712' }} />
+                                                ? <CheckCircle size={8} className={paymentStatusIconClassName[payment.status]} />
                                                 : payment.status === 'overdue'
-                                                    ? <AlertCircle size={8} style={{ color: 'white' }} />
-                                                    : <Clock size={8} style={{ color: '#030712' }} />
+                                                    ? <AlertCircle size={8} className={paymentStatusIconClassName[payment.status]} />
+                                                    : <Clock size={8} className={paymentStatusIconClassName[payment.status]} />
                                             }
                                         </div>
                                     </div>
 
                                     <div className="flex-1 min-w-0">
                                         <h4 className="font-black text-white text-sm truncate">{payment.clientName}</h4>
-                                        <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: '#3D5A80' }}>{payment.plan} • {payment.dueDate}</p>
+                                        <p className="text-[10px] font-bold uppercase tracking-wider text-[#3D5A80]">{payment.plan} • {payment.dueDate}</p>
                                     </div>
 
                                     <div className="text-right shrink-0">
                                         <p className="font-black text-white text-sm">R$ {payment.amount}</p>
                                         <button
                                             onClick={(e) => { e.stopPropagation(); setShowStatusModal(payment); }}
-                                            className="text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full"
-                                            style={{
-                                                background: payment.status === 'paid' ? 'rgba(0,255,136,0.1)' : payment.status === 'overdue' ? 'rgba(255,51,102,0.1)' : 'rgba(255,184,0,0.1)',
-                                                color: payment.status === 'paid' ? '#00FF88' : payment.status === 'overdue' ? '#FF3366' : '#FFB800',
-                                            }}
+                                            className={`text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full ${paymentStatusBadgeClassName[payment.status]}`}
                                         >
                                             {payment.status === 'paid' ? 'Pago' : payment.status === 'overdue' ? 'Atrasado' : 'Pendente'}
                                         </button>

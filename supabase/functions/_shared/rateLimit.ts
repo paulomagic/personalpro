@@ -37,9 +37,15 @@ function checkRateLimitInMemory(rateKey: string, max: number, windowMs: number):
     };
 }
 
-export async function checkRateLimit(rateKey: string): Promise<RateLimitResult> {
-    const max = Number(Deno.env.get("RATE_LIMIT_MAX") || "20");
-    const windowMs = Number(Deno.env.get("RATE_LIMIT_WINDOW_MS") || "60000");
+export async function checkRateLimit(
+    rateKey: string,
+    overrideMax?: number,
+    overrideWindowSeconds?: number
+): Promise<RateLimitResult> {
+    const max = overrideMax ?? Number(Deno.env.get("RATE_LIMIT_MAX") || "20");
+    const windowMs = overrideWindowSeconds != null
+        ? Math.max(1000, overrideWindowSeconds * 1000)
+        : Number(Deno.env.get("RATE_LIMIT_WINDOW_MS") || "60000");
     const windowSeconds = Math.max(1, Math.ceil(windowMs / 1000));
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL");

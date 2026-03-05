@@ -239,6 +239,57 @@ body {
   overflow-x: hidden;
 }
 
+.body-lock-scroll {
+  overflow: hidden;
+}
+
+.page-header-glow-cyan {
+  background: radial-gradient(ellipse 60% 80% at 50% 0%, rgba(59, 130, 246, 0.08) 0%, transparent 100%);
+}
+
+.page-header-glow-blue {
+  background: radial-gradient(ellipse 60% 80% at 50% 0%, rgba(30, 58, 138, 0.08) 0%, transparent 100%);
+}
+
+.page-header-glow-green {
+  background: radial-gradient(ellipse 60% 80% at 50% 0%, rgba(0, 255, 136, 0.06) 0%, transparent 100%);
+}
+
+.page-header-glow-amber {
+  background: radial-gradient(ellipse 60% 80% at 50% 0%, rgba(255, 184, 0, 0.08) 0%, transparent 100%);
+}
+
+.page-header-glow-red {
+  background: radial-gradient(ellipse 60% 80% at 50% 0%, rgba(255, 51, 102, 0.06) 0%, transparent 100%);
+}
+
+.nav-shell {
+  backdrop-filter: blur(32px);
+  -webkit-backdrop-filter: blur(32px);
+}
+
+.nav-shell-light {
+  background: rgba(11, 23, 53, 0.95);
+  border: 1px solid rgba(125, 170, 255, 0.32);
+  box-shadow: 0 -2px 30px rgba(15, 23, 42, 0.2), 0 10px 28px rgba(15, 23, 42, 0.28), inset 0 1px 0 rgba(160, 196, 255, 0.18);
+}
+
+.nav-shell-dark-theme {
+  background: rgba(6, 13, 31, 0.96);
+  border: 1px solid rgba(59, 130, 246, 0.08);
+  box-shadow: 0 -2px 40px rgba(0, 0, 0, 0.6), 0 8px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(59, 130, 246, 0.05);
+}
+
+.nav-pill-light {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.26) 0%, rgba(125, 170, 255, 0.2) 100%);
+  border: 1px solid rgba(125, 170, 255, 0.45);
+}
+
+.nav-pill-dark {
+  background: linear-gradient(135deg, rgba(30, 58, 138, 0.2) 0%, rgba(59, 130, 246, 0.12) 100%);
+  border: 1px solid rgba(59, 130, 246, 0.18);
+}
+
 /* ── Dot Grid Background (AI aesthetic) ── */
 body::before {
   content: '';

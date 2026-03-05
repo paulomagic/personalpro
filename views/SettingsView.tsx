@@ -13,6 +13,7 @@ import {
     subscribeToPushNotifications,
     unsubscribeFromPushNotifications
 } from '../services/pushNotifications';
+import { sendPushTestNotification } from '../services/pushNotificationSender';
 
 interface SettingsViewProps {
     user?: any;
@@ -58,6 +59,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user, onBack, onLogout }) =
     const [newPassword, setNewPassword] = React.useState('');
     const [confirmPassword, setConfirmPassword] = React.useState('');
     const [securitySaving, setSecuritySaving] = React.useState(false);
+    const [sendingTestPush, setSendingTestPush] = React.useState(false);
 
     // States for Toast
     const [toastMessage, setToastMessage] = React.useState<string | null>(null);
@@ -81,6 +83,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user, onBack, onLogout }) =
                     endpoint: subscription.endpoint,
                     p256dh: subscription.toJSON()?.keys?.p256dh || null,
                     auth: subscription.toJSON()?.keys?.auth || null,
+                    user_agent: typeof navigator !== 'undefined' ? navigator.userAgent : null,
                     updated_at: new Date().toISOString()
                 }, {
                     onConflict: 'user_id,endpoint'
@@ -164,12 +167,54 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user, onBack, onLogout }) =
     };
 
     const menuItems = [
-        { icon: User, label: 'Meus Dados', subtitle: 'Nome, email, foto', action: () => setActiveModal('profile'), color: '#3B82F6' },
-        { icon: Bell, label: 'Notificações', subtitle: 'Push e email', action: () => setActiveModal('notifications'), color: '#0099FF' },
-        { icon: Palette, label: 'Aparência', subtitle: 'Tema e cores', action: () => setActiveModal('appearance'), color: '#00FF88' },
-        { icon: Shield, label: 'Segurança', subtitle: 'Senha e 2FA', action: () => setActiveModal('security'), color: '#FFB800' },
-        { icon: CreditCard, label: 'Assinatura', subtitle: 'Plano Premium', action: () => showToast('Você possui o plano Apex Elite'), color: '#3B82F6' },
-        { icon: HelpCircle, label: 'Ajuda', subtitle: 'FAQ e suporte', action: () => setActiveModal('help'), color: '#7A9FCC' },
+        {
+            icon: User,
+            label: 'Meus Dados',
+            subtitle: 'Nome, email, foto',
+            action: () => setActiveModal('profile'),
+            chipClassName: 'bg-[#3B82F61F] border border-[#3B82F633]',
+            iconClassName: 'text-[#3B82F6]'
+        },
+        {
+            icon: Bell,
+            label: 'Notificações',
+            subtitle: 'Push e email',
+            action: () => setActiveModal('notifications'),
+            chipClassName: 'bg-[#0099FF1F] border border-[#0099FF33]',
+            iconClassName: 'text-[#0099FF]'
+        },
+        {
+            icon: Palette,
+            label: 'Aparência',
+            subtitle: 'Tema e cores',
+            action: () => setActiveModal('appearance'),
+            chipClassName: 'bg-[#00FF881F] border border-[#00FF8833]',
+            iconClassName: 'text-[#00FF88]'
+        },
+        {
+            icon: Shield,
+            label: 'Segurança',
+            subtitle: 'Senha e 2FA',
+            action: () => setActiveModal('security'),
+            chipClassName: 'bg-[#FFB8001F] border border-[#FFB80033]',
+            iconClassName: 'text-[#FFB800]'
+        },
+        {
+            icon: CreditCard,
+            label: 'Assinatura',
+            subtitle: 'Plano Premium',
+            action: () => showToast('Você possui o plano Apex Elite'),
+            chipClassName: 'bg-[#3B82F61F] border border-[#3B82F633]',
+            iconClassName: 'text-[#3B82F6]'
+        },
+        {
+            icon: HelpCircle,
+            label: 'Ajuda',
+            subtitle: 'FAQ e suporte',
+            action: () => setActiveModal('help'),
+            chipClassName: 'bg-[#7A9FCC1F] border border-[#7A9FCC33]',
+            iconClassName: 'text-[#7A9FCC]'
+        },
     ];
 
     // Save profile changes to Supabase Auth
@@ -202,6 +247,24 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user, onBack, onLogout }) =
         saveNotificationPrefs(notifState);
         showToast('Preferências de notificação salvas.');
         setActiveModal(null);
+    };
+
+    const handleSendTestPush = async () => {
+        if (isDemo) {
+            showToast('Modo demo: push de teste indisponível', 'error');
+            return;
+        }
+
+        setSendingTestPush(true);
+        try {
+            const result = await sendPushTestNotification({
+                body: 'Se você recebeu esta mensagem, o Web Push está configurado corretamente.',
+                url: '/settings'
+            });
+            showToast(result.message, result.success ? 'success' : 'error');
+        } finally {
+            setSendingTestPush(false);
+        }
     };
 
     const handleSaveSecurity = async () => {
@@ -263,22 +326,19 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user, onBack, onLogout }) =
 
 
     return (
-        <div className="max-w-md mx-auto min-h-screen text-white selection:bg-cyan-500/20 pb-12 relative" style={{ background: 'var(--bg-void)' }}>
+        <div className="max-w-md mx-auto min-h-screen text-white selection:bg-cyan-500/20 pb-12 relative bg-[var(--bg-void)]">
 
             {/* Toast Feedback */}
             {toastMessage && (
                 <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[60] animate-slide-down w-max max-w-[90%]">
                     <div
-                        className="px-6 py-3 rounded-full flex items-center gap-3"
-                        style={{
-                            background: toastType === 'error' ? 'rgba(255,51,102,0.15)' : 'rgba(59, 130, 246,0.1)',
-                            border: `1px solid ${toastType === 'error' ? 'rgba(255,51,102,0.25)' : 'rgba(59, 130, 246,0.2)'}`,
-                            backdropFilter: 'blur(20px)',
-                        }}
+                        className={`px-6 py-3 rounded-full flex items-center gap-3 backdrop-blur-xl border ${toastType === 'error'
+                            ? 'bg-[rgba(255,51,102,0.15)] border-[rgba(255,51,102,0.25)]'
+                            : 'bg-[rgba(59,130,246,0.1)] border-[rgba(59,130,246,0.2)]'
+                            }`}
                     >
                         <div
-                            className="size-4 rounded-full"
-                            style={{ background: toastType === 'error' ? '#FF3366' : '#3B82F6' }}
+                            className={`size-4 rounded-full ${toastType === 'error' ? 'bg-[#FF3366]' : 'bg-[#3B82F6]'}`}
                         />
                         <span className="text-[11px] font-black uppercase tracking-widest text-white">{toastMessage}</span>
                     </div>
@@ -296,28 +356,27 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user, onBack, onLogout }) =
             {/* Profile Card */}
             <div className="px-5 mb-6">
                 <div
-                    className="relative overflow-hidden rounded-3xl p-5 flex items-center gap-4"
-                    style={{ background: 'rgba(59, 130, 246,0.04)', border: '1px solid rgba(59, 130, 246,0.1)' }}
+                    className="relative overflow-hidden rounded-3xl p-5 flex items-center gap-4 bg-[rgba(59,130,246,0.04)] border border-[rgba(59,130,246,0.1)]"
                 >
                     {/* Glow orb */}
-                    <div className="absolute top-0 right-0 size-32 rounded-full pointer-events-none" style={{ background: 'radial-gradient(circle, rgba(59, 130, 246,0.08) 0%, transparent 70%)', filter: 'blur(20px)' }} />
+                    <div className="absolute top-0 right-0 size-32 rounded-full pointer-events-none bg-[radial-gradient(circle,rgba(59,130,246,0.08)_0%,transparent_70%)] blur-[20px]" />
 
-                    <div
-                        className="size-16 rounded-2xl bg-cover bg-center shrink-0"
-                        style={{ backgroundImage: `url(${coachAvatar})`, border: '1.5px solid rgba(59, 130, 246,0.15)' }}
+                    <img
+                        className="size-16 rounded-2xl shrink-0 object-cover border-[1.5px] border-[rgba(59,130,246,0.15)]"
+                        src={coachAvatar}
+                        alt={coachName}
                     />
                     <div className="flex-1 relative z-10">
                         <h2 className="text-lg font-black text-white leading-tight">{coachName}</h2>
-                        <p className="text-[10px] font-bold uppercase tracking-wider mt-1" style={{ color: '#3D5A80' }}>
+                        <p className="text-[10px] font-bold uppercase tracking-wider mt-1 text-[#3D5A80]">
                             {isDemo ? 'Modo Demonstração' : 'Personal Trainer Elite'}
                         </p>
                     </div>
                     <button
                         onClick={() => setActiveModal('profile')}
-                        className="size-10 rounded-2xl flex items-center justify-center transition-all active:scale-90 shrink-0"
-                        style={{ background: 'rgba(59, 130, 246,0.08)', border: '1px solid rgba(59, 130, 246,0.15)' }}
+                        className="size-10 rounded-2xl flex items-center justify-center transition-all active:scale-90 shrink-0 bg-[rgba(59,130,246,0.08)] border border-[rgba(59,130,246,0.15)]"
                     >
-                        <Edit3 size={15} style={{ color: '#3B82F6' }} />
+                        <Edit3 size={15} className="text-[#3B82F6]" />
                     </button>
                 </div>
             </div>
@@ -328,20 +387,18 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user, onBack, onLogout }) =
                     <button
                         key={i}
                         onClick={item.action}
-                        className="w-full rounded-2xl p-4 flex items-center gap-4 active:scale-[0.98] transition-all text-left group"
-                        style={{ background: 'rgba(59, 130, 246,0.03)', border: '1px solid rgba(59, 130, 246,0.06)' }}
+                        className="w-full rounded-2xl p-4 flex items-center gap-4 active:scale-[0.98] transition-all text-left group bg-[rgba(59,130,246,0.03)] border border-[rgba(59,130,246,0.06)]"
                     >
                         <div
-                            className="size-10 rounded-xl flex items-center justify-center shrink-0"
-                            style={{ background: `${item.color}12`, border: `1px solid ${item.color}20` }}
+                            className={`size-10 rounded-xl flex items-center justify-center shrink-0 ${item.chipClassName}`}
                         >
-                            <item.icon size={17} style={{ color: item.color }} />
+                            <item.icon size={17} className={item.iconClassName} />
                         </div>
                         <div className="flex-1">
                             <h4 className="font-black text-white text-sm tracking-tight">{item.label}</h4>
-                            <p className="text-[9px] font-bold uppercase tracking-widest mt-0.5" style={{ color: '#3D5A80' }}>{item.subtitle}</p>
+                            <p className="text-[9px] font-bold uppercase tracking-widest mt-0.5 text-[#3D5A80]">{item.subtitle}</p>
                         </div>
-                        <ChevronRight size={14} style={{ color: '#3D5A80' }} />
+                        <ChevronRight size={14} className="text-[#3D5A80]" />
                     </button>
                 ))}
             </div>
@@ -350,19 +407,14 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user, onBack, onLogout }) =
             <div className="px-5 mt-8">
                 <button
                     onClick={onLogout}
-                    className="w-full h-14 font-black rounded-2xl flex items-center justify-center gap-3 active:scale-[0.98] transition-all uppercase tracking-widest text-xs"
-                    style={{
-                        background: 'rgba(255,51,102,0.06)',
-                        border: '1px solid rgba(255,51,102,0.15)',
-                        color: '#FF3366',
-                    }}
+                    className="w-full h-14 font-black rounded-2xl flex items-center justify-center gap-3 active:scale-[0.98] transition-all uppercase tracking-widest text-xs bg-[rgba(255,51,102,0.06)] border border-[rgba(255,51,102,0.15)] text-[#FF3366]"
                 >
                     <LogOut size={16} />
                     Finalizar Sessão
                 </button>
             </div>
 
-            <p className="text-center text-[9px] font-black mt-10 uppercase tracking-[0.3em]" style={{ color: '#1E3A5F' }}>Apex Elite Framework • v1.1.0</p>
+            <p className="text-center text-[9px] font-black mt-10 uppercase tracking-[0.3em] text-[#1E3A5F]">Apex Elite Framework • v1.1.0</p>
 
             {/* Universal Modal Overlay */}
             <BottomSheet isOpen={!!activeModal} onClose={() => setActiveModal(null)}>
@@ -371,7 +423,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user, onBack, onLogout }) =
                 {activeModal === 'profile' && (
                     <>
                         <div className="text-center mb-8">
-                            <div className="size-24 mx-auto rounded-[30px] bg-cover bg-center border-4 border-slate-950 shadow-glow mb-4" style={{ backgroundImage: `url(${coachAvatar})` }}></div>
+                            <img className="size-24 mx-auto rounded-[30px] object-cover border-4 border-slate-950 shadow-glow mb-4" src={coachAvatar} alt={coachName} />
                             <h3 className="text-2xl font-black text-white">Editar Perfil</h3>
                             <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mt-2">Atualize suas informações</p>
                         </div>
@@ -445,6 +497,13 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user, onBack, onLogout }) =
                                 </div>
                             ))}
                         </div>
+                        <button
+                            onClick={handleSendTestPush}
+                            disabled={!notifState.push || sendingTestPush || isDemo}
+                            className="w-full h-12 mb-3 rounded-2xl font-black uppercase tracking-widest text-[11px] transition-all disabled:opacity-50 bg-[rgba(59,130,246,0.08)] border border-[rgba(59,130,246,0.18)] text-[#93C5FD]"
+                        >
+                            {sendingTestPush ? 'Enviando push...' : 'Enviar Push de Teste'}
+                        </button>
                         <button onClick={handleSave} className="w-full h-16 bg-blue-600 hover:bg-blue-500 text-white font-black rounded-3xl active:scale-[0.98] transition-all uppercase tracking-widest shadow-glow">
                             Confirmar Preferências
                         </button>
@@ -503,8 +562,8 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user, onBack, onLogout }) =
                 {activeModal === 'help' && (
                     <>
                         <div className="text-center mb-8">
-                            <div className="size-16 mx-auto rounded-2xl flex items-center justify-center mb-4" style={{ background: 'rgba(59, 130, 246,0.08)', border: '1px solid rgba(59, 130, 246,0.15)' }}>
-                                <span className="material-symbols-outlined text-3xl" style={{ color: '#3B82F6' }}>support_agent</span>
+                            <div className="size-16 mx-auto rounded-2xl flex items-center justify-center mb-4 bg-[rgba(59,130,246,0.08)] border border-[rgba(59,130,246,0.15)]">
+                                <span className="material-symbols-outlined text-3xl text-[#3B82F6]">support_agent</span>
                             </div>
                             <h3 className="text-2xl font-black text-white">Central de Ajuda</h3>
                             <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mt-2">Como podemos ajudar?</p>
@@ -519,11 +578,11 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user, onBack, onLogout }) =
                             ].map((q, i) => (
                                 <div key={i} className="bg-white/5 rounded-2xl p-4 border border-white/5 flex items-center justify-between active:scale-[0.99] transition-all cursor-pointer hover:bg-white/10 group">
                                     <span className="text-xs font-bold text-slate-300 group-hover:text-white">{q}</span>
-                                    <span className="material-symbols-outlined text-slate-600" style={{ color: 'inherit' }}>expand_more</span>
+                                    <span className="material-symbols-outlined text-slate-600 group-hover:text-white">expand_more</span>
                                 </div>
                             ))}
                         </div>
-                        <button onClick={() => showToast('Mensagem enviada ao suporte!')} className="w-full h-16 text-white font-black rounded-3xl active:scale-[0.98] transition-all uppercase tracking-widest" style={{ background: 'linear-gradient(135deg,#1E3A8A,#3B82F6)', boxShadow: '0 0 24px rgba(30, 58, 138,0.35)' }}>
+                        <button onClick={() => showToast('Mensagem enviada ao suporte!')} className="w-full h-16 text-white font-black rounded-3xl active:scale-[0.98] transition-all uppercase tracking-widest bg-[linear-gradient(135deg,#1E3A8A,#3B82F6)] shadow-[0_0_24px_rgba(30,58,138,0.35)]">
                             Falar com Suporte Humano
                         </button>
                     </>
@@ -577,8 +636,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user, onBack, onLogout }) =
                                 showToast(`Tema ${pendingTheme === 'dark' ? 'escuro' : pendingTheme === 'light' ? 'claro' : 'automático'} aplicado!`);
                                 setActiveModal(null);
                             }}
-                            className="w-full h-16 bg-blue-600 hover:bg-blue-500 font-black rounded-3xl active:scale-[0.98] transition-all uppercase tracking-widest shadow-glow"
-                            style={{ color: '#FFFFFF' }}
+                            className="w-full h-16 bg-blue-600 hover:bg-blue-500 font-black rounded-3xl active:scale-[0.98] transition-all uppercase tracking-widest shadow-glow text-white"
                         >
                             Aplicar Tema
                         </button>

@@ -11,12 +11,12 @@ interface PageHeaderProps {
     accentColor?: 'cyan' | 'blue' | 'green' | 'amber' | 'red';
 }
 
-const accentMap: Record<string, { glow: string; text: string; border: string }> = {
-    cyan: { glow: 'rgba(59, 130, 246,0.08)', text: '#3B82F6', border: 'rgba(59, 130, 246,0.15)' },
-    blue: { glow: 'rgba(30, 58, 138,0.08)', text: '#0099FF', border: 'rgba(30, 58, 138,0.15)' },
-    green: { glow: 'rgba(0,255,136,0.06)', text: '#00FF88', border: 'rgba(0,255,136,0.12)' },
-    amber: { glow: 'rgba(255,184,0,0.08)', text: '#FFB800', border: 'rgba(255,184,0,0.15)' },
-    red: { glow: 'rgba(255,51,102,0.06)', text: '#FF3366', border: 'rgba(255,51,102,0.12)' },
+const accentMap: Record<string, { glowClass: string; textClass: string; borderClass: string }> = {
+    cyan: { glowClass: 'page-header-glow-cyan', textClass: 'text-[#3B82F6]', borderClass: 'border-[rgba(59,130,246,0.15)]' },
+    blue: { glowClass: 'page-header-glow-blue', textClass: 'text-[#0099FF]', borderClass: 'border-[rgba(30,58,138,0.15)]' },
+    green: { glowClass: 'page-header-glow-green', textClass: 'text-[#00FF88]', borderClass: 'border-[rgba(0,255,136,0.12)]' },
+    amber: { glowClass: 'page-header-glow-amber', textClass: 'text-[#FFB800]', borderClass: 'border-[rgba(255,184,0,0.15)]' },
+    red: { glowClass: 'page-header-glow-red', textClass: 'text-[#FF3366]', borderClass: 'border-[rgba(255,51,102,0.12)]' },
 };
 
 /**
@@ -40,12 +40,7 @@ const PageHeader: React.FC<PageHeaderProps> = ({
             className="px-5 pt-14 pb-5 relative z-20"
         >
             {/* Top glow bar */}
-            <div
-                className="absolute top-0 left-0 right-0 h-32 pointer-events-none"
-                style={{
-                    background: `radial-gradient(ellipse 60% 80% at 50% 0%, ${accent.glow} 0%, transparent 100%)`,
-                }}
-            />
+            <div className={`absolute top-0 left-0 right-0 h-32 pointer-events-none ${accent.glowClass}`} />
 
             <div className="flex items-center justify-between relative z-10">
                 {/* Back button */}
@@ -53,14 +48,10 @@ const PageHeader: React.FC<PageHeaderProps> = ({
                     <motion.button
                         whileTap={{ scale: 0.9 }}
                         onClick={onBack}
-                        className="size-11 rounded-2xl flex items-center justify-center transition-all shrink-0"
-                        style={{
-                            background: 'rgba(59, 130, 246,0.05)',
-                            border: `1px solid ${accent.border}`,
-                        }}
+                        className={`size-11 rounded-2xl flex items-center justify-center transition-all shrink-0 bg-[rgba(59,130,246,0.05)] border ${accent.borderClass}`}
                         aria-label="Voltar"
                     >
-                        <ArrowLeft size={18} style={{ color: accent.text }} strokeWidth={2.5} />
+                        <ArrowLeft size={18} className={accent.textClass} strokeWidth={2.5} />
                     </motion.button>
                 ) : (
                     <div className="size-11" />
@@ -72,10 +63,7 @@ const PageHeader: React.FC<PageHeaderProps> = ({
                         {title}
                     </h1>
                     {subtitle && (
-                        <p
-                            className="text-[10px] font-black uppercase tracking-[0.15em] mt-0.5"
-                            style={{ color: accent.text }}
-                        >
+                        <p className={`text-[10px] font-black uppercase tracking-[0.15em] mt-0.5 ${accent.textClass}`}>
                             {subtitle}
                         </p>
                     )}

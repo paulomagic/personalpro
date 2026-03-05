@@ -75,9 +75,14 @@ interface ModelCandidate {
     reason: string;
 }
 
+const DECOMMISSIONED_MODEL_FALLBACKS: Record<string, string> = {
+    'deepseek-r1-distill-llama-70b': 'llama-3.3-70b-versatile'
+};
+
 function resolveGroqModel(envValue: string | undefined, fallback: string): string {
     const normalized = (envValue || '').trim();
-    return normalized || fallback;
+    const resolved = normalized || fallback;
+    return DECOMMISSIONED_MODEL_FALLBACKS[resolved] || resolved;
 }
 
 const GROQ_MODELS = {
@@ -87,7 +92,7 @@ const GROQ_MODELS = {
     ),
     reasoning: resolveGroqModel(
         typeof import.meta !== 'undefined' ? import.meta.env?.VITE_GROQ_MODEL_REASONING : undefined,
-        'deepseek-r1-distill-llama-70b'
+        'llama-3.3-70b-versatile'
     ),
     fallback: resolveGroqModel(
         typeof import.meta !== 'undefined' ? import.meta.env?.VITE_GROQ_MODEL_FALLBACK : undefined,
@@ -157,17 +162,18 @@ export class AIRouter {
         const state = this.getHealthState(providerName, model);
         const error = String(errorMessage || '').toLowerCase();
         const isRateLimit = error.includes('429') || error.includes('rate');
+        const isModelDecommissioned = error.includes('model_decommissioned') || error.includes('decommissioned');
         const isModelNotFound = error.includes('model_not_found')
             || error.includes('model not found')
             || error.includes('does not exist');
 
-        state.score = Math.max(-20, state.score - (isRateLimit ? 4 : isModelNotFound ? 8 : 2));
+        state.score = Math.max(-20, state.score - (isRateLimit ? 4 : (isModelNotFound || isModelDecommissioned) ? 8 : 2));
         state.consecutiveFailures += 1;
         state.lastError = errorMessage;
         state.lastUsedAt = Date.now();
 
-        if (isModelNotFound || isRateLimit || state.consecutiveFailures >= 3) {
-            const cooldownMs = isModelNotFound ? 10 * 60_000 : isRateLimit ? 30_000 : 10_000;
+        if (isModelNotFound || isModelDecommissioned || isRateLimit || state.consecutiveFailures >= 3) {
+            const cooldownMs = (isModelNotFound || isModelDecommissioned) ? 10 * 60_000 : isRateLimit ? 30_000 : 10_000;
             state.circuitOpenUntil = Date.now() + cooldownMs;
         }
     }
@@ -247,10 +253,21 @@ export class AIRouter {
 
         const chain = this.buildCandidateChain(request, rule);
         const attemptFailures: Array<{ provider: string; model: string; reason: string; error?: string }> = [];
+        let skipRemainingGroqForThisRequest = false;
 
         for (let i = 0; i < chain.length; i++) {
             const candidate = chain[i];
             const provider = this.providers[candidate.providerName];
+
+            if (skipRemainingGroqForThisRequest && candidate.providerName === 'groq') {
+                attemptFailures.push({
+                    provider: candidate.providerName,
+                    model: candidate.model,
+                    reason: `${candidate.reason}:skip_after_rate_limit`
+                });
+                continue;
+            }
+
             if (!provider?.isAvailable()) {
                 attemptFailures.push({
                     provider: candidate.providerName,
@@ -307,6 +324,11 @@ export class AIRouter {
                 reason: candidate.reason,
                 error: result.error
             });
+
+            const normalizedError = String(result.error || '').toLowerCase();
+            if (candidate.providerName === 'groq' && (normalizedError.includes('429') || normalizedError.includes('rate_limit'))) {
+                skipRemainingGroqForThisRequest = true;
+            }
         }
 
         // All attempts failed

@@ -131,6 +131,29 @@ export const localProvider: AIProvider = {
             const { days = 3, goal = 'Hipertrofia', name = 'Aluno' } = request.metadata || {};
 
             if (request.action === 'training_intent') {
+                // Slot-level fallback used by trainingEngine.selectWithAI.
+                // Must match the AISelectionResponseSchema contract.
+                if (request.metadata?.type === 'exercise_selection_v3') {
+                    const text = JSON.stringify({
+                        selected: 1,
+                        reasoning: 'Fallback determinístico devido à indisponibilidade temporária do provedor externo.',
+                        safety_check: {
+                            kinetic_chain: 'fechada',
+                            spinal_load: 'moderado',
+                            is_machine: true,
+                            complexity: 'baixa'
+                        }
+                    });
+
+                    return {
+                        success: true,
+                        text,
+                        provider: 'local',
+                        model: 'smart-selector-v1',
+                        latencyMs: Date.now() - startTime
+                    };
+                }
+
                 const splits = generateSplits(days, goal);
 
                 const response = {

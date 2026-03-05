@@ -13,7 +13,11 @@ const GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions";
 
 function normalizeModelName(value: string | null | undefined, fallback: string): string {
     const normalized = (value || "").trim();
-    return normalized || fallback;
+    const resolved = normalized || fallback;
+    if (resolved === 'deepseek-r1-distill-llama-70b') {
+        return 'llama-3.3-70b-versatile';
+    }
+    return resolved;
 }
 
 // Models

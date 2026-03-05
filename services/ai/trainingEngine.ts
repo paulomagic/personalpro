@@ -342,16 +342,17 @@ export async function generateWorkout(params: {
     debugTime('[TrainingEngine] AI Processing');
     onProgress?.({ stage: 'ai_processing', current: 3, total: 4, message: `Gerando treino... (0/${totalSlots})` });
 
-    // Config p-queue: throttle to avoid Groq rate limits (30 req/min on Personal Pro)
-    // Strategy: max 2 slots per 4s = ~30 calls/min. The groq-proxy now fails fast on 429
-    // (no fallback model retry), so each slot = at most 1 Groq API call.
+    // Config p-queue: conservative throughput to reduce 429 bursts.
+    // Combined with MAX_AI_SELECTIONS_PER_WORKOUT, this keeps token usage predictable.
     const queue = new PQueue({
         concurrency: 2,        // 2 concurrent requests max
         interval: 4000,        // 4 second window
-        intervalCap: 2         // max 2 tasks per 4s = ~30/min (within Groq limit)
+        intervalCap: 2
     });
 
     let processedCount = 0;
+    let remainingAISlots = Math.min(MAX_AI_SELECTIONS_PER_WORKOUT, totalSlots);
+    let aiBudgetExhaustedLogged = false;
 
     const processedSlots = await Promise.all(
         allSlotTasks.map(task =>
@@ -437,12 +438,19 @@ export async function generateWorkout(params: {
 
                     // D. Seleção (IA ou determinístico)
                     let selectedExercise: Exercise | undefined;
+                    const shouldUseAIForThisSlot = useAI
+                        && topCandidates.length > 1
+                        && remainingAISlots > 0
+                        && shouldPrioritizeAISlot(task.slot);
 
-                    if (useAI && topCandidates.length > 1) {
-                        // IA escolhe entre top 5
+                    if (shouldUseAIForThisSlot) {
+                        remainingAISlots -= 1;
                         selectedExercise = await selectWithAI(task.slot, topCandidates);
                     } else {
-                        // Fallback determinístico
+                        if (useAI && topCandidates.length > 1 && remainingAISlots <= 0 && !aiBudgetExhaustedLogged) {
+                            debugLog(`[TrainingEngine] AI slot budget exhausted (${MAX_AI_SELECTIONS_PER_WORKOUT}). Remaining slots use deterministic selection.`);
+                            aiBudgetExhaustedLogged = true;
+                        }
                         selectedExercise = topCandidates[0]?.exercise;
                     }
 
@@ -916,7 +924,20 @@ export function setWorkoutContext(context: typeof currentWorkoutContext) {
 
 // v3.0: Contador de retries para logging
 let aiRetryCount = 0;
-const MAX_AI_RETRIES = 2;
+const MAX_AI_RETRIES = 0;
+const MAX_AI_SELECTIONS_PER_WORKOUT = 6;
+
+function shouldPrioritizeAISlot(slot: TrainingSlot): boolean {
+    if (slot.intensity === 'high' || slot.intensity === 'very_high') return true;
+    return [
+        'agachar',
+        'hinge',
+        'empurrar_horizontal',
+        'empurrar_vertical',
+        'puxar_horizontal',
+        'puxar_vertical'
+    ].includes(slot.movement_pattern);
+}
 
 async function selectWithAI(
     slot: TrainingSlot,

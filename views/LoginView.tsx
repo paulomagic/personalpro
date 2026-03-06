@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Turnstile } from '@marsidev/react-turnstile';
 import { supabase } from '../services/supabaseCore';
 import { getInvitationByToken, acceptInvitation } from '../services/invitations/invitationAuthService';
+import { completeInvitedStudentSignup } from '../services/invitations/invitedStudentSignupService';
 import type { AppSessionUser } from '../services/auth/authFlow';
 import { calculateLockDurationMs, getRemainingLockSeconds, isLockedOut } from '../services/auth/authFlow';
 import { persistLockoutState, readLockoutState } from '../services/auth/lockoutStorage';
@@ -95,6 +96,42 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
     }
 
     window.history.replaceState({}, document.title, window.location.pathname);
+  };
+
+  const signInAfterInviteProvisioning = async (): Promise<AppSessionUser | null> => {
+    if (!supabase) return null;
+
+    let loginUser: AppSessionUser | null = null;
+    let lastLoginError: string | null = null;
+    let invalidCredentials = false;
+
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      const { data, error: loginError } = await supabase.auth.signInWithPassword({
+        email: email.toLowerCase().trim(),
+        password
+      });
+
+      if (data.user) {
+        loginUser = data.user as AppSessionUser;
+        break;
+      }
+
+      lastLoginError = loginError?.message || 'Falha ao autenticar após concluir o convite.';
+      invalidCredentials = loginError?.message === 'Invalid login credentials';
+      if (attempt < 2) {
+        await new Promise((resolve) => window.setTimeout(resolve, 400));
+      }
+    }
+
+    if (!loginUser) {
+      setError(invalidCredentials
+        ? 'Conta criada, mas o login falhou. Use "Entrar" com o mesmo email e senha.'
+        : lastLoginError || 'Falha ao autenticar após concluir o convite.');
+      return null;
+    }
+
+    await completeInviteAcceptance(loginUser.id);
+    return loginUser;
   };
 
   const tryRecoverInviteAccessWithoutFreshSession = async (): Promise<AppSessionUser | null> => {
@@ -339,6 +376,26 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
           setError((guard.error || 'Muitas tentativas detectadas.') + wait);
           return;
         }
+      }
+
+      if (isInviteMode) {
+        const inviteSignupResult = await completeInvitedStudentSignup({
+          inviteToken: inviteToken || '',
+          email,
+          password,
+          name
+        });
+
+        if (!inviteSignupResult.success) {
+          setError(inviteSignupResult.error || 'Falha ao concluir o convite.');
+          return;
+        }
+
+        const invitedUser = await signInAfterInviteProvisioning();
+        if (invitedUser) {
+          onLogin(invitedUser);
+        }
+        return;
       }
 
       // If in invite mode, set role as student in user metadata

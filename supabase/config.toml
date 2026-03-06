@@ -12,3 +12,6 @@ verify_jwt = false
 
 [functions.send-push]
 verify_jwt = true
+
+[functions.complete-invite-signup]
+verify_jwt = false

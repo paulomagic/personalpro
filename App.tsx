@@ -6,6 +6,7 @@ import LoginView from './views/LoginView';
 import UpdateBanner from './components/UpdateBanner';
 import AppErrorBoundary from './components/AppErrorBoundary';
 import AppContentRouter from './components/AppContentRouter';
+import ConnectivityBanner from './components/ConnectivityBanner';
 import PasswordRecoveryModal from './components/PasswordRecoveryModal';
 import {
   resolveViewFromPath,
@@ -266,6 +267,7 @@ function App() {
   if (currentView === View.LOGIN) {
     return renderWithBoundary(
       <div className="max-w-md mx-auto min-h-screen bg-slate-950">
+        <ConnectivityBanner />
         <LoginView onLogin={handleLoginSuccess} />
         <PasswordRecoveryModal
           show={showRecoveryModal}
@@ -286,6 +288,7 @@ function App() {
   if (currentView === View.STUDENT) {
     return renderWithBoundary(
       <div className="max-w-md mx-auto bg-slate-950 shadow-2xl min-h-screen overflow-hidden">
+        <ConnectivityBanner />
         {updateAvailable && (
           <UpdateBanner
             onUpdate={handleUpdate}
@@ -301,6 +304,7 @@ function App() {
 
   return renderWithBoundary(
     <div className="max-w-md mx-auto bg-slate-950 shadow-2xl min-h-screen overflow-hidden">
+      <ConnectivityBanner />
       {updateAvailable && (
         <UpdateBanner
           onUpdate={handleUpdate}

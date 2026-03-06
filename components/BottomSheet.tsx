@@ -48,6 +48,9 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({ isOpen, onClose, title
                                 onClose();
                             }
                         }}
+                        role="dialog"
+                        aria-modal="true"
+                        aria-label={title || 'Painel'}
                         className="fixed bottom-0 left-0 right-0 z-50 border-t border-white/10 rounded-t-[32px] overflow-hidden shadow-2xl safe-area-bottom w-full max-w-md mx-auto bg-[var(--bg-surface)]"
                     >
                         {/* Drag Handle */}

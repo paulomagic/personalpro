@@ -145,7 +145,7 @@ export async function getClients(
 
     let query = supabase
         .from('clients')
-        .select('*, avatar:avatar_url, avatar_url')
+        .select('id, name, email, phone, avatar:avatar_url, avatar_url, goal, level, age, weight, height, body_fat, status, adherence, created_at, coach_id, monthly_fee, payment_day, payment_type, session_price')
         .eq('coach_id', coachId)
         .order('name')
         .range(offset, offset + limit - 1);
@@ -176,7 +176,7 @@ export async function getClientById(
 
     const { data, error } = await supabase
         .from('clients')
-        .select('*, avatar:avatar_url, avatar_url, body_fat')
+        .select('id, name, email, phone, avatar:avatar_url, avatar_url, goal, level, age, weight, height, body_fat, status, adherence, created_at, coach_id, monthly_fee, payment_day, payment_type, session_price')
         .eq('id', clientId)
         .single();
 

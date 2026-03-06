@@ -57,15 +57,14 @@ Fluxos cobertos:
 - Login em modo demonstração
 - Abertura de aluno no dashboard e início de treino rápido
 - Feedback de erro para token de convite inválido
+- Fallback offline com Service Worker em build de produção
 
 Execução local:
 
-1. Instale o runner:
-   `npm install -D @playwright/test`
-2. Instale o browser:
-   `npx playwright install chromium`
-3. Rode os testes:
+1. Rode os testes:
    `npm run test:e2e`
+
+O script instala o Chromium automaticamente antes da suíte.
 
 ## Navegação e Histórico (Back Button)
 
@@ -88,3 +87,9 @@ A carga de fontes foi simplificada para reduzir requisições externas:
 - Mantidas apenas `Inter` + `Lexend`
 - Removida família `Outfit` do `index.html`
 - `font-display` do Tailwind alinhada para `Lexend`
+
+## PWA / Offline
+
+- Navegações offline agora usam `public/offline.html`
+- Há banner de conectividade no app quando `navigator.onLine === false`
+- Fluxo documentado em `docs/PWA_OFFLINE.md`

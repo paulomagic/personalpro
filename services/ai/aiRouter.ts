@@ -459,12 +459,14 @@ export async function generateTrainingIntent(
     provider: string;
     fallbackUsed: boolean;
 } | null> {
-    const injuries = clientData.injuries || 'Nenhuma';
-    const preferences = clientData.preferences || 'Não especificadas';
+    const injuries = clientData.injuries || 'sem_restricoes_reportadas';
+    const preferences = clientData.preferences || 'sem_preferencias_especificas';
     const adherence = clientData.adherence || 80;
     const equipment = clientData.equipment?.join(', ') || 'Academia completa';
     const sessionDuration = clientData.sessionDuration || 60;
-    const clientAlias = pseudonymizeClientName(clientData.name);
+    const clientAlias = clientData.name?.startsWith('ATLETA_')
+        ? clientData.name
+        : pseudonymizeClientName(clientData.name);
     const injuryProfile = classifyInjuryConstraints(injuries);
     const preferenceProfile = summarizePreferenceTags(preferences);
 

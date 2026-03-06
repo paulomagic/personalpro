@@ -978,12 +978,12 @@ async function selectWithAI(
 
     // v3.0: Preparar contexto completo para o prompt builder
     const clientContext: ClientContext = {
-        name: ctx.clientName,
+        alias: ctx.clientName,
         age: ctx.age,
         level: ctx.level,
         goal: ctx.goal,
-        injuries: ctx.injuries,
-        observations: ctx.observations,
+        injuriesSummary: ctx.injuries,
+        observationsSummary: ctx.observations,
         conditions: ctx.conditions || [],
         specialConditions: ctx.specialConditions || [],
         restrictions: ctx.restrictions,

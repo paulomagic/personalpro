@@ -1,169 +1,147 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
-
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PersonalPro - Offline</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: linear-gradient(135deg, #1e3a5f 0%, #0f172a 100%);
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-        }
-
-        .container {
-            text-align: center;
-            padding: 2rem;
-            max-width: 400px;
-        }
-
-        .icon {
-            width: 120px;
-            height: 120px;
-            margin: 0 auto 2rem;
-            background: rgba(59, 130, 246, 0.2);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            animation: pulse 2s ease-in-out infinite;
-        }
-
-        .icon svg {
-            width: 60px;
-            height: 60px;
-            fill: #3B82F6;
-        }
-
-        @keyframes pulse {
-
-            0%,
-            100% {
-                transform: scale(1);
-                opacity: 1;
-            }
-
-            50% {
-                transform: scale(1.05);
-                opacity: 0.8;
-            }
-        }
-
-        h1 {
-            font-size: 1.75rem;
-            font-weight: 700;
-            margin-bottom: 0.75rem;
-            color: #f8fafc;
-        }
-
-        p {
-            font-size: 1rem;
-            color: #94a3b8;
-            line-height: 1.6;
-            margin-bottom: 2rem;
-        }
-
-        .retry-btn {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            background: #3B82F6;
-            color: white;
-            border: none;
-            padding: 0.875rem 1.5rem;
-            border-radius: 12px;
-            font-size: 1rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            box-shadow: 0 4px 14px rgba(59, 130, 246, 0.4);
-        }
-
-        .retry-btn:hover {
-            background: #2563eb;
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(59, 130, 246, 0.5);
-        }
-
-        .retry-btn:active {
-            transform: translateY(0);
-        }
-
-        .status {
-            margin-top: 2rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 0.5rem;
-            color: #64748b;
-            font-size: 0.875rem;
-        }
-
-        .status-dot {
-            width: 8px;
-            height: 8px;
-            background: #ef4444;
-            border-radius: 50%;
-            animation: blink 1.5s ease-in-out infinite;
-        }
-
-        @keyframes blink {
-
-            0%,
-            100% {
-                opacity: 1;
-            }
-
-            50% {
-                opacity: 0.3;
-            }
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>PersonalPro Offline</title>
+  <meta name="theme-color" content="#0f172a">
+  <style>
+    :root {
+      color-scheme: dark;
+      --line: rgba(148, 163, 184, 0.18);
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      font-family: Inter, system-ui, sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top, rgba(56, 189, 248, 0.18), transparent 35%),
+        radial-gradient(circle at bottom, rgba(34, 197, 94, 0.12), transparent 30%),
+        linear-gradient(180deg, #020617 0%, #0f172a 100%);
+    }
+    main {
+      width: min(100%, 560px);
+      padding: 28px;
+      border: 1px solid var(--line);
+      border-radius: 28px;
+      background: rgba(15, 23, 42, 0.88);
+      backdrop-filter: blur(18px);
+      box-shadow: 0 24px 64px rgba(2, 6, 23, 0.45);
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(56, 189, 248, 0.12);
+      color: #bae6fd;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    h1 {
+      margin: 18px 0 10px;
+      font-size: clamp(28px, 6vw, 42px);
+      line-height: 1;
+    }
+    p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+    .status {
+      margin-top: 18px;
+      padding: 12px 14px;
+      border-radius: 16px;
+      background: rgba(249, 115, 22, 0.12);
+      border: 1px solid rgba(249, 115, 22, 0.2);
+      color: #fed7aa;
+      font-size: 14px;
+    }
+    ul {
+      margin: 24px 0 0;
+      padding: 0;
+      list-style: none;
+      display: grid;
+      gap: 12px;
+    }
+    li {
+      padding: 14px 16px;
+      border-radius: 18px;
+      border: 1px solid var(--line);
+      background: rgba(15, 23, 42, 0.76);
+    }
+    strong {
+      display: block;
+      margin-bottom: 4px;
+      color: var(--text);
+      font-size: 14px;
+    }
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 24px;
+    }
+    button, a {
+      appearance: none;
+      border: 0;
+      border-radius: 16px;
+      padding: 14px 18px;
+      text-decoration: none;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    button {
+      color: #082f49;
+      background: linear-gradient(135deg, #67e8f9 0%, #38bdf8 100%);
+    }
+    a {
+      color: var(--text);
+      background: rgba(15, 23, 42, 0.72);
+      border: 1px solid var(--line);
+    }
+  </style>
 </head>
-
 <body>
-    <div class="container">
-        <div class="icon">
-            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path
-                    d="M23.64 7c-.45-.34-4.93-4-11.64-4-1.5 0-2.89.19-4.15.48L18.18 13.8 23.64 7zm-6.6 8.22L3.27 1.44 2 2.72l2.05 2.06C1.91 5.76.59 6.82.36 7l11.63 14.49.01.01.01-.01 3.9-4.86 3.32 3.32 1.27-1.27-3.46-3.46z" />
-            </svg>
-        </div>
-
-        <h1>Sem conexão</h1>
-        <p>Parece que você está offline. Verifique sua conexão com a internet e tente novamente.</p>
-
-        <button class="retry-btn" onclick="window.location.reload()">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                <path
-                    d="M17.65 6.35A7.958 7.958 0 0012 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0112 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z" />
-            </svg>
-            Tentar novamente
-        </button>
-
-        <div class="status">
-            <span class="status-dot"></span>
-            <span>Aguardando conexão...</span>
-        </div>
+  <main aria-labelledby="offline-title">
+    <span class="badge">Modo Offline</span>
+    <h1 id="offline-title">Sem conexão no momento.</h1>
+    <p>
+      O PersonalPro ficou sem acesso à internet. A interface principal, feedbacks em fila
+      e dados já cacheados podem voltar assim que a conexão for restabelecida.
+    </p>
+    <div class="status" role="status" aria-live="polite">
+      Login, sincronização com banco, geração com IA e push remoto continuam exigindo internet.
     </div>
-
-    <script>
-        // Auto-reload when back online
-        window.addEventListener('online', () => {
-            window.location.reload();
-        });
-    </script>
+    <ul>
+      <li>
+        <strong>Continua funcionando quando possível</strong>
+        Leitura de assets já cacheados, abertura do app instalado e filas offline suportadas pelo service worker.
+      </li>
+      <li>
+        <strong>Requer internet</strong>
+        Autenticação, Supabase, geração de treino por IA, atualizações e notificações remotas.
+      </li>
+      <li>
+        <strong>Próximo passo</strong>
+        Reconecte à internet e toque em "Tentar novamente" para recarregar a experiência completa.
+      </li>
+    </ul>
+    <div class="actions">
+      <button type="button" onclick="window.location.reload()">Tentar novamente</button>
+      <a href="/" rel="home">Voltar ao início</a>
+    </div>
+  </main>
 </body>
-
 </html>

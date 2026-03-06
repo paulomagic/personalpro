@@ -6,7 +6,7 @@ test('demo login reaches dashboard', async ({ page }) => {
   await page.getByTestId('demo-login-button').click();
 
   await expect(page.getByText('Gerar Treino com IA')).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Alunos' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Alunos' }).first()).toBeVisible();
 });
 
 test('demo user can open client and start quick workout', async ({ page }) => {
@@ -27,3 +27,18 @@ test('invite token invalid path shows error feedback', async ({ page }) => {
   await expect(page.getByText('Convite inválido ou expirado')).toBeVisible();
 });
 
+test('offline navigation falls back to offline shell', async ({ page, context }) => {
+  await page.goto('/');
+  await page.waitForLoadState('networkidle');
+  await page.reload();
+
+  await page.waitForFunction(() => Boolean(navigator.serviceWorker?.controller));
+
+  await context.setOffline(true);
+  await page.goto('/calendar', { waitUntil: 'domcontentloaded' });
+
+  await expect(page.getByRole('heading', { name: 'Sem conexão no momento.' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Tentar novamente' })).toBeVisible();
+
+  await context.setOffline(false);
+});

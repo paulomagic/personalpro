@@ -6,9 +6,13 @@ interface ClientProfileQuickWorkoutFabProps {
 }
 
 const QUICK_WORKOUT_TEMPLATE = {
+  id: 'quick-workout-demo',
+  clientId: 'quick-workout-client',
   title: 'Treino Rápido',
   objective: 'Demonstração',
   duration: '20min',
+  days: 1,
+  splits: [],
   exercises: [
     {
       id: 'demo-1',

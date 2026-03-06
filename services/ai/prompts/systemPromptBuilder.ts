@@ -9,12 +9,12 @@ import type { SpecialCondition } from '../knowledge/specialConditions';
 // ============ TIPOS ============
 
 export interface ClientContext {
-    name: string;
+    alias: string;
     age?: number;
     level: string;
     goal: string;
-    injuries: string;
-    observations: string;
+    injuriesSummary: string;
+    observationsSummary: string;
     conditions: DetectedCondition[];
     specialConditions: SpecialCondition[];
     restrictions: BiomechanicalRestrictions;
@@ -396,14 +396,14 @@ export function buildUserPrompt(
         : 'Nenhuma';
 
     return `PERFIL DO ALUNO:
-- Nome: ${context.name}
+- Alias: ${context.alias}
 - Idade: ${context.age || 'Não informada'}
 - Nível: ${context.level}
 - Objetivo: ${context.goal}
-- Lesões: ${context.injuries || 'Nenhuma'}
+- Restrições categorizadas: ${context.injuriesSummary || 'Nenhuma'}
 - Condições Detectadas: ${conditionsList}
 - Condições Especiais: ${specialCondsList}
-- Observações: ${context.observations || 'Nenhuma'}
+- Observações sanitizadas: ${context.observationsSummary || 'Nenhuma'}
 
 SLOT ATUAL:
 - Padrão de Movimento: ${slot.movement_pattern}

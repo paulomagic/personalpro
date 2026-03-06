@@ -7,6 +7,12 @@ import {
     buildPrecisionPromptContext,
     type PrecisionProfileResolution
 } from './progressionPrecisionService';
+import {
+    classifyInjuryConstraints,
+    pseudonymizeClientName,
+    sanitizeCoachObservations,
+    summarizePreferenceTags
+} from './promptPrivacy';
 import { buildWeeklyMicrocyclePlan } from './weeklyProgressionEngine';
 
 interface WorkoutGenerationRequest {
@@ -64,8 +70,8 @@ function buildCombinedObservations(params: {
     const precisionBrief = params.precisionProfile ? buildPrecisionPromptContext(params.precisionProfile) : '';
 
     return [
-        params.client.observations,
-        params.observations,
+        sanitizeCoachObservations(params.client.observations),
+        sanitizeCoachObservations(params.observations),
         adaptiveBrief,
         riskBrief,
         precisionBrief
@@ -151,6 +157,9 @@ export async function generateWorkoutWithPipeline(params: WorkoutGenerationReque
     const riskAwareDays = params.injuryRisk.conservativeMode ? Math.max(2, adaptiveDaysBase - 1) : adaptiveDaysBase;
     const adaptiveDays = riskAwareDays;
     const effectiveGoal = params.goal || params.client.goal;
+    const clientAlias = pseudonymizeClientName(params.client.name);
+    const injurySummary = classifyInjuryConstraints(params.client.injuries);
+    const preferenceSummary = summarizePreferenceTags(params.client.preferences);
     const combinedObservations = buildCombinedObservations({
         client: params.client,
         observations: params.observations,
@@ -186,11 +195,11 @@ export async function generateWorkoutWithPipeline(params: WorkoutGenerationReque
     ]);
 
     const engineResult = await generateWorkout({
-        name: params.client.name,
+        name: clientAlias,
         goal: effectiveGoal,
         level: params.client.level,
         daysPerWeek: adaptiveDays,
-        injuries: params.client.injuries,
+        injuries: injurySummary,
         observations: combinedObservations,
         birthDate: params.client.birthDate,
         age: params.client.age,
@@ -201,7 +210,7 @@ export async function generateWorkoutWithPipeline(params: WorkoutGenerationReque
 
     if (engineResult && engineResult.days.length > 0) {
         let workout = {
-            title: `${engineResult.template_name} - ${params.client.name}`,
+            title: `${engineResult.template_name} - ${clientAlias}`,
             objective: `Template ${engineResult.template_id} otimizado para ${effectiveGoal}`,
             splits: engineResult.days.map((day) => ({
                 name: day.label,
@@ -224,8 +233,8 @@ export async function generateWorkoutWithPipeline(params: WorkoutGenerationReque
                 effectiveAdaptiveSignal
                     ? `🧠 Readiness ${effectiveAdaptiveSignal.readinessScore}/100 | ajuste ${effectiveAdaptiveSignal.recommendedVolumeDeltaPct >= 0 ? '+' : ''}${effectiveAdaptiveSignal.recommendedVolumeDeltaPct}% volume`
                     : '',
-                params.client.injuries && params.client.injuries.toLowerCase() !== 'nenhuma'
-                    ? `⚠️ Considerando: ${params.client.injuries.split('-')[0].trim()}`
+                injurySummary && injurySummary !== 'sem_restricoes_reportadas'
+                    ? `⚠️ Restrições categorizadas: ${injurySummary}`
                     : '',
                 params.precisionProfile ? `🎯 Política de precisão: ${params.precisionProfile.label}` : ''
             ].filter(Boolean),
@@ -257,12 +266,12 @@ export async function generateWorkoutWithPipeline(params: WorkoutGenerationReque
     }
 
     const intentResult = await generateTrainingIntent({
-        name: params.client.name,
+        name: clientAlias,
         goal: effectiveGoal,
         level: params.client.level,
         days: adaptiveDays,
-        injuries: params.client.injuries,
-        preferences: params.client.preferences,
+        injuries: injurySummary,
+        preferences: preferenceSummary,
         adherence: params.client.adherence,
         equipment: ['Academia completa', 'Halteres', 'Barras', 'Máquinas'],
         sessionDuration: coldStartMode ? 50 : 60
@@ -336,6 +345,9 @@ export async function buildLocalFallbackWorkout(params: LocalFallbackParams): Pr
     const effectiveAdaptiveSignal = params.adaptiveSignal && params.adaptiveSignal.confidence >= 0.35
         ? params.adaptiveSignal
         : null;
+    const clientAlias = pseudonymizeClientName(params.client.name);
+    const injurySummary = classifyInjuryConstraints(params.client.injuries);
+    const preferenceSummary = summarizePreferenceTags(params.client.preferences);
     const adaptiveDaysBase = effectiveAdaptiveSignal?.recommendedDaysPerWeek || params.selectedDays;
     const adaptiveDays = params.injuryRisk.conservativeMode ? Math.max(2, adaptiveDaysBase - 1) : adaptiveDaysBase;
     const weeklyMicrocycle = buildWeeklyMicrocyclePlan({
@@ -350,7 +362,17 @@ export async function buildLocalFallbackWorkout(params: LocalFallbackParams): Pr
         : weeklyMicrocycle.weeks;
 
     const localExercises = await params.ensureExerciseCatalog();
-    let workout = generateSmartWorkout(params.client, params.observations, localExercises);
+    let workout = generateSmartWorkout(
+        {
+            ...params.client,
+            name: clientAlias,
+            injuries: injurySummary,
+            preferences: preferenceSummary,
+            observations: sanitizeCoachObservations(params.client.observations)
+        },
+        sanitizeCoachObservations(params.observations),
+        localExercises
+    );
     if (coldStartMode) {
         workout = applyColdStartProtocol(workout);
     }

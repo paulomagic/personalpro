@@ -1,10 +1,12 @@
 import React, { lazy } from 'react';
+import { Navigate, Route, Routes } from 'react-router';
 import { View, Client, Workout } from '../types';
 import type { DBUserProfile } from '../services/userProfileService';
 import {
   canAccessAdminArea,
   type AppSessionUser,
 } from '../services/auth/authFlow';
+import { resolvePathFromView } from '../services/navigation/historyNavigation';
 import LoginView from '../views/LoginView';
 
 const AIBuilderView = lazy(() => import('../views/AIBuilderView'));
@@ -64,135 +66,117 @@ const AppContentRouter: React.FC<AppContentRouterProps> = ({
     />
   );
 
-  switch (currentView) {
-    case View.LOGIN:
-      return <LoginView onLogin={handleLoginSuccess} />;
-    case View.DASHBOARD:
-      return renderDashboardFallback();
-    case View.AI_BUILDER:
-      return <AIBuilderView user={user} onBack={() => navigateTo(View.DASHBOARD)} onDone={() => navigateTo(View.DASHBOARD)} />;
-    case View.CLIENT_PROFILE:
-      if (!selectedClient) return renderDashboardFallback();
-      return (
-        <ClientProfileView
-          client={selectedClient}
-          coachId={user?.id}
-          onBack={() => navigateTo(View.DASHBOARD)}
-          onStartWorkout={(workout) => navigateTo(View.TRAINING_EXECUTION, workout)}
-          onStartAssessment={() => navigateTo(View.ASSESSMENT)}
-          onCreateWorkout={() => navigateTo(View.WORKOUT_BUILDER)}
-          onStudentView={() => navigateTo(View.STUDENT)}
-          onSportTraining={() => navigateTo(View.SPORT_TRAINING)}
-        />
-      );
-    case View.TRAINING_EXECUTION:
-      if (!activeWorkout) return renderDashboardFallback();
-      return <TrainingExecutionView workout={activeWorkout} onFinish={() => navigateTo(userProfile?.role === 'student' ? View.STUDENT : View.DASHBOARD)} />;
-    case View.CLIENTS:
-      return <ClientsView user={user} onBack={() => navigateTo(View.DASHBOARD)} onSelectClient={(client) => navigateTo(View.CLIENT_PROFILE, client)} />;
-    case View.METRICS:
-      return <MetricsView user={user} onBack={() => navigateTo(userProfile?.role === 'student' ? View.STUDENT : View.DASHBOARD)} />;
-    case View.SETTINGS:
-      return <SettingsView user={user} onBack={() => navigateTo(userProfile?.role === 'student' ? View.STUDENT : View.DASHBOARD)} onLogout={handleLogout} />;
-    case View.CALENDAR:
-      if (userProfile?.role === 'student') {
-        return <StudentCalendarView user={user} onBack={() => navigateTo(View.STUDENT)} />;
-      }
-      return <CalendarView user={user} onBack={() => navigateTo(View.DASHBOARD)} />;
-    case View.FINANCE:
-      return <FinanceView user={user} onBack={() => navigateTo(userProfile?.role === 'student' ? View.STUDENT : View.DASHBOARD)} />;
-    case View.WORKOUT_BUILDER:
-      return (
-        <WorkoutBuilderView
-          user={user}
-          client={selectedClient}
-          onBack={() => navigateTo(View.DASHBOARD)}
-          onSave={() => {
-            navigateTo(View.DASHBOARD);
-          }}
-        />
-      );
-    case View.ASSESSMENT:
-      if (!selectedClient) {
-        return (
+  const dashboardFallback = renderDashboardFallback();
+  const routeFallback = resolvePathFromView(currentView);
+  const deniedAdminElement = dashboardFallback;
+
+  return (
+    <Routes>
+      <Route path={resolvePathFromView(View.LOGIN)} element={<LoginView onLogin={handleLoginSuccess} />} />
+      <Route path={resolvePathFromView(View.DASHBOARD)} element={dashboardFallback} />
+      <Route path={resolvePathFromView(View.AI_BUILDER)} element={<AIBuilderView user={user} onBack={() => navigateTo(View.DASHBOARD)} onDone={() => navigateTo(View.DASHBOARD)} />} />
+      <Route
+        path={resolvePathFromView(View.CLIENT_PROFILE)}
+        element={selectedClient ? (
+          <ClientProfileView
+            client={selectedClient}
+            coachId={user?.id}
+            onBack={() => navigateTo(View.DASHBOARD)}
+            onStartWorkout={(workout) => navigateTo(View.TRAINING_EXECUTION, workout)}
+            onStartAssessment={() => navigateTo(View.ASSESSMENT)}
+            onCreateWorkout={() => navigateTo(View.WORKOUT_BUILDER)}
+            onStudentView={() => navigateTo(View.STUDENT)}
+            onSportTraining={() => navigateTo(View.SPORT_TRAINING)}
+          />
+        ) : dashboardFallback}
+      />
+      <Route
+        path={resolvePathFromView(View.TRAINING_EXECUTION)}
+        element={activeWorkout ? (
+          <TrainingExecutionView workout={activeWorkout} onFinish={() => navigateTo(userProfile?.role === 'student' ? View.STUDENT : View.DASHBOARD)} />
+        ) : dashboardFallback}
+      />
+      <Route path={resolvePathFromView(View.CLIENTS)} element={<ClientsView user={user} onBack={() => navigateTo(View.DASHBOARD)} onSelectClient={(client) => navigateTo(View.CLIENT_PROFILE, client)} />} />
+      <Route path={resolvePathFromView(View.METRICS)} element={<MetricsView user={user} onBack={() => navigateTo(userProfile?.role === 'student' ? View.STUDENT : View.DASHBOARD)} />} />
+      <Route path={resolvePathFromView(View.SETTINGS)} element={<SettingsView user={user} onBack={() => navigateTo(userProfile?.role === 'student' ? View.STUDENT : View.DASHBOARD)} onLogout={handleLogout} />} />
+      <Route
+        path={resolvePathFromView(View.CALENDAR)}
+        element={userProfile?.role === 'student'
+          ? <StudentCalendarView user={user} onBack={() => navigateTo(View.STUDENT)} />
+          : <CalendarView user={user} onBack={() => navigateTo(View.DASHBOARD)} />}
+      />
+      <Route path={resolvePathFromView(View.FINANCE)} element={<FinanceView user={user} onBack={() => navigateTo(userProfile?.role === 'student' ? View.STUDENT : View.DASHBOARD)} />} />
+      <Route
+        path={resolvePathFromView(View.WORKOUT_BUILDER)}
+        element={(
+          <WorkoutBuilderView
+            user={user}
+            client={selectedClient}
+            onBack={() => navigateTo(View.DASHBOARD)}
+            onSave={() => navigateTo(View.DASHBOARD)}
+          />
+        )}
+      />
+      <Route
+        path={resolvePathFromView(View.ASSESSMENT)}
+        element={selectedClient ? (
+          <AssessmentView
+            user={user}
+            client={selectedClient}
+            onBack={() => navigateTo(View.CLIENT_PROFILE, selectedClient)}
+            onSave={() => navigateTo(View.CLIENT_PROFILE, selectedClient)}
+          />
+        ) : (
           <DashboardView
             user={user}
             onSelectClient={setSelectedClient}
             onOpenAI={() => navigateTo(View.AI_BUILDER)}
             onNavigate={handleNavigation}
           />
-        );
-      }
-      return (
-        <AssessmentView
-          user={user}
-          client={selectedClient}
-          onBack={() => navigateTo(View.CLIENT_PROFILE, selectedClient)}
-          onSave={() => {
-            navigateTo(View.CLIENT_PROFILE, selectedClient);
-          }}
-        />
-      );
-    case View.STUDENT:
-      if (userProfile?.role === 'student') {
-        return (
+        )}
+      />
+      <Route
+        path={resolvePathFromView(View.STUDENT)}
+        element={userProfile?.role === 'student' ? (
           <StudentDashboardView
             user={user}
             onStartWorkout={(workout) => navigateTo(View.TRAINING_EXECUTION, workout)}
             onNavigate={handleNavigation}
             onLogout={handleLogout}
           />
-        );
-      }
-      return (
-        <StudentView
-          clientId={selectedClient?.id}
-          studentName={selectedClient?.name || 'Aluno Demo'}
-          coachName={user?.user_metadata?.name || 'Personal'}
-          onCompleteWorkout={() => navigateTo(View.DASHBOARD)}
-          onBack={() => selectedClient ? navigateTo(View.CLIENT_PROFILE, selectedClient) : navigateTo(View.DASHBOARD)}
-        />
-      );
-    case View.STUDENT_PROFILE:
-      return (
-        <StudentProfileView
-          user={user}
-          onBack={() => navigateTo(View.STUDENT)}
-          onSettings={() => navigateTo(View.SETTINGS)}
-        />
-      );
-    case View.STUDENT_WORKOUTS:
-      return (
-        <StudentView
-          clientId={userProfile?.client_id || undefined}
-          studentName={user?.user_metadata?.name || user?.user_metadata?.full_name || 'Aluno'}
-          coachName="Seu Personal"
-          onCompleteWorkout={() => navigateTo(View.STUDENT)}
-          onBack={() => navigateTo(View.STUDENT)}
-        />
-      );
-    case View.SPORT_TRAINING:
-      return (
-        <SportTrainingView
-          clientName={selectedClient?.name}
-          onBack={() => navigateTo(View.DASHBOARD)}
-          onSave={() => {
-            navigateTo(View.DASHBOARD);
-          }}
-        />
-      );
-    case View.ADMIN:
-    case View.ADMIN_USERS:
-    case View.ADMIN_AI_LOGS:
-    case View.ADMIN_AI_DASHBOARD:
-    case View.ADMIN_ACTIVITY_LOGS:
-    case View.ADMIN_SETTINGS:
-      if (!canAccessAdminArea(user)) {
-        console.warn('🔒 Acesso negado: usuário não é admin');
-        return renderDashboardFallback();
-      }
-      if (currentView === View.ADMIN) {
-        return (
+        ) : (
+          <StudentView
+            clientId={selectedClient?.id}
+            studentName={selectedClient?.name || 'Aluno Demo'}
+            coachName={user?.user_metadata?.name || 'Personal'}
+            onCompleteWorkout={() => navigateTo(View.DASHBOARD)}
+            onBack={() => selectedClient ? navigateTo(View.CLIENT_PROFILE, selectedClient) : navigateTo(View.DASHBOARD)}
+          />
+        )}
+      />
+      <Route
+        path={resolvePathFromView(View.STUDENT_PROFILE)}
+        element={<StudentProfileView user={user} onBack={() => navigateTo(View.STUDENT)} onSettings={() => navigateTo(View.SETTINGS)} />}
+      />
+      <Route
+        path={resolvePathFromView(View.STUDENT_WORKOUTS)}
+        element={(
+          <StudentView
+            clientId={userProfile?.client_id || undefined}
+            studentName={user?.user_metadata?.name || user?.user_metadata?.full_name || 'Aluno'}
+            coachName="Seu Personal"
+            onCompleteWorkout={() => navigateTo(View.STUDENT)}
+            onBack={() => navigateTo(View.STUDENT)}
+          />
+        )}
+      />
+      <Route
+        path={resolvePathFromView(View.SPORT_TRAINING)}
+        element={<SportTrainingView clientName={selectedClient?.name} onBack={() => navigateTo(View.DASHBOARD)} onSave={() => navigateTo(View.DASHBOARD)} />}
+      />
+      <Route
+        path={resolvePathFromView(View.ADMIN)}
+        element={canAccessAdminArea(user) ? (
           <AdminView
             onBack={() => navigateTo(View.DASHBOARD)}
             onNavigate={(subView) => {
@@ -205,27 +189,16 @@ const AppContentRouter: React.FC<AppContentRouterProps> = ({
               }
             }}
           />
-        );
-      }
-      if (currentView === View.ADMIN_USERS) {
-        return <AdminUsersView onBack={() => navigateTo(View.ADMIN)} />;
-      }
-      if (currentView === View.ADMIN_AI_LOGS) {
-        return <AdminAILogsView onBack={() => navigateTo(View.ADMIN)} />;
-      }
-      if (currentView === View.ADMIN_AI_DASHBOARD) {
-        return <AdminAIDashboardView onBack={() => navigateTo(View.ADMIN)} />;
-      }
-      if (currentView === View.ADMIN_ACTIVITY_LOGS) {
-        return <AdminActivityLogsView onBack={() => navigateTo(View.ADMIN)} />;
-      }
-      if (currentView === View.ADMIN_SETTINGS) {
-        return <AdminSettingsView onBack={() => navigateTo(View.ADMIN)} />;
-      }
-      return null;
-    default:
-      return <LoginView onLogin={handleLoginSuccess} />;
-  }
+        ) : deniedAdminElement}
+      />
+      <Route path={resolvePathFromView(View.ADMIN_USERS)} element={canAccessAdminArea(user) ? <AdminUsersView onBack={() => navigateTo(View.ADMIN)} /> : deniedAdminElement} />
+      <Route path={resolvePathFromView(View.ADMIN_AI_LOGS)} element={canAccessAdminArea(user) ? <AdminAILogsView onBack={() => navigateTo(View.ADMIN)} /> : deniedAdminElement} />
+      <Route path={resolvePathFromView(View.ADMIN_AI_DASHBOARD)} element={canAccessAdminArea(user) ? <AdminAIDashboardView onBack={() => navigateTo(View.ADMIN)} /> : deniedAdminElement} />
+      <Route path={resolvePathFromView(View.ADMIN_ACTIVITY_LOGS)} element={canAccessAdminArea(user) ? <AdminActivityLogsView onBack={() => navigateTo(View.ADMIN)} /> : deniedAdminElement} />
+      <Route path={resolvePathFromView(View.ADMIN_SETTINGS)} element={canAccessAdminArea(user) ? <AdminSettingsView onBack={() => navigateTo(View.ADMIN)} /> : deniedAdminElement} />
+      <Route path="*" element={<Navigate to={routeFallback} replace />} />
+    </Routes>
+  );
 };
 
 export default AppContentRouter;

@@ -4,7 +4,7 @@ import { getSafeAvatarUrl } from '../utils/validation';
 import { supabase } from '../services/supabaseCore';
 import PageHeader from '../components/PageHeader';
 import { BottomSheet } from '../components/BottomSheet';
-import { User, Bell, Palette, Shield, CreditCard, HelpCircle, ChevronRight, Edit3, LogOut } from 'lucide-react';
+import { User, Bell, Palette, Shield, CreditCard, HelpCircle, ChevronRight, Edit3, LogOut, FileText, Download } from 'lucide-react';
 import { useTheme, type ThemeMode } from '../services/ThemeContext';
 import {
     isPushSupported,
@@ -30,7 +30,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user, onBack, onLogout }) =
     const coachAvatar = getSafeAvatarUrl(rawAvatarUrl, coachName);
     const isDemo = user?.isDemo || !user?.id;
     // States for Modals
-    const [activeModal, setActiveModal] = React.useState<'profile' | 'notifications' | 'security' | 'help' | 'appearance' | null>(null);
+    const [activeModal, setActiveModal] = React.useState<'profile' | 'notifications' | 'security' | 'help' | 'appearance' | 'privacy' | null>(null);
 
     // Theme state — connected to global ThemeContext
     const { theme: selectedTheme, setTheme: setSelectedTheme } = useTheme();
@@ -215,6 +215,14 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user, onBack, onLogout }) =
             chipClassName: 'bg-[#7A9FCC1F] border border-[#7A9FCC33]',
             iconClassName: 'text-[#7A9FCC]'
         },
+        {
+            icon: FileText,
+            label: 'Privacidade e Dados',
+            subtitle: 'LGPD, exportação e política',
+            action: () => setActiveModal('privacy'),
+            chipClassName: 'bg-[#14B8A61F] border border-[#14B8A633]',
+            iconClassName: 'text-[#2DD4BF]'
+        },
     ];
 
     // Save profile changes to Supabase Auth
@@ -247,6 +255,37 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user, onBack, onLogout }) =
         saveNotificationPrefs(notifState);
         showToast('Preferências de notificação salvas.');
         setActiveModal(null);
+    };
+
+    const handleExportPrivacyReport = () => {
+        if (typeof window === 'undefined') return;
+
+        const report = {
+            exportedAt: new Date().toISOString(),
+            account: {
+                name: profileName,
+                email: coachEmail,
+                isDemo
+            },
+            preferences: {
+                notifications: notifState,
+                theme: selectedTheme
+            },
+            privacyControls: {
+                aiPromptProtection: true,
+                clinicalDataEncryption: 'enabled_in_backend_rollout',
+                offlineQueueStorage: true
+            }
+        };
+
+        const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
+        const url = window.URL.createObjectURL(blob);
+        const anchor = document.createElement('a');
+        anchor.href = url;
+        anchor.download = `personalpro-privacy-report-${new Date().toISOString().slice(0, 10)}.json`;
+        anchor.click();
+        window.URL.revokeObjectURL(url);
+        showToast('Relatório de privacidade exportado.');
     };
 
     const handleSendTestPush = async () => {
@@ -640,6 +679,48 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user, onBack, onLogout }) =
                         >
                             Aplicar Tema
                         </button>
+                    </>
+                )}
+
+                {activeModal === 'privacy' && (
+                    <>
+                        <div className="text-center mb-8">
+                            <div className="size-16 mx-auto rounded-2xl bg-teal-500/10 flex items-center justify-center mb-4">
+                                <span className="material-symbols-outlined text-3xl text-teal-300">privacy_tip</span>
+                            </div>
+                            <h3 className="text-2xl font-black text-white">Privacidade e Dados</h3>
+                            <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mt-2">LGPD operacional</p>
+                        </div>
+                        <div className="space-y-3 mb-8">
+                            <div className="rounded-2xl border border-white/5 bg-white/5 p-4">
+                                <p className="text-[10px] font-bold uppercase tracking-widest text-teal-300">Proteções ativas</p>
+                                <p className="mt-2 text-sm font-bold text-white">Prompts de IA mascarados e dados clínicos protegidos no backend.</p>
+                                <p className="mt-1 text-xs text-slate-400">Fluxos sensíveis usam redaction, categorização e camada de criptografia clínica.</p>
+                            </div>
+                            <div className="rounded-2xl border border-white/5 bg-white/5 p-4">
+                                <p className="text-[10px] font-bold uppercase tracking-widest text-blue-300">Seus direitos</p>
+                                <p className="mt-2 text-sm text-slate-300">Acesso, correção, exportação e exclusão dependem de processo operacional e backend do produto.</p>
+                            </div>
+                        </div>
+                        <div className="space-y-3">
+                            <button
+                                onClick={handleExportPrivacyReport}
+                                className="w-full h-14 rounded-2xl border border-[rgba(45,212,191,0.2)] bg-[rgba(20,184,166,0.08)] text-sm font-black uppercase tracking-widest text-teal-200"
+                            >
+                                <span className="inline-flex items-center gap-2">
+                                    <Download size={15} />
+                                    Exportar Relatório
+                                </span>
+                            </button>
+                            <a
+                                href="/privacy-policy.html"
+                                target="_blank"
+                                rel="noreferrer"
+                                className="flex h-14 items-center justify-center rounded-2xl border border-[rgba(59,130,246,0.2)] bg-[rgba(59,130,246,0.08)] text-sm font-black uppercase tracking-widest text-blue-200"
+                            >
+                                Abrir Política de Privacidade
+                            </a>
+                        </div>
                     </>
                 )}
 

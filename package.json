@@ -17,6 +17,7 @@
     "secret-scan": "node scripts/secret-scan.cjs",
     "secret-scan:staged": "node scripts/secret-scan.cjs --staged",
     "security-check": "node scripts/security-check.cjs",
+    "pretest:e2e": "playwright install chromium",
     "test:e2e": "playwright test",
     "test:e2e:headed": "playwright test --headed --project=chromium"
   },
@@ -39,6 +40,7 @@
     "zod": "^4.3.5"
   },
   "devDependencies": {
+    "@playwright/test": "^1.58.2",
     "@types/node": "^22.14.0",
     "@vitejs/plugin-react": "^5.0.0",
     "autoprefixer": "^10.4.23",

@@ -58,7 +58,7 @@ export function pseudonymizeClientName(name?: string): string {
 
 export function classifyInjuryConstraints(injuries?: string): string {
     const normalized = normalizeText(injuries);
-    if (!normalized || normalized === 'nenhuma' || normalized === 'nenhum') {
+    if (!normalized || normalized === 'nenhuma' || normalized === 'nenhum' || normalized === 'sem_restricoes_reportadas') {
         return 'sem_restricoes_reportadas';
     }
 
@@ -78,7 +78,7 @@ export function classifyInjuryConstraints(injuries?: string): string {
 
 export function summarizePreferenceTags(preferences?: string): string {
     const normalized = normalizeText(preferences);
-    if (!normalized || normalized === 'nao especificadas') {
+    if (!normalized || normalized === 'nao especificadas' || normalized === 'sem_preferencias_especificas') {
         return 'sem_preferencias_especificas';
     }
 

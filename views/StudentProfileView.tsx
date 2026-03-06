@@ -1,6 +1,4 @@
-import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
     ArrowLeft,
     User,
@@ -83,14 +81,14 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({
         }
     }, [user]);
 
-    const containerVariants = {
-        hidden: { opacity: 0 },
-        visible: { opacity: 1, transition: { staggerChildren: 0.08 } }
-    };
+    const formatActivityDate = (activity: CompletedWorkout): string => {
+        const rawDate = activity.date || activity.created_at;
+        if (!rawDate) return 'Data indisponível';
 
-    const itemVariants = {
-        hidden: { opacity: 0, y: 20 },
-        visible: { opacity: 1, y: 0 }
+        const parsed = new Date(rawDate);
+        if (Number.isNaN(parsed.getTime())) return 'Data indisponível';
+
+        return parsed.toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' });
     };
 
     // Biometrics data (would come from client/assessments)
@@ -139,17 +137,9 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({
     }
 
     return (
-        <motion.div
-            initial="hidden"
-            animate="visible"
-            variants={containerVariants}
-            className="min-h-screen pb-32 bg-[var(--bg-void)]"
-        >
+        <div className="min-h-screen pb-32 bg-[var(--bg-void)] animate-fade-in">
             {/* Header with Avatar */}
-            <motion.div
-                variants={itemVariants}
-                className="relative h-64 overflow-hidden bg-[linear-gradient(135deg,#030712_0%,#0a1628_50%,#001a3d_100%)]"
-            >
+            <div className="relative h-64 overflow-hidden bg-[linear-gradient(135deg,#030712_0%,#0a1628_50%,#001a3d_100%)]">
                 {/* Decorative elements */}
                 <div className="absolute top-0 right-0 w-64 h-64 rounded-full blur-3xl -mr-32 -mt-32 bg-[rgba(30,58,138,0.15)]" />
                 <div className="absolute bottom-0 left-0 w-48 h-48 rounded-full blur-2xl -ml-24 -mb-24 bg-[rgba(59,130,246,0.1)]" />
@@ -184,10 +174,10 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({
                         )}
                     </div>
                 </div>
-            </motion.div>
+            </div>
 
             {/* Profile Info */}
-            <motion.div variants={itemVariants} className="pt-6 px-6 text-center mb-6">
+            <div className="pt-6 px-6 text-center mb-6 animate-fade-in">
                 <h1 className="text-2xl font-black text-white">{studentName}</h1>
                 <p className="text-sm text-slate-500 mt-1">{clientData?.goal || 'Definir objetivo'}</p>
 
@@ -196,10 +186,10 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({
                     <Flame size={16} className="text-blue-400" />
                     <span className="text-xs font-bold text-blue-400">{weeklyStats.streak} dias seguidos</span>
                 </div>
-            </motion.div>
+            </div>
 
             {/* Premium Segmented Control (Tabs) */}
-            <motion.div variants={itemVariants} className="px-6 mb-6">
+            <div className="px-6 mb-6 animate-fade-in">
                 <div className="flex bg-slate-900/60 rounded-[18px] backdrop-blur-md p-1 border border-white/5 relative">
                     {[
                         { key: 'bio', label: 'Biometria', icon: Activity },
@@ -210,7 +200,7 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({
                             key={tab.key}
                             onClick={() => setActiveTab(tab.key as any)}
                             className={`relative z-10 flex-1 py-3 px-2 rounded-[14px] flex items-center justify-center gap-2 transition-all ${activeTab === tab.key
-                                ? 'text-white'
+                                ? 'bg-blue-600 shadow-glow text-white'
                                 : 'text-slate-500 hover:text-slate-300'
                                 }`}
                         >
@@ -218,30 +208,14 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({
                             <span className="text-[11px] font-black uppercase tracking-wider">{tab.label}</span>
                         </button>
                     ))}
-
-                    {/* Active Background Pill */}
-                    <motion.div
-                        className="absolute top-1 bottom-1 w-[calc(33.33%-4px)] bg-blue-600 rounded-[14px] shadow-glow z-0"
-                        animate={{
-                            left: activeTab === 'bio' ? '4px' : activeTab === 'goals' ? 'calc(33.33% + 2px)' : 'calc(66.66%)'
-                        }}
-                        transition={{ type: 'spring', stiffness: 300, damping: 25 }}
-                    />
                 </div>
-            </motion.div>
+            </div>
 
             {/* Tab Content */}
             <div className="px-6">
-                <AnimatePresence mode="wait">
-                    {/* Biometry Tab */}
-                    {activeTab === 'bio' && (
-                        <motion.div
-                            key="bio"
-                            initial={{ opacity: 0, x: -20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            exit={{ opacity: 0, x: 20 }}
-                            className="space-y-4"
-                        >
+                {/* Biometry Tab */}
+                {activeTab === 'bio' && (
+                    <div className="space-y-4 animate-fade-in">
                             {/* Main Stats Grid */}
                             <div className="grid grid-cols-2 gap-3 pb-2">
                                 <div className="glass-card p-5 text-center rounded-3xl relative overflow-hidden group">
@@ -317,18 +291,12 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({
                                     </div>
                                 </div>
                             </div>
-                        </motion.div>
-                    )}
+                    </div>
+                )}
 
-                    {/* Goals Tab */}
-                    {activeTab === 'goals' && (
-                        <motion.div
-                            key="goals"
-                            initial={{ opacity: 0, x: -20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            exit={{ opacity: 0, x: 20 }}
-                            className="space-y-4"
-                        >
+                {/* Goals Tab */}
+                {activeTab === 'goals' && (
+                    <div className="space-y-4 animate-fade-in">
                             {/* Weekly Progress Card */}
                             <div className="card-blue p-5 relative overflow-hidden">
                                 <div className="absolute inset-0 bg-gradient-to-br from-blue-600 to-indigo-800 opacity-90" />
@@ -420,9 +388,9 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({
 
                                                 <div className="w-6 flex justify-end">
                                                     {isComplete && (
-                                                        <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring' }}>
+                                                        <div className="animate-fade-in">
                                                             <CheckCircle size={20} className="text-emerald-400 drop-shadow-[0_0_8px_rgba(0,255,136,0.3)]" />
-                                                        </motion.div>
+                                                        </div>
                                                     )}
                                                 </div>
                                             </div>
@@ -430,18 +398,12 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({
                                     );
                                 })}
                             </div>
-                        </motion.div>
-                    )}
+                    </div>
+                )}
 
-                    {/* History Tab */}
-                    {activeTab === 'history' && (
-                        <motion.div
-                            key="history"
-                            initial={{ opacity: 0, x: -20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            exit={{ opacity: 0, x: 20 }}
-                            className="space-y-4"
-                        >
+                {/* History Tab */}
+                {activeTab === 'history' && (
+                    <div className="space-y-4 animate-fade-in">
                             {/* Stats Summary */}
                             <div className="grid grid-cols-2 gap-3 mb-6">
                                 <div className="glass-card p-5 text-center rounded-3xl relative overflow-hidden group">
@@ -499,7 +461,7 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({
                                                 <p className="text-[14px] font-black text-white tracking-wide">{activity.title}</p>
                                                 <div className="flex items-center gap-2 mt-1">
                                                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                                                        {new Date(activity.date).toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' })}
+                                                        {formatActivityDate(activity)}
                                                     </span>
                                                     {activity.duration && (
                                                         <>
@@ -516,11 +478,10 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({
                                     ))
                                 )}
                             </div>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
+                    </div>
+                )}
             </div>
-        </motion.div>
+        </div>
     );
 };
 

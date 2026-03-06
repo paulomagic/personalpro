@@ -86,6 +86,38 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
     failureReason: captchaFailureReason
   });
 
+  const completeInviteAcceptance = async (userId: string): Promise<void> => {
+    if (!isInviteMode || !inviteToken) return;
+
+    const result = await acceptInvitation(inviteToken, userId);
+    if (!result.success) {
+      console.error('Error accepting invitation:', result.error);
+    }
+
+    window.history.replaceState({}, document.title, window.location.pathname);
+  };
+
+  const tryRecoverInviteAccessWithoutFreshSession = async (): Promise<AppSessionUser | null> => {
+    if (!supabase || !isInviteMode) return null;
+
+    const { data, error: loginError } = await supabase.auth.signInWithPassword({
+      email,
+      password
+    });
+
+    if (loginError || !data.user) {
+      if (loginError?.message === 'Invalid login credentials') {
+        setError('Esta conta já existe ou ainda não foi confirmada. Use "Entrar" ou confirme o email para continuar.');
+      } else {
+        setError('Verifique seu email para confirmar o cadastro. Se a conta já existir, use "Entrar".');
+      }
+      return null;
+    }
+
+    await completeInviteAcceptance(data.user.id);
+    return data.user as AppSessionUser;
+  };
+
   const resetCaptcha = () => {
     setCaptchaToken('');
     setCaptchaWidgetFailed(false);
@@ -330,20 +362,19 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
 
       if (data.user) {
         if (!data.session) {
-          setError('Verifique seu email para confirmar o cadastro');
+          const recoveredUser = await tryRecoverInviteAccessWithoutFreshSession();
+          if (recoveredUser) {
+            onLogin(recoveredUser);
+            return;
+          }
+
+          setError(isInviteMode
+            ? 'Verifique seu email para confirmar o cadastro. Se a conta já existir, use "Entrar".'
+            : 'Verifique seu email para confirmar o cadastro');
           return;
         }
 
-        // If in invite mode, accept the invitation
-        if (isInviteMode && inviteToken) {
-          const result = await acceptInvitation(inviteToken, data.user.id);
-          if (!result.success) {
-            console.error('Error accepting invitation:', result.error);
-            // Continue anyway - user is created, just not linked yet
-          }
-          // Clear URL params
-          window.history.replaceState({}, document.title, window.location.pathname);
-        }
+        await completeInviteAcceptance(data.user.id);
 
         onLogin(data.user as AppSessionUser);
       }

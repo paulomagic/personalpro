@@ -387,6 +387,13 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
         });
 
         if (!inviteSignupResult.success) {
+          if (inviteSignupResult.existingAccount && inviteSignupResult.existingRole === 'student') {
+            const existingStudent = await signInAfterInviteProvisioning();
+            if (existingStudent) {
+              onLogin(existingStudent);
+              return;
+            }
+          }
           setError(inviteSignupResult.error || 'Falha ao concluir o convite.');
           return;
         }

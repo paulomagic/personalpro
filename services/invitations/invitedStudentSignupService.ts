@@ -1,4 +1,4 @@
-import { supabase } from '../supabaseCore';
+import { supabase, SUPABASE_ANON_KEY, SUPABASE_URL } from '../supabaseCore';
 
 interface CompleteInviteSignupRequest {
     inviteToken: string;
@@ -11,6 +11,7 @@ interface CompleteInviteSignupResponse {
     success: boolean;
     userId?: string;
     existingAccount?: boolean;
+    existingRole?: 'admin' | 'coach' | 'student';
     error?: string;
 }
 
@@ -21,14 +22,28 @@ export async function completeInvitedStudentSignup(
         return { success: false, error: 'Supabase não configurado' };
     }
 
-    const { data, error } = await supabase.functions.invoke('complete-invite-signup', {
-        body: payload
+    const response = await fetch(`${SUPABASE_URL}/functions/v1/complete-invite-signup`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            apikey: SUPABASE_ANON_KEY,
+            Authorization: `Bearer ${SUPABASE_ANON_KEY}`
+        },
+        body: JSON.stringify(payload)
     });
 
-    if (error) {
+    const data = await response.json().catch(() => null);
+
+    if (!response.ok) {
         return {
             success: false,
-            error: error.message || 'Falha ao concluir o cadastro do convite'
+            existingAccount: Boolean(data?.existingAccount),
+            existingRole: data?.existingRole === 'admin' || data?.existingRole === 'coach' || data?.existingRole === 'student'
+                ? data.existingRole
+                : undefined,
+            error: typeof data?.error === 'string'
+                ? data.error
+                : 'Falha ao concluir o cadastro do convite'
         };
     }
 
@@ -36,6 +51,9 @@ export async function completeInvitedStudentSignup(
         success: Boolean(data?.success),
         userId: typeof data?.userId === 'string' ? data.userId : undefined,
         existingAccount: Boolean(data?.existingAccount),
+        existingRole: data?.existingRole === 'admin' || data?.existingRole === 'coach' || data?.existingRole === 'student'
+            ? data.existingRole
+            : undefined,
         error: typeof data?.error === 'string' ? data.error : undefined
     };
 }

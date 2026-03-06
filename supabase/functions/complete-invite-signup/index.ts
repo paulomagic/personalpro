@@ -23,6 +23,8 @@ interface AdminUserRow {
     email?: string;
 }
 
+type ExistingRole = "admin" | "coach" | "student" | null;
+
 function getAllowedOrigins(): string[] {
     const raw = Deno.env.get("ALLOWED_ORIGINS") || "";
     return raw.split(",").map((entry) => entry.trim()).filter(Boolean);
@@ -114,6 +116,35 @@ async function findUserByEmail(adminClient: any, email: string): Promise<AdminUs
     return null;
 }
 
+async function fetchUserRole(
+    supabaseUrl: string,
+    serviceRoleKey: string,
+    userId: string
+): Promise<ExistingRole> {
+    const params = new URLSearchParams({
+        id: `eq.${userId}`,
+        select: "role",
+        limit: "1"
+    });
+
+    const response = await fetch(`${supabaseUrl}/rest/v1/user_profiles?${params.toString()}`, {
+        method: "GET",
+        headers: {
+            "apikey": serviceRoleKey,
+            "Authorization": `Bearer ${serviceRoleKey}`,
+            "Content-Type": "application/json"
+        }
+    });
+
+    if (!response.ok) {
+        throw new Error(`profile_fetch_failed:${response.status}`);
+    }
+
+    const rows = await response.json() as Array<{ role?: ExistingRole }>;
+    const role = rows[0]?.role;
+    return role === "admin" || role === "coach" || role === "student" ? role : null;
+}
+
 serve(async (req: Request) => {
     const corsHeaders = buildCorsHeaders(req);
     if (!corsHeaders) {
@@ -197,11 +228,16 @@ serve(async (req: Request) => {
 
         const existingUser = await findUserByEmail(adminClient, email);
         if (existingUser) {
+            const existingRole = await fetchUserRole(supabaseUrl, serviceRoleKey, existingUser.id);
+            const errorMessage = existingRole === "student"
+                ? "Esta conta de aluno já existe. Use Entrar com a senha correta para concluir o convite."
+                : "Este email já pertence a uma conta existente de personal/admin. Use outro email para o aluno.";
             return new Response(
                 JSON.stringify({
                     success: false,
                     existingAccount: true,
-                    error: "Já existe uma conta com este email. Use Entrar para continuar."
+                    existingRole,
+                    error: errorMessage
                 }),
                 { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } }
             );

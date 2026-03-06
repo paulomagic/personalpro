@@ -22,6 +22,47 @@ export function useAuthSessionSync({
     useEffect(() => {
         if (!supabase) return;
 
+        const handlePasswordRecoveryRedirect = async () => {
+            if (typeof window === 'undefined') return;
+
+            const searchParams = new URLSearchParams(window.location.search);
+            const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+            const searchType = searchParams.get('type');
+            const hashType = hashParams.get('type');
+            const recoveryCode = searchParams.get('code');
+            const tokenHash = searchParams.get('token_hash');
+            const resetFlag = searchParams.get('reset') === 'true';
+            const hasRecoveryHashToken = Boolean(hashParams.get('access_token')) && hashType === 'recovery';
+
+            if (searchType === 'recovery' && recoveryCode) {
+                const { error } = await supabase.auth.exchangeCodeForSession(recoveryCode);
+                if (!error) {
+                    setCurrentView(View.LOGIN);
+                    onPasswordRecovery();
+                }
+                return;
+            }
+
+            if (searchType === 'recovery' && tokenHash) {
+                const { error } = await supabase.auth.verifyOtp({
+                    token_hash: tokenHash,
+                    type: 'recovery'
+                });
+                if (!error) {
+                    setCurrentView(View.LOGIN);
+                    onPasswordRecovery();
+                }
+                return;
+            }
+
+            if (hasRecoveryHashToken || resetFlag) {
+                setCurrentView(View.LOGIN);
+                onPasswordRecovery();
+            }
+        };
+
+        void handlePasswordRecoveryRedirect();
+
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
             (event, session) => {
                 if (event === 'PASSWORD_RECOVERY') {

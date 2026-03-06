@@ -168,7 +168,10 @@ export async function getClients(
     return enrichClientsWithSensitiveData(clients);
 }
 
-export async function getClientById(clientId: string): Promise<DBClient | null> {
+export async function getClientById(
+    clientId: string,
+    options: { includeSensitiveData?: boolean } = {}
+): Promise<DBClient | null> {
     if (!supabase || !isSupabaseUuid(clientId)) return null;
 
     const { data, error } = await supabase
@@ -183,6 +186,10 @@ export async function getClientById(clientId: string): Promise<DBClient | null> 
     }
 
     const client = data as DBClient;
+    if (options.includeSensitiveData === false) {
+        return client;
+    }
+
     const sensitive = await getClientSensitiveData(client.id);
     return mergeClientSensitiveData(client, sensitive);
 }

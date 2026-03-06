@@ -24,6 +24,7 @@ const InviteStudentModal: React.FC<InviteStudentModalProps> = ({
     const [success, setSuccess] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [inviteLink, setInviteLink] = useState<string | null>(null);
+    const [copied, setCopied] = useState(false);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -60,9 +61,11 @@ const InviteStudentModal: React.FC<InviteStudentModalProps> = ({
         }
     };
 
-    const copyToClipboard = () => {
+    const copyToClipboard = async () => {
         if (inviteLink) {
-            navigator.clipboard.writeText(inviteLink);
+            await navigator.clipboard.writeText(inviteLink);
+            setCopied(true);
+            window.setTimeout(() => setCopied(false), 1800);
         }
     };
 
@@ -82,6 +85,7 @@ const InviteStudentModal: React.FC<InviteStudentModalProps> = ({
         setSuccess(false);
         setError(null);
         setInviteLink(null);
+        setCopied(false);
         onClose();
     };
 
@@ -129,10 +133,13 @@ const InviteStudentModal: React.FC<InviteStudentModalProps> = ({
                             <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                                 <button
                                     onClick={copyToClipboard}
-                                    className="py-3 rounded-xl bg-blue-600 text-white font-bold hover:bg-blue-500 transition-colors flex items-center justify-center gap-2"
+                                    className={`py-3 rounded-xl font-bold transition-colors flex items-center justify-center gap-2 ${copied
+                                        ? 'bg-emerald-600 text-white'
+                                        : 'bg-blue-600 text-white hover:bg-blue-500'
+                                        }`}
                                 >
-                                    <span className="material-symbols-outlined text-sm">content_copy</span>
-                                    Copiar Link
+                                    <span className="material-symbols-outlined text-sm">{copied ? 'check' : 'content_copy'}</span>
+                                    {copied ? 'Link copiado' : 'Copiar Link'}
                                 </button>
                                 <button
                                     onClick={shareViaWhatsApp}

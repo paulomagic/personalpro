@@ -36,6 +36,7 @@ function parseDurationToMinutes(duration?: string | null): number {
 }
 
 function resolveCompletedAt(workout: CompletedWorkout): string | null {
+    if (!workout) return null;
     return workout.date || workout.created_at || null;
 }
 
@@ -98,12 +99,13 @@ export function deriveStudentConsistencyStats(params: {
     client: Client | null;
     currentWorkout: Workout | null;
 }): StudentConsistencyStats {
-    const recentHistory = filterWindow(params.history, 7);
+    const safeHistory = params.history.filter((entry): entry is CompletedWorkout => Boolean(entry));
+    const recentHistory = filterWindow(safeHistory, 7);
     const workoutsCompleted = recentHistory.length;
     const workoutsPlanned = derivePlannedSessionsPerWeek(params.client, params.currentWorkout);
     const totalMinutes = recentHistory.reduce((sum, workout) => sum + parseDurationToMinutes(workout.duration), 0);
     const totalLoadVolume = recentHistory.reduce((sum, workout) => sum + (workout.total_load_volume || 0), 0);
-    const streak = calculateCurrentStreak(params.history);
+    const streak = calculateCurrentStreak(safeHistory);
     const completionRate = workoutsPlanned > 0 ? clamp((workoutsCompleted / workoutsPlanned) * 100, 0, 100) : 0;
     const consistencyScore = Math.round(clamp(completionRate * 0.7 + (params.client?.adherence || 0) * 0.3, 0, 100));
 
@@ -115,7 +117,7 @@ export function deriveStudentConsistencyStats(params: {
         streak,
         consistencyScore,
         completionRate,
-        lastCompletedAt: resolveCompletedAt(params.history[0]) || null
+        lastCompletedAt: resolveCompletedAt(safeHistory[0]) || null
     };
 }
 
@@ -125,7 +127,7 @@ export function deriveSmartGoals(params: {
     currentWorkout: Workout | null;
 }): SmartGoalItem[] {
     const stats = deriveStudentConsistencyStats(params);
-    const recentHistory = filterWindow(params.history, 14);
+    const recentHistory = filterWindow(params.history.filter((entry): entry is CompletedWorkout => Boolean(entry)), 14);
     const averageMinutes = recentHistory.length > 0
         ? Math.round(recentHistory.reduce((sum, workout) => sum + parseDurationToMinutes(workout.duration), 0) / recentHistory.length)
         : 45;

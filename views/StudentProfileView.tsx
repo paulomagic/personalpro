@@ -45,6 +45,10 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({
     const [currentWorkout, setCurrentWorkout] = useState<Workout | null>(null);
 
     const studentName = user?.user_metadata?.name || user?.user_metadata?.full_name || 'Aluno';
+    const safeHistory = useMemo(
+        () => history.filter((entry): entry is CompletedWorkout => Boolean(entry && typeof entry === 'object')),
+        [history]
+    );
 
     useEffect(() => {
         const loadData = async () => {
@@ -52,7 +56,7 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({
             try {
                 const profile = await getUserProfile(user.id);
                 if (profile?.client_id) {
-                    const client = await getClientById(profile.client_id);
+                    const client = await getClientById(profile.client_id, { includeSensitiveData: false });
                     if (client) {
                         // Map body_fat from DB to bodyFat in frontend
                         const mappedClient: Client = {
@@ -63,7 +67,7 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({
 
                         // Load history
                         const workouts = await getCompletedWorkouts(profile.client_id);
-                        setHistory(workouts);
+                        setHistory(workouts.filter((workout): workout is CompletedWorkout => Boolean(workout && typeof workout === 'object')));
 
                         const activeWorkout = await getCurrentWorkoutByClient(profile.client_id);
                         setCurrentWorkout(activeWorkout);
@@ -109,16 +113,16 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({
     };
 
     const weeklyStats = useMemo(() => deriveStudentConsistencyStats({
-        history,
+        history: safeHistory,
         client: clientData,
         currentWorkout
-    }), [history, clientData, currentWorkout]);
+    }), [safeHistory, clientData, currentWorkout]);
 
     const smartGoals = useMemo(() => deriveSmartGoals({
-        history,
+        history: safeHistory,
         client: clientData,
         currentWorkout
-    }), [history, clientData, currentWorkout]);
+    }), [safeHistory, clientData, currentWorkout]);
 
     const consistencyRecommendation = useMemo(
         () => buildConsistencyRecommendation(weeklyStats),
@@ -440,7 +444,7 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({
                             {/* Activity List */}
                             <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] px-2 mb-3">Atividades Recentes</h4>
                             <div className="space-y-3">
-                                {history.length === 0 ? (
+                                {safeHistory.length === 0 ? (
                                     <div className="glass-card p-8 rounded-[24px] text-center">
                                         <div className="size-12 rounded-full bg-slate-800/50 flex items-center justify-center mx-auto mb-3 border border-white/5">
                                             <Calendar size={20} className="text-slate-600" />
@@ -449,7 +453,7 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({
                                         <p className="text-slate-500 text-xs">Nenhum treino registrado recentemente.</p>
                                     </div>
                                 ) : (
-                                    history.map((activity) => (
+                                    safeHistory.map((activity) => (
                                         <div
                                             key={activity.id}
                                             className="glass-card p-4 rounded-[20px] flex items-center gap-4 hover:border-blue-500/30 transition-colors group cursor-pointer"

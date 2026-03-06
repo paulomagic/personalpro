@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { X, Mail, Send, UserPlus, Check, AlertCircle } from 'lucide-react';
+import { Mail, Check, AlertCircle, MessageCircle } from 'lucide-react';
 import { createInvitation } from '../services/supabase/domains/invitationsDomain';
 
 interface InviteStudentModalProps {
@@ -67,6 +66,16 @@ const InviteStudentModal: React.FC<InviteStudentModalProps> = ({
         }
     };
 
+    const shareViaWhatsApp = () => {
+        if (!inviteLink) return;
+
+        const message = encodeURIComponent(
+            `Acesse seu convite do Personal PRO por este link:\n${inviteLink}`
+        );
+
+        window.open(`https://wa.me/?text=${message}`, '_blank', 'noopener,noreferrer');
+    };
+
     const handleClose = () => {
         setEmail(clientEmail || '');
         setLoading(false);
@@ -79,21 +88,14 @@ const InviteStudentModal: React.FC<InviteStudentModalProps> = ({
     if (!isOpen) return null;
 
     return (
-        <AnimatePresence>
-            <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-                onClick={handleClose}
+        <div
+            className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in"
+            onClick={handleClose}
+        >
+            <div
+                className="w-full max-w-md glass-card rounded-[32px] p-6 border border-white/10 animate-fade-in"
+                onClick={e => e.stopPropagation()}
             >
-                <motion.div
-                    initial={{ scale: 0.9, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    exit={{ scale: 0.9, opacity: 0 }}
-                    className="w-full max-w-md glass-card rounded-[32px] p-6 border border-white/10"
-                    onClick={e => e.stopPropagation()}
-                >
                     {/* Header */}
                     <div className="mb-6">
                         <button
@@ -116,7 +118,7 @@ const InviteStudentModal: React.FC<InviteStudentModalProps> = ({
                             </div>
                             <h3 className="text-lg font-bold text-white mb-2">Convite Criado!</h3>
                             <p className="text-sm text-slate-400 mb-6">
-                                Copie o link abaixo e envie para o aluno por WhatsApp, email ou como preferir.
+                                Copie o link abaixo ou envie direto por WhatsApp. Nenhum email é disparado automaticamente.
                             </p>
 
                             <div className="bg-slate-900/50 rounded-xl p-4 mb-4">
@@ -124,17 +126,24 @@ const InviteStudentModal: React.FC<InviteStudentModalProps> = ({
                                 <p className="text-sm text-blue-400 break-all font-mono">{inviteLink}</p>
                             </div>
 
-                            <div className="flex gap-3">
+                            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                                 <button
                                     onClick={copyToClipboard}
-                                    className="flex-1 py-3 rounded-xl bg-blue-600 text-white font-bold hover:bg-blue-500 transition-colors flex items-center justify-center gap-2"
+                                    className="py-3 rounded-xl bg-blue-600 text-white font-bold hover:bg-blue-500 transition-colors flex items-center justify-center gap-2"
                                 >
                                     <span className="material-symbols-outlined text-sm">content_copy</span>
                                     Copiar Link
                                 </button>
                                 <button
+                                    onClick={shareViaWhatsApp}
+                                    className="py-3 rounded-xl bg-emerald-600/20 text-emerald-400 font-bold hover:bg-emerald-600/30 transition-colors flex items-center justify-center gap-2 border border-emerald-500/20"
+                                >
+                                    <MessageCircle size={16} />
+                                    WhatsApp
+                                </button>
+                                <button
                                     onClick={handleClose}
-                                    className="flex-1 py-3 rounded-xl bg-white/5 text-white font-bold hover:bg-white/10 transition-colors"
+                                    className="py-3 rounded-xl bg-white/5 text-white font-bold hover:bg-white/10 transition-colors"
                                 >
                                     Fechar
                                 </button>
@@ -148,7 +157,7 @@ const InviteStudentModal: React.FC<InviteStudentModalProps> = ({
                         /* Form State */
                         <form onSubmit={handleSubmit}>
                             <p className="text-sm text-slate-400 mb-6">
-                                Envie um convite para seu aluno acessar o app e acompanhar seus treinos, progresso e muito mais.
+                                Gere um link de convite para copiar e enviar manualmente ao aluno, de preferência por WhatsApp.
                             </p>
 
                             {error && (
@@ -188,13 +197,12 @@ const InviteStudentModal: React.FC<InviteStudentModalProps> = ({
                             </button>
 
                             <p className="text-xs text-slate-500 text-center mt-4">
-                                O aluno receberá um link para criar sua conta
+                                Vamos gerar um link manual. Nenhum email é enviado automaticamente.
                             </p>
                         </form>
                     )}
-                </motion.div>
-            </motion.div>
-        </AnimatePresence>
+            </div>
+        </div>
     );
 };
 

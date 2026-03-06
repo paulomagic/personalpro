@@ -38,7 +38,7 @@ function buildCorsHeaders(req: Request): Record<string, string> | null {
         "http://127.0.0.1:5173",
         "http://127.0.0.1:5174"
     ];
-    const allowedOrigins = configuredOrigins.length > 0 ? configuredOrigins : fallbackOrigins;
+    const allowedOrigins = Array.from(new Set([...fallbackOrigins, ...configuredOrigins]));
     const allowOrigin = !!origin && allowedOrigins.includes(origin);
 
     if (!allowOrigin) return null;

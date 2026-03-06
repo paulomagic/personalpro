@@ -1,6 +1,6 @@
 const PUSH_PREFS_STORAGE_KEY = 'apex_notifications';
 
-interface NotificationPrefs {
+export interface NotificationPrefs {
     push: boolean;
     email: boolean;
     sms: boolean;

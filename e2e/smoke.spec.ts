@@ -21,6 +21,20 @@ test('demo user can open client and start quick workout', async ({ page }) => {
   await expect(page.getByTestId('complete-set-button')).toBeVisible();
 });
 
+test('demo user can open privacy controls from settings', async ({ page }) => {
+  await page.goto('/');
+  await page.getByTestId('demo-login-button').click();
+
+  await page.getByRole('button', { name: 'Abrir perfil' }).click();
+  await expect(page.getByText('Configurações')).toBeVisible();
+
+  await page.getByRole('button', { name: /Privacidade e Dados/i }).click();
+  const privacyDialog = page.getByLabel('Painel');
+  await expect(privacyDialog.getByRole('heading', { name: 'Privacidade e Dados' })).toBeVisible();
+  await expect(privacyDialog.getByRole('button', { name: 'Exportar Dados LGPD' })).toBeVisible();
+  await expect(privacyDialog.getByText('Histórico LGPD')).toBeVisible();
+});
+
 test('invite token invalid path shows error feedback', async ({ page }) => {
   await page.goto('/?invite=invalid-token-e2e');
 

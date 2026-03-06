@@ -1,16 +1,25 @@
 import React from 'react';
 import { Download } from 'lucide-react';
+import type { PrivacyRequestSummary } from '../../services/privacyService';
 
 interface SettingsPrivacyModalProps {
   onExport: () => void;
   onRequestDelete: () => void;
   onRequestAccess: () => void;
+  onRequestRectify: () => void;
+  onCancelRequest: (requestId: string) => void;
+  requests: PrivacyRequestSummary[];
+  loadingRequests: boolean;
 }
 
 export default function SettingsPrivacyModal({
   onExport,
   onRequestDelete,
-  onRequestAccess
+  onRequestAccess,
+  onRequestRectify,
+  onCancelRequest,
+  requests,
+  loadingRequests
 }: SettingsPrivacyModalProps) {
   return (
     <>
@@ -30,7 +39,7 @@ export default function SettingsPrivacyModal({
         </div>
         <div className="rounded-2xl border border-white/5 bg-white/5 p-4">
           <p className="text-[10px] font-bold uppercase tracking-widest text-blue-300">Seus direitos</p>
-          <p className="mt-2 text-sm text-slate-300">Acesso, correção, exportação e exclusão dependem de processo operacional e backend do produto.</p>
+          <p className="mt-2 text-sm text-slate-300">Acesso, correção, exportação e exclusão já passam por trilha auditável no backend e histórico visível no app.</p>
         </div>
       </div>
 
@@ -54,7 +63,13 @@ export default function SettingsPrivacyModal({
           onClick={onRequestAccess}
           className="w-full h-14 rounded-2xl border border-[rgba(96,165,250,0.2)] bg-[rgba(59,130,246,0.08)] text-sm font-black uppercase tracking-widest text-blue-200"
         >
-          Solicitar Atendimento LGPD
+          Solicitar Acesso aos Dados
+        </button>
+        <button
+          onClick={onRequestRectify}
+          className="w-full h-14 rounded-2xl border border-[rgba(250,204,21,0.2)] bg-[rgba(234,179,8,0.08)] text-sm font-black uppercase tracking-widest text-amber-200"
+        >
+          Solicitar Retificação
         </button>
         <a
           href="/privacy-policy.html"
@@ -64,6 +79,73 @@ export default function SettingsPrivacyModal({
         >
           Abrir Política de Privacidade
         </a>
+      </div>
+
+      <div className="mt-6 rounded-2xl border border-white/5 bg-white/5 p-4">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Histórico LGPD</p>
+            <p className="mt-1 text-xs text-slate-400">Últimas solicitações do titular com status operacional.</p>
+          </div>
+          {loadingRequests && <span className="text-[10px] font-bold uppercase tracking-widest text-blue-300">Atualizando</span>}
+        </div>
+
+        <div className="mt-4 space-y-3">
+          {!loadingRequests && requests.length === 0 && (
+            <div className="rounded-2xl border border-white/5 bg-[rgba(15,23,42,0.5)] p-3">
+              <p className="text-sm font-semibold text-white">Nenhuma solicitação recente.</p>
+              <p className="mt-1 text-xs text-slate-400">Novas exportações e pedidos ficam registrados aqui.</p>
+            </div>
+          )}
+
+          {requests.map((request) => {
+            const canCancel = request.status === 'open';
+
+            return (
+              <div key={request.id} className="rounded-2xl border border-white/5 bg-[rgba(15,23,42,0.5)] p-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-black text-white">
+                      {request.request_type === 'access' && 'Acesso aos dados'}
+                      {request.request_type === 'export' && 'Exportação LGPD'}
+                      {request.request_type === 'delete' && 'Exclusão de conta'}
+                      {request.request_type === 'rectify' && 'Retificação cadastral'}
+                    </p>
+                    <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                      {new Date(request.created_at).toLocaleDateString('pt-BR')} • {request.status.replace('_', ' ')}
+                    </p>
+                  </div>
+                  <span className={`rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-widest ${request.status === 'completed'
+                    ? 'bg-[rgba(16,185,129,0.15)] text-emerald-200'
+                    : request.status === 'rejected' || request.status === 'cancelled'
+                      ? 'bg-[rgba(239,68,68,0.12)] text-red-200'
+                      : request.status === 'in_review'
+                        ? 'bg-[rgba(59,130,246,0.12)] text-blue-200'
+                        : 'bg-[rgba(250,204,21,0.12)] text-amber-200'}`}
+                  >
+                    {request.status}
+                  </span>
+                </div>
+
+                {(request.notes || request.resolution_notes) && (
+                  <div className="mt-3 space-y-1">
+                    {request.notes && <p className="text-xs text-slate-300">Solicitação: {request.notes}</p>}
+                    {request.resolution_notes && <p className="text-xs text-slate-400">Tratativa: {request.resolution_notes}</p>}
+                  </div>
+                )}
+
+                {canCancel && (
+                  <button
+                    onClick={() => onCancelRequest(request.id)}
+                    className="mt-3 h-10 rounded-xl border border-[rgba(248,113,113,0.2)] bg-[rgba(239,68,68,0.08)] px-3 text-[10px] font-black uppercase tracking-widest text-red-200"
+                  >
+                    Cancelar Solicitação
+                  </button>
+                )}
+              </div>
+            );
+          })}
+        </div>
       </div>
     </>
   );

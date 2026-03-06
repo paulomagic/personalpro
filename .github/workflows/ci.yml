@@ -42,3 +42,9 @@ jobs:
 
       - name: Bundle Budget
         run: npm run bundle:budget
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: E2E smoke + accessibility
+        run: npm run test:e2e

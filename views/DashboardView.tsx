@@ -178,6 +178,9 @@ const DashboardView: React.FC<DashboardViewProps> = ({
   const heroTextPrimaryClassName = isLightTheme ? 'text-[#F4F8FF]' : 'text-white';
   const heroTextSecondaryClassName = isLightTheme ? 'text-[rgba(229,239,255,0.8)]' : 'text-[rgba(255,255,255,0.7)]';
   const heroTextMutedClassName = isLightTheme ? 'text-[rgba(214,228,255,0.75)]' : 'text-[rgba(255,255,255,0.6)]';
+  const mutedTextClassName = isLightTheme ? 'text-[#3D5A80]' : 'text-[#B8D3FF]';
+  const softTextClassName = isLightTheme ? 'text-[#7A9FCC]' : 'text-[#C9DEFF]';
+  const chromeIconClassName = isLightTheme ? 'text-[#3D5A80]' : 'text-[#A9CAFF]';
   const heroCardClassName = isLightTheme
     ? 'bg-[linear-gradient(135deg,#1E3A8A_0%,#2455C9_46%,#3B82F6_100%)] shadow-[0_16px_42px_-10px_rgba(30,58,138,0.35),0_0_0_1px_rgba(59,130,246,0.2)]'
     : 'bg-[linear-gradient(135deg,#172554_0%,#1E3A8A_40%,#1D4ED8_80%,#3B82F6_100%)] shadow-[0_20px_60px_-10px_rgba(30,58,138,0.45),0_0_0_1px_rgba(59,130,246,0.15)]';
@@ -211,7 +214,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
           <h1 className="text-[26px] font-black text-white tracking-tight leading-tight">
             {timeOfDay()}, {firstName} 👋
           </h1>
-          <p className="text-[12px] mt-0.5 text-[#3D5A80]">
+          <p className={`text-[12px] mt-0.5 ${mutedTextClassName}`}>
             {new Date().toLocaleDateString('pt-BR', {
               weekday: 'long',
               day: 'numeric',
@@ -245,7 +248,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                 onError={() => setProfileImageFailed(true)}
               />
             ) : (
-              <User size={18} className="block mx-auto mt-[7px] text-[#3D5A80]" />
+              <User size={18} className={`block mx-auto mt-[7px] ${chromeIconClassName}`} />
             )}
           </motion.button>
         </div>
@@ -264,7 +267,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
               <div className={`size-10 rounded-xl flex items-center justify-center ${qa.chipClassName}`}>
                 <qa.icon size={18} className={qa.iconClassName} strokeWidth={2} />
               </div>
-              <span className="text-[10px] font-bold leading-none text-[#7A9FCC]">
+              <span className={`text-[10px] font-bold leading-none ${softTextClassName}`}>
                 {qa.label}
               </span>
             </motion.button>
@@ -360,7 +363,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
             >
               <Wallet size={17} className="text-[#00FF88]" />
             </div>
-            <p className="text-[10px] font-bold uppercase tracking-wider mb-0.5 text-[#3D5A80]">
+            <p className={`text-[10px] font-bold uppercase tracking-wider mb-0.5 ${mutedTextClassName}`}>
               {revenueMonthLabel}
             </p>
             <p className="text-lg font-black text-white leading-tight">
@@ -381,7 +384,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
             >
               <Users size={17} className="text-[#3B82F6]" />
             </div>
-            <p className="text-[10px] font-bold uppercase tracking-wider mb-0.5 text-[#3D5A80]">
+            <p className={`text-[10px] font-bold uppercase tracking-wider mb-0.5 ${mutedTextClassName}`}>
               Alunos Ativos
             </p>
             <p className="text-lg font-black text-white leading-tight">{activeClients}</p>
@@ -414,9 +417,9 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                   >
                     IA
                   </span>
-                  <ChevronRight size={12} className="ml-auto shrink-0 text-[#3D5A80]" />
+                  <ChevronRight size={12} className={`ml-auto shrink-0 ${chromeIconClassName}`} />
                 </div>
-                <p className="text-xs leading-relaxed text-[#7A9FCC]">
+                <p className={`text-xs leading-relaxed ${softTextClassName}`}>
                   <span className="text-white font-semibold">{featuredAlertClient.name}</span>{' '}
                   {(featuredAlertClient.status === 'at-risk' || featuredAlertClient.adherence < 50)
                     ? 'não treina há dias — risco de evasão detectado.'
@@ -479,7 +482,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                     <div
                       className="size-11 rounded-2xl flex items-center justify-center bg-[rgba(59,130,246,0.07)] border border-[rgba(59,130,246,0.1)]"
                     >
-                      <User size={18} className="text-[#3D5A80]" />
+                      <User size={18} className={chromeIconClassName} />
                     </div>
                   )}
                   <div
@@ -503,7 +506,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                       {client.adherence}%
                     </span>
                   </div>
-                  <p className="text-[11px] truncate mb-1.5 text-[#3D5A80]">
+                  <p className={`text-[11px] truncate mb-1.5 ${mutedTextClassName}`}>
                     {client.goal} · {client.lastTraining || 'Iniciando'}
                   </p>
                   {/* Progress bar */}
@@ -520,7 +523,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                   </div>
                 </div>
 
-                <ChevronRight size={13} className="shrink-0 text-[#3D5A80]" />
+                <ChevronRight size={13} className={`shrink-0 ${chromeIconClassName}`} />
               </motion.div>
             ))
           ) : (

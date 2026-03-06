@@ -1,4 +1,4 @@
-import { useEffect, useState, type Dispatch, type SetStateAction } from 'react';
+import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react';
 
 interface UseServiceWorkerUpdatesResult {
     updateAvailable: boolean;
@@ -9,6 +9,7 @@ interface UseServiceWorkerUpdatesResult {
 export function useServiceWorkerUpdates(): UseServiceWorkerUpdatesResult {
     const [updateAvailable, setUpdateAvailable] = useState(false);
     const [waitingWorker, setWaitingWorker] = useState<ServiceWorker | null>(null);
+    const shouldReloadOnControllerChangeRef = useRef(false);
 
     useEffect(() => {
         if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return;
@@ -26,6 +27,10 @@ export function useServiceWorkerUpdates(): UseServiceWorkerUpdatesResult {
         };
 
         const onControllerChange = () => {
+            if (!shouldReloadOnControllerChangeRef.current) {
+                return;
+            }
+
             if (!refreshing) {
                 refreshing = true;
                 window.location.reload();
@@ -72,6 +77,7 @@ export function useServiceWorkerUpdates(): UseServiceWorkerUpdatesResult {
 
     const handleUpdate = () => {
         if (waitingWorker) {
+            shouldReloadOnControllerChangeRef.current = true;
             waitingWorker.postMessage({ type: 'SKIP_WAITING' });
         }
     };

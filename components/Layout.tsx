@@ -98,71 +98,76 @@ const NavButton: React.FC<NavButtonProps> = ({
     onClick,
     badge = 0,
     isLightTheme,
-}) => (
-    <button
-        onClick={onClick}
-        aria-label={label}
-        aria-current={isActive ? 'page' : undefined}
-        className="relative flex-1 flex flex-col items-center justify-center gap-1 py-2 rounded-[22px] transition-all duration-300"
-    >
-        {/* Active pill highlight */}
-        <AnimatePresence>
+}) => {
+    const inactiveIconClassName = isLightTheme ? 'text-[#89AFDF]' : 'text-[#9FC4FF]';
+    const inactiveLabelClassName = isLightTheme ? 'text-[#89AFDF]' : 'text-[#C2DAFF]';
+
+    return (
+        <button
+            onClick={onClick}
+            aria-label={label}
+            aria-current={isActive ? 'page' : undefined}
+            className="relative flex-1 flex flex-col items-center justify-center gap-1 py-2 rounded-[22px] transition-all duration-300"
+        >
+            {/* Active pill highlight */}
+            <AnimatePresence>
+                {isActive && (
+                    <motion.div
+                        layoutId="nav-pill"
+                        className={`absolute inset-0 rounded-[22px] ${isLightTheme ? 'nav-pill-light' : 'nav-pill-dark'}`}
+                        initial={{ opacity: 0, scale: 0.85 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.85 }}
+                        transition={{ type: 'spring', stiffness: 450, damping: 32 }}
+                    />
+                )}
+            </AnimatePresence>
+
+            {/* Icon */}
+            <div className="relative z-10">
+                <motion.div
+                    animate={{ scale: isActive ? 1.08 : 1, y: isActive ? -1 : 0 }}
+                    transition={{ type: 'spring', stiffness: 500, damping: 28 }}
+                >
+                    <Icon
+                        size={21}
+                        strokeWidth={isActive ? 2.5 : 1.8}
+                        className={`transition-colors duration-200 ${isActive ? 'text-[#5EA2FF]' : inactiveIconClassName}`}
+                    />
+                </motion.div>
+
+                {/* Badge */}
+                {badge > 0 && (
+                    <span
+                        aria-hidden="true"
+                        className="absolute -top-1.5 -right-1.5 min-w-[15px] h-[15px] px-0.5 rounded-full text-[8px] font-black flex items-center justify-center text-white bg-[#FF3366] shadow-[0_0_8px_rgba(255,51,102,0.5)]"
+                    >
+                        {badge > 9 ? '9+' : badge}
+                    </span>
+                )}
+            </div>
+
+            {/* Label */}
+            <motion.span
+                animate={{ opacity: isActive ? 1 : 0.9 }}
+                transition={{ duration: 0.2 }}
+                className={`relative z-10 text-[10px] font-bold tracking-wide ${isActive ? 'text-[#5EA2FF]' : inactiveLabelClassName}`}
+            >
+                {label}
+            </motion.span>
+
+            {/* Active dot */}
             {isActive && (
                 <motion.div
-                    layoutId="nav-pill"
-                    className={`absolute inset-0 rounded-[22px] ${isLightTheme ? 'nav-pill-light' : 'nav-pill-dark'}`}
-                    initial={{ opacity: 0, scale: 0.85 }}
+                    layoutId="nav-dot"
+                    className="absolute -bottom-0.5 w-1 h-1 rounded-full bg-[#5EA2FF] shadow-[0_0_6px_#5EA2FF]"
+                    initial={{ opacity: 0, scale: 0 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.85 }}
-                    transition={{ type: 'spring', stiffness: 450, damping: 32 }}
+                    transition={{ delay: 0.1 }}
                 />
             )}
-        </AnimatePresence>
-
-        {/* Icon */}
-        <div className="relative z-10">
-            <motion.div
-                animate={{ scale: isActive ? 1.08 : 1, y: isActive ? -1 : 0 }}
-                transition={{ type: 'spring', stiffness: 500, damping: 28 }}
-            >
-                <Icon
-                    size={21}
-                    strokeWidth={isActive ? 2.5 : 1.8}
-                    className={`transition-colors duration-200 ${isActive ? 'text-[#5EA2FF]' : (isLightTheme ? 'text-[#89AFDF]' : 'text-[#3D5A80]')}`}
-                />
-            </motion.div>
-
-            {/* Badge */}
-            {badge > 0 && (
-                <span
-                    aria-hidden="true"
-                    className="absolute -top-1.5 -right-1.5 min-w-[15px] h-[15px] px-0.5 rounded-full text-[8px] font-black flex items-center justify-center text-white bg-[#FF3366] shadow-[0_0_8px_rgba(255,51,102,0.5)]"
-                >
-                    {badge > 9 ? '9+' : badge}
-                </span>
-            )}
-        </div>
-
-        {/* Label */}
-        <motion.span
-            animate={{ opacity: isActive ? 1 : 0.45 }}
-            transition={{ duration: 0.2 }}
-            className={`relative z-10 text-[10px] font-bold tracking-wide ${isActive ? 'text-[#5EA2FF]' : (isLightTheme ? 'text-[#89AFDF]' : 'text-[#3D5A80]')}`}
-        >
-            {label}
-        </motion.span>
-
-        {/* Active dot */}
-        {isActive && (
-            <motion.div
-                layoutId="nav-dot"
-                className="absolute -bottom-0.5 w-1 h-1 rounded-full bg-[#5EA2FF] shadow-[0_0_6px_#5EA2FF]"
-                initial={{ opacity: 0, scale: 0 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.1 }}
-            />
-        )}
-    </button>
-);
+        </button>
+    );
+};
 
 export default Layout;

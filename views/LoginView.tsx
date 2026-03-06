@@ -483,6 +483,11 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
 
   // Check for session on mount (handle OAuth redirect)
   useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.has('invite')) {
+      return;
+    }
+
     if (supabase) {
       supabase.auth.getSession().then(({ data: { session } }) => {
         if (session?.user) {
@@ -490,7 +495,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
         }
       });
     }
-  }, []);
+  }, [onLogin]);
 
   // Auth Form (Shared for Login/Register)
   if (showLogin || showRegister) {
@@ -747,7 +752,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
           </button>
         </div>
 
-        <p className="text-center mt-6 text-xs text-slate-500">
+        <p className="text-center mt-6 text-xs text-slate-400">
           Já tem uma conta? <button type="button" onClick={() => setShowLogin(true)} className="text-blue-500 font-bold hover:underline">Entrar</button>
         </p>
       </div>

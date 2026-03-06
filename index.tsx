@@ -67,5 +67,14 @@ if ('serviceWorker' in navigator) {
         void registration.unregister();
       });
     });
+    if (typeof caches !== 'undefined') {
+      void caches.keys().then((cacheNames) => {
+        cacheNames.forEach((cacheName) => {
+          if (cacheName.startsWith('personalpro-')) {
+            void caches.delete(cacheName);
+          }
+        });
+      });
+    }
   }
 }

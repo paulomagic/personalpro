@@ -32,6 +32,7 @@ import { getAppointments, type Appointment } from '../services/supabase/domains/
 import { getPayments, type Payment } from '../services/supabase/domains/paymentsDomain';
 import type { AppSessionUser } from '../services/auth/authFlow';
 import { useTheme } from '../services/ThemeContext';
+import { getSafeAvatarUrl } from '../utils/validation';
 
 interface DashboardViewProps {
   user: AppSessionUser | null;
@@ -95,10 +96,14 @@ const DashboardView: React.FC<DashboardViewProps> = ({
   const [loadingClients, setLoadingClients] = useState(false);
   const [appointments, setAppointments] = useState<DashboardAppointment[]>(DEMO_APPOINTMENTS);
   const [revenue, setRevenue] = useState(12450);
+  const [profileImageFailed, setProfileImageFailed] = useState(false);
 
   const revenueMonth = new Date().toLocaleDateString('pt-BR', { month: 'long' });
   const revenueMonthLabel = revenueMonth.charAt(0).toUpperCase() + revenueMonth.slice(1);
   const firstName = user?.user_metadata?.name?.split(' ')[0] || 'Coach';
+  const profileName = user?.user_metadata?.name || user?.user_metadata?.full_name || 'Perfil';
+  const rawProfileAvatarUrl = user?.user_metadata?.avatar_url;
+  const safeProfileAvatarUrl = getSafeAvatarUrl(rawProfileAvatarUrl, profileName);
 
   // ── Data Fetching ────────────────────────────────────────────────────────
   useEffect(() => {
@@ -153,7 +158,21 @@ const DashboardView: React.FC<DashboardViewProps> = ({
     loadData();
   }, [user]);
 
-  const atRiskClient = clients.find((c) => c.status === 'at-risk' || c.adherence < 60) || clients[0];
+  useEffect(() => {
+    setProfileImageFailed(false);
+  }, [safeProfileAvatarUrl]);
+
+  const featuredAlertClient =
+    clients.find((client) => {
+      const lastTraining = (client.lastTraining || '').toLowerCase();
+      return (
+        client.status === 'at-risk'
+        || client.status === 'paused'
+        || client.adherence < 60
+        || lastTraining.includes('dia')
+        || lastTraining.includes('não registrado')
+      );
+    }) ?? clients[0] ?? null;
   const nextAppointment = appointments[0];
   const activeClients = clients.filter((c) => c.status === 'active').length || clients.length;
   const heroTextPrimaryClassName = isLightTheme ? 'text-[#F4F8FF]' : 'text-white';
@@ -218,11 +237,12 @@ const DashboardView: React.FC<DashboardViewProps> = ({
             className="size-10 rounded-2xl overflow-hidden border-[1.5px] border-[rgba(59,130,246,0.12)] bg-[rgba(59,130,246,0.04)]"
             aria-label="Abrir perfil"
           >
-            {user?.user_metadata?.avatar_url ? (
+            {rawProfileAvatarUrl && !profileImageFailed ? (
               <img
-                src={user.user_metadata.avatar_url}
+                src={safeProfileAvatarUrl}
                 alt="Perfil"
                 className="w-full h-full object-cover"
+                onError={() => setProfileImageFailed(true)}
               />
             ) : (
               <User size={18} className="block mx-auto mt-[7px] text-[#3D5A80]" />
@@ -374,10 +394,10 @@ const DashboardView: React.FC<DashboardViewProps> = ({
       </motion.div>
 
       {/* ─── Smart Alert ─────────────────────────────────────────────── */}
-      {atRiskClient && (
+      {featuredAlertClient && (
         <motion.div variants={item} className="px-5 mb-4">
           <div
-            onClick={() => onSelectClient(atRiskClient)}
+            onClick={() => onSelectClient(featuredAlertClient)}
             className="p-4 rounded-2xl cursor-pointer transition-all active:scale-[0.99] group bg-[rgba(255,184,0,0.04)] border border-[rgba(255,184,0,0.15)]"
           >
             <div className="flex items-start gap-3">
@@ -397,15 +417,15 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                   <ChevronRight size={12} className="ml-auto shrink-0 text-[#3D5A80]" />
                 </div>
                 <p className="text-xs leading-relaxed text-[#7A9FCC]">
-                  <span className="text-white font-semibold">{atRiskClient.name}</span>{' '}
-                  {(atRiskClient.status === 'at-risk' || atRiskClient.adherence < 50)
+                  <span className="text-white font-semibold">{featuredAlertClient.name}</span>{' '}
+                  {(featuredAlertClient.status === 'at-risk' || featuredAlertClient.adherence < 50)
                     ? 'não treina há dias — risco de evasão detectado.'
                     : 'precisa de atenção especial.'}
                 </p>
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    const p = atRiskClient.phone?.replace(/\D/g, '');
+                    const p = featuredAlertClient.phone?.replace(/\D/g, '');
                     if (p) window.open(`https://wa.me/55${p}`, '_blank', 'noopener,noreferrer');
                   }}
                   className="mt-2.5 flex items-center gap-1.5 text-[11px] font-bold py-1.5 px-3 rounded-xl transition-all active:scale-95 bg-[rgba(37,211,102,0.08)] border border-[rgba(37,211,102,0.18)] text-[#25D366]"

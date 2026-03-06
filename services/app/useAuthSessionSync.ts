@@ -31,8 +31,15 @@ export function useAuthSessionSync({
             const hashType = hashParams.get('type');
             const recoveryCode = searchParams.get('code');
             const tokenHash = searchParams.get('token_hash');
+            const searchAccessToken = searchParams.get('access_token');
+            const hashAccessToken = hashParams.get('access_token');
+            const searchRefreshToken = searchParams.get('refresh_token');
+            const hashRefreshToken = hashParams.get('refresh_token');
             const resetFlag = searchParams.get('reset') === 'true';
-            const hasRecoveryHashToken = Boolean(hashParams.get('access_token')) && hashType === 'recovery';
+            const accessToken = searchAccessToken || hashAccessToken;
+            const refreshToken = searchRefreshToken || hashRefreshToken;
+            const recoveryType = searchType || hashType;
+            const hasRecoverySessionTokens = Boolean(accessToken) && Boolean(refreshToken);
 
             if (searchType === 'recovery' && recoveryCode) {
                 const { error } = await supabase.auth.exchangeCodeForSession(recoveryCode);
@@ -55,7 +62,19 @@ export function useAuthSessionSync({
                 return;
             }
 
-            if (hasRecoveryHashToken || resetFlag) {
+            if (hasRecoverySessionTokens) {
+                const { error } = await supabase.auth.setSession({
+                    access_token: accessToken!,
+                    refresh_token: refreshToken!
+                });
+                if (!error && (recoveryType === 'recovery' || resetFlag)) {
+                    setCurrentView(View.LOGIN);
+                    onPasswordRecovery();
+                }
+                return;
+            }
+
+            if (recoveryType === 'recovery' || resetFlag) {
                 setCurrentView(View.LOGIN);
                 onPasswordRecovery();
             }

@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { Suspense, lazy } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import type { Client, MissedClass } from '../../types';
-import ClientProfileBioTab from './ClientProfileBioTab';
-import ClientProfileEvolutionTab from './ClientProfileEvolutionTab';
-import ClientProfileAssessmentsTab from './ClientProfileAssessmentsTab';
-import ClientProfileWorkoutsTab from './ClientProfileWorkoutsTab';
+
+const ClientProfileBioTab = lazy(() => import('./ClientProfileBioTab'));
+const ClientProfileEvolutionTab = lazy(() => import('./ClientProfileEvolutionTab'));
+const ClientProfileAssessmentsTab = lazy(() => import('./ClientProfileAssessmentsTab'));
+const ClientProfileWorkoutsTab = lazy(() => import('./ClientProfileWorkoutsTab'));
 
 interface ProgressAnalysis {
     summary: string;
@@ -47,59 +48,61 @@ interface ClientProfileTabPanelsProps {
 
 const ClientProfileTabPanels: React.FC<ClientProfileTabPanelsProps> = (props) => {
     return (
-        <AnimatePresence mode="wait">
-            {props.activeTab === 'Evolução' && (
-                <ClientProfileEvolutionTab
-                    client={props.client}
-                    chartMode={props.chartMode}
-                    setChartMode={props.setChartMode}
-                    progressAnalysis={props.progressAnalysis}
-                    loadingAnalysis={props.loadingAnalysis}
-                    handleAnalyzeProgress={props.handleAnalyzeProgress}
-                    onOpenGalleryModal={props.onOpenGalleryModal}
-                    onStartAssessment={props.onStartAssessment}
-                />
-            )}
+        <Suspense fallback={<div className="glass-card rounded-[28px] min-h-[320px] animate-pulse bg-white/5" />}>
+            <AnimatePresence mode="wait">
+                {props.activeTab === 'Evolução' && (
+                    <ClientProfileEvolutionTab
+                        client={props.client}
+                        chartMode={props.chartMode}
+                        setChartMode={props.setChartMode}
+                        progressAnalysis={props.progressAnalysis}
+                        loadingAnalysis={props.loadingAnalysis}
+                        handleAnalyzeProgress={props.handleAnalyzeProgress}
+                        onOpenGalleryModal={props.onOpenGalleryModal}
+                        onStartAssessment={props.onStartAssessment}
+                    />
+                )}
 
-            {props.activeTab === 'Avaliações' && (
-                <ClientProfileAssessmentsTab
-                    client={props.client}
-                    onStartAssessment={props.onStartAssessment}
-                />
-            )}
+                {props.activeTab === 'Avaliações' && (
+                    <ClientProfileAssessmentsTab
+                        client={props.client}
+                        onStartAssessment={props.onStartAssessment}
+                    />
+                )}
 
-            {props.activeTab === 'Treinos' && (
-                <ClientProfileWorkoutsTab
-                    client={props.client}
-                    onCreateWorkout={props.onCreateWorkout}
-                    onStartWorkout={props.onStartWorkout}
-                    onStudentView={props.onStudentView}
-                    onSportTraining={props.onSportTraining}
-                    onOpenMissedClassModal={props.onOpenMissedClassModal}
-                    getReasonLabel={props.getReasonLabel}
-                    handleMarkAsReplaced={props.handleMarkAsReplaced}
-                />
-            )}
+                {props.activeTab === 'Treinos' && (
+                    <ClientProfileWorkoutsTab
+                        client={props.client}
+                        onCreateWorkout={props.onCreateWorkout}
+                        onStartWorkout={props.onStartWorkout}
+                        onStudentView={props.onStudentView}
+                        onSportTraining={props.onSportTraining}
+                        onOpenMissedClassModal={props.onOpenMissedClassModal}
+                        getReasonLabel={props.getReasonLabel}
+                        handleMarkAsReplaced={props.handleMarkAsReplaced}
+                    />
+                )}
 
-            {props.activeTab === 'Bio' && (
-                <ClientProfileBioTab
-                    client={props.client}
-                    coachId={props.coachId}
-                    onFinanceUpdate={props.onFinanceUpdate}
-                    isEditing={props.isEditing}
-                    setIsEditing={props.setIsEditing}
-                    handleSaveNotes={props.handleSaveNotes}
-                    onOpenContactModal={props.onOpenContactModal}
-                    editedObservations={props.editedObservations}
-                    setEditedObservations={props.setEditedObservations}
-                    editedInjuries={props.editedInjuries}
-                    setEditedInjuries={props.setEditedInjuries}
-                    editedPreferences={props.editedPreferences}
-                    setEditedPreferences={props.setEditedPreferences}
-                    onUpdatePhysicalData={props.onUpdatePhysicalData}
-                />
-            )}
-        </AnimatePresence>
+                {props.activeTab === 'Bio' && (
+                    <ClientProfileBioTab
+                        client={props.client}
+                        coachId={props.coachId}
+                        onFinanceUpdate={props.onFinanceUpdate}
+                        isEditing={props.isEditing}
+                        setIsEditing={props.setIsEditing}
+                        handleSaveNotes={props.handleSaveNotes}
+                        onOpenContactModal={props.onOpenContactModal}
+                        editedObservations={props.editedObservations}
+                        setEditedObservations={props.setEditedObservations}
+                        editedInjuries={props.editedInjuries}
+                        setEditedInjuries={props.setEditedInjuries}
+                        editedPreferences={props.editedPreferences}
+                        setEditedPreferences={props.setEditedPreferences}
+                        onUpdatePhysicalData={props.onUpdatePhysicalData}
+                    />
+                )}
+            </AnimatePresence>
+        </Suspense>
     );
 };
 

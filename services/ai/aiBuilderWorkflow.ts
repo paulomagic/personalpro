@@ -1,44 +1,9 @@
 import { logFunnelEvent } from '../loggingService';
 import { saveAIGenerationFeedback } from './feedback/aiGenerationFeedbackService';
 import { type AdaptiveTrainingSignal } from './adaptiveSignalsService';
+import { mapToLocalExercises, type AIBuilderExercise } from './aiBuilderWorkoutUtils';
 import { assessInjuryRisk, type InjuryRiskAssessment } from './injuryRiskService';
 import { buildLocalFallbackWorkout, generateWorkoutWithPipeline } from './workoutGenerationOrchestrator';
-import type { AIBuilderExercise } from './aiBuilderWorkoutUtils';
-
-type MockExercise = AIBuilderExercise;
-
-export function mapToLocalExercises(aiResult: any, localExercises: MockExercise[]) {
-    if (!aiResult || !aiResult.splits) return aiResult;
-
-    const mappedSplits = aiResult.splits.map((split: any) => ({
-        ...split,
-        exercises: split.exercises.map((exercise: any) => {
-            let localMatch = localExercises.find((catalogExercise) =>
-                catalogExercise.name.toLowerCase() === exercise.name.toLowerCase()
-            );
-
-            if (!localMatch) {
-                localMatch = localExercises.find((catalogExercise) =>
-                    catalogExercise.name.toLowerCase().includes(exercise.name.toLowerCase()) ||
-                    exercise.name.toLowerCase().includes(catalogExercise.name.toLowerCase())
-                );
-            }
-
-            if (localMatch) {
-                return {
-                    ...exercise,
-                    id: localMatch.id,
-                    videoUrl: `https://videos.apex-app.com/${localMatch.id}.mp4`,
-                    isVerified: true
-                };
-            }
-
-            return { ...exercise, isVerified: false };
-        })
-    }));
-
-    return { ...aiResult, splits: mappedSplits };
-}
 
 interface SubmitFeedbackParams {
     isDemo: boolean;
@@ -82,7 +47,7 @@ interface GenerateAIBuilderWorkoutParams {
     observations: string;
     adaptiveSignal: AdaptiveTrainingSignal | null;
     precisionProfile: any;
-    ensureExerciseCatalog: () => Promise<MockExercise[]>;
+    ensureExerciseCatalog: () => Promise<AIBuilderExercise[]>;
     mapExercises: typeof mapToLocalExercises;
     setLoading: (loading: boolean) => void;
     setLoadingMessageIndex: (index: number) => void;

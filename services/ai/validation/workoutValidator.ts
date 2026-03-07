@@ -1,7 +1,7 @@
 // Validação de treinos gerados
 // Previne duplicatas, garante cobertura muscular e distribui volume
 
-import type { ResolvedSlot, ResolvedDay, GeneratedWorkout } from '../trainingEngine';
+import type { ResolvedSlot, ResolvedDay, GeneratedWorkout } from '../trainingEngineTypes';
 import type { WorkoutTemplate } from '../workoutTemplates';
 import type { Exercise } from '../../exerciseService';
 

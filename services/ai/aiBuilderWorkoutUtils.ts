@@ -8,6 +8,39 @@ export interface AIBuilderExercise {
     sets?: Array<{ reps?: string }>;
 }
 
+export function mapToLocalExercises(aiResult: any, localExercises: AIBuilderExercise[]) {
+    if (!aiResult || !aiResult.splits) return aiResult;
+
+    const mappedSplits = aiResult.splits.map((split: any) => ({
+        ...split,
+        exercises: split.exercises.map((exercise: any) => {
+            let localMatch = localExercises.find((catalogExercise) =>
+                catalogExercise.name.toLowerCase() === exercise.name.toLowerCase()
+            );
+
+            if (!localMatch) {
+                localMatch = localExercises.find((catalogExercise) =>
+                    catalogExercise.name.toLowerCase().includes(exercise.name.toLowerCase()) ||
+                    exercise.name.toLowerCase().includes(catalogExercise.name.toLowerCase())
+                );
+            }
+
+            if (localMatch) {
+                return {
+                    ...exercise,
+                    id: localMatch.id,
+                    videoUrl: `https://videos.apex-app.com/${localMatch.id}.mp4`,
+                    isVerified: true
+                };
+            }
+
+            return { ...exercise, isVerified: false };
+        })
+    }));
+
+    return { ...aiResult, splits: mappedSplits };
+}
+
 function hasMeaningfulLastTraining(value?: string): boolean {
     if (!value) return false;
     const normalized = value.trim().toLowerCase();

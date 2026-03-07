@@ -4,10 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import {
     ArrowLeft,
     Brain,
-    Coins,
     BarChart2,
-    TrendingUp,
-    Zap,
     AlertTriangle,
     CheckCircle,
     RefreshCw,
@@ -15,6 +12,8 @@ import {
     Clock
 } from 'lucide-react';
 import { getAIMetrics } from '../services/loggingService';
+import { AdminAIDashboardOverview } from '../components/admin/AdminAIDashboardOverview';
+import { AdminAIDashboardInsights } from '../components/admin/AdminAIDashboardInsights';
 
 interface AdminAIDashboardViewProps {
     onBack: () => void;
@@ -79,322 +78,18 @@ const AdminAIDashboardView: React.FC<AdminAIDashboardViewProps> = ({ onBack }) =
             </header>
 
             <main className="px-6 py-6 space-y-6">
-                {/* Hero Stats - Today */}
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="glass-card rounded-2xl p-5 border border-purple-500/20 bg-gradient-to-br from-purple-500/10 to-transparent"
-                >
-                    <div className="flex items-center gap-2 mb-4">
-                        <Calendar size={16} className="text-purple-400" />
-                        <span className="text-sm font-black text-white">Hoje</span>
-                        <span className="text-[9px] bg-purple-500/20 text-purple-400 px-2 py-0.5 rounded-full ml-auto">
-                            {new Date().toLocaleDateString('pt-BR')}
-                        </span>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <p className="text-3xl font-black text-purple-400">
-                                {loading ? '...' : metrics?.todayLogs || 0}
-                            </p>
-                            <p className="text-xs text-slate-400">requisições</p>
-                        </div>
-                        <div>
-                            <p className="text-3xl font-black text-emerald-400">
-                                {loading ? '...' : `${metrics?.successRate || 0}%`}
-                            </p>
-                            <p className="text-xs text-slate-400">taxa de sucesso</p>
-                        </div>
-                    </div>
-                </motion.div>
+                <AdminAIDashboardOverview
+                    metrics={metrics}
+                    loading={loading}
+                    formatNumber={formatNumber}
+                    formatDateTime={formatDateTime}
+                />
 
-                {metrics?.providerHealth && (
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.05 }}
-                        className={`rounded-2xl p-4 border ${metrics.providerHealth.status === 'critical'
-                            ? 'bg-red-500/10 border-red-500/40'
-                            : metrics.providerHealth.status === 'warning'
-                                ? 'bg-amber-500/10 border-amber-500/40'
-                                : 'bg-emerald-500/10 border-emerald-500/30'
-                            }`}
-                    >
-                        <div className="flex items-start gap-3">
-                            {metrics.providerHealth.status === 'ok'
-                                ? <CheckCircle size={18} className="text-emerald-400 mt-0.5" />
-                                : <AlertTriangle size={18} className={metrics.providerHealth.status === 'critical' ? 'text-red-400 mt-0.5' : 'text-amber-300 mt-0.5'} />}
-                            <div className="flex-1">
-                                <p className={`text-sm font-black ${metrics.providerHealth.status === 'critical'
-                                    ? 'text-red-300'
-                                    : metrics.providerHealth.status === 'warning'
-                                        ? 'text-amber-200'
-                                        : 'text-emerald-300'
-                                    }`}>
-                                    Saúde do Provedor IA: {String(metrics.providerHealth.status).toUpperCase()}
-                                </p>
-                                <p className="text-xs text-slate-300 mt-1">{metrics.providerHealth.reason}</p>
-                                <div className="mt-2 text-[11px] text-slate-400 grid grid-cols-2 gap-1">
-                                    <span>Treinos IA (24h): {metrics.providerHealth.workoutActions24h || 0}</span>
-                                    <span>Sucesso Groq (24h): {metrics.providerHealth.groqSuccess24h || 0}</span>
-                                    <span className="col-span-2">Último sucesso Groq: {formatDateTime(metrics.providerHealth.lastGroqSuccessAt)}</span>
-                                </div>
-                            </div>
-                        </div>
-                    </motion.div>
-                )}
-
-                {/* Tokens do Dia */}
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.1 }}
-                    className="glass-card rounded-2xl p-5 border border-cyan-500/20 bg-gradient-to-br from-cyan-500/10 to-transparent"
-                >
-                    <div className="flex items-center gap-2 mb-4">
-                        <Zap size={16} className="text-cyan-400" />
-                        <span className="text-sm font-black text-white">Tokens do Dia</span>
-                    </div>
-                    <div className="grid grid-cols-3 gap-4">
-                        <div>
-                            <p className="text-2xl font-black text-cyan-400">
-                                {loading ? '...' : formatNumber(metrics?.todayTokens || 0)}
-                            </p>
-                            <p className="text-[10px] text-slate-500">Total</p>
-                        </div>
-                        <div>
-                            <p className="text-2xl font-black text-slate-300">
-                                {loading ? '...' : formatNumber(metrics?.todayTokensInput || 0)}
-                            </p>
-                            <p className="text-[10px] text-slate-500">Entrada</p>
-                        </div>
-                        <div>
-                            <p className="text-2xl font-black text-slate-300">
-                                {loading ? '...' : formatNumber(metrics?.todayTokensOutput || 0)}
-                            </p>
-                            <p className="text-[10px] text-slate-500">Saída</p>
-                        </div>
-                    </div>
-                </motion.div>
-
-                {/* Tokens Acumulados (Total) */}
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.2 }}
-                    className="glass-card rounded-2xl p-5 border border-blue-500/20 bg-gradient-to-br from-amber-500/10 to-transparent"
-                >
-                    <div className="flex items-center gap-2 mb-4">
-                        <Coins size={16} className="text-blue-400" />
-                        <span className="text-sm font-black text-white">Tokens Acumulados</span>
-                        <span className="text-[9px] bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded-full">~estimado</span>
-                    </div>
-                    <div className="grid grid-cols-3 gap-4">
-                        <div>
-                            <p className="text-2xl font-black text-blue-400">
-                                {loading ? '...' : formatNumber(metrics?.totalTokens || 0)}
-                            </p>
-                            <p className="text-[10px] text-slate-500">Total</p>
-                        </div>
-                        <div>
-                            <p className="text-2xl font-black text-slate-300">
-                                {loading ? '...' : formatNumber(metrics?.totalTokensInput || 0)}
-                            </p>
-                            <p className="text-[10px] text-slate-500">Entrada</p>
-                        </div>
-                        <div>
-                            <p className="text-2xl font-black text-slate-300">
-                                {loading ? '...' : formatNumber(metrics?.totalTokensOutput || 0)}
-                            </p>
-                            <p className="text-[10px] text-slate-500">Saída</p>
-                        </div>
-                    </div>
-                </motion.div>
-
-                {/* Quick Stats */}
-                <div className="grid grid-cols-2 gap-4">
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.3 }}
-                        className="glass-card rounded-2xl p-4"
-                    >
-                        <div className="flex items-center gap-2 mb-2">
-                            <TrendingUp size={14} className="text-blue-400" />
-                            <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Total Requisições</span>
-                        </div>
-                        <p className="text-2xl font-black text-white">
-                            {loading ? '...' : formatNumber(metrics?.totalLogs || 0)}
-                        </p>
-                    </motion.div>
-
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.35 }}
-                        className="glass-card rounded-2xl p-4"
-                    >
-                        <div className="flex items-center gap-2 mb-2">
-                            <AlertTriangle size={14} className="text-red-400" />
-                            <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Erros Hoje</span>
-                        </div>
-                        <p className="text-2xl font-black text-red-400">
-                            {loading ? '...' : metrics?.errorsToday || 0}
-                        </p>
-                    </motion.div>
-                </div>
-
-                {metrics?.productMetrics && (
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.37 }}
-                        className="glass-card rounded-2xl p-4 border border-cyan-500/20 bg-gradient-to-br from-cyan-500/10 to-transparent"
-                    >
-                        <div className="flex items-center justify-between mb-3">
-                            <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Métricas de Produto ({metrics.productMetrics.windowDays} dias)</span>
-                            <span className="text-xs text-slate-400">{metrics.productMetrics.tta?.samples || 0} amostras TTA</span>
-                        </div>
-                        <div className="grid grid-cols-2 gap-3 mb-3">
-                            <div>
-                                <p className="text-xl font-black text-cyan-300">
-                                    {metrics.productMetrics.tta?.avgSeconds || 0}s
-                                </p>
-                                <p className="text-[10px] text-slate-500">TTA médio</p>
-                            </div>
-                            <div>
-                                <p className="text-xl font-black text-cyan-100">
-                                    p50 {metrics.productMetrics.tta?.p50Seconds || 0}s
-                                </p>
-                                <p className="text-[10px] text-slate-500">TTA mediano</p>
-                            </div>
-                            <div>
-                                <p className={`text-xl font-black ${(metrics.productMetrics.workoutCompletionRate || 0) >= 60 ? 'text-emerald-400' : (metrics.productMetrics.workoutCompletionRate || 0) >= 40 ? 'text-amber-300' : 'text-red-400'}`}>
-                                    {metrics.productMetrics.workoutCompletionRate || 0}%
-                                </p>
-                                <p className="text-[10px] text-slate-500">Conclusão de treino</p>
-                            </div>
-                            <div>
-                                <p className={`text-xl font-black ${(metrics.productMetrics.localFallbackRate || 0) <= 25 ? 'text-emerald-400' : (metrics.productMetrics.localFallbackRate || 0) <= 45 ? 'text-amber-300' : 'text-red-400'}`}>
-                                    {metrics.productMetrics.localFallbackRate || 0}%
-                                </p>
-                                <p className="text-[10px] text-slate-500">Fallback local IA</p>
-                            </div>
-                        </div>
-                        <div className="grid grid-cols-2 gap-2 text-xs">
-                            <div className="rounded-lg border border-white/5 p-2 bg-white/[0.02]">
-                                <p className="text-slate-400">Conversão geração</p>
-                                <p className="font-black text-white">{metrics.productMetrics.generationConversionRate || 0}%</p>
-                            </div>
-                            <div className="rounded-lg border border-white/5 p-2 bg-white/[0.02]">
-                                <p className="text-slate-400">Conversão salvar treino</p>
-                                <p className="font-black text-white">{metrics.productMetrics.saveConversionRate || 0}%</p>
-                            </div>
-                        </div>
-                    </motion.div>
-                )}
-
-                {metrics?.aiFeedback && (
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.38 }}
-                        className="glass-card rounded-2xl p-4 border border-emerald-500/20 bg-gradient-to-br from-emerald-500/10 to-transparent"
-                    >
-                        <div className="flex items-center justify-between mb-2">
-                            <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Feedback IA (7 dias)</span>
-                            <span className="text-xs text-slate-400">{metrics.aiFeedback.total} avaliações</span>
-                        </div>
-                        <div className="grid grid-cols-3 gap-3">
-                            <div>
-                                <p className="text-xl font-black text-emerald-400">{metrics.aiFeedback.positive || 0}</p>
-                                <p className="text-[10px] text-slate-500">positivo</p>
-                            </div>
-                            <div>
-                                <p className="text-xl font-black text-red-400">{metrics.aiFeedback.negative || 0}</p>
-                                <p className="text-[10px] text-slate-500">negativo</p>
-                            </div>
-                            <div>
-                                <p className="text-xl font-black text-white">{metrics.aiFeedback.approvalRate || 0}%</p>
-                                <p className="text-[10px] text-slate-500">aprovação</p>
-                            </div>
-                        </div>
-                    </motion.div>
-                )}
-
-                {metrics?.progressionPrecision && metrics.progressionPrecision.total > 0 && (
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.39 }}
-                        className="glass-card rounded-2xl p-4 border border-blue-500/20 bg-gradient-to-br from-blue-500/10 to-transparent"
-                    >
-                        <div className="flex items-center justify-between mb-3">
-                            <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Precisão Progressão IA (7 dias)</span>
-                            <span className="text-xs text-slate-400">{metrics.progressionPrecision.total} amostras</span>
-                        </div>
-                        <div className="grid grid-cols-3 gap-3 mb-3">
-                            <div>
-                                <p className="text-xl font-black text-blue-300">{metrics.progressionPrecision.avgScore || 0}</p>
-                                <p className="text-[10px] text-slate-500">score médio</p>
-                            </div>
-                            <div>
-                                <p className="text-xl font-black text-emerald-400">{metrics.progressionPrecision.hitRate || 0}%</p>
-                                <p className="text-[10px] text-slate-500">meta atingida</p>
-                            </div>
-                            <div>
-                                <p className="text-xl font-black text-white">{metrics.progressionPrecision.avgConfidence || 0}</p>
-                                <p className="text-[10px] text-slate-500">confiança</p>
-                            </div>
-                        </div>
-                        {metrics.progressionPrecision.bySegment && Object.keys(metrics.progressionPrecision.bySegment).length > 0 && (
-                            <div className="space-y-2">
-                                {Object.entries(metrics.progressionPrecision.bySegment)
-                                    .sort(([, a]: any, [, b]: any) => (b.total || 0) - (a.total || 0))
-                                    .map(([segment, data]: [string, any]) => (
-                                        <div key={segment} className="flex items-center justify-between text-xs">
-                                            <span className="text-slate-400">{segment.replace(/_/g, ' ')}</span>
-                                            <div className="flex items-center gap-2">
-                                                <span className="text-blue-300 font-bold">score {data.avgScore}</span>
-                                                <span className={`font-bold ${data.hitRate >= 70 ? 'text-emerald-400' : data.hitRate >= 40 ? 'text-amber-300' : 'text-red-400'}`}>
-                                                    {data.hitRate}%
-                                                </span>
-                                                <span className="text-slate-500">({data.total})</span>
-                                            </div>
-                                        </div>
-                                    ))}
-                            </div>
-                        )}
-                    </motion.div>
-                )}
-
-                {metrics?.usageByUser && metrics.usageByUser.length > 0 && (
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.395 }}
-                        className="glass-card rounded-2xl p-4 border border-blue-500/20 bg-gradient-to-br from-blue-500/10 to-transparent"
-                    >
-                        <div className="flex items-center justify-between mb-3">
-                            <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Consumo IA por usuário (30 dias)</span>
-                            <span className="text-xs text-slate-400">{metrics.usageByUser.length} usuários</span>
-                        </div>
-                        <div className="space-y-2">
-                            {metrics.usageByUser.map((row: any) => (
-                                <div key={row.user_id || 'anonymous'} className="flex items-center justify-between text-xs border border-white/5 rounded-lg px-3 py-2">
-                                    <span className="text-slate-300 font-mono">{formatUserLabel(row.user_id)}</span>
-                                    <div className="flex items-center gap-3">
-                                        <span className="text-blue-300 font-bold">{formatNumber(row.total_tokens || 0)} tok</span>
-                                        <span className="text-slate-400">{row.total_requests || 0} req</span>
-                                        <span className={`${(row.success_rate || 0) >= 70 ? 'text-emerald-400' : (row.success_rate || 0) >= 40 ? 'text-amber-300' : 'text-red-400'} font-bold`}>
-                                            {Math.round(row.success_rate || 0)}%
-                                        </span>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </motion.div>
-                )}
+                <AdminAIDashboardInsights
+                    metrics={metrics}
+                    formatNumber={formatNumber}
+                    formatUserLabel={formatUserLabel}
+                />
 
                 {/* Uso por Modelo */}
                 {metrics?.byModel && Object.keys(metrics.byModel).length > 0 && (

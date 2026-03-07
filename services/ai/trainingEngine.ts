@@ -6,16 +6,11 @@
 import PQueue from 'p-queue';
 import { selectTemplate, type IntensityLevel, type TrainingSlot } from './workoutTemplates';
 import { resolveExercise, type Exercise, type Injury, fetchAllExercises, filterExercisesInMemory, parseClientInjuries } from '../exerciseService';
-import { aiRouter } from './aiRouter';
 import type { MovementPattern } from './types';
-import { detectConditions, getAggregatedModifiers, type SpecialCondition } from './knowledge/specialConditions';
+import { detectConditions, getAggregatedModifiers } from './knowledge/specialConditions';
 import { compileBiomechanicalProfile, isExerciseCompatible, type BiomechanicalProfile } from './biomechanicalProfile';
 // v2.2: Sistema de detecção expandido com keywords robustas
-import { detectConditionsEnhanced, type DetectionResult, type BiomechanicalRestrictions } from './knowledge/conditionDetection';
-// v3.0: Sistema Neuro-Simbólico
-import { buildDynamicSystemPrompt, buildUserPrompt, type ClientContext } from './prompts/systemPromptBuilder';
-import { validateAIResponse, findSafeAlternative, type ValidationResult } from './validation/exerciseValidator';
-import { getRelevantRules, formatRulesForPrompt } from './knowledge/exerciseOntology';
+import { detectConditionsEnhanced } from './knowledge/conditionDetection';
 // v3.1: Volume Counter em Tempo Real
 import { initializeVolumeCounter, addSetsToCounter, adjustSetsToFitMRV, validateFinalVolume, getDefaultMuscleForPattern, type VolumeCounter } from './volumeCounter';
 // v3.1.2: Pattern Validator - Prevenir padrões consecutivos
@@ -26,6 +21,19 @@ import { validateNoDuplicatesInDay, validateMuscleCoverage, removeDuplicatesFrom
 import { filterByContext, prioritizeByContext, type ContextFilterOptions } from './knowledge/exerciseBlacklist';
 import { evaluateExerciseTier } from './knowledge/exerciseTiering';
 import { classifyInjuryConstraints, pseudonymizeClientName, sanitizeCoachObservations } from './promptPrivacy';
+import { setWorkoutAIContext, shouldPrioritizeAISlot, selectSlotExerciseWithAI } from './trainingEngineAI';
+import {
+    CANDIDATES_PER_SLOT,
+    extractContextExceptions,
+    getDefaultMuscle,
+    getPersonalizedConfig,
+    inferDayFocus,
+    isAdvancedLevel,
+    normalizeExerciseName,
+    normalizeLevel,
+    normalizeText,
+    parseInjuries
+} from './trainingEngineUtils';
 
 const isDev = import.meta.env.DEV;
 const debugLog = (...args: unknown[]) => {
@@ -81,112 +89,6 @@ export interface GeneratedWorkout {
         duplicates_removed?: number;
         [key: string]: any; // Allow additional properties
     };
-}
-
-// ============ CONFIGURAÇÃO ============
-
-// Multipliers por nível (baseado em knowledge/volume.ts)
-const LEVEL_MULTIPLIERS: Record<string, { volume: number; intensity: number }> = {
-    'iniciante': { volume: 0.6, intensity: 0.8 },      // -40% volume, -20% intensidade
-    'idoso': { volume: 0.5, intensity: 0.7 },          // -50% volume, -30% intensidade (SEGURANÇA)
-    'intermediario': { volume: 1.0, intensity: 1.0 },  // Baseline
-    'intermediário': { volume: 1.0, intensity: 1.0 },  // Alias
-    'avancado': { volume: 1.2, intensity: 1.1 },       // +20% volume, +10% intensidade
-    'avançado': { volume: 1.2, intensity: 1.1 },       // Alias
-    'atleta': { volume: 1.4, intensity: 1.2 }          // +40% volume, +20% intensidade
-};
-
-// Rep ranges por objetivo (baseado em knowledge/progression.ts)
-const GOAL_REP_RANGES: Record<string, { min: number; max: number; rest: string }> = {
-    'forca': { min: 4, max: 6, rest: '180s' },
-    'força': { min: 4, max: 6, rest: '180s' },
-    'força máxima': { min: 4, max: 6, rest: '180s' },
-    'hipertrofia': { min: 8, max: 12, rest: '90s' },
-    'hipertrofia glúteo': { min: 8, max: 12, rest: '90s' },
-    'hipertrofia gluteo': { min: 8, max: 12, rest: '90s' },
-    'emagrecimento': { min: 12, max: 20, rest: '45s' },
-    'perda de peso': { min: 12, max: 20, rest: '45s' },
-    'saude': { min: 10, max: 15, rest: '90s' },
-    'saúde': { min: 10, max: 15, rest: '90s' },
-    'qualidade de vida': { min: 10, max: 15, rest: '90s' },
-    'bem-estar': { min: 10, max: 15, rest: '90s' },
-    'condicionamento': { min: 12, max: 15, rest: '60s' },
-    'resistencia': { min: 15, max: 25, rest: '45s' },
-    'resistência': { min: 15, max: 25, rest: '45s' },
-};
-
-// Baseline por intensidade (ajustado por level e goal depois)
-const BASE_INTENSITY_CONFIG: Record<IntensityLevel, { sets: number; reps: string; rest: string }> = {
-    'very_high': { sets: 4, reps: '4-6', rest: '180s' },
-    'high': { sets: 4, reps: '6-8', rest: '120s' },
-    'moderate': { sets: 3, reps: '8-12', rest: '90s' },
-    'low': { sets: 3, reps: '12-15', rest: '60s' },
-    'very_low': { sets: 2, reps: '15-20', rest: '45s' }
-};
-
-const CANDIDATES_PER_SLOT = 8;
-
-function normalizeText(value: string): string {
-    return value
-        .toLowerCase()
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .replace(/\s+/g, ' ')
-        .trim();
-}
-
-function isAdvancedLevel(level: string): boolean {
-    const normalized = normalizeText(level);
-    return normalized.includes('avanc') || normalized.includes('atleta');
-}
-
-function inferDayFocus(label?: string): 'forca' | 'volume' | 'neutral' {
-    const text = normalizeText(label || '');
-    if (text.includes('forca')) return 'forca';
-    if (text.includes('volume') || text.includes('hipertrofia')) return 'volume';
-    return 'neutral';
-}
-
-function extractContextExceptions(goal: string, observations?: string): string[] {
-    const text = normalizeText(`${goal || ''} ${observations || ''}`);
-    const exceptions: string[] = [];
-
-    // Exceções explícitas por intenção do personal/aluno
-    if (
-        text.includes('permitir peso corporal') ||
-        text.includes('permitir calistenia') ||
-        text.includes('calistenia') ||
-        text.includes('funcional')
-    ) {
-        exceptions.push('flexao', 'push up', 'burpee', 'mountain climber', 'polichinelo');
-    }
-
-    return exceptions;
-}
-
-// ============ HELPERS DE PERSONALIZAÇÃO ============
-
-function getPersonalizedConfig(
-    intensity: IntensityLevel,
-    level: string,
-    goal: string,
-    conditionVolumeModifier: number = 1.0  // NOVO: modificador de condições especiais
-): { sets: number; reps: string; rest: string } {
-    const baseConfig = BASE_INTENSITY_CONFIG[intensity];
-    const levelMultiplier = LEVEL_MULTIPLIERS[level.toLowerCase()] || LEVEL_MULTIPLIERS['intermediario'];
-    const goalRange = GOAL_REP_RANGES[goal.toLowerCase()] || GOAL_REP_RANGES['hipertrofia'];
-
-    // Ajusta sets pelo nível E condições especiais
-    const combinedVolumeMultiplier = levelMultiplier.volume * conditionVolumeModifier;
-    const adjustedSets = Math.max(2, Math.round(baseConfig.sets * combinedVolumeMultiplier));
-
-    // Usa rep range do objetivo
-    const reps = `${goalRange.min}-${goalRange.max}`;
-
-    // Usa descanso do objetivo
-    const rest = goalRange.rest;
-
-    return { sets: adjustedSets, reps, rest };
 }
 
 // ============ ENGINE ============
@@ -276,7 +178,7 @@ export async function generateWorkout(params: {
 
     // v3.0: Setar contexto completo para o sistema neuro-simbólico
 
-    setWorkoutContext({
+    setWorkoutAIContext({
         clientName: pseudonymizeClientName(name),
         level,
         goal,
@@ -446,7 +348,10 @@ export async function generateWorkout(params: {
 
                     if (shouldUseAIForThisSlot) {
                         remainingAISlots -= 1;
-                        selectedExercise = await selectWithAI(task.slot, topCandidates);
+                        selectedExercise = await selectSlotExerciseWithAI(
+                            task.slot,
+                            topCandidates.map(candidate => candidate.exercise)
+                        );
                     } else {
                         if (useAI && topCandidates.length > 1 && remainingAISlots <= 0 && !aiBudgetExhaustedLogged) {
                             debugLog(`[TrainingEngine] AI slot budget exhausted (${MAX_AI_SELECTIONS_PER_WORKOUT}). Remaining slots use deterministic selection.`);
@@ -756,28 +661,6 @@ function calculateScore(
     return score;
 }
 
-function getDefaultMuscle(pattern: MovementPattern): string {
-    const defaults: Record<MovementPattern, string> = {
-        'empurrar_horizontal': 'peito',
-        'empurrar_vertical': 'ombro',
-        'puxar_horizontal': 'costas',
-        'puxar_vertical': 'costas',
-        'agachar': 'quadriceps',
-        'hinge': 'gluteos',
-        'core': 'core',
-        'isolar_biceps': 'biceps',
-        'isolar_triceps': 'triceps',
-        'isolar_ombro': 'ombro',
-        'isolar_panturrilha': 'panturrilha',
-        'isolar_antebraco': 'antebraco'
-    };
-    return defaults[pattern] || 'core';
-}
-
-function normalizeExerciseName(name: string): string {
-    return normalizeText(name);
-}
-
 function applyIntelligentVariation(
     days: ResolvedDay[],
     initialSessions: number = 3
@@ -902,242 +785,7 @@ function enforceCrossDayUniqueness(
     return { days: updatedDays, replacements };
 }
 
-// ============ SELEÇÃO COM IA (NEURO-SIMBÓLICA v3.0) ============
-
-// Contexto completo para o sistema neuro-simbólico
-let currentWorkoutContext: {
-    clientName: string;
-    level: string;
-    goal: string;
-    injuries: string;
-    observations: string;
-    specialConditions: SpecialCondition[];
-    // v3.0: Dados expandidos
-    age?: number;
-    conditions: Array<{ type: string; location?: string; notes?: string }>;
-    restrictions: BiomechanicalRestrictions;
-    biomechProfile: BiomechanicalProfile;
-} | null = null;
-
-export function setWorkoutContext(context: typeof currentWorkoutContext) {
-    currentWorkoutContext = context;
-}
-
-// v3.0: Contador de retries para logging
-let aiRetryCount = 0;
-const MAX_AI_RETRIES = 0;
 const MAX_AI_SELECTIONS_PER_WORKOUT = 6;
-
-function shouldPrioritizeAISlot(slot: TrainingSlot): boolean {
-    if (slot.intensity === 'high' || slot.intensity === 'very_high') return true;
-    return [
-        'agachar',
-        'hinge',
-        'empurrar_horizontal',
-        'empurrar_vertical',
-        'puxar_horizontal',
-        'puxar_vertical'
-    ].includes(slot.movement_pattern);
-}
-
-async function selectWithAI(
-    slot: TrainingSlot,
-    candidates: SlotCandidate[]
-): Promise<Exercise> {
-    // Fallback se menos de 2 candidatos
-    if (candidates.length < 2) {
-        return candidates[0]?.exercise;
-    }
-
-    // Contexto do cliente (se disponível)
-    const ctx = currentWorkoutContext || {
-        clientName: 'Aluno',
-        level: 'Intermediário',
-        goal: 'Hipertrofia',
-        injuries: 'Nenhuma',
-        observations: '',
-        specialConditions: [] as SpecialCondition[],
-        conditions: [],
-        restrictions: {
-            avoid_axial_load: false,
-            avoid_spinal_shear: false,
-            avoid_knee_shear: false,
-            avoid_deep_knee_flexion: false,
-            avoid_shoulder_overhead: false,
-            avoid_spinal_flexion: false,
-            avoid_spinal_rotation: false,
-            avoid_hip_impact: false,
-            max_impact_level: 'high' as const,
-            requires_supervision: false,
-            prefer_machines: false,
-            volume_modifier: 1.0,
-            intensity_modifier: 1.0
-        },
-        biomechProfile: {} as BiomechanicalProfile
-    };
-
-    // v3.0: Preparar contexto completo para o prompt builder
-    const clientContext: ClientContext = {
-        alias: ctx.clientName,
-        age: ctx.age,
-        level: ctx.level,
-        goal: ctx.goal,
-        injuriesSummary: ctx.injuries,
-        observationsSummary: ctx.observations,
-        conditions: ctx.conditions || [],
-        specialConditions: ctx.specialConditions || [],
-        restrictions: ctx.restrictions,
-        biomechProfile: ctx.biomechProfile
-    };
-
-    // v3.0: Buscar regras EXMO relevantes (RAG)
-    const relevantRules = getRelevantRules({
-        conditions: ctx.conditions || [],
-        specialConditions: ctx.specialConditions || [],
-        age: ctx.age,
-        level: ctx.level,
-        goal: ctx.goal
-    });
-    const rulesContext = formatRulesForPrompt(relevantRules);
-
-    // v3.0: Construir prompts dinâmicos
-    const systemPrompt = buildDynamicSystemPrompt(clientContext) + rulesContext;
-
-    const candidatesList = candidates.map((c, i) => ({
-        num: i + 1,
-        name: c.exercise.name,
-        equipment: c.exercise.equipment?.join(', ') || 'variado',
-        is_machine: c.exercise.is_machine,
-        is_compound: c.exercise.is_compound,
-        spinal_load: c.exercise.spinal_load
-    }));
-
-    const userPrompt = buildUserPrompt(
-        clientContext,
-        {
-            movement_pattern: slot.movement_pattern,
-            target_muscle: slot.target_muscles?.[0],
-            intensity: slot.intensity,
-            candidateCount: candidates.length
-        },
-        candidatesList
-    );
-
-    const validationContext = {
-        conditions: ctx.conditions || [],
-        restrictions: ctx.restrictions,
-        biomechProfile: ctx.biomechProfile,
-        level: ctx.level,
-        goal: ctx.goal
-    };
-
-    // v3.0: Loop de retry com validação
-    for (let attempt = 0; attempt <= MAX_AI_RETRIES; attempt++) {
-        try {
-            const result = await aiRouter.execute({
-                action: 'training_intent',
-                prompt: `${systemPrompt}\n\n${userPrompt}`,
-                metadata: {
-                    slot_id: slot.id,
-                    type: 'exercise_selection_v3',
-                    client_level: ctx.level,
-                    client_goal: ctx.goal,
-                    has_injuries: ctx.injuries !== 'Nenhuma' && ctx.injuries !== '',
-                    conditions_count: (ctx.conditions || []).length,
-                    attempt: attempt + 1,
-                    rules_injected: relevantRules.length
-                }
-            });
-
-            if (result.success && result.text) {
-                // v3.0: VALIDAÇÃO SIMBÓLICA
-                const validation = validateAIResponse(
-                    result.text,
-                    candidates.map(c => c.exercise),
-                    validationContext
-                );
-
-                if (validation.valid && validation.selectedExercise) {
-                    // ✅ Resposta válida!
-                    debugLog(`[AI v3.0] ✅ Selected ${validation.selectedExercise.name}: ${validation.response?.reasoning || 'No reason'}`);
-                    if (validation.warnings.length > 0) {
-                        debugLog(`[AI v3.0] ⚠️ Warnings: ${validation.warnings.join(', ')}`);
-                    }
-                    aiRetryCount = 0;
-                    return validation.selectedExercise;
-                } else {
-                    // ❌ Validação falhou
-                    console.warn(`[AI v3.0] ❌ Validation failed (attempt ${attempt + 1}/${MAX_AI_RETRIES + 1}):`);
-                    validation.violations.forEach(v => console.warn(`  - ${v}`));
-
-                    const hasNonRecoverableSelectedSchemaError = validation.violations.some((violation) => {
-                        const normalized = violation.toLowerCase();
-                        return normalized.includes('erro de schema')
-                            && normalized.includes('selected')
-                            && (normalized.includes('nan') || normalized.includes('number'));
-                    });
-
-                    if (hasNonRecoverableSelectedSchemaError) {
-                        debugLog('[AI v3.0] 🛡️ Schema selected inválido não recuperável, aplicando fallback seguro imediato');
-                        const safeAlternative = findSafeAlternative(
-                            candidates.map(c => c.exercise),
-                            validationContext
-                        );
-                        if (safeAlternative) return safeAlternative;
-                        break;
-                    }
-
-                    // Se é última tentativa, buscar alternativa segura
-                    if (attempt === MAX_AI_RETRIES) {
-                        debugLog('[AI v3.0] 🔄 Finding safe alternative...');
-                        const safeAlternative = findSafeAlternative(
-                            candidates.map(c => c.exercise),
-                            validationContext
-                        );
-                        if (safeAlternative) {
-                            debugLog(`[AI v3.0] ✅ Safe alternative found: ${safeAlternative.name}`);
-                            return safeAlternative;
-                        }
-                    }
-                }
-            }
-        } catch (error) {
-            console.warn(`[AI v3.0] Error in attempt ${attempt + 1}:`, error);
-        }
-    }
-
-    // Fallback final: melhor do ranking determinístico
-    debugLog('[AI v3.0] 🔙 Using deterministic fallback (top candidate)');
-    return candidates[0].exercise;
-}
-
-// ============ HELPERS ============
-
-function normalizeLevel(level: string): 'iniciante' | 'intermediario' | 'avancado' | 'atleta' {
-    const l = level.toLowerCase();
-    if (l.includes('inic')) return 'iniciante';
-    if (l.includes('inter')) return 'intermediario';
-    if (l.includes('avanc')) return 'avancado';
-    if (l.includes('atlet')) return 'atleta';
-    return 'intermediario';
-}
-
-function parseInjuries(injuriesText?: string): Injury[] {
-    if (!injuriesText || injuriesText.toLowerCase() === 'nenhuma') return [];
-
-    const injuries: Injury[] = [];
-    const text = injuriesText.toLowerCase();
-
-    if (text.includes('ombro')) injuries.push('ombro');
-    if (text.includes('joelho')) injuries.push('joelho');
-    if (text.includes('coluna') || text.includes('costas') || text.includes('lombar')) {
-        injuries.push('coluna');
-    }
-    if (text.includes('cotovelo')) injuries.push('cotovelo');
-    if (text.includes('punho') || text.includes('pulso')) injuries.push('punho');
-
-    return injuries;
-}
 
 // ============ EXPORT ============
 

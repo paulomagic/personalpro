@@ -7,6 +7,7 @@ import { getAssessmentsByClient } from '../services/supabase/domains/assessments
 import { getWorkoutsByClient } from '../services/supabase/domains/workoutsDomain';
 import { uploadAvatar } from '../services/supabase/domains/storageDomain';
 import { buildClientPhysicalUpdatePayload, mapAssessmentsToClientShape } from '../services/clientProfileUtils';
+import { createScopedLogger } from '../services/appLogger';
 
 interface UseClientProfileControllerParams {
     initialClient: Client;
@@ -20,6 +21,7 @@ interface ProgressAnalysis {
     concerns: string[];
     recommendations: string[];
 }
+const clientProfileLogger = createScopedLogger('ClientProfileController');
 
 export function getReasonLabel(reason: MissedClass['reason']) {
     const labels = { sick: 'Doença', travel: 'Viagem', personal: 'Pessoal', other: 'Outro' };
@@ -75,7 +77,7 @@ export function useClientProfileController({
                     workouts: workoutsData
                 }));
             } catch (error) {
-                console.error('Error loading client details:', error);
+                clientProfileLogger.error('Error loading client details', error, { clientId: initialClient.id });
             }
         };
 
@@ -129,7 +131,7 @@ export function useClientProfileController({
             }));
             setIsEditing(false);
         } catch (error) {
-            console.error('Error updating client notes:', error);
+            clientProfileLogger.error('Error updating client notes', error, { clientId: client.id });
         }
     };
 
@@ -148,7 +150,7 @@ export function useClientProfileController({
                 suspensionEndDate: undefined
             }));
         } catch (error) {
-            console.error('Error updating status:', error);
+            clientProfileLogger.error('Error updating client status', error, { clientId: client.id, newStatus });
         }
     };
 
@@ -201,7 +203,7 @@ export function useClientProfileController({
 
             const updateResult = await updateClientById(client.id, updates as any);
             if (!updateResult) {
-                console.error('Erro ao atualizar contato: updateClientById retornou null');
+                clientProfileLogger.error('Contact update returned null result', undefined, { clientId: client.id });
                 return false;
             }
 
@@ -212,7 +214,7 @@ export function useClientProfileController({
             }));
             return true;
         } catch (error) {
-            console.error('Erro ao salvar contato:', error);
+            clientProfileLogger.error('Error saving contact data', error, { clientId: client.id });
             return false;
         }
     };
@@ -232,7 +234,7 @@ export function useClientProfileController({
             setClient((prev) => ({ ...prev, avatar: publicUrl, avatar_url: publicUrl }));
             return true;
         } catch (error) {
-            console.error('[handleAvatarChange] Erro inesperado:', error);
+            clientProfileLogger.error('Unexpected avatar upload error', error, { clientId: client.id, coachId });
             return false;
         } finally {
             setIsUploadingAvatar(false);
@@ -249,10 +251,10 @@ export function useClientProfileController({
 
             const updateResult = await updateClientById(client.id, updateData as any);
             if (!updateResult) {
-                console.error('🔴 Erro ao atualizar dados físicos: updateClientById retornou null');
+                clientProfileLogger.error('Physical data update returned null result', undefined, { clientId: client.id });
             }
         } catch (error) {
-            console.error('🔴 Erro ao salvar dados físicos:', error);
+            clientProfileLogger.error('Error saving physical data', error, { clientId: client.id });
         }
     };
 

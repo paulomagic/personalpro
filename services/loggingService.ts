@@ -1,18 +1,27 @@
 import { supabase } from './supabaseCore';
 
+const isDev = typeof window !== 'undefined'
+    && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+
 // ============================================
 // AI Logging Service
 // ============================================
 
 export interface AILogEntry {
-    action_type: 'generate_workout' | 'generate_workout_intention' | 'refine' | 'regenerate_exercise' | 'insight' | 'message_template' | 'analyze_progress';
-    model_used: string;
+    action_type: 'generate_workout' | 'generate_workout_intention' | 'training_intent' | 'refine' | 'regenerate_exercise' | 'insight' | 'message' | 'message_template' | 'analyze_progress';
+    provider_used?: string;
+    model_used?: string;
+    model_name?: string;
     prompt: string;
     response: string | null;
     tokens_input?: number;
     tokens_output?: number;
     latency_ms: number;
     success: boolean;
+    schema_valid?: boolean;
+    rejection_reason?: string;
+    fallback_used?: boolean;
+    fallback_provider?: string;
     error_message?: string;
     metadata?: Record<string, any>;
 }
@@ -35,7 +44,7 @@ export interface FrontendErrorLogEntry {
     metadata?: Record<string, any>;
 }
 
-function redactSensitiveText(value?: string | null): string | null {
+export function redactSensitiveText(value?: string | null): string | null {
     if (!value) return null;
 
     return value
@@ -48,6 +57,111 @@ function redactSensitiveText(value?: string | null): string | null {
         .slice(0, 2000);
 }
 
+function sanitizeLogValue(value: unknown, depth = 0): unknown {
+    if (value == null) return value;
+    if (depth > 3) return '[TRUNCATED_DEPTH]';
+    if (typeof value === 'string') return redactSensitiveText(value);
+    if (typeof value === 'number' || typeof value === 'boolean') return value;
+    if (value instanceof Error) {
+        return {
+            name: value.name,
+            message: redactSensitiveText(value.message),
+            stack: redactSensitiveText(value.stack)
+        };
+    }
+    if (Array.isArray(value)) {
+        return value.slice(0, 20).map((item) => sanitizeLogValue(item, depth + 1));
+    }
+    if (typeof value === 'object') {
+        return Object.fromEntries(
+            Object.entries(value as Record<string, unknown>).slice(0, 30).map(([key, entryValue]) => [
+                key,
+                sanitizeLogValue(entryValue, depth + 1)
+            ])
+        );
+    }
+    return String(value);
+}
+
+export function sanitizeLogMetadata(metadata?: Record<string, unknown> | null): Record<string, unknown> | undefined {
+    if (!metadata) return undefined;
+    return sanitizeLogValue(metadata) as Record<string, unknown>;
+}
+
+type AppLogLevel = 'debug' | 'info' | 'warn' | 'error';
+
+function emitConsole(level: AppLogLevel, scope: string, message: string, metadata?: Record<string, unknown>) {
+    if (level === 'debug' && !isDev) return;
+    const prefix = `[${scope}] ${message}`;
+    const payload = sanitizeLogMetadata(metadata);
+
+    if (level === 'debug') {
+        console.debug(prefix, payload ?? '');
+        return;
+    }
+    if (level === 'info') {
+        if (isDev) console.info(prefix, payload ?? '');
+        return;
+    }
+    if (level === 'warn') {
+        console.warn(prefix, payload ?? '');
+        return;
+    }
+    console.error(prefix, payload ?? '');
+}
+
+export function createScopedLogger(scope: string, baseMetadata?: Record<string, unknown>) {
+    const withBase = (metadata?: Record<string, unknown>) => ({
+        ...(baseMetadata || {}),
+        ...(metadata || {})
+    });
+
+    return {
+        debug(message: string, metadata?: Record<string, unknown>) {
+            emitConsole('debug', scope, message, withBase(metadata));
+        },
+        info(message: string, metadata?: Record<string, unknown>) {
+            emitConsole('info', scope, message, withBase(metadata));
+        },
+        warn(message: string, metadata?: Record<string, unknown>) {
+            const merged = withBase(metadata);
+            emitConsole('warn', scope, message, merged);
+            void logActivity({
+                action: `app_warn:${scope}`,
+                resource_type: 'app_log',
+                metadata: {
+                    message,
+                    level: 'warn',
+                    ...sanitizeLogMetadata(merged)
+                }
+            });
+        },
+        error(message: string, error?: unknown, metadata?: Record<string, unknown>) {
+            const normalizedError = error == null
+                ? null
+                : error instanceof Error
+                    ? error
+                    : new Error(typeof error === 'string' ? error : 'unknown_error');
+            const merged = withBase({
+                ...metadata,
+                error_name: normalizedError?.name
+            });
+
+            emitConsole('error', scope, message, {
+                ...merged,
+                error_message: normalizedError?.message
+            });
+
+            void logFrontendError({
+                type: 'runtime_error',
+                message: normalizedError ? `[${scope}] ${message}: ${normalizedError.message}` : `[${scope}] ${message}`,
+                stack: normalizedError?.stack,
+                metadata: sanitizeLogMetadata(merged)
+            });
+        }
+    };
+}
+
 // Log AI action with full details
 export async function logAIAction(entry: AILogEntry): Promise<void> {
     try {
@@ -57,7 +171,8 @@ export async function logAIAction(entry: AILogEntry): Promise<void> {
         const { error } = await supabase.from('ai_logs').insert({
             user_id: user?.id,
             action_type: entry.action_type,
-            model_used: entry.model_used,
+            provider_used: entry.provider_used || 'app',
+            model_used: entry.model_used || entry.model_name || 'unknown',
             prompt: redactSensitiveText(entry.prompt),
             response: redactSensitiveText(entry.response),
             tokens_input: entry.tokens_input,
@@ -65,7 +180,13 @@ export async function logAIAction(entry: AILogEntry): Promise<void> {
             latency_ms: entry.latency_ms,
             success: entry.success,
             error_message: redactSensitiveText(entry.error_message),
-            metadata: entry.metadata
+            metadata: sanitizeLogMetadata({
+                schema_valid: entry.schema_valid,
+                rejection_reason: entry.rejection_reason,
+                fallback_used: entry.fallback_used,
+                fallback_provider: entry.fallback_provider,
+                ...entry.metadata
+            })
         });
 
         if (error) {
@@ -88,7 +209,7 @@ export async function logActivity(entry: ActivityLogEntry): Promise<void> {
             resource_type: entry.resource_type,
             resource_id: entry.resource_id,
             user_agent: typeof navigator !== 'undefined' ? navigator.userAgent : 'unknown',
-            metadata: entry.metadata
+            metadata: sanitizeLogMetadata(entry.metadata)
         });
 
         if (error) {

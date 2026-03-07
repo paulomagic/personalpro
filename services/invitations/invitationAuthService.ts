@@ -1,9 +1,12 @@
 import { supabase } from '../supabaseCore';
+import { createScopedLogger } from '../appLogger';
 import {
     normalizeAcceptInvitationResult,
     normalizeInvitationPreviewFromRpc,
     type InvitationPreview,
 } from './invitationUtils';
+
+const invitationAuthLogger = createScopedLogger('InvitationAuthService');
 
 export async function getInvitationByToken(token: string): Promise<InvitationPreview | null> {
     if (!supabase) return null;
@@ -14,7 +17,7 @@ export async function getInvitationByToken(token: string): Promise<InvitationPre
 
     if (error) {
         if (error.code !== 'PGRST116') {
-            console.error('Error fetching invitation:', error);
+            invitationAuthLogger.error('Error fetching invitation by token', error);
         }
         return null;
     }
@@ -31,10 +34,9 @@ export async function acceptInvitation(token: string, userId: string): Promise<{
     });
 
     if (error) {
-        console.error('Error accepting invitation:', error);
+        invitationAuthLogger.error('Error accepting invitation', error);
         return { success: false, error: 'Erro ao aceitar convite' };
     }
 
     return normalizeAcceptInvitationResult(data);
 }
-

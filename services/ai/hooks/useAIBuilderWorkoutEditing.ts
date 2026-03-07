@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import type { Client } from '../../../types';
+import { createScopedLogger } from '../../appLogger';
 
 const loadAIRouter = () => import('../aiRouter');
+const aiBuilderEditingLogger = createScopedLogger('AIBuilderWorkoutEditing');
 
 interface UseAIBuilderWorkoutEditingParams {
     selectedClient: Client | null;
@@ -57,7 +59,11 @@ export function useAIBuilderWorkoutEditing({
                 setResult(newResult);
             }
         } catch (error) {
-            console.error('Error regenerating exercise:', error);
+            aiBuilderEditingLogger.error('Error regenerating exercise', error, {
+                clientId: selectedClient.id,
+                splitIdx,
+                exIdx
+            });
         } finally {
             setRegeneratingId(null);
         }
@@ -86,7 +92,9 @@ export function useAIBuilderWorkoutEditing({
             }
         } catch (error: any) {
             setErrorToast('🤖 Erro ao refinar treino. Tente novamente.');
-            console.error('Error refining workout:', error?.message || error);
+            aiBuilderEditingLogger.error('Error refining workout', error, {
+                clientId: selectedClient?.id
+            });
         } finally {
             setIsRefining(false);
         }

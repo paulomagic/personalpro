@@ -18,6 +18,8 @@ import { localProvider } from './providers/localProvider';
 import { supabase } from '../supabaseCore';
 import { resolveExercise, type Exercise, type Equipment } from '../exerciseService';
 import { classifyInjuryConstraints, pseudonymizeClientName, sanitizePromptText, summarizePreferenceTags } from './promptPrivacy';
+import { logAIAction } from '../loggingService';
+import { createScopedLogger } from '../appLogger';
 import {
     ExerciseReplacementSchema,
     extractLikelyJson,
@@ -32,53 +34,7 @@ const providers: Record<string, AIProvider> = {
     gemini: geminiProvider,
     local: localProvider
 };
-
-// ============ LOGGING ============
-function redactSensitiveText(value?: string | null): string | null {
-    if (!value) return null;
-
-    return value
-        .replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, '[REDACTED_EMAIL]')
-        .replace(/\b(?:\+?55\s?)?(?:\(?\d{2}\)?\s?)?\d{4,5}-?\d{4}\b/g, '[REDACTED_PHONE]')
-        .replace(/\b\d{3}\.?\d{3}\.?\d{3}-?\d{2}\b/g, '[REDACTED_CPF]')
-        .replace(/\b[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\b/gi, '[REDACTED_UUID]')
-        .replace(/\b(?:nome|name|cliente|aluno)\s*[:=]\s*([^\n,;]+)/gi, '[REDACTED_PERSON]')
-        .replace(/\bclient(?:_id)?\s*[:=]\s*([^\n,;]+)/gi, 'client:[REDACTED_ID]')
-        .slice(0, 2000);
-}
-
-async function logAIAction(entry: AILogEntry): Promise<void> {
-    if (!supabase) return;
-
-    try {
-        // Get current user id for RLS filtering
-        const { data: { session } } = await supabase.auth.getSession();
-        const userId = session?.user?.id ?? null;
-
-        await supabase.from('ai_logs').insert({
-            user_id: userId,
-            action_type: entry.action_type,
-            provider_used: entry.provider_used,
-            model_used: entry.model_name,
-            prompt: redactSensitiveText(entry.prompt),
-            response: redactSensitiveText(entry.response),
-            tokens_input: entry.tokens_input,
-            tokens_output: entry.tokens_output,
-            latency_ms: entry.latency_ms,
-            success: entry.success,
-            error_message: redactSensitiveText(entry.error_message),
-            metadata: {
-                schema_valid: entry.schema_valid,
-                rejection_reason: entry.rejection_reason,
-                fallback_used: entry.fallback_used,
-                fallback_provider: entry.fallback_provider,
-                ...entry.metadata
-            }
-        });
-    } catch (error) {
-        console.warn('Failed to log AI action:', error);
-    }
-}
+const routerLogger = createScopedLogger('AIRouter');
 
 // ============ ROUTER ============
 interface ModelCandidate {
@@ -251,7 +207,7 @@ export class AIRouter {
         const rule = this.getRoutingRule(request.action);
 
         if (!rule) {
-            console.warn(`No routing rule for action: ${request.action}`);
+            routerLogger.warn('No routing rule for action', { action: request.action });
             return {
                 success: false,
                 text: null,
@@ -719,7 +675,10 @@ Retorne APENAS JSON:
         const parsed = JSON.parse(cleanText);
         const schemaResult = RefinedWorkoutSchema.safeParse(parsed);
         if (!schemaResult.success) {
-            console.warn('[AIRouter] refine schema failed:', formatSchemaError(schemaResult.error));
+            routerLogger.warn('Refine schema validation failed', {
+                action: 'refine',
+                schemaError: formatSchemaError(schemaResult.error)
+            });
             return null;
         }
         return schemaResult.data;
@@ -776,7 +735,10 @@ Retorne APENAS JSON:
         const parsed = JSON.parse(cleanText);
         const schemaResult = ExerciseReplacementSchema.safeParse(parsed);
         if (!schemaResult.success) {
-            console.warn('[AIRouter] regenerate schema failed:', formatSchemaError(schemaResult.error));
+            routerLogger.warn('Regenerate schema validation failed', {
+                action: 'regenerate_exercise',
+                schemaError: formatSchemaError(schemaResult.error)
+            });
             return null;
         }
         return schemaResult.data;
@@ -856,7 +818,10 @@ Responda APENAS JSON:
         const parsed = JSON.parse(cleanText);
         const schemaResult = ProgressAnalysisSchema.safeParse(parsed);
         if (!schemaResult.success) {
-            console.warn('[AIRouter] analyze_progress schema failed:', formatSchemaError(schemaResult.error));
+            routerLogger.warn('Analyze progress schema validation failed', {
+                action: 'analyze_progress',
+                schemaError: formatSchemaError(schemaResult.error)
+            });
             return {
                 summary: 'O aluno apresenta evolução consistente no contexto atual.',
                 improvements: ['Manutenção da consistência de treino'],

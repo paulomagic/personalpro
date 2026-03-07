@@ -9,6 +9,9 @@ import { mockClients } from '../mocks/demoData';
 import AddClientModal from '../components/AddClientModal';
 import { ClientCardSkeleton } from '../components/Skeleton';
 import PageHeader from '../components/PageHeader';
+import { createScopedLogger } from '../services/appLogger';
+
+const clientsViewLogger = createScopedLogger('ClientsView');
 
 interface ClientsViewProps {
     user: any;
@@ -74,7 +77,7 @@ const ClientsView: React.FC<ClientsViewProps> = ({ user, onBack, onSelectClient 
                 const data = await getClients(user.id, { limit: 300 });
                 return mapDbClients(data);
             } catch (error) {
-                console.error('Error loading clients:', error);
+                clientsViewLogger.error('Error loading clients list', error, { userId: user.id });
                 return [];
             }
         }
@@ -97,7 +100,7 @@ const ClientsView: React.FC<ClientsViewProps> = ({ user, onBack, onSelectClient 
                         avatarUrl = uploadedUrl;
                     }
                 } catch (e) {
-                    console.error('Error uploading avatar:', e);
+                    clientsViewLogger.error('Error uploading avatar while creating client', e, { userId: user.id });
                     showToast('Não foi possível fazer upload da foto. Usando padrão.', 'error');
                 }
             }
@@ -148,7 +151,7 @@ const ClientsView: React.FC<ClientsViewProps> = ({ user, onBack, onSelectClient 
             await refetchClients();
             showToast('Aluno criado com sucesso!', 'success');
         } catch (error) {
-            console.error('Error creating client:', error);
+            clientsViewLogger.error('Error creating client from view', error, { userId: user.id });
             showToast('Erro ao criar aluno. Tente novamente.', 'error');
             throw error;
         }
@@ -406,7 +409,7 @@ const ClientsView: React.FC<ClientsViewProps> = ({ user, onBack, onSelectClient 
                                             await queryClient.invalidateQueries({ queryKey: ['clients', user.id] });
                                             await refetchClients();
                                         } catch (error) {
-                                            console.error(error);
+                                            clientsViewLogger.error('Error seeding demo clients', error, { userId: user.id });
                                             showToast('Erro ao gerar dados', 'error');
                                         }
                                     }}

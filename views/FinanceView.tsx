@@ -7,9 +7,11 @@ import { mockClients } from '../mocks/demoData';
 import { PaymentCardSkeleton } from '../components/Skeleton';
 import EmptyState from '../components/EmptyState';
 import PageHeader from '../components/PageHeader';
+import { createScopedLogger } from '../services/appLogger';
 
 const FinanceOverviewChart = lazy(() => import('../components/FinanceOverviewChart'));
 const PaymentStatusModal = lazy(() => import('../components/PaymentStatusModal'));
+const financeViewLogger = createScopedLogger('FinanceView');
 
 interface FinanceViewProps {
     user: any;
@@ -138,7 +140,7 @@ const FinanceView: React.FC<FinanceViewProps> = ({ user, onBack }) => {
 
                 return buildFallbackPayments();
             } catch (error) {
-                console.error('Error fetching payments:', error);
+                financeViewLogger.error('Error fetching finance data', error, { userId: user?.id });
                 return buildFallbackPayments();
             }
         }

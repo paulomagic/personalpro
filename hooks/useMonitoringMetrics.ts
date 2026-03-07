@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { createScopedLogger } from '../services/appLogger';
 import { supabase } from '../services/supabaseCore';
 
 export type MonitoringTimeRange = '24h' | '7d' | '30d';
@@ -24,6 +25,7 @@ const EMPTY_METRICS: GenerationMetrics = {
     fallback_usage_percent: 0,
     last_updated: new Date().toISOString()
 };
+const monitoringLogger = createScopedLogger('MonitoringMetrics');
 
 function mapMetricsRow(row?: Record<string, unknown>): GenerationMetrics {
     if (!row) {
@@ -67,7 +69,7 @@ export function useMonitoringMetrics(timeRange: MonitoringTimeRange) {
                 });
 
             if (rpcError) {
-                console.error('[Monitoring] RPC Error:', rpcError);
+                monitoringLogger.error('RPC error while fetching metrics', rpcError, { timeRange });
                 setError('Erro ao buscar métricas. Verifique se a migration foi aplicada.');
                 setMetrics(null);
                 return;
@@ -76,7 +78,7 @@ export function useMonitoringMetrics(timeRange: MonitoringTimeRange) {
             const firstRow = Array.isArray(data) ? data[0] : undefined;
             setMetrics(mapMetricsRow(firstRow));
         } catch (fetchError: any) {
-            console.error('[Monitoring] Error fetching metrics:', fetchError);
+            monitoringLogger.error('Unexpected error while fetching metrics', fetchError, { timeRange });
             setError(fetchError.message || 'Erro desconhecido');
             setMetrics(null);
         } finally {

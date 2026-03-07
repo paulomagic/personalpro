@@ -18,6 +18,9 @@ import PendingRequestsPanel from '../components/PendingRequestsPanel';
 import MonthlyScheduleModal from '../components/MonthlyScheduleModal';
 import { getAllBatchesForCoach } from '../services/monthlyScheduleService';
 import PageHeader from '../components/PageHeader';
+import { createScopedLogger } from '../services/appLogger';
+
+const calendarViewLogger = createScopedLogger('CalendarView');
 
 
 interface CalendarViewProps {
@@ -108,7 +111,10 @@ const CalendarView: React.FC<CalendarViewProps> = ({ user, onBack, onSelectClien
                     monthlyBatchesCount: batches.reduce((sum, b) => sum + b.total_sessions, 0)
                 };
             } catch (error) {
-                console.error('Error fetching calendar data:', error);
+                calendarViewLogger.error('Error fetching calendar data', error, {
+                    userId: user?.id,
+                    date: dateStr
+                });
                 return {
                     clients: mockClients as unknown as DBClient[],
                     appointments: demoAppointments,
@@ -346,7 +352,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({ user, onBack, onSelectClien
                 alert('Erro ao excluir agendamentos. Tente novamente.');
             }
         } catch (error) {
-            console.error('Error in cleanup:', error);
+            calendarViewLogger.error('Error cleaning up monthly appointments', error, { userId: user?.id });
             alert('Erro ao limpar agendamentos.');
         } finally {
             setCleaningUp(false);

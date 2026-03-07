@@ -1,4 +1,7 @@
 import { supabase } from '../../supabaseCore';
+import { createScopedLogger } from '../../appLogger';
+
+const appointmentsDomainLogger = createScopedLogger('AppointmentsDomain');
 
 export interface Appointment {
     id: string;
@@ -55,7 +58,12 @@ export async function getAppointments(
 
     const { data, error } = await query;
     if (error) {
-        console.error('Error fetching appointments:', error);
+        appointmentsDomainLogger.error('Error fetching appointments', error, {
+            coachId,
+            date,
+            limit,
+            offset
+        });
         return [];
     }
     return data || [];
@@ -65,7 +73,12 @@ export async function createAppointment(appointment: Omit<Appointment, 'id' | 'c
     if (!supabase) return null;
     const { data, error } = await supabase.from('appointments').insert(appointment).select().single();
     if (error) {
-        console.error('Error creating appointment:', error);
+        appointmentsDomainLogger.error('Error creating appointment', error, {
+            coachId: appointment.coach_id,
+            clientId: appointment.client_id,
+            date: appointment.date,
+            time: appointment.time
+        });
         return null;
     }
     return data;
@@ -75,7 +88,7 @@ export async function updateAppointment(id: string, updates: Partial<Appointment
     if (!supabase) return null;
     const { data, error } = await supabase.from('appointments').update(updates).eq('id', id).select().single();
     if (error) {
-        console.error('Error updating appointment:', error);
+        appointmentsDomainLogger.error('Error updating appointment', error, { appointmentId: id });
         return null;
     }
     return data;
@@ -85,7 +98,7 @@ export async function deleteAppointment(id: string): Promise<boolean> {
     if (!supabase) return false;
     const { error } = await supabase.from('appointments').delete().eq('id', id);
     if (error) {
-        console.error('Error deleting appointment:', error);
+        appointmentsDomainLogger.error('Error deleting appointment', error, { appointmentId: id });
         return false;
     }
     return true;
@@ -108,7 +121,11 @@ export async function getAllAppointmentsForCoach(
         .order('time')
         .range(offset, offset + limit - 1);
     if (error) {
-        console.error('Error fetching all appointments:', error);
+        appointmentsDomainLogger.error('Error fetching all appointments', error, {
+            coachId,
+            limit,
+            offset
+        });
         return [];
     }
     return data || [];
@@ -128,7 +145,7 @@ export async function getStudentAppointmentsByClient(clientId: string): Promise<
         .order('date', { ascending: true });
 
     if (error) {
-        console.error('Error fetching student appointments:', error);
+        appointmentsDomainLogger.error('Error fetching student appointments', error, { clientId });
         return [];
     }
 
@@ -139,7 +156,7 @@ export async function deleteAppointmentsBulk(ids: string[]): Promise<boolean> {
     if (!supabase || ids.length === 0) return false;
     const { error } = await supabase.from('appointments').delete().in('id', ids);
     if (error) {
-        console.error('Error bulk deleting appointments:', error);
+        appointmentsDomainLogger.error('Error bulk deleting appointments', error, { count: ids.length });
         return false;
     }
     return true;
@@ -168,7 +185,11 @@ export async function createRescheduleRequest(data: {
         .select()
         .single();
     if (error) {
-        console.error('Error creating reschedule request:', error);
+        appointmentsDomainLogger.error('Error creating reschedule request', error, {
+            appointmentId: data.appointmentId,
+            clientId: data.clientId,
+            coachId: data.coachId
+        });
         return null;
     }
     return result;
@@ -186,7 +207,7 @@ export async function getPendingRescheduleRequests(coachId: string): Promise<(DB
         .eq('status', 'pending')
         .order('created_at', { ascending: false });
     if (error) {
-        console.error('Error fetching pending requests:', error);
+        appointmentsDomainLogger.error('Error fetching pending reschedule requests', error, { coachId });
         return [];
     }
     return (data || []).map(req => ({ ...req, client_name: req.clients?.name }));
@@ -200,7 +221,7 @@ export async function countPendingRescheduleRequests(coachId: string): Promise<n
         .eq('coach_id', coachId)
         .eq('status', 'pending');
     if (error) {
-        console.error('Error counting pending requests:', error);
+        appointmentsDomainLogger.error('Error counting pending reschedule requests', error, { coachId });
         return 0;
     }
     return count || 0;
@@ -220,7 +241,7 @@ export async function respondToRescheduleRequest(
         .single();
 
     if (fetchError || !request) {
-        console.error('Error fetching request:', fetchError);
+        appointmentsDomainLogger.error('Error fetching reschedule request', fetchError, { requestId });
         return false;
     }
 
@@ -234,7 +255,7 @@ export async function respondToRescheduleRequest(
         .eq('id', requestId);
 
     if (updateError) {
-        console.error('Error updating request:', updateError);
+        appointmentsDomainLogger.error('Error updating reschedule request', updateError, { requestId, approved });
         return false;
     }
 
@@ -251,7 +272,10 @@ export async function respondToRescheduleRequest(
             .eq('id', request.appointment_id);
 
         if (appointmentError) {
-            console.error('Error updating appointment:', appointmentError);
+            appointmentsDomainLogger.error('Error updating appointment after approval', appointmentError, {
+                requestId,
+                appointmentId: request.appointment_id
+            });
             return false;
         }
     }

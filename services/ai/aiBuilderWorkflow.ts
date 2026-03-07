@@ -1,9 +1,11 @@
 import { logFunnelEvent } from '../loggingService';
+import { createScopedLogger } from '../appLogger';
 import { saveAIGenerationFeedback } from './feedback/aiGenerationFeedbackService';
 import { type AdaptiveTrainingSignal } from './adaptiveSignalsService';
 import { mapToLocalExercises, type AIBuilderExercise } from './aiBuilderWorkoutUtils';
 import { assessInjuryRisk, type InjuryRiskAssessment } from './injuryRiskService';
 import { buildLocalFallbackWorkout, generateWorkoutWithPipeline } from './workoutGenerationOrchestrator';
+const aiBuilderWorkflowLogger = createScopedLogger('AIBuilderWorkflow');
 
 interface SubmitFeedbackParams {
     isDemo: boolean;
@@ -138,7 +140,11 @@ export async function generateAIBuilderWorkout({
             precisionSegment: pipelineResult.metadata.precisionSegment
         });
     } catch (error) {
-        console.error('Error generating workout:', error);
+        aiBuilderWorkflowLogger.error('Error generating workout', error, {
+            clientId: client.id,
+            goal,
+            selectedDays
+        });
         void logFunnelEvent('workout_generation_failed', {
             clientId: client.id,
             coldStartMode: false,
@@ -265,7 +271,10 @@ export async function saveAIBuilderWorkoutSelection({
             });
         }
     } catch (error) {
-        console.error('Error saving workout:', error);
+        aiBuilderWorkflowLogger.error('Error saving workout', error, {
+            coachId: user.id,
+            clientId: selectedClient?.id
+        });
         void logFunnelEvent('workout_save_failed', {
             coachId: user.id,
             clientId: selectedClient?.id,

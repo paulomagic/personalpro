@@ -1,4 +1,7 @@
 import { supabase } from './supabaseCore';
+import { createScopedLogger } from './appLogger';
+
+const userProfileLogger = createScopedLogger('UserProfileService');
 
 export interface DBUserProfile {
     id: string;
@@ -22,7 +25,7 @@ export async function getUserProfile(userId: string): Promise<DBUserProfile | nu
 
     if (error || !data) {
         if (error?.code !== 'PGRST116') {
-            console.error('[getUserProfile] Error fetching profile:', error);
+            userProfileLogger.error('Error fetching user profile', error, { userId });
         }
         return null;
     }
@@ -40,10 +43,9 @@ export async function countPendingRescheduleRequests(coachId: string): Promise<n
         .eq('status', 'pending');
 
     if (error) {
-        console.error('Error counting pending requests:', error);
+        userProfileLogger.error('Error counting pending reschedule requests', error, { coachId });
         return 0;
     }
 
     return count || 0;
 }
-

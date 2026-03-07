@@ -1,5 +1,8 @@
 import { supabase } from '../../supabaseCore';
 import { isSupabaseUuid } from '../utils/identifiers';
+import { createScopedLogger } from '../../appLogger';
+
+const clientsDomainLogger = createScopedLogger('ClientsDomain');
 
 export interface DBClient {
     id: string;
@@ -160,7 +163,13 @@ export async function getClients(
     const { data, error } = await query;
 
     if (error) {
-        console.error('Error fetching clients:', error);
+        clientsDomainLogger.error('Error fetching clients', error, {
+            coachId,
+            search: options.search,
+            status: normalizedStatus,
+            limit,
+            offset
+        });
         return [];
     }
 
@@ -181,7 +190,10 @@ export async function getClientById(
         .single();
 
     if (error) {
-        console.error('Error fetching client:', error);
+        clientsDomainLogger.error('Error fetching client by id', error, {
+            clientId,
+            includeSensitiveData: options.includeSensitiveData !== false
+        });
         return null;
     }
 
@@ -204,7 +216,10 @@ export async function createClient(client: CreateClientInput): Promise<DBClient 
         .single();
 
     if (error) {
-        console.error('Error creating client:', error);
+        clientsDomainLogger.error('Error creating client', error, {
+            coachId: client.coach_id,
+            clientName: client.name
+        });
         return null;
     }
 
@@ -222,7 +237,10 @@ export async function updateClientById(clientId: string, updates: Partial<DBClie
         .single();
 
     if (error) {
-        console.error('[updateClient] Error:', error.message, error.code, error.details, error.hint);
+        clientsDomainLogger.error('Error updating client', error, {
+            clientId,
+            errorCode: error.code
+        });
         return null;
     }
 
@@ -244,13 +262,13 @@ export async function deleteClientCascade(clientId: string): Promise<boolean> {
             .eq('id', clientId);
 
         if (clientError) {
-            console.error('Error deleting client:', clientError);
+            clientsDomainLogger.error('Error deleting client', clientError, { clientId });
             return false;
         }
 
         return true;
     } catch (error) {
-        console.error('Error in deleteClientCascade:', error);
+        clientsDomainLogger.error('Error in delete client cascade', error, { clientId });
         return false;
     }
 }

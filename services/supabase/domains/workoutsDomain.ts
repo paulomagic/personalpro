@@ -1,6 +1,9 @@
 import { supabase } from '../../supabaseCore';
 import { hydrateWorkoutWithVideos } from '../../exerciseService';
 import { isSupabaseUuid } from '../utils/identifiers';
+import { createScopedLogger } from '../../appLogger';
+
+const workoutsDomainLogger = createScopedLogger('WorkoutsDomain');
 
 export interface AIWorkoutMetadata {
     model: string;
@@ -64,7 +67,11 @@ export async function getWorkoutsByClient(
         .range(offset, offset + limit - 1);
 
     if (error) {
-        console.error('Error fetching workouts:', error);
+        workoutsDomainLogger.error('Error fetching workouts by client', error, {
+            clientId,
+            limit,
+            offset
+        });
         return [];
     }
 
@@ -96,7 +103,11 @@ export async function saveAIWorkout(
         .single();
 
     if (error) {
-        console.error('Error saving AI workout:', error);
+        workoutsDomainLogger.error('Error saving AI workout', error, {
+            clientId,
+            coachId,
+            model: metadata.model
+        });
         return null;
     }
 
@@ -113,7 +124,10 @@ export async function saveWorkout(workout: Omit<Workout, 'id' | 'created_at'>): 
         .single();
 
     if (error) {
-        console.error('Error saving workout:', error);
+        workoutsDomainLogger.error('Error saving workout', error, {
+            clientId: workout.client_id,
+            coachId: workout.coach_id
+        });
         return null;
     }
 
@@ -133,7 +147,7 @@ export async function getCurrentWorkoutByClient(clientId: string): Promise<Worko
 
     if (error) {
         if ((error as any)?.code !== 'PGRST116') {
-            console.error('Error fetching client workout:', error);
+            workoutsDomainLogger.error('Error fetching current workout', error, { clientId });
         }
         return null;
     }
@@ -143,7 +157,7 @@ export async function getCurrentWorkoutByClient(clientId: string): Promise<Worko
     try {
         return await hydrateWorkoutWithVideos(data);
     } catch (hydrateError) {
-        console.error('Error hydrating workout:', hydrateError);
+        workoutsDomainLogger.error('Error hydrating workout videos', hydrateError, { clientId, workoutId: data.id });
         return data as Workout;
     }
 }

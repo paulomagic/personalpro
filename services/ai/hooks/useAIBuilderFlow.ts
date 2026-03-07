@@ -6,6 +6,7 @@ import { getAdaptiveTrainingSignal, type AdaptiveTrainingSignal } from '../adapt
 import { assessInjuryRisk, type InjuryRiskAssessment } from '../injuryRiskService';
 import { resolvePrecisionProfile } from '../progressionPrecisionService';
 import { isDemoSessionUser } from '../../auth/authFlow';
+import { createScopedLogger } from '../../appLogger';
 
 const loadDemoData = () => import('../../../mocks/demoData');
 const loadClientsDomain = () => import('../../supabase/domains/clientsDomain');
@@ -17,6 +18,7 @@ const LOADING_MESSAGES = [
     'Ajustando densidade e descanso...',
     'Finalizando protocolo de elite...'
 ];
+const aiBuilderFlowLogger = createScopedLogger('AIBuilderFlow');
 
 interface UseAIBuilderFlowParams {
     user: any;
@@ -66,7 +68,10 @@ export function useAIBuilderFlow({ user }: UseAIBuilderFlowParams) {
                 }
                 return await loadFallbackClients();
             } catch (error) {
-                console.error('Error fetching clients:', error);
+                aiBuilderFlowLogger.error('Error fetching AI Builder clients', error, {
+                    userId: user?.id,
+                    isDemo
+                });
                 return await loadFallbackClients();
             }
         }
@@ -110,7 +115,10 @@ export function useAIBuilderFlow({ user }: UseAIBuilderFlowParams) {
                     setAdaptiveSignal(signal);
                 }
             } catch (error) {
-                console.error('Error loading adaptive signal:', error);
+                aiBuilderFlowLogger.error('Error loading adaptive signal', error, {
+                    clientId: selectedClient.id,
+                    selectedDays
+                });
                 if (!cancelled) setAdaptiveSignal(null);
             } finally {
                 if (!cancelled) setLoadingAdaptiveSignal(false);

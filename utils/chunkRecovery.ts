@@ -1,5 +1,9 @@
+import { createScopedLogger } from '../services/appLogger';
+
 const CHUNK_RELOAD_KEY = 'personalpro:chunk-reload-at';
 const CHUNK_RELOAD_COOLDOWN_MS = 60_000;
+
+const chunkRecoveryLogger = createScopedLogger('ChunkRecovery');
 
 type BrowserLocation = Pick<Location, 'href' | 'pathname' | 'search' | 'hash' | 'replace'>;
 type BrowserStorage = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
@@ -49,7 +53,10 @@ export function installChunkRecovery(): void {
 
         const recovered = tryRecoverFromChunkError(window.location, sessionStorage);
         if (!recovered) {
-            console.error('[ChunkRecovery] Repeated chunk load failure detected.', event.message || target?.src);
+            chunkRecoveryLogger.error('Repeated chunk load failure detected', undefined, {
+                message: event.message,
+                src: target?.src
+            });
         }
     }, true);
 
@@ -62,7 +69,9 @@ export function installChunkRecovery(): void {
 
         const recovered = tryRecoverFromChunkError(window.location, sessionStorage);
         if (!recovered) {
-            console.error('[ChunkRecovery] Repeated dynamic import failure.', message);
+            chunkRecoveryLogger.error('Repeated dynamic import failure', undefined, {
+                message
+            });
         }
     });
 }

@@ -4,6 +4,7 @@ import VideoPlayerModal from '../components/VideoPlayerModal';
 import { FeedbackForm } from '../components/FeedbackForm';
 import { saveSessionFeedbackWithRetry, flushQueuedFeedback, getProgressionSuggestion } from '../services/ai/feedback';
 import { logFunnelEvent } from '../services/loggingService';
+import { createScopedLogger } from '../services/appLogger';
 import type { SessionFeedback } from '../services/ai/feedback/types';
 import {
   getWorkoutSplits,
@@ -12,6 +13,8 @@ import {
   resolveExecutionExercises,
   resolveInitialSplitIndex,
 } from '../services/trainingExecutionUtils';
+
+const trainingExecutionLogger = createScopedLogger('TrainingExecutionView');
 
 interface TrainingExecutionViewProps {
   workout: Workout;
@@ -196,8 +199,10 @@ const TrainingExecutionView: React.FC<TrainingExecutionViewProps> = ({ workout, 
           );
 
         if (suggestion) {
-          // Show suggestion (could use toast/notification)
-          console.log('[Feedback] Suggestion:', suggestion);
+          trainingExecutionLogger.debug('Progression suggestion generated', {
+            workoutId: feedback.workout_id,
+            exerciseId: feedback.exercise_id
+          });
         }
 
         // Move to next exercise or finish
@@ -229,7 +234,11 @@ const TrainingExecutionView: React.FC<TrainingExecutionViewProps> = ({ workout, 
         finishWorkout();
       }
     } catch (error) {
-      console.error('[Feedback] Error:', error);
+      trainingExecutionLogger.error('Error submitting feedback during workout execution', error, {
+        workoutId: feedback.workout_id,
+        exerciseId: feedback.exercise_id,
+        coldStartMode: isColdStartWorkout
+      });
       if (isColdStartWorkout) {
         alert('Erro ao salvar feedback. No modo inicial, tente novamente para concluir.');
         return;

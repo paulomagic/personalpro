@@ -7,6 +7,7 @@
 //   supabase secrets set GROQ_API_KEY=your-key
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createEdgeLogger } from "../_shared/edgeLogger.ts";
 import { buildRateLimitHeaders, checkRateLimit } from "../_shared/rateLimit.ts";
 
 const GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions";
@@ -23,6 +24,7 @@ function normalizeModelName(value: string | null | undefined, fallback: string):
 // Models
 const MODEL_DEFAULT = normalizeModelName(Deno.env.get("GROQ_MODEL_DEFAULT"), "openai/gpt-oss-20b");
 const MODEL_FALLBACK = normalizeModelName(Deno.env.get("GROQ_MODEL_FALLBACK"), "qwen/qwen3-32b");
+const logger = createEdgeLogger("groq-proxy", { provider: "groq" });
 
 function getAllowedOrigins(): string[] {
     const raw = Deno.env.get("ALLOWED_ORIGINS") || "";
@@ -284,7 +286,7 @@ serve(async (req: Request) => {
         const apiKey = Deno.env.get("GROQ_API_KEY");
 
         if (!apiKey) {
-            console.error("[groq-proxy] No Groq API key configured");
+            logger.error("Missing Groq API key configuration", undefined, { userId, action });
             return new Response(
                 JSON.stringify({ success: false, error: "AI service not configured" }),
                 { status: 500, headers: jsonHeaders }
@@ -295,14 +297,25 @@ serve(async (req: Request) => {
         let modelUsed = normalizeModelName(model, MODEL_DEFAULT);
 
         // Try primary model
-        console.log(`[groq-proxy] Trying ${modelUsed}...`);
+        logger.info("Calling Groq upstream", {
+            userId,
+            action,
+            model: modelUsed,
+            promptLength: prompt.length
+        });
         result = await callGroq(apiKey, modelUsed, prompt, action);
 
         // If rate limited, return 429 immediately — do NOT try fallback model.
         // This avoids doubling the Groq API pressure per workout generation.
         // The client (aiRouter) will fall back to the local deterministic provider.
         if (result.isRateLimit) {
-            console.warn(`[groq-proxy] Rate limited by Groq — returning 429 to client (fast fail)`);
+            logger.warn("Groq upstream rate limited", {
+                userId,
+                action,
+                model: modelUsed,
+                errorCode: result.errorCode,
+                upstreamStatus: result.statusCode
+            });
             return new Response(
                 JSON.stringify({
                     success: false,
@@ -317,7 +330,14 @@ serve(async (req: Request) => {
 
         // Try fallback model only when primary failed for non-rate-limit reasons
         if (!result.text && modelUsed !== MODEL_FALLBACK) {
-            console.warn(`[groq-proxy] Primary failed: ${result.error}, trying fallback model...`);
+            logger.warn("Primary Groq model failed, retrying fallback", {
+                userId,
+                action,
+                primaryModel: modelUsed,
+                fallbackModel: MODEL_FALLBACK,
+                errorCode: result.errorCode,
+                upstreamStatus: result.statusCode
+            });
             modelUsed = MODEL_FALLBACK;
             result = await callGroq(apiKey, modelUsed, prompt, action);
         }
@@ -325,7 +345,14 @@ serve(async (req: Request) => {
         const latencyMs = Date.now() - startTime;
 
         if (result.text) {
-            console.log(`[groq-proxy] Success with ${modelUsed} in ${latencyMs}ms (action: ${action || 'unknown'})`);
+            logger.info("Groq upstream success", {
+                userId,
+                action,
+                model: modelUsed,
+                latencyMs,
+                tokensInput: result.usage?.in,
+                tokensOutput: result.usage?.out
+            });
             return new Response(
                 JSON.stringify({
                     success: true,
@@ -338,7 +365,15 @@ serve(async (req: Request) => {
                 { status: 200, headers: jsonHeaders }
             );
         } else {
-            console.error(`[groq-proxy] All models failed: ${result.error} (code=${result.errorCode || 'unknown'}, status=${result.statusCode || 'n/a'})`);
+            logger.error("Groq upstream failed for all attempted models", undefined, {
+                userId,
+                action,
+                model: modelUsed,
+                latencyMs,
+                errorCode: result.errorCode,
+                upstreamStatus: result.statusCode,
+                details: result.error
+            });
             const status = result.isModelNotFound
                 ? 404
                 : result.statusCode && result.statusCode >= 400 && result.statusCode < 500
@@ -357,7 +392,7 @@ serve(async (req: Request) => {
             );
         }
     } catch (error) {
-        console.error("[groq-proxy] Unexpected error:", error);
+        logger.error("Unexpected Groq proxy error", error);
         return new Response(
             JSON.stringify({ success: false, error: "Internal server error" }),
             { status: 500, headers: jsonHeaders }

@@ -204,7 +204,6 @@ const AdminView: React.FC<AdminViewProps> = ({ onBack, onNavigate }) => {
                     <div className="flex items-center gap-2 mb-4">
                         <Coins size={16} className="text-blue-400" />
                         <span className="text-sm font-black text-white">Tokens Consumidos</span>
-                        <span className="text-[9px] bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded-full">~estimado</span>
                     </div>
                     <div className="grid grid-cols-3 gap-4">
                         <div>

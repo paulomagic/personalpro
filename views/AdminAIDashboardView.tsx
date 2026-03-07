@@ -36,6 +36,8 @@ const AdminAIDashboardView: React.FC<AdminAIDashboardViewProps> = ({ onBack }) =
         return num.toLocaleString('pt-BR');
     };
 
+
+
     const formatUserLabel = (userId?: string | null) => {
         if (!userId) return 'Sem usuário';
         return `${userId.slice(0, 8)}...`;

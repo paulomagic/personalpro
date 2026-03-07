@@ -6,12 +6,14 @@
 //   supabase secrets set GEMINI_API_KEY=your-key
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createEdgeLogger } from "../_shared/edgeLogger.ts";
 import { buildRateLimitHeaders, checkRateLimit } from "../_shared/rateLimit.ts";
 
 const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models";
 
 // Model
 const MODEL = "gemini-2.5-flash";
+const logger = createEdgeLogger("gemini-proxy", { provider: "gemini" });
 
 function getAllowedOrigins(): string[] {
     const raw = Deno.env.get("ALLOWED_ORIGINS") || "";
@@ -95,7 +97,7 @@ async function callGemini(
     apiKey: string,
     model: string,
     prompt: string
-): Promise<{ text: string | null; error: string | null }> {
+): Promise<{ text: string | null; error: string | null; statusCode: number }> {
     try {
         const response = await fetch(
             `${GEMINI_API_URL}/${model}:generateContent?key=${apiKey}`,
@@ -121,13 +123,21 @@ async function callGemini(
         const data: GeminiAPIResponse = await response.json();
 
         if (data.error) {
-            return { text: null, error: data.error.message };
+            return { text: null, error: data.error.message, statusCode: data.error.code || response.status || 500 };
+        }
+
+        if (!response.ok) {
+            return {
+                text: null,
+                error: `Gemini upstream error (${response.status})`,
+                statusCode: response.status
+            };
         }
 
         const text = data.candidates?.[0]?.content?.parts?.[0]?.text || null;
-        return { text, error: null };
+        return { text, error: text ? null : 'empty_response', statusCode: response.status };
     } catch (error) {
-        return { text: null, error: String(error) };
+        return { text: null, error: String(error), statusCode: 502 };
     }
 }
 
@@ -199,20 +209,30 @@ serve(async (req: Request) => {
         const apiKey = Deno.env.get("GEMINI_API_KEY") || Deno.env.get("GEMINI_API_KEY_PRIMARY");
 
         if (!apiKey) {
-            console.error("No Gemini API key configured");
+            logger.error("Missing Gemini API key configuration", undefined, { userId, action });
             return new Response(
                 JSON.stringify({ success: false, error: "AI service not configured" }),
                 { status: 500, headers: jsonHeaders }
             );
         }
 
-        console.log(`[gemini-proxy] Calling ${MODEL}...`);
+        logger.info("Calling Gemini upstream", {
+            userId,
+            action,
+            model: MODEL,
+            promptLength: prompt.length
+        });
         const result = await callGemini(apiKey, MODEL, prompt);
 
         const latencyMs = Date.now() - startTime;
 
         if (result.text) {
-            console.log(`[gemini-proxy] Success with ${MODEL} in ${latencyMs}ms (action: ${action || 'unknown'})`);
+            logger.info("Gemini upstream success", {
+                userId,
+                action,
+                model: MODEL,
+                latencyMs
+            });
             return new Response(
                 JSON.stringify({
                     success: true,
@@ -223,7 +243,14 @@ serve(async (req: Request) => {
                 { status: 200, headers: jsonHeaders }
             );
         } else {
-            console.error(`[gemini-proxy] Failed: ${result.error}`);
+            logger.error("Gemini upstream failed", undefined, {
+                userId,
+                action,
+                model: MODEL,
+                latencyMs,
+                upstreamStatus: result.statusCode,
+                details: result.error
+            });
             return new Response(
                 JSON.stringify({
                     success: false,
@@ -233,7 +260,7 @@ serve(async (req: Request) => {
             );
         }
     } catch (error) {
-        console.error("[gemini-proxy] Unexpected error:", error);
+        logger.error("Unexpected Gemini proxy error", error);
         return new Response(
             JSON.stringify({ success: false, error: "Internal server error" }),
             { status: 500, headers: jsonHeaders }

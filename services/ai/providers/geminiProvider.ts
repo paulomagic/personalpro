@@ -4,13 +4,14 @@
 import type { AIProvider, ProviderRequest, ProviderResponse } from '../types';
 import { supabase } from '../../supabaseCore';
 import { buildEdgeAuthHeaders } from './edgeHeaders';
+import { createScopedLogger } from '../../appLogger';
 
 // Supabase URL for Edge Function
 const SUPABASE_URL = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SUPABASE_URL) || '';
 const SUPABASE_ANON_KEY = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SUPABASE_ANON_KEY) || '';
 const GEMINI_PROXY_URL = `${SUPABASE_URL}/functions/v1/gemini-proxy`;
 
-const isDev = typeof import.meta !== 'undefined' && import.meta.env?.DEV;
+const geminiProviderLogger = createScopedLogger('GeminiProvider');
 
 function estimateTokens(text: string): number {
     return Math.ceil(text.length / 4);
@@ -46,7 +47,10 @@ export const geminiProvider: AIProvider = {
         }
 
         try {
-            if (isDev) console.log('🚀 Calling Gemini via Edge Function...');
+            geminiProviderLogger.debug('Calling Gemini via Edge Function', {
+                action: request.action,
+                model: requestedModel
+            });
             const authHeaders = await getAuthHeaders();
             if (!authHeaders) {
                 return {
@@ -77,7 +81,12 @@ export const geminiProvider: AIProvider = {
 
             if (!response.ok) {
                 const errorText = await response.text();
-                console.warn('❌ Gemini proxy failed:', response.status, errorText);
+                geminiProviderLogger.warn('Gemini proxy failed', {
+                    action: request.action,
+                    model: requestedModel,
+                    status: response.status,
+                    errorText
+                });
 
                 return {
                     success: false,
@@ -94,7 +103,11 @@ export const geminiProvider: AIProvider = {
 
             if (data.success && data.text) {
                 const tokensOutput = estimateTokens(data.text);
-                if (isDev) console.log(`✅ Gemini succeeded via ${data.model} (${latencyMs}ms)`);
+                geminiProviderLogger.debug('Gemini succeeded', {
+                    action: request.action,
+                    model: data.model || requestedModel,
+                    latencyMs
+                });
 
                 return {
                     success: true,
@@ -119,7 +132,11 @@ export const geminiProvider: AIProvider = {
 
         } catch (error: any) {
             const latencyMs = Date.now() - startTime;
-            console.error('❌ Error calling Gemini proxy:', error?.message);
+            geminiProviderLogger.error('Error calling Gemini proxy', error, {
+                action: request.action,
+                model: requestedModel,
+                latencyMs
+            });
 
             return {
                 success: false,

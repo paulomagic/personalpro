@@ -4,7 +4,6 @@ import {
     AlertTriangle,
     Calendar,
     CheckCircle,
-    Coins,
     TrendingUp,
     Zap
 } from 'lucide-react';
@@ -130,9 +129,7 @@ export function AdminAIDashboardOverview({
                 className="glass-card rounded-2xl p-5 border border-blue-500/20 bg-gradient-to-br from-amber-500/10 to-transparent"
             >
                 <div className="flex items-center gap-2 mb-4">
-                    <Coins size={16} className="text-blue-400" />
                     <span className="text-sm font-black text-white">Tokens Acumulados</span>
-                    <span className="text-[9px] bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded-full">~estimado</span>
                 </div>
                 <div className="grid grid-cols-3 gap-4">
                     <div>
@@ -155,6 +152,8 @@ export function AdminAIDashboardOverview({
                     </div>
                 </div>
             </motion.div>
+
+
 
             <div className="grid grid-cols-2 gap-4">
                 <motion.div

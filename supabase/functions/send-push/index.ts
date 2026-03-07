@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import webpush from "npm:web-push@3.6.7";
+import { createEdgeLogger } from "../_shared/edgeLogger.ts";
 import { buildRateLimitHeaders, checkRateLimit } from "../_shared/rateLimit.ts";
 
 interface SendPushRequest {
@@ -17,6 +18,8 @@ interface SubscriptionRow {
     auth: string | null;
     disabled_at: string | null;
 }
+
+const logger = createEdgeLogger("send-push");
 
 function getAllowedOrigins(): string[] {
     const raw = Deno.env.get("ALLOWED_ORIGINS") || "";
@@ -245,7 +248,7 @@ serve(async (req: Request) => {
             { status: delivered > 0 ? 200 : 502, headers: { ...corsHeaders, ...rateLimitHeaders, "Content-Type": "application/json" } }
         );
     } catch (error) {
-        console.error("[send-push] Unexpected error:", error);
+        logger.error("Unexpected send-push error", error);
         const message = error instanceof Error ? error.message : String(error);
         return new Response(
             JSON.stringify({ success: false, error: message }),

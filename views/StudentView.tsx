@@ -7,6 +7,7 @@ import { saveCompletedWorkout } from '../services/supabase/domains/completedWork
 import { saveSessionFeedbackWithRetry, flushQueuedFeedback } from '../services/ai/feedback';
 import type { SessionFeedback } from '../services/ai/feedback/types';
 import { logFunnelEvent } from '../services/loggingService';
+import { createScopedLogger } from '../services/appLogger';
 import { mockExercises } from '../mocks/demoData';
 import VideoPlayerModal from '../components/VideoPlayerModal';
 import { FeedbackForm } from '../components/FeedbackForm';
@@ -16,6 +17,8 @@ import StudentExecutionHeader from '../components/student/StudentExecutionHeader
 import StudentRestTimerOverlay from '../components/student/StudentRestTimerOverlay';
 import StudentProgressFooter from '../components/student/StudentProgressFooter';
 import StudentCompletionModal from '../components/student/StudentCompletionModal';
+
+const studentViewLogger = createScopedLogger('StudentView');
 
 interface StudentViewProps {
     clientId?: string;          // ID do cliente para buscar treinos reais
@@ -121,7 +124,7 @@ const StudentView: React.FC<StudentViewProps> = ({
                         setWorkout(createDemoWorkout(studentName));
                     }
                 } catch (error) {
-                    console.error('Error fetching workout:', error);
+                    studentViewLogger.error('Error fetching current workout', error, { clientId, studentName });
                     setWorkout(createDemoWorkout(studentName));
                 }
             } else {
@@ -420,9 +423,17 @@ const StudentView: React.FC<StudentViewProps> = ({
                     total_load_volume: 0, // Not tracked in this view
                     feedback_notes: 'Treino concluído via app'
                 });
-                console.log('Workout saved successfully');
+                studentViewLogger.debug('Workout history saved successfully', {
+                    clientId,
+                    workoutId: workout?.id,
+                    splitId: selectedSplit.id
+                });
             } catch (error) {
-                console.error('Error saving workout history:', error);
+                studentViewLogger.error('Error saving workout history', error, {
+                    clientId,
+                    workoutId: workout?.id,
+                    splitId: selectedSplit.id
+                });
             }
         }
 

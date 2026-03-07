@@ -11,6 +11,9 @@ import {
     MessageSquare
 } from 'lucide-react';
 import { getPendingRescheduleRequests, respondToRescheduleRequest, DBRescheduleRequest } from '../services/supabase/domains/appointmentsDomain';
+import { createScopedLogger } from '../services/appLogger';
+
+const pendingRequestsLogger = createScopedLogger('PendingRequestsPanel');
 
 interface PendingRequestsPanelProps {
     coachId: string;
@@ -33,7 +36,7 @@ const PendingRequestsPanel: React.FC<PendingRequestsPanelProps> = ({ coachId, on
             const data = await getPendingRescheduleRequests(coachId);
             setRequests(data);
         } catch (error) {
-            console.error('Error loading requests:', error);
+            pendingRequestsLogger.error('Error loading pending reschedule requests', error, { coachId });
         } finally {
             setLoading(false);
         }
@@ -50,7 +53,11 @@ const PendingRequestsPanel: React.FC<PendingRequestsPanelProps> = ({ coachId, on
                 if (onUpdate) onUpdate();
             }
         } catch (error) {
-            console.error('Error responding to request:', error);
+            pendingRequestsLogger.error('Error responding to reschedule request', error, {
+                coachId,
+                requestId,
+                approved
+            });
         } finally {
             setResponding(null);
         }

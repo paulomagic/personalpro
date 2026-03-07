@@ -4,6 +4,9 @@ import { getClients } from '../services/supabase/domains/clientsDomain';
 import { supabase } from '../services/supabaseCore';
 import PageHeader from '../components/PageHeader';
 import { Users, Dumbbell, Activity, TrendingUp } from 'lucide-react';
+import { createScopedLogger } from '../services/appLogger';
+
+const metricsViewLogger = createScopedLogger('MetricsView');
 
 interface MetricsViewProps {
     user: any;
@@ -65,7 +68,10 @@ const MetricsView: React.FC<MetricsViewProps> = ({ user, onBack }) => {
                     weeklyLoad
                 };
             } catch (error) {
-                console.error('Error fetching metrics:', error);
+                metricsViewLogger.error('Error fetching product metrics', error, {
+                    userId: user?.id,
+                    activePeriod
+                });
                 return emptyMetrics;
             } finally {
                 // no-op

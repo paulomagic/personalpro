@@ -4,6 +4,7 @@
 import type { AIProvider, ProviderRequest, ProviderResponse } from '../types';
 import { supabase } from '../../supabaseCore';
 import { buildEdgeAuthHeaders } from './edgeHeaders';
+import { createScopedLogger } from '../../appLogger';
 
 // Supabase URL for Edge Function
 const SUPABASE_URL = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SUPABASE_URL) || '';
@@ -11,7 +12,7 @@ const SUPABASE_ANON_KEY = (typeof import.meta !== 'undefined' && import.meta.env
 const GROQ_PROXY_URL = `${SUPABASE_URL}/functions/v1/groq-proxy`;
 const GROQ_OPERATIONAL_MODEL = ((typeof import.meta !== 'undefined' && import.meta.env?.VITE_GROQ_MODEL_OPERATIONAL) || 'openai/gpt-oss-20b').trim();
 
-const isDev = typeof import.meta !== 'undefined' && import.meta.env?.DEV;
+const groqProviderLogger = createScopedLogger('GroqProvider');
 
 function estimateTokens(text: string): number {
     return Math.ceil(text.length / 4);
@@ -60,7 +61,10 @@ export const groqProvider: AIProvider = {
         }
 
         try {
-            if (isDev) console.log('🚀 Calling Groq via Edge Function...');
+            groqProviderLogger.debug('Calling Groq via Edge Function', {
+                action: request.action,
+                model: requestedModel
+            });
             const authHeaders = await getAuthHeaders();
             if (!authHeaders) {
                 return {
@@ -94,7 +98,13 @@ export const groqProvider: AIProvider = {
                 const parsed = safeJsonParse(errorText);
                 const proxyCode = parsed?.code || parsed?.errorCode || parsed?.error || 'proxy_error';
                 const proxyMessage = parsed?.details || parsed?.message || parsed?.error || errorText;
-                console.warn('❌ Groq proxy failed:', response.status, proxyCode, proxyMessage);
+                groqProviderLogger.warn('Groq proxy failed', {
+                    action: request.action,
+                    model: requestedModel,
+                    status: response.status,
+                    proxyCode,
+                    proxyMessage
+                });
 
                 return {
                     success: false,
@@ -111,7 +121,11 @@ export const groqProvider: AIProvider = {
 
             if (data.success && data.text) {
                 const tokensOutput = estimateTokens(data.text);
-                if (isDev) console.log(`✅ Groq succeeded (${latencyMs}ms)`);
+                groqProviderLogger.debug('Groq succeeded', {
+                    action: request.action,
+                    model: data.model || requestedModel,
+                    latencyMs
+                });
 
                 return {
                     success: true,
@@ -136,7 +150,11 @@ export const groqProvider: AIProvider = {
 
         } catch (error: any) {
             const latencyMs = Date.now() - startTime;
-            console.error('❌ Error calling Groq proxy:', error?.message);
+            groqProviderLogger.error('Error calling Groq proxy', error, {
+                action: request.action,
+                model: requestedModel,
+                latencyMs
+            });
 
             return {
                 success: false,

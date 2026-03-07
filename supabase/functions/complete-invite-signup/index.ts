@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 // @ts-ignore Deno edge runtime import
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
+import { createEdgeLogger } from "../_shared/edgeLogger.ts";
 
 interface InviteSignupPayload {
     inviteToken?: string;
@@ -24,6 +25,7 @@ interface AdminUserRow {
 }
 
 type ExistingRole = "admin" | "coach" | "student" | null;
+const logger = createEdgeLogger("complete-invite-signup");
 
 function getAllowedOrigins(): string[] {
     const raw = Deno.env.get("ALLOWED_ORIGINS") || "";
@@ -268,7 +270,7 @@ serve(async (req: Request) => {
             { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
     } catch (error) {
-        console.error("[complete-invite-signup] Unexpected error:", error);
+        logger.error("Unexpected invite signup completion error", error);
         const message = error instanceof Error ? error.message : String(error);
         return new Response(
             JSON.stringify({ success: false, error: message }),

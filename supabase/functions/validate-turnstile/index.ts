@@ -5,9 +5,11 @@
 // Set secret: supabase secrets set TURNSTILE_SECRET_KEY=your-secret-key
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createEdgeLogger } from "../_shared/edgeLogger.ts";
 
 const TURNSTILE_VERIFY_URL = "https://challenges.cloudflare.com/turnstile/v0/siteverify";
 const requestsByIp = new Map<string, { count: number; resetAt: number }>();
+const logger = createEdgeLogger("validate-turnstile");
 
 function getAllowedOrigins(): string[] {
     const raw = Deno.env.get("ALLOWED_ORIGINS") || "";
@@ -126,7 +128,7 @@ serve(async (req: Request) => {
         const secretKey = Deno.env.get("TURNSTILE_SECRET_KEY");
 
         if (!secretKey) {
-            console.error("TURNSTILE_SECRET_KEY not configured");
+            logger.error("TURNSTILE secret key not configured");
             return new Response(
                 JSON.stringify({ success: false, error: "Validation service not configured" }),
                 { status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -179,7 +181,11 @@ serve(async (req: Request) => {
                 }
             );
         } else {
-            console.warn("Turnstile validation failed:", result["error-codes"]);
+            logger.warn("Turnstile validation failed", {
+                errorCodes: result["error-codes"],
+                hostname: result.hostname,
+                clientIp: clientIP
+            });
             return new Response(
                 JSON.stringify({
                     success: false,
@@ -193,7 +199,7 @@ serve(async (req: Request) => {
             );
         }
     } catch (error) {
-        console.error("Turnstile validation error:", error);
+        logger.error("Turnstile validation error", error);
         return new Response(
             JSON.stringify({ success: false, error: "Validation service error" }),
             {

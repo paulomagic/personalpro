@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createEdgeLogger } from "../_shared/edgeLogger.ts";
 
 interface AuthGuardRequest {
     action: 'login' | 'register';
@@ -13,6 +14,7 @@ interface RateLimitRpcResponse {
 }
 
 let requestCounter = 0;
+const logger = createEdgeLogger("auth-guard");
 
 function getAllowedOrigins(): string[] {
     const raw = Deno.env.get("ALLOWED_ORIGINS") || "";
@@ -184,7 +186,7 @@ serve(async (req: Request) => {
             { status: 200, headers: commonHeaders }
         );
     } catch (error) {
-        console.error("[auth-guard] Unexpected error:", error);
+        logger.error("Unexpected auth guard error", error);
         return new Response(
             JSON.stringify({ success: false, error: "Internal server error" }),
             { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }

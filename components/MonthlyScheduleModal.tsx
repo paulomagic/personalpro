@@ -6,6 +6,9 @@ import MonthlyReviewScreen from './MonthlyReviewScreen';
 import { createMonthlyScheduleBatch } from '../services/monthlyScheduleService';
 import { MonthlyScheduleConfig } from '../types';
 import { getClients, DBClient } from '../services/supabase/domains/clientsDomain';
+import { createScopedLogger } from '../services/appLogger';
+
+const monthlyScheduleLogger = createScopedLogger('MonthlyScheduleModal');
 
 interface MonthlyScheduleModalProps {
     coachId: string;
@@ -49,7 +52,7 @@ const MonthlyScheduleModal: React.FC<MonthlyScheduleModalProps> = ({
                 const clientsData = await getClients(coachId);
                 setClients(clientsData);
             } catch (error) {
-                console.error('Error fetching clients:', error);
+                monthlyScheduleLogger.error('Error fetching clients for monthly schedule', error, { coachId });
             } finally {
                 setLoadingClients(false);
             }
@@ -116,7 +119,12 @@ const MonthlyScheduleModal: React.FC<MonthlyScheduleModalProps> = ({
                 setIsCreating(false);
             }
         } catch (error: any) {
-            console.error('Error creating monthly schedule:', error);
+            monthlyScheduleLogger.error('Error creating monthly schedule', error, {
+                coachId,
+                clientId: selectedClientId || config.clientId,
+                month,
+                year
+            });
             const errorMessage = error?.message?.includes('Conflito')
                 ? error.message
                 : 'Erro ao criar agendamento mensal. Tente novamente.';

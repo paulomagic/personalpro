@@ -144,6 +144,8 @@ export function AdminAIDashboardInsights({
                 </motion.div>
             )}
 
+
+
             {metrics?.usageByUser && metrics.usageByUser.length > 0 && (
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}

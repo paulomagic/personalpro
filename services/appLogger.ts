@@ -71,28 +71,14 @@ async function persistLog(level: 'warn' | 'error', scope: string, message: strin
     if (typeof window === 'undefined') return;
 
     try {
-        const { logActivity, logFrontendError } = await import('./loggingService');
+        const { persistScopedError, persistScopedWarn } = await import('./appLogPersistence');
         const safeMetadata = sanitizeMetadata(metadata);
-
         if (level === 'warn') {
-            await logActivity({
-                action: `app_warn:${scope}`,
-                resource_type: 'app_log',
-                metadata: {
-                    message,
-                    level: 'warn',
-                    ...safeMetadata
-                }
-            });
+            await persistScopedWarn(scope, message, safeMetadata);
             return;
         }
 
-        await logFrontendError({
-            type: 'runtime_error',
-            message: error ? `[${scope}] ${message}: ${error.message}` : `[${scope}] ${message}`,
-            stack: error?.stack,
-            metadata: safeMetadata
-        });
+        await persistScopedError(scope, message, error, safeMetadata);
     } catch {
         // Fail closed: logging must never break the user flow.
     }

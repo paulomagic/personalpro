@@ -190,10 +190,10 @@ export async function logAIAction(entry: AILogEntry): Promise<void> {
         });
 
         if (error) {
-            console.warn('Failed to log AI action:', error.message);
+            emitConsole('warn', 'logging-service', 'Failed to log AI action', { error_message: error.message });
         }
     } catch (e) {
-        console.warn('Error in logAIAction:', e);
+        emitConsole('warn', 'logging-service', 'Error in logAIAction', { error: e });
     }
 }
 
@@ -213,10 +213,10 @@ export async function logActivity(entry: ActivityLogEntry): Promise<void> {
         });
 
         if (error) {
-            console.warn('Failed to log activity:', error.message);
+            emitConsole('warn', 'logging-service', 'Failed to log activity', { error_message: error.message });
         }
     } catch (e) {
-        console.warn('Error in logActivity:', e);
+        emitConsole('warn', 'logging-service', 'Error in logActivity', { error: e });
     }
 }
 
@@ -270,6 +270,7 @@ export interface AIUsageByUser {
     last_request_at: string | null;
 }
 
+
 export async function getAILogs(filters: AILogFilters = {}) {
     let query = supabase
         .from('ai_logs')
@@ -297,7 +298,7 @@ export async function getAILogs(filters: AILogFilters = {}) {
     const { data, error, count } = await query;
 
     if (error) {
-        console.error('Error fetching AI logs:', error);
+        emitConsole('error', 'logging-service', 'Error fetching AI logs', { error_message: error.message });
         return { logs: [], total: 0 };
     }
 
@@ -328,7 +329,7 @@ export async function getActivityLogs(filters: AILogFilters = {}) {
     const { data, error, count } = await query;
 
     if (error) {
-        console.error('Error fetching activity logs:', error);
+        emitConsole('error', 'logging-service', 'Error fetching activity logs', { error_message: error.message });
         return { logs: [], total: 0 };
     }
 
@@ -556,13 +557,13 @@ export async function getAIMetrics() {
     // Total tokens used & Breakdown by action
     const { data: tokenData } = await supabase
         .from('ai_logs')
-        .select('action_type, tokens_input, tokens_output');
+        .select('action_type, provider_used, model_used, tokens_input, tokens_output, created_at, success, latency_ms');
 
     let totalTokensInput = 0;
     let totalTokensOutput = 0;
     const tokensByAction: Record<string, number> = {};
 
-    tokenData?.forEach(log => {
+    tokenData?.forEach((log: any) => {
         const input = log.tokens_input || 0;
         const output = log.tokens_output || 0;
         const total = input + output;
@@ -818,6 +819,7 @@ export async function getAIMetrics() {
             lastGroqSuccessAt,
             byProvider: providerStats
         },
+
         aiFeedback: {
             total: feedbackTotal,
             positive: feedbackPositive,

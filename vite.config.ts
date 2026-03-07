@@ -28,9 +28,6 @@ export default defineConfig(({ mode }) => {
             if (id.includes('framer-motion')) {
               return 'vendor-motion';
             }
-            if (id.includes('recharts') || id.includes('/d3-')) {
-              return 'vendor-charts';
-            }
             if (id.includes('lucide-react')) {
               return 'vendor-icons';
             }

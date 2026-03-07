@@ -7,12 +7,7 @@ import { BottomSheet } from '../components/BottomSheet';
 import SettingsToast from '../components/settings/SettingsToast';
 import SettingsProfileCard from '../components/settings/SettingsProfileCard';
 import SettingsMenuList, { type SettingsMenuItem } from '../components/settings/SettingsMenuList';
-import SettingsProfileModal from '../components/settings/SettingsProfileModal';
-import SettingsNotificationsModal from '../components/settings/SettingsNotificationsModal';
-import SettingsSecurityModal from '../components/settings/SettingsSecurityModal';
-import SettingsHelpModal from '../components/settings/SettingsHelpModal';
-import SettingsAppearanceModal from '../components/settings/SettingsAppearanceModal';
-import SettingsPrivacyModal from '../components/settings/SettingsPrivacyModal';
+import SettingsModalContent, { type SettingsModalType } from '../components/settings/SettingsModalContent';
 import { useTheme, type ThemeMode } from '../services/ThemeContext';
 import {
     isPushSupported,
@@ -24,27 +19,15 @@ import {
 } from '../services/pushNotifications';
 import { sendPushTestNotification } from '../services/pushNotificationSender';
 import {
-    cancelPrivacyRequest,
-    createPrivacyRequest,
     downloadPrivacyJson,
-    exportMyPrivacyData,
-    listPrivacyRequests,
-    type PrivacyRequestSummary
 } from '../services/privacyService';
+import { useSettingsPrivacy } from '../hooks/useSettingsPrivacy';
 
 interface SettingsViewProps {
     user?: any;
     onBack: () => void;
     onLogout: () => void;
 }
-
-type SettingsModal = 'profile' | 'notifications' | 'security' | 'help' | 'appearance' | 'privacy' | null;
-
-const PRIVACY_REQUEST_LABELS = {
-    access: 'Solicitação de acesso gerada via autoatendimento.',
-    delete: 'Solicitação de exclusão de conta aberta pelo titular.',
-    rectify: 'Solicitação de retificação cadastral aberta pelo titular.'
-} as const;
 
 const SettingsView: React.FC<SettingsViewProps> = ({ user, onBack, onLogout }) => {
     const coachName = user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email?.split('@')[0] || 'Usuário';
@@ -53,7 +36,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user, onBack, onLogout }) =
     const coachAvatar = getSafeAvatarUrl(rawAvatarUrl, coachName);
     const isDemo = user?.isDemo || !user?.id;
 
-    const [activeModal, setActiveModal] = React.useState<SettingsModal>(null);
+    const [activeModal, setActiveModal] = React.useState<SettingsModalType>(null);
     const { theme: selectedTheme, setTheme: setSelectedTheme } = useTheme();
     const [pendingTheme, setPendingTheme] = React.useState<ThemeMode>(selectedTheme);
 
@@ -65,9 +48,6 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user, onBack, onLogout }) =
     const [confirmPassword, setConfirmPassword] = React.useState('');
     const [securitySaving, setSecuritySaving] = React.useState(false);
     const [sendingTestPush, setSendingTestPush] = React.useState(false);
-
-    const [privacyRequests, setPrivacyRequests] = React.useState<PrivacyRequestSummary[]>([]);
-    const [privacyLoading, setPrivacyLoading] = React.useState(false);
 
     const [toastMessage, setToastMessage] = React.useState<string | null>(null);
     const [toastType, setToastType] = React.useState<'success' | 'error'>('success');
@@ -95,24 +75,47 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user, onBack, onLogout }) =
         window.setTimeout(() => setToastMessage(null), 3000);
     }, []);
 
-    const loadPrivacyHistory = React.useCallback(async () => {
-        if (isDemo) {
-            setPrivacyRequests([]);
-            return;
-        }
-
-        setPrivacyLoading(true);
-        try {
-            const result = await listPrivacyRequests();
-            if (!result.success) {
-                showToast(result.error || 'Erro ao carregar histórico LGPD', 'error');
-                return;
+    const handleExportPrivacyReport = React.useCallback(() => {
+        const report = {
+            exportedAt: new Date().toISOString(),
+            account: {
+                name: profileName,
+                email: coachEmail,
+                isDemo
+            },
+            preferences: {
+                notifications: notifState,
+                theme: selectedTheme
+            },
+            privacyControls: {
+                aiPromptProtection: true,
+                clinicalDataEncryption: 'enabled_in_backend_rollout',
+                offlineQueueStorage: true
             }
-            setPrivacyRequests(result.data || []);
-        } finally {
-            setPrivacyLoading(false);
-        }
-    }, [isDemo, showToast]);
+        };
+
+        const result = downloadPrivacyJson(report, 'personalpro-privacy-report');
+        showToast(result.success ? 'Relatório de privacidade exportado.' : (result.error || 'Erro ao exportar relatório'), result.success ? 'success' : 'error');
+    }, [coachEmail, isDemo, notifState, profileName, selectedTheme, showToast]);
+
+    const handleDownloadLivePrivacyExport = React.useCallback((data: unknown) => {
+        const downloadResult = downloadPrivacyJson(data, 'personalpro-lgpd-export');
+        showToast(downloadResult.success ? 'Exportação LGPD concluída.' : (downloadResult.error || 'Erro ao finalizar exportação'), downloadResult.success ? 'success' : 'error');
+    }, [showToast]);
+
+    const {
+        privacyRequests,
+        privacyLoading,
+        loadPrivacyHistory,
+        handleExportLivePrivacyData,
+        handlePrivacyRequest,
+        handleCancelPrivacyRequest
+    } = useSettingsPrivacy({
+        isDemo,
+        showToast,
+        onExportDemoFallback: handleExportPrivacyReport,
+        onDownloadExport: handleDownloadLivePrivacyExport
+    });
 
     React.useEffect(() => {
         if (activeModal === 'privacy') {
@@ -309,73 +312,6 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user, onBack, onLogout }) =
         }
     };
 
-    const handleExportPrivacyReport = () => {
-        const report = {
-            exportedAt: new Date().toISOString(),
-            account: {
-                name: profileName,
-                email: coachEmail,
-                isDemo
-            },
-            preferences: {
-                notifications: notifState,
-                theme: selectedTheme
-            },
-            privacyControls: {
-                aiPromptProtection: true,
-                clinicalDataEncryption: 'enabled_in_backend_rollout',
-                offlineQueueStorage: true
-            }
-        };
-
-        const result = downloadPrivacyJson(report, 'personalpro-privacy-report');
-        showToast(result.success ? 'Relatório de privacidade exportado.' : (result.error || 'Erro ao exportar relatório'), result.success ? 'success' : 'error');
-    };
-
-    const handleExportLivePrivacyData = async () => {
-        if (isDemo) {
-            handleExportPrivacyReport();
-            return;
-        }
-
-        const result = await exportMyPrivacyData();
-        if (!result.success) {
-            showToast(result.error || 'Erro ao exportar dados', 'error');
-            return;
-        }
-
-        const downloadResult = downloadPrivacyJson(result.data, 'personalpro-lgpd-export');
-        showToast(downloadResult.success ? 'Exportação LGPD concluída.' : (downloadResult.error || 'Erro ao finalizar exportação'), downloadResult.success ? 'success' : 'error');
-        await loadPrivacyHistory();
-    };
-
-    const handlePrivacyRequest = async (requestType: 'access' | 'delete' | 'rectify') => {
-        if (isDemo) {
-            showToast('Modo demo: solicitação LGPD indisponível', 'error');
-            return;
-        }
-
-        const result = await createPrivacyRequest(requestType, PRIVACY_REQUEST_LABELS[requestType]);
-        if (!result.success) {
-            showToast(result.error || 'Erro ao abrir solicitação', 'error');
-            return;
-        }
-
-        showToast('Solicitação registrada com sucesso.');
-        await loadPrivacyHistory();
-    };
-
-    const handleCancelPrivacyRequest = async (requestId: string) => {
-        const result = await cancelPrivacyRequest(requestId);
-        if (!result.success) {
-            showToast(result.error || 'Não foi possível cancelar a solicitação', 'error');
-            return;
-        }
-
-        showToast('Solicitação cancelada.');
-        await loadPrivacyHistory();
-    };
-
     const applyTheme = () => {
         setSelectedTheme(pendingTheme);
         showToast(`Tema ${pendingTheme === 'dark' ? 'escuro' : pendingTheme === 'light' ? 'claro' : 'automático'} aplicado!`);
@@ -474,64 +410,39 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user, onBack, onLogout }) =
             <p className="text-center text-[9px] font-black mt-10 uppercase tracking-[0.3em] text-[#1E3A5F]">Apex Elite Framework • v1.1.0</p>
 
             <BottomSheet isOpen={!!activeModal} onClose={() => setActiveModal(null)}>
-                {activeModal === 'profile' && (
-                    <SettingsProfileModal
-                        coachAvatar={coachAvatar}
-                        coachName={coachName}
-                        profileName={profileName}
-                        coachEmail={coachEmail}
-                        saving={saving}
-                        onProfileNameChange={setProfileName}
-                        onSave={handleSaveProfile}
-                    />
-                )}
-
-                {activeModal === 'notifications' && (
-                    <SettingsNotificationsModal
-                        isPushAvailable={isPushSupported()}
-                        notifState={notifState}
-                        sendingTestPush={sendingTestPush}
-                        isDemo={isDemo}
-                        onToggle={toggleNotif}
-                        onSendTestPush={handleSendTestPush}
-                        onSave={handleSaveNotifications}
-                    />
-                )}
-
-                {activeModal === 'security' && (
-                    <SettingsSecurityModal
-                        newPassword={newPassword}
-                        confirmPassword={confirmPassword}
-                        securitySaving={securitySaving}
-                        onNewPasswordChange={setNewPassword}
-                        onConfirmPasswordChange={setConfirmPassword}
-                        onSave={handleSaveSecurity}
-                    />
-                )}
-
-                {activeModal === 'help' && (
-                    <SettingsHelpModal onContactSupport={() => showToast('Mensagem enviada ao suporte!')} />
-                )}
-
-                {activeModal === 'appearance' && (
-                    <SettingsAppearanceModal
-                        pendingTheme={pendingTheme}
-                        onThemeChange={setPendingTheme}
-                        onApply={applyTheme}
-                    />
-                )}
-
-                {activeModal === 'privacy' && (
-                    <SettingsPrivacyModal
-                        onExport={handleExportLivePrivacyData}
-                        onRequestDelete={() => handlePrivacyRequest('delete')}
-                        onRequestAccess={() => handlePrivacyRequest('access')}
-                        onRequestRectify={() => handlePrivacyRequest('rectify')}
-                        onCancelRequest={handleCancelPrivacyRequest}
-                        requests={privacyRequests}
-                        loadingRequests={privacyLoading}
-                    />
-                )}
+                <SettingsModalContent
+                    activeModal={activeModal}
+                    coachAvatar={coachAvatar}
+                    coachName={coachName}
+                    profileName={profileName}
+                    coachEmail={coachEmail}
+                    saving={saving}
+                    notifState={notifState}
+                    sendingTestPush={sendingTestPush}
+                    isDemo={isDemo}
+                    newPassword={newPassword}
+                    confirmPassword={confirmPassword}
+                    securitySaving={securitySaving}
+                    pendingTheme={pendingTheme}
+                    privacyRequests={privacyRequests}
+                    privacyLoading={privacyLoading}
+                    onProfileNameChange={setProfileName}
+                    onSaveProfile={handleSaveProfile}
+                    onToggleNotif={toggleNotif}
+                    onSendTestPush={handleSendTestPush}
+                    onSaveNotifications={handleSaveNotifications}
+                    onNewPasswordChange={setNewPassword}
+                    onConfirmPasswordChange={setConfirmPassword}
+                    onSaveSecurity={handleSaveSecurity}
+                    onContactSupport={() => showToast('Mensagem enviada ao suporte!')}
+                    onThemeChange={setPendingTheme}
+                    onApplyTheme={applyTheme}
+                    onExportPrivacy={handleExportLivePrivacyData}
+                    onRequestDelete={() => handlePrivacyRequest('delete')}
+                    onRequestAccess={() => handlePrivacyRequest('access')}
+                    onRequestRectify={() => handlePrivacyRequest('rectify')}
+                    onCancelRequest={handleCancelPrivacyRequest}
+                />
             </BottomSheet>
         </div>
     );

@@ -50,9 +50,10 @@ const AIBuilderWizardStepGenerate: React.FC<AIBuilderWizardStepGenerateProps> = 
 
         <button
           onClick={onBack}
-          className="w-full h-12 rounded-2xl border border-white/10 text-slate-300 font-bold hover:bg-white/5 transition-colors"
+          className="btn-back-secondary group w-full h-12 rounded-2xl flex items-center justify-center gap-2 transition-all active:scale-[0.97]"
         >
-          Voltar
+          <span className="material-symbols-outlined text-[18px] transition-transform duration-300 group-hover:-translate-x-1">arrow_back</span>
+          <span className="text-sm font-semibold tracking-wide">Voltar</span>
         </button>
       </div>
     </section>

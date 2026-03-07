@@ -380,6 +380,37 @@ body::before {
   transition: transform 0.15s;
 }
 
+/* ── Secondary Back Button ── */
+.btn-back-secondary {
+  background: transparent;
+  border: 1px solid var(--border-mid);
+  color: var(--text-secondary);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.btn-back-secondary:hover {
+  background: var(--cyan-dim);
+  border-color: var(--border-lit);
+  color: var(--text-primary);
+  box-shadow: 0 0 12px var(--cyan-glow);
+}
+
+[data-theme="light"] .btn-back-secondary {
+  background: rgba(255, 255, 255, 0.6);
+  border-color: var(--border-mid);
+  color: var(--text-secondary);
+}
+
+[data-theme="light"] .btn-back-secondary:hover {
+  background: var(--cyan-dim);
+  border-color: var(--border-lit);
+  color: var(--text-primary);
+  box-shadow: 0 0 10px var(--cyan-glow);
+}
+
+
+
 /* ── AI Hero Card ── */
 .card-ai {
   background: var(--grad-ai);

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Check, Clock, Dumbbell, ChevronRight, Play, Pause, RotateCcw, Trophy, Flame, Timer as TimerIcon, ArrowLeft, Layers, AlertCircle } from 'lucide-react';
-import { WorkoutExercise, ExerciseSet, WorkoutSplit } from '../types';
+import { Check, Dumbbell, ChevronRight, Play, AlertCircle } from 'lucide-react';
+import { WorkoutExercise, WorkoutSplit } from '../types';
 import { getCurrentWorkoutByClient } from '../services/supabase/domains/workoutsDomain';
 import { saveCompletedWorkout } from '../services/supabase/domains/completedWorkoutsDomain';
 import { saveSessionFeedbackWithRetry, flushQueuedFeedback } from '../services/ai/feedback';
@@ -10,8 +10,12 @@ import { logFunnelEvent } from '../services/loggingService';
 import { mockExercises } from '../mocks/demoData';
 import VideoPlayerModal from '../components/VideoPlayerModal';
 import { FeedbackForm } from '../components/FeedbackForm';
-import PageHeader from '../components/PageHeader';
 import { useTheme } from '../services/ThemeContext';
+import StudentSplitSelection from '../components/student/StudentSplitSelection';
+import StudentExecutionHeader from '../components/student/StudentExecutionHeader';
+import StudentRestTimerOverlay from '../components/student/StudentRestTimerOverlay';
+import StudentProgressFooter from '../components/student/StudentProgressFooter';
+import StudentCompletionModal from '../components/student/StudentCompletionModal';
 
 interface StudentViewProps {
     clientId?: string;          // ID do cliente para buscar treinos reais
@@ -475,91 +479,15 @@ const StudentView: React.FC<StudentViewProps> = ({
     // Split Selection View
     if (!selectedSplit) {
         return (
-            <div className="min-h-screen text-white bg-[var(--bg-void)]">
-                {/* Header Premium (Seletor de Treinos) */}
-                <PageHeader
-                    title={workout.title}
-                    subtitle={`Olá, ${studentName.split(' ')[0]}! 👋`}
-                    onBack={onBack}
-                    accentColor="blue"
-                    rightSlot={
-                        coachLogo ? (
-                            <img src={coachLogo} alt={coachName} className="h-11 w-auto rounded-[14px] border border-white/10 shadow-lg" />
-                        ) : (
-                            <div className="text-right flex flex-col justify-center">
-                                <span className="text-[9px] font-black text-slate-500 uppercase tracking-[0.15em] mb-0.5">Personal</span>
-                                <span className="text-xs font-black text-white tracking-wide">{coachName}</span>
-                            </div>
-                        )
-                    }
-                />
-
-                {/* Split Selection */}
-                <main className="max-w-md mx-auto px-5 py-2 pb-32">
-                    <div className="mb-6">
-                        <h2 className="text-2xl font-display font-black text-white mb-2">Escolha seu Treino</h2>
-                        <p className="text-sm text-slate-400">Selecione qual treino você vai fazer hoje</p>
-                    </div>
-
-                    <div className="space-y-4">
-                        {workout.splits.map((split, index) => {
-                            // Extract letter from split name (e.g., "Treino A: Força..." -> "A")
-                            const splitLetter = split.name.match(/[A-Z](?=:|$)/)?.[0] || split.name.charAt(0).toUpperCase();
-                            // Use description if available, otherwise parse from name
-                            const splitDescription = split.description || split.name.replace(/^Treino\s*[A-Z][\s:]*/, '').trim() || 'Treino Geral';
-
-                            return (
-                                <motion.button
-                                    key={split.id || index}
-                                    initial={{ opacity: 0, y: 20 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    transition={{ delay: index * 0.1 }}
-                                    onClick={() => {
-                                        if ('vibrate' in navigator) navigator.vibrate(20);
-                                        setSelectedSplit(split);
-                                    }}
-                                    className="w-full glass-card p-5 rounded-[24px] text-left relative overflow-hidden group hover:border-blue-500/30 transition-all active:scale-[0.98]"
-                                >
-                                    <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-full blur-3xl group-hover:bg-blue-500/20 transition-all pointer-events-none" />
-
-                                    <div className="flex items-center gap-4 relative z-10">
-                                        <div
-                                            className="size-[60px] rounded-[18px] flex items-center justify-center flex-shrink-0 bg-[var(--btn-primary-bg)] border border-[var(--btn-primary-border)] shadow-[var(--btn-primary-shadow)]"
-                                        >
-                                            <span className="text-[26px] font-black text-[var(--btn-primary-text)]">
-                                                {splitLetter}
-                                            </span>
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                            <h3 className="font-bold text-white text-lg mb-1 truncate">
-                                                Treino {splitLetter}: {splitDescription}
-                                            </h3>
-                                            <div className="flex items-center gap-3 mt-2">
-                                                <span className="text-[10px] font-bold text-slate-500 flex items-center gap-1">
-                                                    <Dumbbell size={12} /> {split.exercises?.length || 0} exercícios
-                                                </span>
-                                                <span className="text-[10px] font-bold text-slate-500 flex items-center gap-1">
-                                                    <Layers size={12} /> {split.exercises?.reduce((acc, e) => acc + (Array.isArray(e.sets) ? e.sets.length : 0), 0) || 0} séries
-                                                </span>
-                                            </div>
-                                        </div>
-                                        <ChevronRight size={24} className="text-slate-600 group-hover:text-blue-400 transition-colors flex-shrink-0" />
-                                    </div>
-                                </motion.button>
-                            );
-                        })}
-                    </div>
-
-                    {/* Demo Indicator */}
-                    {!clientId && (
-                        <div className="mt-6 p-4 bg-blue-500/10 border border-blue-500/20 rounded-2xl">
-                            <p className="text-xs text-blue-400 text-center">
-                                ⚠️ Modo demonstração - Treinos de exemplo
-                            </p>
-                        </div>
-                    )}
-                </main>
-            </div>
+            <StudentSplitSelection
+                workout={workout}
+                studentName={studentName}
+                coachName={coachName}
+                coachLogo={coachLogo}
+                clientId={clientId}
+                onBack={onBack}
+                onSelectSplit={setSelectedSplit}
+            />
         );
     }
 
@@ -567,130 +495,33 @@ const StudentView: React.FC<StudentViewProps> = ({
     return (
         <div className="min-h-screen text-white bg-[var(--bg-void)]">
             {/* Header Execution Premium */}
-            <header
-                className={`sticky top-0 z-40 backdrop-blur-xl px-5 pt-12 pb-5 safe-area-top border-b ${isLightTheme
-                    ? 'bg-[linear-gradient(180deg,rgba(231,239,252,0.96)_0%,rgba(223,233,250,0.9)_100%)] border-b-[rgba(130,170,235,0.28)]'
-                    : 'bg-[rgba(3,7,18,0.85)] border-b-[rgba(255,255,255,0.05)]'
-                    }`}
-            >
-                <div
-                    className={`absolute top-0 left-0 right-0 h-32 pointer-events-none ${isLightTheme
-                        ? 'bg-[radial-gradient(ellipse_60%_80%_at_50%_0%,rgba(59,130,246,0.14)_0%,transparent_100%)]'
-                        : 'bg-[radial-gradient(ellipse_60%_80%_at_50%_0%,rgba(59,130,246,0.08)_0%,transparent_100%)]'
-                        }`}
-                />
+            <StudentExecutionHeader
+                isLightTheme={isLightTheme}
+                selectedSplit={selectedSplit}
+                oneHandMode={oneHandMode}
+                progress={progress}
+                completedSets={completedSets}
+                totalSets={totalSets}
+                isColdStartWorkout={isColdStartWorkout}
+                feedbackCompletedCount={feedbackCompletedExercises.size}
+                requiredFeedbackCount={requiredFeedbackCount}
+                adherenceNudge={adherenceNudge}
+                onBack={() => {
+                    setSelectedSplit(null);
+                    setProcessedSplitId(null);
+                    setWorkoutStartTime(null);
+                    setShowFeedbackForm(false);
+                    setFeedbackCompletedExercises(new Set());
+                }}
+                onToggleOneHandMode={() => setOneHandMode(prev => !prev)}
+            />
 
-                <div className="max-w-md mx-auto relative z-10">
-                    <div className="flex flex-col gap-4 mb-4">
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                                <button
-                                    onClick={() => {
-                                        setSelectedSplit(null);
-                                        setProcessedSplitId(null);
-                                        setWorkoutStartTime(null);
-                                        setShowFeedbackForm(false);
-                                        setFeedbackCompletedExercises(new Set());
-                                    }}
-                                    className={`size-11 rounded-2xl backdrop-blur-xl text-white flex items-center justify-center shadow-lg transition-all active:scale-95 border ${isLightTheme
-                                        ? 'bg-[rgba(255,255,255,0.66)] border-[rgba(130,170,235,0.35)] shadow-[0_8px_22px_rgba(63,93,152,0.16)]'
-                                        : 'bg-[rgba(255,255,255,0.10)] border-[rgba(255,255,255,0.20)]'
-                                        }`}
-                                >
-                                    <ArrowLeft size={20} strokeWidth={2.5} />
-                                </button>
-                                <div className="flex flex-col">
-                                    <span className="text-[10px] font-black text-blue-400 uppercase tracking-[0.15em] mb-0.5">Treino {selectedSplit.name}</span>
-                                    <span className="text-[15px] font-black tracking-wide text-white leading-tight pr-4">{selectedSplit.description}</span>
-                                </div>
-                            </div>
-                            <button
-                                type="button"
-                                onClick={() => setOneHandMode(prev => !prev)}
-                                className={`h-11 px-3 rounded-2xl border text-[10px] font-black uppercase tracking-widest transition-all ${oneHandMode
-                                    ? 'bg-blue-500/20 border-blue-400/60 text-blue-300'
-                                    : (isLightTheme
-                                        ? 'bg-white/60 border-[rgba(130,170,235,0.35)] text-[#3D5A80]'
-                                        : 'bg-white/10 border-white/20 text-slate-300')
-                                    }`}
-                            >
-                                1M
-                            </button>
-                        </div>
-                    </div>
-
-                    {/* Progress Bar */}
-                    <div className="relative h-1.5 bg-slate-800/50 rounded-full overflow-hidden mb-2">
-                        <motion.div
-                            initial={{ width: 0 }}
-                            animate={{ width: `${progress}%` }}
-                            className="absolute inset-y-0 left-0 bg-blue-500 rounded-full shadow-[0_0_10px_rgba(59,130,246,0.8)]"
-                        />
-                    </div>
-                    <div className="flex justify-between items-center px-1">
-                        <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{completedSets} de {totalSets} séries</span>
-                        <span className="text-[10px] font-black text-blue-400 uppercase tracking-widest">{Math.round(progress)}% concluído</span>
-                    </div>
-                    {isColdStartWorkout && (
-                        <div className="flex justify-between items-center mt-1">
-                            <span className="text-[10px] font-black text-blue-400 uppercase tracking-widest">Modo Inicial Ativo</span>
-                            <span className="text-[10px] font-bold text-amber-300">
-                                Feedback: {feedbackCompletedExercises.size}/{requiredFeedbackCount}
-                            </span>
-                        </div>
-                    )}
-                    <div
-                        className={`mt-3 rounded-2xl px-3 py-2 border ${isLightTheme
-                            ? 'bg-[rgba(219,234,254,0.68)] border-[rgba(130,170,235,0.32)]'
-                            : 'bg-[rgba(59,130,246,0.12)] border-[rgba(59,130,246,0.25)]'
-                            }`}
-                    >
-                        <p className={`text-[11px] font-semibold ${isLightTheme ? 'text-[#264569]' : 'text-[#BFDBFE]'}`}>
-                            {adherenceNudge}
-                        </p>
-                    </div>
-                </div>
-            </header>
-
-            {/* Rest Timer Overlay */}
-            <AnimatePresence>
-                {isResting && (
-                    <motion.div
-                        initial={{ opacity: 0, y: 50 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: 50 }}
-                        className="fixed bottom-20 left-4 right-4 z-50 max-w-md mx-auto"
-                    >
-                        <div className="rounded-[24px] p-6 shadow-2xl bg-[linear-gradient(135deg,#1E3A8A,#3B82F6)] shadow-[0_16px_48px_rgba(30,58,138,0.3)]">
-                            <div className="flex items-center justify-between mb-4">
-                                <div className="flex items-center gap-3">
-                                    <div className="size-12 rounded-full bg-white/20 flex items-center justify-center">
-                                        <TimerIcon size={24} className="text-white" />
-                                    </div>
-                                    <div>
-                                        <p className="text-sm font-bold text-white/70">Descansando...</p>
-                                        <p className="text-3xl font-black text-white">{formatTime(restTime)}</p>
-                                    </div>
-                                </div>
-                                <button
-                                    onClick={() => setIsResting(false)}
-                                    className="size-12 rounded-full bg-white/20 flex items-center justify-center hover:bg-white/30 transition-colors"
-                                >
-                                    <Play size={24} className="ml-1" />
-                                </button>
-                            </div>
-                            <div className="h-2 bg-white/20 rounded-full overflow-hidden">
-                                <motion.div
-                                    initial={{ width: '100%' }}
-                                    animate={{ width: '0%' }}
-                                    transition={{ duration: restTime, ease: 'linear' }}
-                                    className="h-full bg-white rounded-full"
-                                />
-                            </div>
-                        </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
+            <StudentRestTimerOverlay
+                isResting={isResting}
+                restTime={restTime}
+                formatTime={formatTime}
+                onSkip={() => setIsResting(false)}
+            />
 
             {/* Exercises List */}
             <main className="max-w-md mx-auto px-4 py-6 pb-32 space-y-4">
@@ -835,104 +666,21 @@ const StudentView: React.FC<StudentViewProps> = ({
                 })}
             </main>
 
-            {/* Finish Button */}
-            <div
-                className={`fixed bottom-0 left-0 right-0 py-6 px-4 pointer-events-none z-40 safe-area-bottom ${isLightTheme
-                    ? 'bg-[linear-gradient(to_top,rgba(240,244,255,0.98)_0%,rgba(240,244,255,0.75)_42%,rgba(240,244,255,0)_100%)]'
-                    : 'bg-[linear-gradient(to_top,rgba(2,8,23,1)_0%,rgba(2,8,23,0.9)_40%,rgba(2,8,23,0)_100%)]'
-                    }`}
-            >
-                <div className="max-w-md mx-auto pointer-events-auto">
-                    {oneHandMode && (
-                        <div
-                            className={`mb-3 p-2 rounded-2xl border ${isLightTheme
-                                ? 'bg-[rgba(235,243,255,0.9)] border-[rgba(130,170,235,0.32)]'
-                                : 'bg-[rgba(15,23,42,0.82)] border-[rgba(59,130,246,0.28)]'
-                                }`}
-                        >
-                            <div className="grid grid-cols-2 gap-2">
-                                <button
-                                    type="button"
-                                    onClick={handleQuickCompleteNextSet}
-                                    disabled={!canQuickCompleteSet}
-                                    className="h-12 rounded-xl bg-blue-600 text-white text-[10px] font-black uppercase tracking-widest disabled:opacity-40 disabled:cursor-not-allowed"
-                                >
-                                    Próxima Série
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={moveToNextPendingExercise}
-                                    className={`h-12 rounded-xl border text-[10px] font-black uppercase tracking-widest ${isLightTheme
-                                        ? 'border-[rgba(130,170,235,0.42)] text-[#355680] bg-[rgba(255,255,255,0.75)]'
-                                        : 'border-[rgba(148,163,184,0.35)] text-[#CBD5E1] bg-[rgba(15,23,42,0.65)]'
-                                        }`}
-                                >
-                                    Próx Exercício
-                                </button>
-                            </div>
-                        </div>
-                    )}
-                    {progress >= 100 ? (
-                        <button
-                            onClick={() => {
-                                if ('vibrate' in navigator) navigator.vibrate(100);
-                                handleFinishWorkout();
-                            }}
-                            disabled={!canFinishWorkout}
-                            className={`w-full py-4 rounded-2xl relative overflow-hidden group disabled:opacity-35 transition-all active:scale-[0.98] ${canFinishWorkout
-                                ? 'cursor-pointer bg-[var(--btn-primary-bg)] border border-[var(--btn-primary-border)] shadow-[var(--btn-primary-shadow)]'
-                                : 'opacity-80 cursor-not-allowed'
-                                } ${!canFinishWorkout && (isLightTheme
-                                    ? 'bg-[linear-gradient(145deg,rgba(214,224,242,0.95),rgba(204,216,238,0.95))] border border-[rgba(130,170,235,0.28)] shadow-[inset_0_1px_0_rgba(246,250,255,0.45)]'
-                                    : 'bg-[rgba(15,23,42,0.7)] border border-[rgba(51,65,85,0.65)]'
-                                )}`}
-                        >
-                            <div className="absolute inset-0 flex items-center justify-center gap-3 z-10 px-6">
-                                <div className="flex-1 flex flex-col items-start justify-center">
-                                    <span
-                                        className={`font-black uppercase tracking-[0.15em] text-[13px] leading-tight ${canFinishWorkout ? 'text-[var(--btn-primary-text)]' : (isLightTheme ? 'text-[#3D5A80]' : 'text-[#7A9FCC]')}`}
-                                    >
-                                        Encerrar Sessão
-                                    </span>
-                                    <span
-                                        className={`text-[10px] font-semibold tracking-wide ${canFinishWorkout ? 'text-[rgba(244,248,255,0.78)]' : 'text-[#64748B]'}`}
-                                    >
-                                        {isColdStartWorkout && !hasAllRequiredFeedback
-                                            ? 'Feedback obrigatório Pendente'
-                                            : 'Excelente trabalho hoje'}
-                                    </span>
-                                </div>
-                                <div
-                                    className={`size-11 rounded-[14px] backdrop-blur-sm flex items-center justify-center mt-px border-2 ${canFinishWorkout
-                                        ? 'bg-[rgba(255,255,255,0.18)] border-[rgba(255,255,255,0.3)]'
-                                        : (isLightTheme
-                                            ? 'bg-[rgba(255,255,255,0.45)] border-[rgba(130,170,235,0.28)]'
-                                            : 'bg-[rgba(255,255,255,0.05)] border-[rgba(255,255,255,0.12)]')
-                                        }`}
-                                >
-                                    <Check
-                                        size={20}
-                                        strokeWidth={3}
-                                        className={canFinishWorkout ? 'text-white' : 'text-[#64748B]'}
-                                    />
-                                </div>
-                            </div>
-                        </button>
-                    ) : (
-                        <div
-                            className={`w-full py-4 rounded-2xl flex items-center justify-center gap-3 backdrop-blur-md border ${isLightTheme
-                                ? 'bg-[linear-gradient(145deg,rgba(222,232,248,0.92),rgba(212,224,244,0.92))] border-[rgba(130,170,235,0.28)] shadow-[inset_0_1px_0_rgba(246,250,255,0.45)]'
-                                : 'bg-[rgba(2,12,37,0.86)] border-[rgba(255,255,255,0.06)]'
-                                }`}
-                        >
-                            <Trophy size={18} className={isLightTheme ? 'text-[#526A8C]' : 'text-[#64748B]'} />
-                            <span className={`font-black text-[11px] uppercase tracking-widest ${isLightTheme ? 'text-[#3D5A80]' : 'text-[#64748B]'}`}>
-                                {Math.round(progress)}% Concluído
-                            </span>
-                        </div>
-                    )}
-                </div>
-            </div>
+            <StudentProgressFooter
+                isLightTheme={isLightTheme}
+                oneHandMode={oneHandMode}
+                canQuickCompleteSet={canQuickCompleteSet}
+                progress={progress}
+                canFinishWorkout={canFinishWorkout}
+                isColdStartWorkout={isColdStartWorkout}
+                hasAllRequiredFeedback={hasAllRequiredFeedback}
+                onQuickCompleteNextSet={handleQuickCompleteNextSet}
+                onMoveToNextExercise={moveToNextPendingExercise}
+                onFinishWorkout={() => {
+                    if ('vibrate' in navigator) navigator.vibrate(100);
+                    void handleFinishWorkout();
+                }}
+            />
 
             {/* Feedback Modal */}
             <AnimatePresence>
@@ -963,92 +711,20 @@ const StudentView: React.FC<StudentViewProps> = ({
                 )}
             </AnimatePresence>
 
-            {/* Completion Modal */}
-            <AnimatePresence>
-                {showCompleteModal && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-50 bg-slate-950/95 backdrop-blur-md flex items-center justify-center p-4"
-                    >
-                        <motion.div
-                            initial={{ scale: 0.8, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            className="text-center"
-                        >
-                            {/* Celebration Animation */}
-                            <motion.div
-                                initial={{ scale: 0 }}
-                                animate={{ scale: 1 }}
-                                transition={{ type: 'spring', bounce: 0.6, delay: 0.2 }}
-                                className="size-32 mx-auto mb-8 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center shadow-2xl shadow-emerald-500/50"
-                            >
-                                <Trophy size={64} className="text-white" />
-                            </motion.div>
-
-                            <motion.h2
-                                initial={{ y: 20, opacity: 0 }}
-                                animate={{ y: 0, opacity: 1 }}
-                                transition={{ delay: 0.4 }}
-                                className="text-3xl font-black text-white mb-2"
-                            >
-                                Treino Concluído! 🎉
-                            </motion.h2>
-
-                            <motion.p
-                                initial={{ y: 20, opacity: 0 }}
-                                animate={{ y: 0, opacity: 1 }}
-                                transition={{ delay: 0.5 }}
-                                className="text-slate-400 mb-8"
-                            >
-                                Excelente trabalho, {studentName.split(' ')[0]}!
-                            </motion.p>
-
-                            {/* Stats */}
-                            <motion.div
-                                initial={{ y: 20, opacity: 0 }}
-                                animate={{ y: 0, opacity: 1 }}
-                                transition={{ delay: 0.6 }}
-                                className="grid grid-cols-3 gap-4 mb-8"
-                            >
-                                <div className="bg-white/5 rounded-2xl p-4">
-                                    <p className="text-2xl font-black text-emerald-400">{selectedSplit?.exercises.length || 0}</p>
-                                    <p className="text-[9px] font-black text-slate-500 uppercase">Exercícios</p>
-                                </div>
-                                <div className="bg-white/5 rounded-2xl p-4">
-                                    <p className="text-2xl font-black text-blue-400">{totalSets}</p>
-                                    <p className="text-[9px] font-black text-slate-500 uppercase">Séries</p>
-                                </div>
-                                <div className="bg-white/5 rounded-2xl p-4">
-                                    <div className="flex items-center justify-center gap-1">
-                                        <Flame size={20} className="text-orange-400" />
-                                        <span className="text-2xl font-black text-orange-400">45</span>
-                                    </div>
-                                    <p className="text-[9px] font-black text-slate-500 uppercase">Minutos</p>
-                                </div>
-                            </motion.div>
-
-                            <motion.button
-                                initial={{ y: 20, opacity: 0 }}
-                                animate={{ y: 0, opacity: 1 }}
-                                transition={{ delay: 0.7 }}
-                                onClick={() => {
-                                    setShowCompleteModal(false);
-                                    setSelectedSplit(null);
-                                    setProcessedSplitId(null);
-                                    setWorkoutStartTime(null);
-                                    setShowFeedbackForm(false);
-                                    setFeedbackCompletedExercises(new Set());
-                                }}
-                                className="px-8 py-4 bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-black rounded-2xl shadow-lg shadow-emerald-500/30 active:scale-95 transition-transform"
-                            >
-                                Fechar
-                            </motion.button>
-                        </motion.div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
+            <StudentCompletionModal
+                show={showCompleteModal}
+                studentName={studentName}
+                exerciseCount={selectedSplit?.exercises.length || 0}
+                totalSets={totalSets}
+                onClose={() => {
+                    setShowCompleteModal(false);
+                    setSelectedSplit(null);
+                    setProcessedSplitId(null);
+                    setWorkoutStartTime(null);
+                    setShowFeedbackForm(false);
+                    setFeedbackCompletedExercises(new Set());
+                }}
+            />
 
             {/* Video Modal */}
             {showVideoModal && activeVideo && (

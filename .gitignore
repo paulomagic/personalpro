@@ -35,3 +35,4 @@ organizacao-alteracoes-20260215/
 .tmp-tests/
 playwright-report/
 test-results/
+.agent/

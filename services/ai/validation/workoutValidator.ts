@@ -4,6 +4,9 @@
 import type { ResolvedSlot, ResolvedDay, GeneratedWorkout } from '../trainingEngineTypes';
 import type { WorkoutTemplate } from '../workoutTemplates';
 import type { Exercise } from '../../exerciseService';
+import { createScopedLogger } from '../../appLogger';
+
+const workoutValidatorLogger = createScopedLogger('WorkoutValidator');
 
 export interface DuplicateValidationResult {
     valid: boolean;
@@ -196,7 +199,10 @@ export function removeDuplicatesFromDay(slots: ResolvedSlot[]): {
 
         if (seenExercises.has(exerciseName)) {
             removed.push(slot.selected.name);
-            console.warn(`[Validator] 🔄 Removendo duplicata: ${slot.selected.name} (slot ${slot.slot_id})`);
+            workoutValidatorLogger.warn('Removing duplicate exercise from generated day', {
+                exerciseName: slot.selected.name,
+                slotId: slot.slot_id
+            });
             return false;
         }
 

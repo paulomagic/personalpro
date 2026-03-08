@@ -29,6 +29,13 @@ export function MonitoringDashboardConnected() {
         return 'red';
     };
 
+    const getProviderHealthColor = (status?: 'ok' | 'warning' | 'critical'): 'green' | 'yellow' | 'red' | 'blue' => {
+        if (status === 'ok') return 'green';
+        if (status === 'warning') return 'yellow';
+        if (status === 'critical') return 'red';
+        return 'blue';
+    };
+
     // ============ RENDER ============
 
     if (loading) {
@@ -143,9 +150,43 @@ export function MonitoringDashboardConnected() {
                     trend="neutral"
                     color="blue"
                 />
+
+                {metrics.provider_health && (
+                    <MonitoringMetricCard
+                        title="Saúde do Provedor IA"
+                        value={String(metrics.provider_health.status).toUpperCase()}
+                        subtitle={metrics.provider_health.reason}
+                        trend={metrics.provider_health.status === 'ok' ? 'up' : 'down'}
+                        color={getProviderHealthColor(metrics.provider_health.status)}
+                    />
+                )}
             </div>
 
             <MonitoringStatusSummary metrics={metrics} />
+
+            {metrics.provider_health && (
+                <div className="bg-white border rounded-lg p-6">
+                    <h3 className="font-semibold mb-4">Provedor IA</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-700">
+                        <div>
+                            <p className="text-xs uppercase tracking-wide text-gray-500">Treinos IA (24h)</p>
+                            <p className="mt-1 text-2xl font-bold text-gray-900">{metrics.provider_health.workout_actions_24h}</p>
+                        </div>
+                        <div>
+                            <p className="text-xs uppercase tracking-wide text-gray-500">Sucesso Groq (24h)</p>
+                            <p className="mt-1 text-2xl font-bold text-gray-900">{metrics.provider_health.groq_success_24h}</p>
+                        </div>
+                        <div>
+                            <p className="text-xs uppercase tracking-wide text-gray-500">Último sucesso Groq</p>
+                            <p className="mt-1 text-sm font-semibold text-gray-900">
+                                {metrics.provider_health.last_groq_success_at
+                                    ? new Date(metrics.provider_health.last_groq_success_at).toLocaleString('pt-BR')
+                                    : 'Nenhum registro'}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Last Updated */}
             <div className="text-center mt-6 text-sm text-gray-500">

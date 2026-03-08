@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { createScopedLogger } from '../services/appLogger';
+import { getAIMetrics } from '../services/loggingService';
 import { supabase } from '../services/supabaseCore';
 
 export type MonitoringTimeRange = '24h' | '7d' | '30d';
@@ -13,6 +14,13 @@ export interface GenerationMetrics {
     fallback_usage_count: number;
     fallback_usage_percent: number;
     last_updated: string;
+    provider_health?: {
+        status: 'ok' | 'warning' | 'critical';
+        reason: string;
+        workout_actions_24h: number;
+        groq_success_24h: number;
+        last_groq_success_at: string | null;
+    };
 }
 
 const EMPTY_METRICS: GenerationMetrics = {
@@ -43,7 +51,8 @@ function mapMetricsRow(row?: Record<string, unknown>): GenerationMetrics {
         validation_errors: Number(row.validation_errors) || 0,
         fallback_usage_count: Number(row.fallback_usage_count) || 0,
         fallback_usage_percent: Number(row.fallback_usage_percent) || 0,
-        last_updated: new Date().toISOString()
+        last_updated: new Date().toISOString(),
+        provider_health: undefined
     };
 }
 
@@ -63,10 +72,18 @@ export function useMonitoringMetrics(timeRange: MonitoringTimeRange) {
         setError(null);
 
         try {
-            const { data, error: rpcError } = await supabase
-                .rpc('get_ai_generation_metrics', {
+            const [{ data, error: rpcError }, aiMetricsResult] = await Promise.all([
+                supabase.rpc('get_ai_generation_metrics', {
                     time_range_hours: getTimeRangeHours(timeRange)
-                });
+                }),
+                getAIMetrics().catch((metricsError) => {
+                    monitoringLogger.warn('Unable to load AI provider health summary', {
+                        timeRange,
+                        error: metricsError
+                    });
+                    return null;
+                })
+            ]);
 
             if (rpcError) {
                 monitoringLogger.error('RPC error while fetching metrics', rpcError, { timeRange });
@@ -76,7 +93,19 @@ export function useMonitoringMetrics(timeRange: MonitoringTimeRange) {
             }
 
             const firstRow = Array.isArray(data) ? data[0] : undefined;
-            setMetrics(mapMetricsRow(firstRow));
+            const mappedMetrics = mapMetricsRow(firstRow);
+
+            if (aiMetricsResult?.providerHealth) {
+                mappedMetrics.provider_health = {
+                    status: aiMetricsResult.providerHealth.status,
+                    reason: aiMetricsResult.providerHealth.reason,
+                    workout_actions_24h: Number(aiMetricsResult.providerHealth.workoutActions24h || 0),
+                    groq_success_24h: Number(aiMetricsResult.providerHealth.groqSuccess24h || 0),
+                    last_groq_success_at: aiMetricsResult.providerHealth.lastGroqSuccessAt || null
+                };
+            }
+
+            setMetrics(mappedMetrics);
         } catch (fetchError: any) {
             monitoringLogger.error('Unexpected error while fetching metrics', fetchError, { timeRange });
             setError(fetchError.message || 'Erro desconhecido');

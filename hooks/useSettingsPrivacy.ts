@@ -3,7 +3,10 @@ import {
     cancelPrivacyRequest,
     createPrivacyRequest,
     exportMyPrivacyData,
+    listPrivacyConsents,
     listPrivacyRequests,
+    upsertPrivacyConsent,
+    type PrivacyConsentSummary,
     type PrivacyRequestSummary
 } from '../services/privacyService';
 
@@ -27,22 +30,36 @@ export function useSettingsPrivacy({
     onDownloadExport
 }: UseSettingsPrivacyParams) {
     const [privacyRequests, setPrivacyRequests] = React.useState<PrivacyRequestSummary[]>([]);
+    const [privacyConsents, setPrivacyConsents] = React.useState<PrivacyConsentSummary[]>([]);
     const [privacyLoading, setPrivacyLoading] = React.useState(false);
+    const [privacyConsentSaving, setPrivacyConsentSaving] = React.useState<string | null>(null);
 
     const loadPrivacyHistory = React.useCallback(async () => {
         if (isDemo) {
             setPrivacyRequests([]);
+            setPrivacyConsents([]);
             return;
         }
 
         setPrivacyLoading(true);
         try {
-            const result = await listPrivacyRequests();
-            if (!result.success) {
-                showToast(result.error || 'Erro ao carregar histórico LGPD', 'error');
+            const [requestsResult, consentsResult] = await Promise.all([
+                listPrivacyRequests(),
+                listPrivacyConsents()
+            ]);
+
+            if (!requestsResult.success) {
+                showToast(requestsResult.error || 'Erro ao carregar histórico LGPD', 'error');
                 return;
             }
-            setPrivacyRequests(result.data || []);
+
+            if (!consentsResult.success) {
+                showToast(consentsResult.error || 'Erro ao carregar consentimentos', 'error');
+                return;
+            }
+
+            setPrivacyRequests(requestsResult.data || []);
+            setPrivacyConsents(consentsResult.data || []);
         } finally {
             setPrivacyLoading(false);
         }
@@ -91,12 +108,41 @@ export function useSettingsPrivacy({
         await loadPrivacyHistory();
     }, [loadPrivacyHistory, showToast]);
 
+    const handlePrivacyConsentChange = React.useCallback(async (
+        consentType: 'privacy_policy' | 'ai_data_processing' | 'clinical_data_processing',
+        granted: boolean
+    ) => {
+        if (isDemo) {
+            showToast('Modo demo: consentimentos LGPD indisponíveis', 'error');
+            return;
+        }
+
+        setPrivacyConsentSaving(consentType);
+        try {
+            const result = await upsertPrivacyConsent(consentType, granted, {
+                origin: 'settings_privacy_modal'
+            });
+            if (!result.success) {
+                showToast(result.error || 'Erro ao atualizar consentimento', 'error');
+                return;
+            }
+
+            showToast(granted ? 'Consentimento registrado.' : 'Consentimento revogado.');
+            await loadPrivacyHistory();
+        } finally {
+            setPrivacyConsentSaving(null);
+        }
+    }, [isDemo, loadPrivacyHistory, showToast]);
+
     return {
         privacyRequests,
+        privacyConsents,
         privacyLoading,
+        privacyConsentSaving,
         loadPrivacyHistory,
         handleExportLivePrivacyData,
         handlePrivacyRequest,
-        handleCancelPrivacyRequest
+        handleCancelPrivacyRequest,
+        handlePrivacyConsentChange
     };
 }

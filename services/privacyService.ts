@@ -2,6 +2,8 @@ import { supabase } from './supabaseCore';
 
 export type PrivacyRequestType = 'access' | 'export' | 'delete' | 'rectify';
 export type PrivacyRequestStatus = 'open' | 'in_review' | 'completed' | 'rejected' | 'cancelled';
+export type PrivacyConsentType = 'privacy_policy' | 'ai_data_processing' | 'clinical_data_processing';
+export const CURRENT_PRIVACY_POLICY_VERSION = '2026-03-08';
 
 export interface PrivacyRequestSummary {
   id: string;
@@ -12,6 +14,16 @@ export interface PrivacyRequestSummary {
   notes?: string | null;
   resolution_notes?: string | null;
   processed_at?: string | null;
+  metadata?: Record<string, unknown> | null;
+}
+
+export interface PrivacyConsentSummary {
+  consent_type: PrivacyConsentType;
+  granted: boolean;
+  version: string;
+  granted_at?: string | null;
+  revoked_at?: string | null;
+  updated_at: string;
   metadata?: Record<string, unknown> | null;
 }
 
@@ -84,6 +96,46 @@ export async function cancelPrivacyRequest(requestId: string): Promise<{ success
   }
 
   return { success: true };
+}
+
+export async function listPrivacyConsents(): Promise<{ success: boolean; data?: PrivacyConsentSummary[]; error?: string }> {
+  if (!supabase) {
+    return { success: false, error: 'Supabase indisponível.' };
+  }
+
+  const { data, error } = await supabase
+    .from('privacy_consents')
+    .select('consent_type, granted, version, granted_at, revoked_at, updated_at, metadata')
+    .order('updated_at', { ascending: false });
+
+  if (error) {
+    return { success: false, error: error.message };
+  }
+
+  return { success: true, data: (data ?? []) as PrivacyConsentSummary[] };
+}
+
+export async function upsertPrivacyConsent(
+  consentType: PrivacyConsentType,
+  granted: boolean,
+  metadata?: Record<string, unknown>
+): Promise<{ success: boolean; data?: PrivacyConsentSummary; error?: string }> {
+  if (!supabase) {
+    return { success: false, error: 'Supabase indisponível.' };
+  }
+
+  const { data, error } = await supabase.rpc('upsert_my_privacy_consent', {
+    p_consent_type: consentType,
+    p_granted: granted,
+    p_version: CURRENT_PRIVACY_POLICY_VERSION,
+    p_metadata: metadata ?? {}
+  });
+
+  if (error) {
+    return { success: false, error: error.message };
+  }
+
+  return { success: true, data: data as PrivacyConsentSummary };
 }
 
 export function buildPrivacyExportFilename(prefix = 'personalpro-lgpd-export'): string {

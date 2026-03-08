@@ -115,11 +115,14 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user, onBack, onLogout }) =
 
     const {
         privacyRequests,
+        privacyConsents,
         privacyLoading,
+        privacyConsentSaving,
         loadPrivacyHistory,
         handleExportLivePrivacyData,
         handlePrivacyRequest,
-        handleCancelPrivacyRequest
+        handleCancelPrivacyRequest,
+        handlePrivacyConsentChange
     } = useSettingsPrivacy({
         isDemo,
         showToast,
@@ -435,7 +438,9 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user, onBack, onLogout }) =
                     securitySaving={securitySaving}
                     pendingTheme={pendingTheme}
                     privacyRequests={privacyRequests}
+                    privacyConsents={privacyConsents}
                     privacyLoading={privacyLoading}
+                    privacyConsentSaving={privacyConsentSaving}
                     onProfileNameChange={setProfileName}
                     onSaveProfile={handleSaveProfile}
                     onToggleNotif={toggleNotif}
@@ -452,6 +457,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user, onBack, onLogout }) =
                     onRequestAccess={() => handlePrivacyRequest('access')}
                     onRequestRectify={() => handlePrivacyRequest('rectify')}
                     onCancelRequest={handleCancelPrivacyRequest}
+                    onConsentChange={(consentType, granted) => void handlePrivacyConsentChange(consentType, granted)}
                 />
             </BottomSheet>
         </div>

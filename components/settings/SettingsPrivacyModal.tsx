@@ -1,6 +1,6 @@
 import React from 'react';
 import { Download } from 'lucide-react';
-import type { PrivacyRequestSummary } from '../../services/privacyService';
+import type { PrivacyConsentSummary, PrivacyRequestSummary } from '../../services/privacyService';
 
 interface SettingsPrivacyModalProps {
   onExport: () => void;
@@ -8,8 +8,11 @@ interface SettingsPrivacyModalProps {
   onRequestAccess: () => void;
   onRequestRectify: () => void;
   onCancelRequest: (requestId: string) => void;
+  onConsentChange: (consentType: 'privacy_policy' | 'ai_data_processing' | 'clinical_data_processing', granted: boolean) => void;
   requests: PrivacyRequestSummary[];
+  consents: PrivacyConsentSummary[];
   loadingRequests: boolean;
+  savingConsent: string | null;
 }
 
 export default function SettingsPrivacyModal({
@@ -18,9 +21,31 @@ export default function SettingsPrivacyModal({
   onRequestAccess,
   onRequestRectify,
   onCancelRequest,
+  onConsentChange,
   requests,
-  loadingRequests
+  consents,
+  loadingRequests,
+  savingConsent
 }: SettingsPrivacyModalProps) {
+  const consentMap = new Map(consents.map((consent) => [consent.consent_type, consent]));
+  const consentItems = [
+    {
+      key: 'privacy_policy' as const,
+      label: 'Política de privacidade',
+      description: 'Registra o aceite da política vigente e da base legal operacional do app.'
+    },
+    {
+      key: 'ai_data_processing' as const,
+      label: 'IA para personalização',
+      description: 'Autoriza o uso de dados reduzidos e mascarados para geração assistida de treinos.'
+    },
+    {
+      key: 'clinical_data_processing' as const,
+      label: 'Dados clínicos sensíveis',
+      description: 'Registra ciência sobre tratamento reforçado de observações e restrições clínicas.'
+    }
+  ];
+
   return (
     <>
       <div className="text-center mb-8">
@@ -40,6 +65,63 @@ export default function SettingsPrivacyModal({
         <div className="rounded-2xl border border-white/5 bg-white/5 p-4">
           <p className="text-[10px] font-bold uppercase tracking-widest text-blue-300">Seus direitos</p>
           <p className="mt-2 text-sm text-slate-300">Acesso, correção, exportação e exclusão já passam por trilha auditável no backend e histórico visível no app.</p>
+        </div>
+        <div className="rounded-2xl border border-white/5 bg-white/5 p-4">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-300">Inventário de dados</p>
+          <div className="mt-2 space-y-1 text-xs text-slate-300">
+            <p>Conta e autenticação: email, perfil, preferências e sessão.</p>
+            <p>Operação: agenda, treinos, pagamentos, convites, push e logs.</p>
+            <p>Clínico: observações, lesões, medidas e sinais relevantes de treino.</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="mb-8 rounded-2xl border border-white/5 bg-white/5 p-4">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Consentimentos registrados</p>
+            <p className="mt-1 text-xs text-slate-400">Aceites e revogações ficam versionados e auditáveis no backend.</p>
+          </div>
+          {loadingRequests && <span className="text-[10px] font-bold uppercase tracking-widest text-blue-300">Atualizando</span>}
+        </div>
+
+        <div className="mt-4 space-y-3">
+          {consentItems.map((item) => {
+            const consent = consentMap.get(item.key);
+            const granted = Boolean(consent?.granted);
+            const busy = savingConsent === item.key;
+
+            return (
+              <div key={item.key} className="rounded-2xl border border-white/5 bg-[rgba(15,23,42,0.5)] p-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-black text-white">{item.label}</p>
+                    <p className="mt-1 text-xs text-slate-400">{item.description}</p>
+                    <p className="mt-2 text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                      {consent?.version ? `versão ${consent.version}` : 'sem registro'}
+                      {consent?.updated_at ? ` • ${new Date(consent.updated_at).toLocaleDateString('pt-BR')}` : ''}
+                    </p>
+                  </div>
+                  <span className={`rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-widest ${granted
+                    ? 'bg-[rgba(16,185,129,0.15)] text-emerald-200'
+                    : 'bg-[rgba(239,68,68,0.12)] text-red-200'}`}
+                  >
+                    {granted ? 'ativo' : 'revogado'}
+                  </span>
+                </div>
+
+                <button
+                  onClick={() => onConsentChange(item.key, !granted)}
+                  disabled={busy}
+                  className={`mt-3 h-10 rounded-xl px-3 text-[10px] font-black uppercase tracking-widest disabled:opacity-50 ${granted
+                    ? 'border border-[rgba(248,113,113,0.2)] bg-[rgba(239,68,68,0.08)] text-red-200'
+                    : 'border border-[rgba(45,212,191,0.2)] bg-[rgba(20,184,166,0.08)] text-teal-200'}`}
+                >
+                  {busy ? 'Salvando...' : granted ? 'Revogar Consentimento' : 'Registrar Consentimento'}
+                </button>
+              </div>
+            );
+          })}
         </div>
       </div>
 

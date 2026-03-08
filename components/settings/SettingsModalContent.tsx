@@ -7,7 +7,7 @@ import SettingsAppearanceModal from './SettingsAppearanceModal';
 import SettingsPrivacyModal from './SettingsPrivacyModal';
 import type { ThemeMode } from '../../services/ThemeContext';
 import { isPushSupported, type NotificationPrefs } from '../../services/pushNotifications';
-import type { PrivacyRequestSummary } from '../../services/privacyService';
+import type { PrivacyConsentSummary, PrivacyRequestSummary } from '../../services/privacyService';
 
 export type SettingsModalType = 'profile' | 'notifications' | 'security' | 'help' | 'appearance' | 'privacy' | null;
 
@@ -26,7 +26,9 @@ interface SettingsModalContentProps {
     securitySaving: boolean;
     pendingTheme: ThemeMode;
     privacyRequests: PrivacyRequestSummary[];
+    privacyConsents: PrivacyConsentSummary[];
     privacyLoading: boolean;
+    privacyConsentSaving: string | null;
     onProfileNameChange: (value: string) => void;
     onSaveProfile: () => void;
     onToggleNotif: (key: keyof NotificationPrefs) => void;
@@ -43,6 +45,7 @@ interface SettingsModalContentProps {
     onRequestAccess: () => void;
     onRequestRectify: () => void;
     onCancelRequest: (requestId: string) => void;
+    onConsentChange: (consentType: 'privacy_policy' | 'ai_data_processing' | 'clinical_data_processing', granted: boolean) => void;
 }
 
 const SettingsModalContent: React.FC<SettingsModalContentProps> = ({
@@ -60,7 +63,9 @@ const SettingsModalContent: React.FC<SettingsModalContentProps> = ({
     securitySaving,
     pendingTheme,
     privacyRequests,
+    privacyConsents,
     privacyLoading,
+    privacyConsentSaving,
     onProfileNameChange,
     onSaveProfile,
     onToggleNotif,
@@ -76,7 +81,8 @@ const SettingsModalContent: React.FC<SettingsModalContentProps> = ({
     onRequestDelete,
     onRequestAccess,
     onRequestRectify,
-    onCancelRequest
+    onCancelRequest,
+    onConsentChange
 }) => {
     if (activeModal === 'profile') {
         return (
@@ -142,7 +148,10 @@ const SettingsModalContent: React.FC<SettingsModalContentProps> = ({
                 onRequestRectify={onRequestRectify}
                 onCancelRequest={onCancelRequest}
                 requests={privacyRequests}
+                consents={privacyConsents}
                 loadingRequests={privacyLoading}
+                savingConsent={privacyConsentSaving}
+                onConsentChange={onConsentChange}
             />
         );
     }

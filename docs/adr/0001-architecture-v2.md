@@ -15,40 +15,46 @@ Isso aumenta custo de mudança, risco de regressão e variabilidade da IA.
 Adotar a arquitetura v2 com as seguintes fronteiras:
 
 1. Shell de aplicação
-- `App.tsx` fica responsável por composição, autenticação e layout.
-- Estado compartilhado de navegação/contexto vai para um store leve dedicado.
+- `App.tsx` permanece responsável por composição, autenticação, error boundary e layout principal.
+- estado compartilhado de navegação/contexto fica em store leve dedicado.
+- roteamento formal é feito por `React Router` em `components/AppContentRouter.tsx`.
+- sincronização entre estado interno e URL fica em `useRouterNavigationSync` e `useDeepLinkHydration`.
 
 2. Dados
-- `services/supabase/domains/*` vira a única porta de acesso ao banco para a UI.
+- `services/supabase/domains/*` é a porta padrão de acesso ao banco para a UI.
 - `supabaseCore` continua como infraestrutura de baixo nível.
-- arquivos agregadores legados devem ser removidos.
+- caminhos legados agregadores devem continuar sendo removidos.
 
 3. IA
-- `workoutGenerationOrchestrator` passa a ser o ponto único de orquestração de geração.
-- `trainingEngine`, `aiRouter` e fallback local viram estratégias internas do pipeline.
-- `aiRouter` segue como registry e execução multi-provider.
+- `workoutGenerationOrchestrator` é o ponto único de orquestração de geração.
+- `trainingEngine`, `aiRouter` e fallback local operam como estratégias internas.
+- providers ficam encapsulados sob router e validação.
 
 4. Observabilidade
-- métricas de produto, qualidade IA e saúde de providers permanecem em `loggingService`.
-- qualquer nova jornada crítica deve emitir eventos de funil.
+- logging de produto, qualidade IA e saúde operacional usa `loggingService` e `appLogger`.
+- edge functions compartilham logger próprio em `supabase/functions/_shared/edgeLogger.ts`.
+- jornadas críticas devem emitir evento estruturado.
 
 5. PWA
-- service worker permanece versionado e responsável por cache, background sync e push.
-- filas offline persistentes usam IndexedDB com fallback controlado.
+- service worker permanece versionado e responsável por cache, offline shell, background sync e push.
+- filas offline persistentes usam storage local controlado.
 
 ## Consequências
 ### Positivas
 - menor acoplamento no shell
+- router e URL reais
 - caminho único para geração de treino
 - acesso a dados mais previsível
 - melhor testabilidade por módulo
+- melhor separação entre fluxo demo e fluxo real
 
 ### Negativas
-- ainda existe navegação manual; a migração para router formal fica como passo seguinte
-- store leve resolve estado compartilhado imediato, mas não substitui server-state
+- ainda existem pontos herdados de navegação e hidratação contextual que exigem disciplina
+- store leve resolve estado compartilhado, mas não substitui server-state
+- há áreas especializadas ainda com acoplamento acima do ideal
 
 ## Próximos Passos
 1. remover todo acesso residual ao legado de dados
-2. migrar navegação manual para router formal
-3. fechar backend emissor de web push
-4. eliminar `unsafe-inline` remanescente da CSP
+2. continuar reduzindo acoplamento do shell e de telas grandes
+3. ampliar observabilidade e alertas operacionais
+4. reduzir `alert(...)` remanescente e melhorar acessibilidade

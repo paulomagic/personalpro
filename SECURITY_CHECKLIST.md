@@ -1,170 +1,75 @@
-# 🔐 Security Checklist — Apex Premium PT Assistant
+# Security Checklist
 
-**Última Atualização:** 2026-03-03  
-**Responsável:** Paulo Ricardo  
-**Projeto:** Apex Premium PT Assistant (PersonalPro)
+## Uso
 
----
+Este é o checklist operacional de segurança vigente. Ele deve refletir o estado real do projeto, não histórico de auditoria.
 
-## ✅ Checklist para Novas Features
+## Antes de merge ou deploy
 
-### 1. Validação de Entrada
-- [ ] Todos os campos de texto são validados antes de usar
-- [ ] Campos numéricos têm validação de range (min/max)
-- [ ] Emails são validados com regex
-- [ ] URLs externas são validadas contra lista de domínios permitidos
-- [ ] Uploads de arquivo verificam tipo MIME e tamanho
+- [ ] `npm run secret-scan`
+- [ ] `npm run security-check`
+- [ ] `npm run typecheck:all`
+- [ ] `npm run test:regression`
+- [ ] `npm run build`
+- [ ] `npm run test:e2e`
 
-### 2. Autenticação e Autorização
-- [ ] View requer autenticação (`user?.id` verificado)
-- [ ] RLS policies aplicadas para novas tabelas
-- [ ] `coach_id` é usado para filtrar dados
-- [ ] Tokens/sessões são verificados antes de operações sensíveis
+## Para toda nova feature
 
-### 3. Proteção de Dados
-- [ ] Dados sensíveis NÃO são logados no console
-- [ ] API keys estão em variáveis de ambiente (`.env.local` ou Supabase Secrets)
-- [ ] Senhas nunca são armazenadas localmente
-- [ ] Dados do usuário são sanitizados antes de exibição
+### Entrada e saída
 
-### 4. Comunicação Segura
-- [ ] Todas as requisições usam HTTPS
-- [ ] URLs de redirecionamento são validadas
-- [ ] `window.open()` usa URLs confiáveis
+- [ ] campos textuais validados antes de persistir ou renderizar
+- [ ] campos numéricos com range coerente
+- [ ] URLs externas validadas
+- [ ] uploads com validação de tipo e tamanho
+- [ ] saída de IA tratada como dado não confiável
 
-### 5. Database (Supabase)
-- [ ] Nova tabela tem `ENABLE ROW LEVEL SECURITY`
-- [ ] Policies criadas para SELECT, INSERT, UPDATE, DELETE
-- [ ] `coach_id` referencia `auth.users(id)`
-- [ ] Dados não são expostos sem filtro de `coach_id`
+### Auth e autorização
 
----
+- [ ] autenticação obrigatória onde o fluxo não é demo
+- [ ] RLS aplicada em novas tabelas
+- [ ] operações sensíveis não dependem só de bloqueio client-side
+- [ ] admin continua validado por backend e políticas, não só por UI
 
-## 🛡️ Status de Segurança (2026-02-27)
+### Dados sensíveis
 
-### ✅ Implementado e Funcional
+- [ ] nada sensível em `console.*`
+- [ ] prompts de IA recebem contexto sanitizado
+- [ ] segredos não são expostos em `VITE_*`
+- [ ] leitura e escrita de dados clínicos seguem o rollout de criptografia
 
-| Item | Status | Implementação |
-|------|--------|---------------|
-| API Keys protegidas via Edge Functions | ✅ | `gemini-proxy`, `groq-proxy` |
-| CAPTCHA no registro (Cloudflare Turnstile) | ✅ | `validate-turnstile` + `LoginView.tsx` |
-| CAPTCHA Fail-Closed | ✅ | Retorna 503 se secret ausente |
-| HTTPS obrigatório | ✅ | Vercel + Supabase |
-| Autenticação via Supabase Auth (JWT) | ✅ | `supabaseCore.ts` |
-| Row Level Security (RLS) | ✅ | Todas as tabelas críticas |
-| CORS com lista de origens permitidas | ✅ | `supabase/functions/_shared/` |
-| Rate Limiting nas Edge Functions | ✅ | `_shared/rateLimit.ts` — DB + fallback em memória |
-| Rate Limiting no Login/Registro (Server-side) | ✅ | `auth-guard/index.ts` + `services/auth/authGuard.ts` |
-| Proteção local contra Brute Force (Client-side) | ✅ | `services/auth/lockoutStorage.ts` |
-| Token de convite criptográfico (CSPRNG) | ✅ | `crypto.getRandomValues` (32 bytes / 256 bits) |
-| Fluxo de convite atômico (race condition) | ✅ | RPC `accept_invitation` no Supabase |
-| Escalada de privilégio bloqueada | ✅ | `handle_new_user()` força `role='coach'` |
-| Limpeza automática de rate limit (DB) | ✅ | `cleanup_edge_rate_limits` RPC (a cada 500 req) |
-| SHA-256 hash anônimo de identidade no auth-guard | ✅ | `sha256Hex(action + email + ip)` |
-| Validação de IP de origem no CAPTCHA | ✅ | `x-forwarded-for` incluído na validação Turnstile |
-| CI com verificação de segurança automatizada | ✅ | `.github/workflows/ci.yml` — `npm run security-check` |
-| Secret scan em CI + pre-commit | ✅ | `npm run secret-scan` + `.githooks/pre-commit` |
-| Política de retenção de logs com scheduler | ✅ | `cleanup_old_logs_system(90)` via `pg_cron` |
-| Camada de criptografia clínica (rollout) | ✅ | colunas `*_encrypted` + trigger + backfill |
+### Rede e browser
 
-### 🟡 Parcialmente Implementado
+- [ ] `window.open()` com destino conhecido e `noopener,noreferrer`
+- [ ] CORS restrito nas edge functions
+- [ ] rate limit em endpoints expostos a abuso
+- [ ] service worker não quebra fluxo autenticado nem purga incorretamente dados do usuário
 
-| Item | Status | Observação |
-|------|--------|------------|
-| Sanitização de dados retornados pela IA | 🟡 | `escapeHtml()` no AIBuilderView. Falta DOMPurify global |
-| Logs condicionais em produção | 🟡 | `console.error` ainda presente em alguns serviços |
-| Validação de schemas com Zod | 🟡 | Zod instalado mas não aplicado a todas as operações de DB |
+## Controles hoje ativos
 
-### ❌ Pendente
+- edge functions para IA e auth
+- Turnstile no fluxo correspondente
+- auth guard com rate limit server-side
+- secret scan
+- security check em CI
+- RLS nas áreas críticas
+- retenção de logs
+- camada de criptografia clínica
+- logger estruturado em fluxos críticos
 
-| Item | Prioridade | Observação |
-|------|------------|------------|
-| Dados Sensíveis em Prompts de IA (anonimização) | 🟠 MÉDIA | Nome, lesões e preferências do aluno vão para a API |
-| Criptografia clínica 100% aplicada (read path) | 🟡 MÉDIA | Shadow encryption ativo; leitura principal ainda usa plaintext legado |
-| Monitoramento de custos de API | 🟡 BAIXA | Sem alertas automáticos de quota |
-| Modo Demo com banco isolado | 🟡 BAIXA | Demo usa banco real (dados de demonstração) |
+## Gaps ainda abertos
 
----
+- anonimização completa em toda a superfície de IA
+- remoção total de `console.*` residual
+- política de leitura 100% migrada para dados criptografados
+- centralização de alertas de segurança e operação
+- revisão ampla de componentes ainda não cobertos por saneamento/a11y
 
-## 🤖 Proteção das APIs de IA
+## Edge functions em produção
 
-Todas as chamadas para Gemini e Groq são feitas via **Edge Functions** no Supabase, protegendo as chaves do frontend.
-
-### Edge Functions Ativas:
-
-| Função | Endpoint | Rate Limit | CORS |
-|--------|----------|------------|------|
-| `gemini-proxy` | `/functions/v1/gemini-proxy` | ✅ Ativo | ✅ Restrito |
-| `groq-proxy` | `/functions/v1/groq-proxy` | ✅ Ativo | ✅ Restrito |
-| `validate-turnstile` | `/functions/v1/validate-turnstile` | ✅ Ativo | ✅ Restrito |
-| `auth-guard` | `/functions/v1/auth-guard` | ✅ Ativo | ✅ Restrito |
-
-### Deploy:
-```bash
-supabase functions deploy gemini-proxy
-supabase functions deploy groq-proxy
-supabase functions deploy validate-turnstile
-supabase functions deploy auth-guard
-```
-
-### Secrets no Supabase:
-```bash
-supabase secrets set GEMINI_API_KEY_PRIMARY=sua-chave
-supabase secrets set GEMINI_API_KEY_FALLBACK=sua-chave-fallback
-supabase secrets set GROQ_API_KEY=sua-chave
-supabase secrets set TURNSTILE_SECRET_KEY=sua-chave
-```
-
----
-
-## 📝 Histórico de Auditorias
-
-| Data | Auditor | Vulnerabilidades | Resultado |
-|------|---------|------------------|-----------|
-| 2024-12-28 | Paulo Ricardo | 0 | ✅ Nenhuma ação necessária |
-| 2025-12-30 | Paulo Ricardo | 1 (API Key exposta) | ✅ Migrado para Edge Function |
-| 2026-02-15 | Paulo Ricardo | 12 identificadas | ✅ 9 corrigidas, 3 pendentes |
-| 2026-02-27 | Paulo Ricardo | Rate limit e auth-guard | ✅ Server-side rate limit implementado |
-
----
-
-## 🔄 Rotina de Segurança Recomendada
-
-| Frequência | Ação |
-|------------|------|
-| A cada commit | CI executa `npm run security-check` automaticamente |
-| Semanal | `npm audit` manual |
-| Mensal | `npm update` + revisão de dependências |
-| Por feature | Verificar checklist deste arquivo antes do PR |
-| Por release | Code review de segurança + atualizar este documento |
-
----
-
-## 🚀 Comandos Úteis
-
-```bash
-# Verificação completa de segurança (Audit + Env Var + Files)
-npm run security-check
-
-# Secret scan de todos os arquivos versionados
-npm run secret-scan
-
-# Secret scan apenas do que está staged (pre-commit)
-npm run secret-scan:staged
-
-# Verificar vulnerabilidades em dependências
-npm audit
-
-# Corrigir vulnerabilidades automaticamente
-npm audit fix
-
-# Ver detalhes em JSON
-npm audit --json
-
-# Executar todos os testes (inclui testes de segurança unitários)
-npm run test:regression
-```
-
----
-
-*Este arquivo é atualizado automaticamente pelo workflow `.github/workflows/docs-update.yml` quando há mudanças no código.*
+- `auth-guard`
+- `validate-turnstile`
+- `gemini-proxy`
+- `groq-proxy`
+- `complete-invite-signup`
+- `send-push`
+- `admin-users`

@@ -8,7 +8,6 @@ import { saveSessionFeedbackWithRetry, flushQueuedFeedback } from '../services/a
 import type { SessionFeedback } from '../services/ai/feedback/types';
 import { logFunnelEvent } from '../services/loggingService';
 import { createScopedLogger } from '../services/appLogger';
-import { mockExercises } from '../mocks/demoData';
 import VideoPlayerModal from '../components/VideoPlayerModal';
 import { FeedbackForm } from '../components/FeedbackForm';
 import { useTheme } from '../services/ThemeContext';
@@ -45,27 +44,6 @@ interface StudentWorkoutState {
         coldStartMode?: boolean;
     };
 }
-
-// Fallback workout para demo (quando não há treino no banco)
-const createDemoWorkout = (studentName: string) => ({
-    title: 'Treino Demo',
-    objective: 'Demonstração',
-    duration: '45 min',
-    splits: [
-        {
-            id: 'demo-a',
-            name: 'A',
-            description: 'Superior (Demo)',
-            exercises: mockExercises.filter(e => ['ch1', 'ch2', 'sh1', 'sh2', 'tri1', 'bi1'].includes(e.id))
-        },
-        {
-            id: 'demo-b',
-            name: 'B',
-            description: 'Inferior (Demo)',
-            exercises: mockExercises.filter(e => ['quad1', 'quad2', 'ham1', 'glut1', 'calf1'].includes(e.id))
-        }
-    ]
-});
 
 const StudentView: React.FC<StudentViewProps> = ({
     clientId,
@@ -120,16 +98,14 @@ const StudentView: React.FC<StudentViewProps> = ({
                             ai_metadata: (workoutData as any).ai_metadata
                         });
                     } else {
-                        // Fallback to demo workout
-                        setWorkout(createDemoWorkout(studentName));
+                        setWorkout(null);
                     }
                 } catch (error) {
                     studentViewLogger.error('Error fetching current workout', error, { clientId, studentName });
-                    setWorkout(createDemoWorkout(studentName));
+                    setWorkout(null);
                 }
             } else {
-                // No clientId - use demo workout
-                setWorkout(createDemoWorkout(studentName));
+                setWorkout(null);
             }
 
             setLoading(false);

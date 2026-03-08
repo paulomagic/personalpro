@@ -1,4 +1,4 @@
-import React, { Suspense, lazy, useCallback, useEffect, useState } from 'react';
+import React, { Suspense, lazy, useEffect, useState } from 'react';
 import { TrendingUp, Download, CheckCircle, AlertCircle, Clock, ChevronRight } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getPayments, updatePayment } from '../services/supabase/domains/paymentsDomain';
@@ -56,10 +56,9 @@ const FinanceView: React.FC<FinanceViewProps> = ({ user, onBack }) => {
     const [showStatusModal, setShowStatusModal] = useState<Payment | null>(null);
     const [showSuccessToast, setShowSuccessToast] = useState<string | null>(null);
     const [payments, setPayments] = useState<Payment[]>([]);
-    const [showFallbackWhileLoading, setShowFallbackWhileLoading] = useState(false);
     const [enableHeavyUI, setEnableHeavyUI] = useState(false);
-    const buildFallbackPayments = useCallback(
-        () => mockClients.slice(0, 5).map((c: any, i: number) => ({
+    const buildDemoPayments = () =>
+        mockClients.slice(0, 5).map((c: any, i: number) => ({
             id: `demo-${i}`,
             clientId: c.id || `demo-client-${i}`,
             clientName: c.name,
@@ -69,9 +68,7 @@ const FinanceView: React.FC<FinanceViewProps> = ({ user, onBack }) => {
             status: i % 3 === 0 ? 'paid' : i % 3 === 1 ? 'pending' : 'overdue' as any,
             plan: 'Premium',
             phone: c.phone || '',
-        })),
-        []
-    );
+        }));
 
     useEffect(() => {
         const timer = window.setTimeout(() => setEnableHeavyUI(true), 0);
@@ -91,21 +88,11 @@ const FinanceView: React.FC<FinanceViewProps> = ({ user, onBack }) => {
         queryKey: ['finance-payments', user?.id, user?.isDemo],
         staleTime: 60_000,
         queryFn: async () => {
-            if (!user?.id) return buildFallbackPayments();
+            if (!user?.id) return [];
 
             try {
                 if (user.isDemo) {
-                    return mockClients.slice(0, 5).map((c: any, i: number) => ({
-                        id: `demo-${i}`,
-                        clientId: c.id || `demo-client-${i}`,
-                        clientName: c.name,
-                        clientAvatar: c.avatar || c.avatar_url || '',
-                        amount: 350,
-                        dueDate: new Date(new Date().setDate(15 + i)).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }),
-                        status: i % 3 === 0 ? 'paid' : i % 3 === 1 ? 'pending' : 'overdue' as const,
-                        plan: 'Premium',
-                        phone: c.phone || ''
-                    }));
+                    return buildDemoPayments();
                 }
 
                 const dbPayments = await withTimeout(getPayments(user.id));
@@ -123,25 +110,11 @@ const FinanceView: React.FC<FinanceViewProps> = ({ user, onBack }) => {
                     }));
                 }
 
-                const clients = await withTimeout(getClients(user.id, { limit: 120 }));
-                if (clients.length > 0) {
-                    return clients.slice(0, 5).map((c: any, i: number) => ({
-                        id: `demo-${i}`,
-                        clientId: c.id || `demo-client-${i}`,
-                        clientName: c.name,
-                        clientAvatar: c.avatar_url || '',
-                        amount: 350,
-                        dueDate: `${15 + i}/12`,
-                        status: i % 3 === 0 ? 'paid' : i % 3 === 1 ? 'pending' : 'overdue' as const,
-                        plan: 'Premium',
-                        phone: c.phone || ''
-                    }));
-                }
-
-                return buildFallbackPayments();
+                await withTimeout(getClients(user.id, { limit: 120 }));
+                return [];
             } catch (error) {
                 financeViewLogger.error('Error fetching finance data', error, { userId: user?.id });
-                return buildFallbackPayments();
+                return [];
             }
         }
     });
@@ -149,19 +122,9 @@ const FinanceView: React.FC<FinanceViewProps> = ({ user, onBack }) => {
     useEffect(() => {
         if (!financeQuery.data) return;
         setPayments(financeQuery.data);
-        setShowFallbackWhileLoading(false);
     }, [financeQuery.data]);
 
-    useEffect(() => {
-        if (!financeQuery.isLoading) return;
-        const timer = window.setTimeout(() => {
-            setPayments((prev) => (prev.length > 0 ? prev : buildFallbackPayments()));
-            setShowFallbackWhileLoading(true);
-        }, 4000);
-        return () => window.clearTimeout(timer);
-    }, [financeQuery.isLoading, buildFallbackPayments]);
-
-    const loading = financeQuery.isLoading && !showFallbackWhileLoading && payments.length === 0;
+    const loading = financeQuery.isLoading;
 
     const paidPayments = payments.filter(p => p.status === 'paid');
     const pendingPayments = payments.filter(p => p.status === 'pending' || p.status === 'overdue');
@@ -176,7 +139,7 @@ const FinanceView: React.FC<FinanceViewProps> = ({ user, onBack }) => {
         { month: 'Set', amount: 4900 },
         { month: 'Out', amount: 6100 },
         { month: 'Nov', amount: 5800 },
-        { month: 'Hoje', amount: stats.monthlyRevenue || 800 },
+        { month: 'Hoje', amount: stats.monthlyRevenue },
     ];
 
     const showToast = (message: string) => {

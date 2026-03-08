@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, Plus, Users, AlertTriangle, Pause, CheckCircle, ChevronRight, User } from 'lucide-react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { Client } from '../types';
 import { getClients, createClient, DBClient } from '../services/supabase/domains/clientsDomain';
 import { uploadAvatar } from '../services/supabase/domains/storageDomain';
@@ -22,10 +22,8 @@ interface ClientsViewProps {
 const ClientsView: React.FC<ClientsViewProps> = ({ user, onBack, onSelectClient }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'at-risk' | 'paused'>('all');
-    const [showFilters, setShowFilters] = useState(false);
     const [showAddModal, setShowAddModal] = useState(false);
     const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
-    const queryClient = useQueryClient();
 
     const showToast = (message: string, type: 'success' | 'error' = 'success') => {
         setToast({ message, type });
@@ -145,9 +143,6 @@ const ClientsView: React.FC<ClientsViewProps> = ({ user, onBack, onSelectClient 
                 throw new Error('Create client failed');
             }
 
-            if (user?.id) {
-                await queryClient.invalidateQueries({ queryKey: ['clients', user.id] });
-            }
             await refetchClients();
             showToast('Aluno criado com sucesso!', 'success');
         } catch (error) {
@@ -391,33 +386,6 @@ const ClientsView: React.FC<ClientsViewProps> = ({ user, onBack, onSelectClient 
                                 </button>
                             )}
 
-                            {!searchTerm && clients.length === 0 && (
-                                <button
-                                    onClick={async () => {
-                                        if (user?.id === 'demo-user-id' || user.isDemo) {
-                                            await refetchClients();
-                                            return;
-                                        }
-                                        if (!user?.id) {
-                                            showToast('Faça login para usar este recurso', 'error');
-                                            return;
-                                        }
-                                        try {
-                                            const { seedDatabase } = await import('../services/seedDatabase');
-                                            const count = await seedDatabase(user.id);
-                                            showToast(`${count} alunos gerados com sucesso!`);
-                                            await queryClient.invalidateQueries({ queryKey: ['clients', user.id] });
-                                            await refetchClients();
-                                        } catch (error) {
-                                            clientsViewLogger.error('Error seeding demo clients', error, { userId: user.id });
-                                            showToast('Erro ao gerar dados', 'error');
-                                        }
-                                    }}
-                                    className="px-6 py-3 bg-slate-800 text-slate-400 font-bold text-xs rounded-xl border border-white/5 hover:bg-slate-700 hover:text-white transition-all w-full max-w-[200px]"
-                                >
-                                    🪄 Gerar Alunos Demo
-                                </button>
-                            )}
                         </div>
                     </div>
                 )}

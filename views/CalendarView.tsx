@@ -58,7 +58,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({ user, onBack, onSelectClien
     const [showDetailModal, setShowDetailModal] = useState<DisplayAppointment | null>(null);
     const [showMonthlyModal, setShowMonthlyModal] = useState(false);
     const [monthlyBatchesCount, setMonthlyBatchesCount] = useState(0);
-    const [appointments, setAppointments] = useState<DisplayAppointment[]>(demoAppointments);
+    const [appointments, setAppointments] = useState<DisplayAppointment[]>([]);
     const [clients, setClients] = useState<DBClient[]>([]);
     const [saving, setSaving] = useState(false);
     const [cleaningUp, setCleaningUp] = useState(false);
@@ -116,8 +116,8 @@ const CalendarView: React.FC<CalendarViewProps> = ({ user, onBack, onSelectClien
                     date: dateStr
                 });
                 return {
-                    clients: mockClients as unknown as DBClient[],
-                    appointments: demoAppointments,
+                    clients: [],
+                    appointments: [],
                     monthlyBatchesCount: 0
                 };
             }
@@ -705,7 +705,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({ user, onBack, onSelectClien
                                         Selecionar Aluno
                                     </h3>
                                     <div className="grid grid-cols-3 gap-2 max-h-40 overflow-y-auto">
-                                        {(isDemo ? mockClients : clients).map((client: any) => (
+                                        {clients.map((client: any) => (
                                             <button
                                                 key={client.id}
                                                 onClick={() => setNewAppointment(prev => ({ ...prev, clientId: client.id }))}

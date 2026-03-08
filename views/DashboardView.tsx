@@ -92,10 +92,11 @@ const DashboardView: React.FC<DashboardViewProps> = ({
 }) => {
   const { resolvedTheme } = useTheme();
   const isLightTheme = resolvedTheme === 'light';
+  const isDemoUser = Boolean(user?.isDemo);
   const [clients, setClients] = useState<Client[]>([]);
   const [loadingClients, setLoadingClients] = useState(false);
-  const [appointments, setAppointments] = useState<DashboardAppointment[]>(DEMO_APPOINTMENTS);
-  const [revenue, setRevenue] = useState(12450);
+  const [appointments, setAppointments] = useState<DashboardAppointment[]>([]);
+  const [revenue, setRevenue] = useState(0);
   const [profileImageFailed, setProfileImageFailed] = useState(false);
 
   const revenueMonth = new Date().toLocaleDateString('pt-BR', { month: 'long' });
@@ -109,8 +110,10 @@ const DashboardView: React.FC<DashboardViewProps> = ({
   useEffect(() => {
     const loadData = async () => {
       if (!user?.id) {
-        if (user?.isDemo) {
+        if (isDemoUser) {
           setClients(mockClients.slice(0, 3));
+          setAppointments(DEMO_APPOINTMENTS);
+          setRevenue(12450);
           setLoadingClients(false);
         }
         return;
@@ -118,9 +121,10 @@ const DashboardView: React.FC<DashboardViewProps> = ({
       setLoadingClients(true);
       try {
         const today = new Date().toISOString().split('T')[0];
-        if (user.isDemo) {
+        if (isDemoUser) {
           setClients(mockClients.slice(0, 3));
           setAppointments(DEMO_APPOINTMENTS);
+          setRevenue(12450);
         } else {
           const [clientsData, todayAppts, payments] = await Promise.all([
             getClients(user.id, { limit: 50 }),
@@ -144,19 +148,24 @@ const DashboardView: React.FC<DashboardViewProps> = ({
           const paid = payments
             .filter((p: Payment) => p.status === 'paid')
             .reduce((s: number, p: Payment) => s + (p.amount || 0), 0);
-          if (paid > 0) setRevenue(paid);
+          setRevenue(paid);
         }
       } catch {
-        if (user.isDemo) {
+        if (isDemoUser) {
           setClients(mockClients.slice(0, 3));
           setAppointments(DEMO_APPOINTMENTS);
+          setRevenue(12450);
+        } else {
+          setClients([]);
+          setAppointments([]);
+          setRevenue(0);
         }
       } finally {
         setLoadingClients(false);
       }
     };
     loadData();
-  }, [user]);
+  }, [isDemoUser, user]);
 
   useEffect(() => {
     setProfileImageFailed(false);

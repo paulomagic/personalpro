@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { Workout, WorkoutExercise, Exercise } from '../types';
 import VideoPlayerModal from '../components/VideoPlayerModal';
 import { FeedbackForm } from '../components/FeedbackForm';
@@ -43,6 +44,7 @@ const TrainingExecutionView: React.FC<TrainingExecutionViewProps> = ({ workout, 
   const [restTime, setRestTime] = useState(90);
   const [elapsedTime, setElapsedTime] = useState(0);
   const [showVideoModal, setShowVideoModal] = useState(false);
+  const [feedbackNotice, setFeedbackNotice] = useState<{ type: 'error' | 'info'; message: string } | null>(null);
 
   // Feedback state
   const [showFeedbackForm, setShowFeedbackForm] = useState(false);
@@ -53,6 +55,12 @@ const TrainingExecutionView: React.FC<TrainingExecutionViewProps> = ({ workout, 
     return window.localStorage.getItem('personalpro:quick_one_hand_mode') === '1';
   });
   const isColdStartWorkout = Boolean((workout as any)?.coldStartMode || (workout as any)?.ai_metadata?.coldStartMode);
+
+  useEffect(() => {
+    if (!feedbackNotice) return;
+    const timeout = window.setTimeout(() => setFeedbackNotice(null), 3200);
+    return () => window.clearTimeout(timeout);
+  }, [feedbackNotice]);
 
   const parseRestSeconds = (value: string | number | undefined): number => {
     if (typeof value === 'number') return value;
@@ -217,7 +225,10 @@ const TrainingExecutionView: React.FC<TrainingExecutionViewProps> = ({ workout, 
           finishWorkout();
         }
       } else if (isColdStartWorkout) {
-        alert('Não foi possível salvar o feedback. No modo inicial, o feedback é obrigatório para finalizar.');
+        setFeedbackNotice({
+          type: 'error',
+          message: 'Não foi possível salvar o feedback. No modo inicial, ele é obrigatório para finalizar.'
+        });
         void logFunnelEvent('feedback_failed', {
           workoutId: feedback.workout_id,
           exerciseId: feedback.exercise_id,
@@ -240,11 +251,17 @@ const TrainingExecutionView: React.FC<TrainingExecutionViewProps> = ({ workout, 
         coldStartMode: isColdStartWorkout
       });
       if (isColdStartWorkout) {
-        alert('Erro ao salvar feedback. No modo inicial, tente novamente para concluir.');
+        setFeedbackNotice({
+          type: 'error',
+          message: 'Erro ao salvar feedback. No modo inicial, tente novamente para concluir.'
+        });
         return;
       }
 
-      alert('Erro ao salvar feedback. Continuando...');
+      setFeedbackNotice({
+        type: 'info',
+        message: 'Erro ao salvar feedback. O treino continuará sem bloquear sua execução.'
+      });
 
       // Continue anyway
       if (currentExerciseIndex < exercises.length - 1) {
@@ -260,7 +277,10 @@ const TrainingExecutionView: React.FC<TrainingExecutionViewProps> = ({ workout, 
 
   const handleSkipFeedback = () => {
     if (isColdStartWorkout) {
-      alert('No modo inicial, o feedback de cada exercício é obrigatório.');
+      setFeedbackNotice({
+        type: 'error',
+        message: 'No modo inicial, o feedback de cada exercício é obrigatório.'
+      });
       return;
     }
 
@@ -348,6 +368,25 @@ const TrainingExecutionView: React.FC<TrainingExecutionViewProps> = ({ workout, 
 
   return (
     <div data-testid="training-execution-screen" className="fixed inset-0 bg-slate-950 text-white flex flex-col overflow-hidden">
+      <AnimatePresence>
+        {feedbackNotice && (
+          <motion.div
+            initial={{ opacity: 0, y: -12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -12 }}
+            className="absolute top-4 left-1/2 z-[60] w-[calc(100%-2rem)] max-w-md -translate-x-1/2"
+          >
+            <div className={`rounded-2xl border px-4 py-3 text-sm font-bold shadow-2xl backdrop-blur-xl ${
+              feedbackNotice.type === 'error'
+                ? 'bg-[rgba(255,51,102,0.14)] border-[rgba(255,51,102,0.22)] text-[#FFD1DD]'
+                : 'bg-[rgba(59,130,246,0.14)] border-[rgba(59,130,246,0.22)] text-[#D9E7FF]'
+            }`}>
+              {feedbackNotice.message}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Progress Bar Top */}
       <div className="absolute top-0 left-0 right-0 h-1.5 bg-white/5 z-50">
         <svg viewBox="0 0 100 6" preserveAspectRatio="none" className="h-full w-full">

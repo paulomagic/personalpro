@@ -11,7 +11,6 @@ import {
     deleteAppointment,
     deleteAppointmentsBulk,
     getAllAppointmentsForCoach,
-    Appointment as DBAppointment
 } from '../services/supabase/domains/appointmentsDomain';
 import { mockClients } from '../mocks/demoData';
 import PendingRequestsPanel from '../components/PendingRequestsPanel';
@@ -63,6 +62,9 @@ const CalendarView: React.FC<CalendarViewProps> = ({ user, onBack, onSelectClien
     const [saving, setSaving] = useState(false);
     const [cleaningUp, setCleaningUp] = useState(false);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
+    const [toast, setToast] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null);
+    const [appointmentPendingDelete, setAppointmentPendingDelete] = useState<DisplayAppointment | null>(null);
+    const [confirmCleanupOpen, setConfirmCleanupOpen] = useState(false);
 
     // New appointment form state
     const [newAppointment, setNewAppointment] = useState({
@@ -74,6 +76,17 @@ const CalendarView: React.FC<CalendarViewProps> = ({ user, onBack, onSelectClien
 
     const isDemo = user?.isDemo || !user?.id;
     const dateStr = selectedDate.toISOString().split('T')[0];
+
+    const showToast = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
+        setToast({ message, type });
+    };
+
+    useEffect(() => {
+        if (!toast) return;
+        const timeout = window.setTimeout(() => setToast(null), 3200);
+        return () => window.clearTimeout(timeout);
+    }, [toast]);
+
     const calendarQuery = useQuery({
         queryKey: ['calendar-data', user?.id, isDemo, dateStr],
         staleTime: 30_000,
@@ -226,13 +239,15 @@ const CalendarView: React.FC<CalendarViewProps> = ({ user, onBack, onSelectClien
             // Deletar permanentemente do banco de dados
             const deleted = await deleteAppointment(apt.id);
             if (!deleted) {
-                alert('Erro ao excluir agendamento. Tente novamente.');
+                showToast('Erro ao excluir agendamento. Tente novamente.', 'error');
                 return;
             }
             void queryClient.invalidateQueries({ queryKey: ['calendar-data', user?.id, isDemo] });
         }
         setAppointments(prev => prev.filter(a => a.id !== apt.id));
         setShowDetailModal(null);
+        setAppointmentPendingDelete(null);
+        showToast('Agendamento removido com sucesso.', 'success');
     };
 
     const handleSendReminder = (apt: DisplayAppointment) => {
@@ -325,19 +340,17 @@ const CalendarView: React.FC<CalendarViewProps> = ({ user, onBack, onSelectClien
     // Função para limpar todos os agendamentos duplicados
     const handleCleanupDuplicates = async () => {
         if (isDemo) {
-            alert('Não disponível no modo demo');
+            showToast('Não disponível no modo demo.', 'info');
             return;
         }
 
-        const confirmCleanup = confirm('⚠️ Isso irá EXCLUIR TODOS os agendamentos deste mês.\n\nDeseja continuar?');
-        if (!confirmCleanup) return;
-
         setCleaningUp(true);
+        setConfirmCleanupOpen(false);
         try {
             const allAppts = await getAllAppointmentsForCoach(user.id);
 
             if (allAppts.length === 0) {
-                alert('Nenhum agendamento encontrado.');
+                showToast('Nenhum agendamento encontrado.', 'info');
                 return;
             }
 
@@ -345,15 +358,15 @@ const CalendarView: React.FC<CalendarViewProps> = ({ user, onBack, onSelectClien
             const deleted = await deleteAppointmentsBulk(idsToDelete);
 
             if (deleted) {
-                alert(`✅ ${idsToDelete.length} agendamentos excluídos com sucesso!`);
+                showToast(`${idsToDelete.length} agendamentos excluídos com sucesso.`, 'success');
                 setAppointments([]);
                 void queryClient.invalidateQueries({ queryKey: ['calendar-data', user?.id, isDemo] });
             } else {
-                alert('Erro ao excluir agendamentos. Tente novamente.');
+                showToast('Erro ao excluir agendamentos. Tente novamente.', 'error');
             }
         } catch (error) {
             calendarViewLogger.error('Error cleaning up monthly appointments', error, { userId: user?.id });
-            alert('Erro ao limpar agendamentos.');
+            showToast('Erro ao limpar agendamentos.', 'error');
         } finally {
             setCleaningUp(false);
         }
@@ -361,6 +374,26 @@ const CalendarView: React.FC<CalendarViewProps> = ({ user, onBack, onSelectClien
 
     return (
         <div className="max-w-md mx-auto min-h-screen text-white selection:bg-cyan-500/20 pb-12 bg-[var(--bg-void)]">
+            <AnimatePresence>
+                {toast && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -12 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -12 }}
+                        className="fixed top-5 left-1/2 z-[70] w-[calc(100%-2rem)] max-w-md -translate-x-1/2"
+                    >
+                        <div className={`rounded-2xl border px-4 py-3 text-sm font-bold shadow-2xl backdrop-blur-xl ${
+                            toast.type === 'success'
+                                ? 'bg-[rgba(0,255,136,0.12)] border-[rgba(0,255,136,0.2)] text-[#B6FFD8]'
+                                : toast.type === 'error'
+                                    ? 'bg-[rgba(255,51,102,0.14)] border-[rgba(255,51,102,0.22)] text-[#FFD1DD]'
+                                    : 'bg-[rgba(59,130,246,0.14)] border-[rgba(59,130,246,0.22)] text-[#D9E7FF]'
+                        }`}>
+                            {toast.message}
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             {/* AI Header */}
             <PageHeader
@@ -372,7 +405,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({ user, onBack, onSelectClien
                     <div className="flex gap-2">
                         {!isDemo && (
                             <button
-                                onClick={handleCleanupDuplicates}
+                                onClick={() => setConfirmCleanupOpen(true)}
                                 disabled={cleaningUp}
                                 className="size-10 rounded-2xl flex items-center justify-center active:scale-90 transition-all disabled:opacity-60 bg-[rgba(255,51,102,0.08)] border border-[rgba(255,51,102,0.15)]"
                                 title="Limpar Agendamentos"
@@ -531,9 +564,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({ user, onBack, onSelectClien
                                             <button
                                                 onClick={(e) => {
                                                     e.stopPropagation();
-                                                    if (confirm(`Excluir agendamento de ${apt.clientName} às ${apt.time}?`)) {
-                                                        handleCancelAppointment(apt);
-                                                    }
+                                                    setAppointmentPendingDelete(apt);
                                                 }}
                                                 className="size-8 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400 hover:bg-red-500 hover:text-white transition-all opacity-0 group-hover:opacity-100"
                                                 title="Excluir agendamento"
@@ -645,6 +676,82 @@ const CalendarView: React.FC<CalendarViewProps> = ({ user, onBack, onSelectClien
                                     className="w-full h-14 bg-white/5 text-slate-500 font-bold rounded-2xl active:scale-[0.98] transition-all uppercase tracking-widest text-[10px]"
                                 >
                                     Fechar
+                                </button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            <AnimatePresence>
+                {appointmentPendingDelete && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[65] flex items-end bg-slate-950/80 backdrop-blur-sm"
+                    >
+                        <motion.div
+                            initial={{ y: '100%' }}
+                            animate={{ y: 0 }}
+                            exit={{ y: '100%' }}
+                            className="w-full max-w-md mx-auto rounded-t-[32px] border-t border-white/10 bg-slate-900 p-6"
+                        >
+                            <div className="mx-auto mb-5 h-1.5 w-12 rounded-full bg-white/10" />
+                            <h3 className="text-xl font-black text-white mb-2">Excluir agendamento?</h3>
+                            <p className="text-sm text-slate-400 mb-6">
+                                {appointmentPendingDelete.clientName} às {appointmentPendingDelete.time} será removido permanentemente.
+                            </p>
+                            <div className="grid grid-cols-2 gap-3">
+                                <button
+                                    onClick={() => setAppointmentPendingDelete(null)}
+                                    className="h-12 rounded-2xl bg-white/5 text-slate-300 font-bold"
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    onClick={() => void handleCancelAppointment(appointmentPendingDelete)}
+                                    className="h-12 rounded-2xl bg-red-500 text-white font-black"
+                                >
+                                    Excluir
+                                </button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            <AnimatePresence>
+                {confirmCleanupOpen && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[65] flex items-end bg-slate-950/80 backdrop-blur-sm"
+                    >
+                        <motion.div
+                            initial={{ y: '100%' }}
+                            animate={{ y: 0 }}
+                            exit={{ y: '100%' }}
+                            className="w-full max-w-md mx-auto rounded-t-[32px] border-t border-white/10 bg-slate-900 p-6"
+                        >
+                            <div className="mx-auto mb-5 h-1.5 w-12 rounded-full bg-white/10" />
+                            <h3 className="text-xl font-black text-white mb-2">Limpar agenda do mês?</h3>
+                            <p className="text-sm text-slate-400 mb-6">
+                                Esta ação remove todos os agendamentos do mês atual. Use apenas se a agenda estiver corrompida ou duplicada.
+                            </p>
+                            <div className="grid grid-cols-2 gap-3">
+                                <button
+                                    onClick={() => setConfirmCleanupOpen(false)}
+                                    className="h-12 rounded-2xl bg-white/5 text-slate-300 font-bold"
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    onClick={() => void handleCleanupDuplicates()}
+                                    className="h-12 rounded-2xl bg-red-500 text-white font-black"
+                                >
+                                    Limpar
                                 </button>
                             </div>
                         </motion.div>

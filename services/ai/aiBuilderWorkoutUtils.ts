@@ -1,4 +1,5 @@
 import type { Client } from '../../types';
+import type { Exercise as CatalogExercise } from '../exerciseService';
 
 export interface AIBuilderExercise {
     id?: string;
@@ -6,6 +7,18 @@ export interface AIBuilderExercise {
     targetMuscle?: string;
     category?: string;
     sets?: Array<{ reps?: string }>;
+}
+
+export function mapCatalogExerciseToAIBuilder(exercise: CatalogExercise): AIBuilderExercise {
+    return {
+        id: exercise.id,
+        name: exercise.name,
+        targetMuscle: exercise.primary_muscle
+            ? exercise.primary_muscle.replace(/_/g, ' ')
+            : 'geral',
+        category: exercise.category,
+        sets: [{ reps: exercise.category === 'cardio' ? '' : '10-12' }]
+    };
 }
 
 export function mapToLocalExercises(aiResult: any, localExercises: AIBuilderExercise[]) {

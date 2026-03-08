@@ -12,7 +12,6 @@ import {
     deleteAppointmentsBulk,
     getAllAppointmentsForCoach,
 } from '../services/supabase/domains/appointmentsDomain';
-import { mockClients } from '../mocks/demoData';
 import PendingRequestsPanel from '../components/PendingRequestsPanel';
 import MonthlyScheduleModal from '../components/MonthlyScheduleModal';
 import { getAllBatchesForCoach } from '../services/monthlyScheduleService';
@@ -20,6 +19,11 @@ import PageHeader from '../components/PageHeader';
 import { createScopedLogger } from '../services/appLogger';
 
 const calendarViewLogger = createScopedLogger('CalendarView');
+
+const loadDemoClients = async () => {
+    const { mockClients } = await import('../mocks/demoData');
+    return mockClients;
+};
 
 
 interface CalendarViewProps {
@@ -92,8 +96,9 @@ const CalendarView: React.FC<CalendarViewProps> = ({ user, onBack, onSelectClien
         staleTime: 30_000,
         queryFn: async () => {
             if (isDemo || !user?.id) {
+                const demoClients = await loadDemoClients();
                 return {
-                    clients: mockClients as unknown as DBClient[],
+                    clients: demoClients as unknown as DBClient[],
                     appointments: demoAppointments,
                     monthlyBatchesCount: 0
                 };
@@ -537,7 +542,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({ user, onBack, onSelectClien
                                             >
                                                 <div className="text-center w-14 border-r border-white/5 pr-4 mr-1">
                                                     <p className="text-lg font-black text-white leading-none mb-1">{(apt.time || '').slice(0, 5)}</p>
-                                                    <p className="text-[9px] text-slate-300 font-black uppercase tracking-widest">{apt.duration}</p>
+                                                    <p className="text-[10px] text-[#E2E8F0] font-black uppercase tracking-widest">{apt.duration}</p>
                                                 </div>
 
                                                 <div className="flex-1 min-w-0">
@@ -551,7 +556,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({ user, onBack, onSelectClien
                                                             <h4 className="font-black text-white text-sm leading-tight mb-0.5">{apt.clientName}</h4>
                                                             <div className="flex items-center gap-1.5">
                                                                 <div className={`size-1.5 rounded-full ${getTypeColor(apt.type)}`}></div>
-                                                                <p className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">{getTypeLabel(apt.type)}</p>
+                                                                <p className="text-[10px] font-bold text-[#E2E8F0] uppercase tracking-widest">{getTypeLabel(apt.type)}</p>
                                                             </div>
                                                         </div>
                                                     </div>

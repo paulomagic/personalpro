@@ -5,13 +5,17 @@ import { useQuery } from '@tanstack/react-query';
 import { Client } from '../types';
 import { getClients, createClient, DBClient } from '../services/supabase/domains/clientsDomain';
 import { uploadAvatar } from '../services/supabase/domains/storageDomain';
-import { mockClients } from '../mocks/demoData';
 import AddClientModal from '../components/AddClientModal';
 import { ClientCardSkeleton } from '../components/Skeleton';
 import PageHeader from '../components/PageHeader';
 import { createScopedLogger } from '../services/appLogger';
 
 const clientsViewLogger = createScopedLogger('ClientsView');
+
+const loadDemoClients = async () => {
+    const { mockClients } = await import('../mocks/demoData');
+    return mockClients;
+};
 
 interface ClientsViewProps {
     user: any;
@@ -66,7 +70,7 @@ const ClientsView: React.FC<ClientsViewProps> = ({ user, onBack, onSelectClient 
         enabled: Boolean(user?.id || user?.isDemo),
         queryFn: async () => {
             if (user?.isDemo || user?.id === 'demo-user-id') {
-                return mockClients;
+                return await loadDemoClients();
             }
             if (!user?.id) {
                 return [];
@@ -234,10 +238,10 @@ const ClientsView: React.FC<ClientsViewProps> = ({ user, onBack, onSelectClient 
             {/* Stats Row */}
             <motion.div variants={itemVariants} className="px-5 grid grid-cols-4 gap-2 mb-5">
                 {[
-                    { tab: 'all', label: 'Total', value: stats.total, icon: Users, activeClassName: 'bg-[rgba(59,130,246,0.1)] border-[rgba(59,130,246,0.25)]', iconClassName: 'text-[#3B82F6]', valueActiveClassName: 'text-[#3B82F6]' },
-                    { tab: 'active', label: 'Ativos', value: stats.active, icon: CheckCircle, activeClassName: 'bg-[rgba(0,255,136,0.1)] border-[rgba(0,255,136,0.25)]', iconClassName: 'text-[#00FF88]', valueActiveClassName: 'text-[#00FF88]' },
-                    { tab: 'at-risk', label: 'Alerta', value: stats.atRisk, icon: AlertTriangle, activeClassName: 'bg-[rgba(255,184,0,0.1)] border-[rgba(255,184,0,0.25)]', iconClassName: 'text-[#FFB800]', valueActiveClassName: 'text-[#FFB800]' },
-                    { tab: 'paused', label: 'Pausa', value: stats.paused, icon: Pause, activeClassName: 'bg-[rgba(61,90,128,0.15)] border-[rgba(61,90,128,0.3)]', iconClassName: 'text-[#A9C4E8]', valueActiveClassName: 'text-[#A9C4E8]' },
+                    { tab: 'all', label: 'Total', value: stats.total, icon: Users, activeClassName: 'bg-[rgba(59,130,246,0.16)] border-[rgba(96,165,250,0.38)]', iconClassName: 'text-[#93C5FD]', valueActiveClassName: 'text-[#DBEAFE]' },
+                    { tab: 'active', label: 'Ativos', value: stats.active, icon: CheckCircle, activeClassName: 'bg-[rgba(16,185,129,0.16)] border-[rgba(52,211,153,0.38)]', iconClassName: 'text-[#6EE7B7]', valueActiveClassName: 'text-[#D1FAE5]' },
+                    { tab: 'at-risk', label: 'Alerta', value: stats.atRisk, icon: AlertTriangle, activeClassName: 'bg-[rgba(245,158,11,0.16)] border-[rgba(251,191,36,0.38)]', iconClassName: 'text-[#FCD34D]', valueActiveClassName: 'text-[#FEF3C7]' },
+                    { tab: 'paused', label: 'Pausa', value: stats.paused, icon: Pause, activeClassName: 'bg-[rgba(71,85,105,0.32)] border-[rgba(148,163,184,0.4)]', iconClassName: 'text-[#E2E8F0]', valueActiveClassName: 'text-[#F8FAFC]' },
                 ].map(({ tab, label, value, icon: Icon, activeClassName, iconClassName, valueActiveClassName }) => {
                     const isActive = statusFilter === tab;
                     return (
@@ -246,12 +250,12 @@ const ClientsView: React.FC<ClientsViewProps> = ({ user, onBack, onSelectClient 
                             onClick={() => setStatusFilter(tab as any)}
                             className={`rounded-2xl p-3 text-center transition-all border ${isActive
                                 ? activeClassName
-                                : 'bg-[rgba(59,130,246,0.03)] border-[rgba(59,130,246,0.06)]'
+                                : 'bg-[rgba(15,23,42,0.72)] border-[rgba(148,163,184,0.16)]'
                                 }`}
                         >
-                            <Icon size={15} className={`mx-auto mb-1 ${isActive ? iconClassName : 'text-[#A9C4E8]'}`} />
-                            <p className={`text-base font-black ${isActive ? valueActiveClassName : 'text-[#7A9FCC]'}`}>{value}</p>
-                            <p className="text-[8px] font-black uppercase tracking-widest text-[#B8D3FF]">{label}</p>
+                            <Icon size={15} className={`mx-auto mb-1 ${isActive ? iconClassName : 'text-[#D1E3FF]'}`} />
+                            <p className={`text-base font-black ${isActive ? valueActiveClassName : 'text-white'}`}>{value}</p>
+                            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#D1E3FF]">{label}</p>
                         </button>
                     );
                 })}
@@ -268,7 +272,7 @@ const ClientsView: React.FC<ClientsViewProps> = ({ user, onBack, onSelectClient 
                         placeholder="Buscar aluno..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full h-12 pl-11 pr-5 rounded-2xl text-sm font-bold text-white placeholder:text-[#A9C4E8] outline-none bg-[rgba(59,130,246,0.04)] border border-[rgba(59,130,246,0.1)]"
+                        className="w-full h-12 pl-11 pr-5 rounded-2xl text-sm font-bold text-white placeholder:text-[#D1E3FF] outline-none bg-[rgba(15,23,42,0.78)] border border-[rgba(148,163,184,0.18)]"
                     />
                 </div>
             </motion.div>

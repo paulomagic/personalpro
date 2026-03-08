@@ -20,7 +20,6 @@ import {
   Brain,
   Cpu,
 } from 'lucide-react';
-import { mockClients } from '../mocks/demoData';
 import { ClientCardSkeleton } from '../components/Skeleton';
 import EmptyState from '../components/EmptyState';
 import {
@@ -57,6 +56,11 @@ const DEMO_APPOINTMENTS: DashboardAppointment[] = [
   { id: '2', time: '10:30', clientName: 'Pedro Souza' },
   { id: '3', time: '16:00', clientName: 'Ana Silva' },
 ];
+
+const loadDemoClients = async () => {
+  const { mockClients } = await import('../mocks/demoData');
+  return mockClients;
+};
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 const timeOfDay = () => {
@@ -111,7 +115,8 @@ const DashboardView: React.FC<DashboardViewProps> = ({
     const loadData = async () => {
       if (!user?.id) {
         if (isDemoUser) {
-          setClients(mockClients.slice(0, 3));
+          const demoClients = await loadDemoClients();
+          setClients(demoClients.slice(0, 3));
           setAppointments(DEMO_APPOINTMENTS);
           setRevenue(12450);
           setLoadingClients(false);
@@ -122,7 +127,8 @@ const DashboardView: React.FC<DashboardViewProps> = ({
       try {
         const today = new Date().toISOString().split('T')[0];
         if (isDemoUser) {
-          setClients(mockClients.slice(0, 3));
+          const demoClients = await loadDemoClients();
+          setClients(demoClients.slice(0, 3));
           setAppointments(DEMO_APPOINTMENTS);
           setRevenue(12450);
         } else {
@@ -152,7 +158,8 @@ const DashboardView: React.FC<DashboardViewProps> = ({
         }
       } catch {
         if (isDemoUser) {
-          setClients(mockClients.slice(0, 3));
+          const demoClients = await loadDemoClients();
+          setClients(demoClients.slice(0, 3));
           setAppointments(DEMO_APPOINTMENTS);
           setRevenue(12450);
         } else {

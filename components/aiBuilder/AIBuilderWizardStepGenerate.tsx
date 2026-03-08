@@ -8,6 +8,8 @@ interface AIBuilderWizardStepGenerateProps {
   selectedDays: number;
   injuryRisk: InjuryRiskAssessment | null;
   loading: boolean;
+  exerciseCatalogStatus: 'idle' | 'loading' | 'ready' | 'empty' | 'error';
+  generateDisabledReason: string | null;
   onBack: () => void;
   onGenerate: () => void;
 }
@@ -18,10 +20,12 @@ const AIBuilderWizardStepGenerate: React.FC<AIBuilderWizardStepGenerateProps> = 
   selectedDays,
   injuryRisk,
   loading,
+  exerciseCatalogStatus,
+  generateDisabledReason,
   onBack,
   onGenerate
 }) => {
-  const blocked = !selectedClient || !selectedGoal || loading || Boolean(injuryRisk?.blockGeneration);
+  const blocked = !selectedClient || !selectedGoal || loading || Boolean(generateDisabledReason);
 
   return (
     <section className="space-y-5">
@@ -32,8 +36,22 @@ const AIBuilderWizardStepGenerate: React.FC<AIBuilderWizardStepGenerateProps> = 
           <p><span className="text-slate-400">Objetivo:</span> <span className="text-white font-bold">{selectedGoal}</span></p>
           <p><span className="text-slate-400">Frequência:</span> <span className="text-white font-bold">{selectedDays} dias/semana</span></p>
           <p><span className="text-slate-400">Risco:</span> <span className="text-white font-bold">{injuryRisk ? `${injuryRisk.score}/100 (${injuryRisk.level})` : 'sem dados'}</span></p>
+          <p><span className="text-slate-400">Catálogo:</span> <span className="text-white font-bold">
+            {exerciseCatalogStatus === 'ready' && 'disponível'}
+            {exerciseCatalogStatus === 'loading' && 'carregando'}
+            {exerciseCatalogStatus === 'idle' && 'aguardando'}
+            {exerciseCatalogStatus === 'empty' && 'vazio'}
+            {exerciseCatalogStatus === 'error' && 'indisponível'}
+          </span></p>
         </div>
       </div>
+
+      {generateDisabledReason && (
+        <div className="glass-card rounded-[22px] p-4 border border-amber-500/20 bg-amber-500/5">
+          <p className="text-[10px] font-black uppercase tracking-widest text-amber-300 mb-2">Geração indisponível</p>
+          <p className="text-sm text-white">{generateDisabledReason}</p>
+        </div>
+      )}
 
       <div className="flex flex-col gap-3">
         <button

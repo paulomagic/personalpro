@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Play, Save, Plus, Trash2, Activity, Flame, Target, Timer, Zap, Heart, TrendingUp } from 'lucide-react';
 import { SportType, SportTrainingParams, WorkoutExercise } from '../types';
-import { mockExercises } from '../mocks/demoData';
+import { fetchAllExercises, type Exercise as CatalogExercise } from '../services/exerciseService';
+import { createScopedLogger } from '../services/appLogger';
 
 interface SportTrainingViewProps {
     clientName?: string;
@@ -10,42 +11,38 @@ interface SportTrainingViewProps {
     onSave: (workout: any) => void;
 }
 
-const sportConfig: Record<SportType, { icon: string; color: string; gradient: string; exercises: string[] }> = {
+const sportTrainingLogger = createScopedLogger('SportTrainingView');
+
+const sportConfig: Record<SportType, { icon: string; color: string; gradient: string }> = {
     futebol: {
         icon: '⚽',
         color: 'text-green-400',
-        gradient: 'from-green-600 to-emerald-500',
-        exercises: ['sport1', 'sport3', 'plyo1', 'plyo2', 'func1']
+        gradient: 'from-green-600 to-emerald-500'
     },
     tenis: {
         icon: '🎾',
         color: 'text-yellow-400',
-        gradient: 'from-yellow-500 to-amber-500',
-        exercises: ['sport2', 'sport4', 'plyo2', 'func6']
+        gradient: 'from-yellow-500 to-amber-500'
     },
     natacao: {
         icon: '🏊',
         color: 'text-blue-400',
-        gradient: 'from-blue-500 to-cyan-500',
-        exercises: ['card4', 'mob1', 'func4']
+        gradient: 'from-blue-500 to-cyan-500'
     },
     corrida: {
         icon: '🏃',
         color: 'text-orange-400',
-        gradient: 'from-orange-500 to-red-500',
-        exercises: ['run1', 'run2', 'sport5', 'plyo5']
+        gradient: 'from-orange-500 to-red-500'
     },
     funcional_esportivo: {
         icon: '💪',
         color: 'text-purple-400',
-        gradient: 'from-purple-600 to-pink-500',
-        exercises: ['func1', 'func2', 'func3', 'func5', 'func10']
+        gradient: 'from-purple-600 to-pink-500'
     },
     crossfit: {
         icon: '🏋️',
         color: 'text-red-400',
-        gradient: 'from-red-600 to-rose-500',
-        exercises: ['func1', 'func9', 'func10', 'card6', 'plyo6']
+        gradient: 'from-red-600 to-rose-500'
     }
 };
 
@@ -57,11 +54,66 @@ const effortZoneColors: Record<number, { bg: string; text: string; label: string
     5: { bg: 'bg-red-500/20', text: 'text-red-400', label: 'Máximo' }
 };
 
+function mapSportCategory(exercise: CatalogExercise): WorkoutExercise['category'] {
+    if (exercise.category === 'mobilidade') return 'mobilidade';
+    if (exercise.category === 'cardio') {
+        if (/corrida|esteira|sprint/i.test(exercise.name)) return 'corrida';
+        return 'cardio';
+    }
+    if (exercise.category === 'core') return 'funcional';
+    if (/salto|jump|bound|plio/i.test(exercise.name)) return 'pliometria';
+    if (/agility|sport|sprint|ladder/i.test(exercise.slug || exercise.name)) return 'esporte';
+    return 'funcional';
+}
+
+function mapCatalogExerciseToSportWorkout(exercise: CatalogExercise): WorkoutExercise {
+    return {
+        id: exercise.id,
+        name: exercise.name,
+        category: mapSportCategory(exercise),
+        targetMuscle: exercise.primary_muscle,
+        notes: exercise.execution_tips || '',
+        videoUrl: exercise.video_url,
+        sets: [{
+            method: 'simples',
+            reps: exercise.category === 'cardio' ? '' : '8-12',
+            load: '',
+            rest: exercise.category === 'cardio' ? '30s' : '60s',
+            time: exercise.category === 'cardio' ? '30s' : ''
+        }]
+    };
+}
+
+function selectRecommendedExercises(sport: SportType, catalog: CatalogExercise[]): WorkoutExercise[] {
+    const filtered = catalog.filter((exercise) => {
+        if (sport === 'futebol') {
+            return ['cardio', 'core'].includes(exercise.category) || ['agachar', 'hinge'].includes(exercise.movement_pattern);
+        }
+        if (sport === 'tenis') {
+            return ['cardio', 'core'].includes(exercise.category) || ['empurrar_horizontal', 'puxar_horizontal'].includes(exercise.movement_pattern);
+        }
+        if (sport === 'natacao') {
+            return ['mobilidade', 'cardio', 'core'].includes(exercise.category) || ['puxar_horizontal', 'puxar_vertical'].includes(exercise.movement_pattern);
+        }
+        if (sport === 'corrida') {
+            return ['cardio', 'core'].includes(exercise.category) || ['agachar', 'hinge'].includes(exercise.movement_pattern);
+        }
+        if (sport === 'crossfit') {
+            return exercise.is_compound || ['cardio', 'core'].includes(exercise.category);
+        }
+        return ['cardio', 'core', 'mobilidade'].includes(exercise.category) || ['agachar', 'hinge', 'empurrar_horizontal', 'puxar_horizontal'].includes(exercise.movement_pattern);
+    });
+
+    return filtered.slice(0, 6).map(mapCatalogExerciseToSportWorkout);
+}
+
 const SportTrainingView: React.FC<SportTrainingViewProps> = ({ clientName = 'Aluno', onBack, onSave }) => {
     const [selectedSport, setSelectedSport] = useState<SportType | null>(null);
     const [workoutTitle, setWorkoutTitle] = useState('');
     const [selectedExercises, setSelectedExercises] = useState<WorkoutExercise[]>([]);
     const [showExerciseSelector, setShowExerciseSelector] = useState(false);
+    const [exerciseCatalog, setExerciseCatalog] = useState<CatalogExercise[]>([]);
+    const [isCatalogLoading, setIsCatalogLoading] = useState(true);
 
     // Training params
     const [targetZone, setTargetZone] = useState<1 | 2 | 3 | 4 | 5>(3);
@@ -73,16 +125,48 @@ const SportTrainingView: React.FC<SportTrainingViewProps> = ({ clientName = 'Alu
         { work: 30, rest: 30 }
     ]);
 
+    useEffect(() => {
+        let cancelled = false;
+
+        const loadCatalog = async () => {
+            setIsCatalogLoading(true);
+            try {
+                const exercises = await fetchAllExercises();
+                if (!cancelled) setExerciseCatalog(exercises);
+            } catch (error) {
+                sportTrainingLogger.error('Error loading sport training exercise catalog', error);
+                if (!cancelled) setExerciseCatalog([]);
+            } finally {
+                if (!cancelled) setIsCatalogLoading(false);
+            }
+        };
+
+        void loadCatalog();
+        return () => {
+            cancelled = true;
+        };
+    }, []);
+
     const handleSelectSport = (sport: SportType) => {
         setSelectedSport(sport);
         setWorkoutTitle(`Treino ${sport.charAt(0).toUpperCase() + sport.slice(1).replace('_', ' ')}`);
 
-        // Auto-add recommended exercises
-        const recommended = mockExercises.filter(e =>
-            sportConfig[sport].exercises.includes(e.id)
-        );
+        const recommended = selectRecommendedExercises(sport, exerciseCatalog);
         setSelectedExercises(recommended);
     };
+
+    const recommendedCounts = useMemo(() => {
+        return (Object.keys(sportConfig) as SportType[]).reduce<Record<SportType, number>>((acc, sport) => {
+            acc[sport] = selectRecommendedExercises(sport, exerciseCatalog).length;
+            return acc;
+        }, {} as Record<SportType, number>);
+    }, [exerciseCatalog]);
+
+    const estimatedDurationMinutes = useMemo(() => {
+        const intervalMinutes = intervals.reduce((acc, interval) => acc + interval.work + interval.rest, 0) / 60;
+        const exerciseBlockMinutes = selectedExercises.length * 3;
+        return Math.max(1, Math.round(intervalMinutes + exerciseBlockMinutes));
+    }, [intervals, selectedExercises.length]);
 
     const addInterval = () => {
         setIntervals([...intervals, { work: 30, rest: 30 }]);
@@ -122,7 +206,7 @@ const SportTrainingView: React.FC<SportTrainingViewProps> = ({ clientName = 'Alu
             {/* Header */}
             <header className="sticky top-0 z-40 bg-slate-950/80 backdrop-blur-md border-b border-white/5 px-4 py-4">
                 <div className="flex items-center justify-between max-w-md mx-auto">
-                    <button onClick={onBack} className="p-2 rounded-xl hover:bg-white/10 transition-colors">
+                    <button onClick={onBack} aria-label="Voltar" className="p-2 rounded-xl hover:bg-white/10 transition-colors">
                         <ArrowLeft size={24} />
                     </button>
                     <div className="text-center">
@@ -134,8 +218,9 @@ const SportTrainingView: React.FC<SportTrainingViewProps> = ({ clientName = 'Alu
                     </div>
                     <button
                         onClick={handleSave}
-                        disabled={!selectedSport}
-                        className={`p-2 rounded-xl transition-all ${selectedSport ? 'bg-blue-600 text-white shadow-glow' : 'bg-slate-800 text-slate-500'}`}
+                        disabled={!selectedSport || selectedExercises.length === 0}
+                        aria-label="Salvar treino esportivo"
+                        className={`p-2 rounded-xl transition-all ${selectedSport && selectedExercises.length > 0 ? 'bg-blue-600 text-white shadow-glow' : 'bg-slate-800 text-slate-500'}`}
                     >
                         <Save size={20} />
                     </button>
@@ -151,7 +236,10 @@ const SportTrainingView: React.FC<SportTrainingViewProps> = ({ clientName = 'Alu
                         className="space-y-4"
                     >
                         <h2 className="text-xl font-black text-white">Escolha o Esporte</h2>
-                        <p className="text-sm text-slate-400">Selecione a modalidade para criar um treino específico com parâmetros esportivos.</p>
+                        <p className="text-sm text-slate-400">
+                            Selecione a modalidade para criar um treino específico com parâmetros esportivos.
+                            {isCatalogLoading ? ' O catálogo real está sendo carregado.' : exerciseCatalog.length === 0 ? ' Nenhum exercício do catálogo foi encontrado.' : ' As sugestões abaixo usam o catálogo real do app.'}
+                        </p>
 
                         <div className="grid grid-cols-2 gap-3">
                             {(Object.keys(sportConfig) as SportType[]).map(sport => (
@@ -160,12 +248,17 @@ const SportTrainingView: React.FC<SportTrainingViewProps> = ({ clientName = 'Alu
                                     whileHover={{ scale: 1.02 }}
                                     whileTap={{ scale: 0.98 }}
                                     onClick={() => handleSelectSport(sport)}
+                                    aria-label={`Selecionar esporte ${sport.replace('_', ' ')}`}
                                     className={`glass-card rounded-[24px] p-6 text-left hover:border-${sportConfig[sport].gradient.split('-')[1]}-500/50 transition-all group`}
                                 >
                                     <span className="text-4xl mb-3 block">{sportConfig[sport].icon}</span>
                                     <h3 className="font-bold text-white capitalize">{sport.replace('_', ' ')}</h3>
-                                    <p className="text-[10px] text-slate-500 font-bold mt-1">
-                                        {sportConfig[sport].exercises.length} exercícios
+                                    <p className="text-[10px] text-slate-400 font-bold mt-1">
+                                        {isCatalogLoading
+                                            ? 'Carregando sugestões...'
+                                            : recommendedCounts[sport] > 0
+                                                ? `${recommendedCounts[sport]} sugestões reais`
+                                                : 'Sem sugestões no catálogo atual'}
                                     </p>
                                 </motion.button>
                             ))}
@@ -258,6 +351,7 @@ const SportTrainingView: React.FC<SportTrainingViewProps> = ({ clientName = 'Alu
                                 </div>
                                 <button
                                     onClick={addInterval}
+                                    aria-label="Adicionar intervalo"
                                     className="size-8 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center hover:bg-blue-500/30 transition-colors"
                                 >
                                     <Plus size={16} />
@@ -275,6 +369,7 @@ const SportTrainingView: React.FC<SportTrainingViewProps> = ({ clientName = 'Alu
                                                     type="number"
                                                     value={interval.work}
                                                     onChange={(e) => updateInterval(idx, 'work', parseInt(e.target.value) || 0)}
+                                                    aria-label={`Tempo de trabalho do intervalo ${idx + 1}`}
                                                     className="w-full bg-slate-900/50 rounded-lg py-2 px-2 text-center text-sm font-bold text-white outline-none focus:ring-1 ring-blue-500"
                                                 />
                                             </div>
@@ -284,6 +379,7 @@ const SportTrainingView: React.FC<SportTrainingViewProps> = ({ clientName = 'Alu
                                                     type="number"
                                                     value={interval.rest}
                                                     onChange={(e) => updateInterval(idx, 'rest', parseInt(e.target.value) || 0)}
+                                                    aria-label={`Tempo de descanso do intervalo ${idx + 1}`}
                                                     className="w-full bg-slate-900/50 rounded-lg py-2 px-2 text-center text-sm font-bold text-white outline-none focus:ring-1 ring-blue-500"
                                                 />
                                             </div>
@@ -291,6 +387,7 @@ const SportTrainingView: React.FC<SportTrainingViewProps> = ({ clientName = 'Alu
                                         {intervals.length > 1 && (
                                             <button
                                                 onClick={() => removeInterval(idx)}
+                                                aria-label={`Remover intervalo ${idx + 1}`}
                                                 className="text-slate-600 hover:text-red-400 p-1"
                                             >
                                                 <Trash2 size={16} />
@@ -301,7 +398,7 @@ const SportTrainingView: React.FC<SportTrainingViewProps> = ({ clientName = 'Alu
                             </div>
 
                             <p className="text-xs text-slate-500 text-center">
-                                Total: {Math.round(intervals.reduce((acc, i) => acc + i.work + i.rest, 0) / 60)} minutos
+                                Total base de intervalos: {Math.round(intervals.reduce((acc, i) => acc + i.work + i.rest, 0) / 60)} minutos
                             </p>
                         </div>
 
@@ -318,6 +415,8 @@ const SportTrainingView: React.FC<SportTrainingViewProps> = ({ clientName = 'Alu
                             </div>
                             <button
                                 onClick={() => setUseOxygenLadder(!useOxygenLadder)}
+                                aria-label={useOxygenLadder ? 'Desativar escada de oxigênio' : 'Ativar escada de oxigênio'}
+                                aria-pressed={useOxygenLadder}
                                 className={`relative w-12 h-6 rounded-full transition-colors ${useOxygenLadder ? 'bg-cyan-500' : 'bg-slate-700'}`}
                             >
                                 <motion.div
@@ -333,6 +432,7 @@ const SportTrainingView: React.FC<SportTrainingViewProps> = ({ clientName = 'Alu
                                 <h3 className="font-bold text-white">Exercícios ({selectedExercises.length})</h3>
                                 <button
                                     onClick={() => setShowExerciseSelector(true)}
+                                    aria-label="Adicionar exercício ao treino esportivo"
                                     className="text-xs font-bold text-blue-400 uppercase tracking-widest"
                                 >
                                     + Adicionar
@@ -350,12 +450,34 @@ const SportTrainingView: React.FC<SportTrainingViewProps> = ({ clientName = 'Alu
                                     </div>
                                     <button
                                         onClick={() => setSelectedExercises(selectedExercises.filter(e => e.id !== ex.id))}
+                                        aria-label={`Remover exercício ${ex.name}`}
                                         className="text-slate-600 hover:text-red-400 p-1"
                                     >
                                         <Trash2 size={16} />
                                     </button>
                                 </div>
                             ))}
+
+                            {selectedExercises.length === 0 && (
+                                <div className="glass-card rounded-2xl p-4 text-center space-y-2">
+                                    <p className="text-sm font-bold text-white">Nenhum exercício sugerido ainda</p>
+                                    <p className="text-xs text-slate-400">
+                                        {exerciseCatalog.length === 0
+                                            ? 'O catálogo real não carregou exercícios para esta modalidade.'
+                                            : 'Adicione exercícios manualmente para montar este treino esportivo.'}
+                                    </p>
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="glass-card rounded-2xl p-4 flex items-center justify-between">
+                            <div>
+                                <p className="text-[10px] uppercase tracking-widest font-black text-slate-500">Duração estimada</p>
+                                <p className="text-lg font-black text-white">{estimatedDurationMinutes} min</p>
+                            </div>
+                            <p className="max-w-[180px] text-right text-xs text-slate-400">
+                                Estimativa baseada em intervalos configurados e quantidade de exercícios selecionados.
+                            </p>
                         </div>
                     </motion.div>
                 )}

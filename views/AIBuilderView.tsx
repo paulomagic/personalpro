@@ -1,8 +1,8 @@
-import React, { Suspense, lazy, useState } from 'react';
+import React, { Suspense, lazy, useEffect, useMemo, useState } from 'react';
 import { useAIBuilderWorkoutEditing } from '../services/ai/hooks/useAIBuilderWorkoutEditing';
 import { useAIBuilderFlow } from '../services/ai/hooks/useAIBuilderFlow';
 import { useAIBuilderResultEditor } from '../services/ai/hooks/useAIBuilderResultEditor';
-import { mapToLocalExercises, type AIBuilderExercise } from '../services/ai/aiBuilderWorkoutUtils';
+import { mapCatalogExerciseToAIBuilder, mapToLocalExercises, type AIBuilderExercise } from '../services/ai/aiBuilderWorkoutUtils';
 import PageHeader from '../components/PageHeader';
 import AIBuilderWizardHeader from '../components/aiBuilder/AIBuilderWizardHeader';
 import AIBuilderWizardStepProfile from '../components/aiBuilder/AIBuilderWizardStepProfile';
@@ -10,6 +10,7 @@ import AIBuilderWizardStepRisk from '../components/aiBuilder/AIBuilderWizardStep
 import AIBuilderWizardStepGenerate from '../components/aiBuilder/AIBuilderWizardStepGenerate';
 import AIBuilderErrorToast from '../components/aiBuilder/AIBuilderErrorToast';
 import AIBuilderLoadingScreen from '../components/aiBuilder/AIBuilderLoadingScreen';
+import { fetchAllExercises } from '../services/exerciseService';
 
 interface AIBuilderViewProps {
   user: any;
@@ -31,10 +32,20 @@ const AIBuilderView: React.FC<AIBuilderViewProps> = ({ user, onBack, onDone }) =
   const [selectedOptionIndex, setSelectedOptionIndex] = useState(0);
   const [feedback, setFeedback] = useState<'positive' | 'negative' | null>(null);
   const [activeTabIndex, setActiveTabIndex] = useState(0);
+  const [exerciseCatalogStatus, setExerciseCatalogStatus] = useState<'idle' | 'loading' | 'ready' | 'empty' | 'error'>('idle');
 
   const ensureExerciseCatalog = async (): Promise<MockExercise[]> => {
-    const { mockExercises } = await loadDemoData();
-    return mockExercises as MockExercise[];
+    if (isDemo) {
+      const { mockExercises } = await loadDemoData();
+      return mockExercises as MockExercise[];
+    }
+
+    const catalog = await fetchAllExercises();
+    if (catalog.length > 0) {
+      return catalog.map(mapCatalogExerciseToAIBuilder);
+    }
+
+    return [];
   };
 
   const {
@@ -68,6 +79,56 @@ const AIBuilderView: React.FC<AIBuilderViewProps> = ({ user, onBack, onDone }) =
     handleContinueFromProfile,
     handleContinueFromRisk
   } = useAIBuilderFlow({ user });
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const preloadExerciseCatalog = async () => {
+      setExerciseCatalogStatus('loading');
+      try {
+        const catalog = await ensureExerciseCatalog();
+        if (cancelled) return;
+        setExerciseCatalogStatus(catalog.length > 0 ? 'ready' : 'empty');
+      } catch {
+        if (!cancelled) {
+          setExerciseCatalogStatus('error');
+        }
+      }
+    };
+
+    void preloadExerciseCatalog();
+    return () => {
+      cancelled = true;
+    };
+  }, [isDemo]);
+
+  const generateDisabledReason = useMemo(() => {
+    if (!selectedClient) {
+      return fetchingClients
+        ? 'Aguarde o carregamento dos alunos para gerar.'
+        : 'Cadastre ou selecione um aluno para gerar um treino.';
+    }
+
+    if (exerciseCatalogStatus === 'loading' || exerciseCatalogStatus === 'idle') {
+      return 'O catálogo de exercícios ainda está carregando.';
+    }
+
+    if (exerciseCatalogStatus === 'empty') {
+      return isDemo
+        ? 'O catálogo demo não encontrou exercícios suficientes para montar o treino.'
+        : 'O catálogo real de exercícios está vazio. Cadastre exercícios antes de gerar.';
+    }
+
+    if (exerciseCatalogStatus === 'error') {
+      return 'Não foi possível carregar o catálogo de exercícios agora.';
+    }
+
+    if (injuryRisk?.blockGeneration) {
+      return `Geração bloqueada por risco crítico (${injuryRisk.score}/100).`;
+    }
+
+    return null;
+  }, [exerciseCatalogStatus, fetchingClients, injuryRisk, isDemo, selectedClient]);
 
   const handleFeedback = async (type: 'positive' | 'negative') => {
     setFeedback(type);
@@ -220,6 +281,7 @@ const AIBuilderView: React.FC<AIBuilderViewProps> = ({ user, onBack, onDone }) =
             setSelectedDays={setSelectedDays}
             handleContinueFromProfile={handleContinueFromProfile}
             canAdvanceFromProfileStep={canAdvanceFromProfileStep}
+            emptyClientsMessage={isDemo ? 'Nenhum aluno demo disponível.' : 'Nenhum aluno encontrado. Cadastre um aluno antes de usar o AI Builder.'}
           />
         )}
 
@@ -246,6 +308,8 @@ const AIBuilderView: React.FC<AIBuilderViewProps> = ({ user, onBack, onDone }) =
             selectedDays={selectedDays}
             injuryRisk={injuryRisk}
             loading={loading}
+            exerciseCatalogStatus={exerciseCatalogStatus}
+            generateDisabledReason={generateDisabledReason}
             onBack={() => setWizardStep(2)}
             onGenerate={handleGenerate}
           />

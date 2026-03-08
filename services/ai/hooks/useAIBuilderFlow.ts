@@ -59,20 +59,25 @@ export function useAIBuilderFlow({ user }: UseAIBuilderFlowParams) {
         enabled: Boolean(user?.id || user?.isDemo),
         queryFn: async () => {
             try {
-                if (!isDemo && user?.id) {
+                if (isDemo) {
+                    return await loadFallbackClients();
+                }
+
+                if (user?.id) {
                     const { getClients, mapDBClientToClient } = await loadClientsDomain();
                     const dbClients = await getClients(user.id, { limit: 100 });
                     if (dbClients && dbClients.length > 0) {
                         return dbClients.map(mapDBClientToClient) as Client[];
                     }
+                    return [];
                 }
-                return await loadFallbackClients();
+                return [];
             } catch (error) {
                 aiBuilderFlowLogger.error('Error fetching AI Builder clients', error, {
                     userId: user?.id,
                     isDemo
                 });
-                return await loadFallbackClients();
+                return isDemo ? await loadFallbackClients() : [];
             }
         }
     });

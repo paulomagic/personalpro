@@ -38,6 +38,7 @@ interface SettingsModalContentProps {
     onConfirmPasswordChange: (value: string) => void;
     onSaveSecurity: () => void;
     onContactSupport: () => void;
+    supportCtaLabel: string;
     onThemeChange: (value: ThemeMode) => void;
     onApplyTheme: () => void;
     onExportPrivacy: () => void;
@@ -75,6 +76,7 @@ const SettingsModalContent: React.FC<SettingsModalContentProps> = ({
     onConfirmPasswordChange,
     onSaveSecurity,
     onContactSupport,
+    supportCtaLabel,
     onThemeChange,
     onApplyTheme,
     onExportPrivacy,
@@ -126,7 +128,7 @@ const SettingsModalContent: React.FC<SettingsModalContentProps> = ({
     }
 
     if (activeModal === 'help') {
-        return <SettingsHelpModal onContactSupport={onContactSupport} />;
+        return <SettingsHelpModal onContactSupport={onContactSupport} supportCtaLabel={supportCtaLabel} />;
     }
 
     if (activeModal === 'appearance') {

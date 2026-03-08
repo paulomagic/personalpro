@@ -35,6 +35,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user, onBack, onLogout }) =
     const rawAvatarUrl = user?.user_metadata?.avatar_url || user?.user_metadata?.picture;
     const coachAvatar = getSafeAvatarUrl(rawAvatarUrl, coachName);
     const isDemo = user?.isDemo || !user?.id;
+    const supportEmail = (import.meta.env.VITE_SUPPORT_EMAIL || '').trim();
 
     const [activeModal, setActiveModal] = React.useState<SettingsModalType>(null);
     const { theme: selectedTheme, setTheme: setSelectedTheme } = useTheme();
@@ -85,6 +86,8 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user, onBack, onLogout }) =
         window.setTimeout(() => setToastMessage(null), 3000);
     }, []);
 
+    const supportCtaLabel = supportEmail ? 'Abrir Contato com Suporte' : 'Copiar Diagnóstico do App';
+
     const handleExportPrivacyReport = React.useCallback(() => {
         const report = {
             exportedAt: new Date().toISOString(),
@@ -112,6 +115,33 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user, onBack, onLogout }) =
         const downloadResult = downloadPrivacyJson(data, 'personalpro-lgpd-export');
         showToast(downloadResult.success ? 'Exportação LGPD concluída.' : (downloadResult.error || 'Erro ao finalizar exportação'), downloadResult.success ? 'success' : 'error');
     }, [showToast]);
+
+    const handleContactSupport = React.useCallback(async () => {
+        const diagnostics = [
+            `App: PersonalPro`,
+            `Data: ${new Date().toISOString()}`,
+            `Usuário: ${coachEmail}`,
+            `Modo demo: ${isDemo ? 'sim' : 'não'}`,
+            `Tema: ${selectedTheme}`,
+            `Push ativo: ${notifState.push ? 'sim' : 'não'}`,
+            `Navegador: ${typeof navigator !== 'undefined' ? navigator.userAgent : 'indisponível'}`
+        ].join('\n');
+
+        if (supportEmail) {
+            const subject = encodeURIComponent('PersonalPro - Solicitação de suporte');
+            const body = encodeURIComponent(`Descreva o problema abaixo:\n\n---\n${diagnostics}\n---\n`);
+            window.open(`mailto:${supportEmail}?subject=${subject}&body=${body}`, '_blank', 'noopener,noreferrer');
+            showToast('Canal de suporte aberto.');
+            return;
+        }
+
+        try {
+            await navigator.clipboard.writeText(diagnostics);
+            showToast('Diagnóstico copiado. Configure VITE_SUPPORT_EMAIL para contato direto.');
+        } catch {
+            showToast('Não foi possível copiar o diagnóstico.', 'error');
+        }
+    }, [coachEmail, isDemo, notifState.push, selectedTheme, showToast, supportEmail]);
 
     const {
         privacyRequests,
@@ -441,6 +471,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user, onBack, onLogout }) =
                     privacyConsents={privacyConsents}
                     privacyLoading={privacyLoading}
                     privacyConsentSaving={privacyConsentSaving}
+                    supportCtaLabel={supportCtaLabel}
                     onProfileNameChange={setProfileName}
                     onSaveProfile={handleSaveProfile}
                     onToggleNotif={toggleNotif}
@@ -449,7 +480,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user, onBack, onLogout }) =
                     onNewPasswordChange={setNewPassword}
                     onConfirmPasswordChange={setConfirmPassword}
                     onSaveSecurity={handleSaveSecurity}
-                    onContactSupport={() => showToast('Mensagem enviada ao suporte!')}
+                    onContactSupport={handleContactSupport}
                     onThemeChange={setPendingTheme}
                     onApplyTheme={applyTheme}
                     onExportPrivacy={handleExportLivePrivacyData}

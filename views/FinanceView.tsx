@@ -3,7 +3,6 @@ import { TrendingUp, Download, CheckCircle, AlertCircle, Clock, ChevronRight } f
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getPayments, updatePayment } from '../services/supabase/domains/paymentsDomain';
 import { getClients } from '../services/supabase/domains/clientsDomain';
-import { mockClients } from '../mocks/demoData';
 import { PaymentCardSkeleton } from '../components/Skeleton';
 import EmptyState from '../components/EmptyState';
 import PageHeader from '../components/PageHeader';
@@ -12,6 +11,11 @@ import { createScopedLogger } from '../services/appLogger';
 const FinanceOverviewChart = lazy(() => import('../components/FinanceOverviewChart'));
 const PaymentStatusModal = lazy(() => import('../components/PaymentStatusModal'));
 const financeViewLogger = createScopedLogger('FinanceView');
+
+const loadDemoClients = async () => {
+    const { mockClients } = await import('../mocks/demoData');
+    return mockClients;
+};
 
 interface FinanceViewProps {
     user: any;
@@ -57,8 +61,9 @@ const FinanceView: React.FC<FinanceViewProps> = ({ user, onBack }) => {
     const [showSuccessToast, setShowSuccessToast] = useState<string | null>(null);
     const [payments, setPayments] = useState<Payment[]>([]);
     const [enableHeavyUI, setEnableHeavyUI] = useState(false);
-    const buildDemoPayments = () =>
-        mockClients.slice(0, 5).map((c: any, i: number) => ({
+    const buildDemoPayments = async () => {
+        const demoClients = await loadDemoClients();
+        return demoClients.slice(0, 5).map((c: any, i: number) => ({
             id: `demo-${i}`,
             clientId: c.id || `demo-client-${i}`,
             clientName: c.name,
@@ -69,6 +74,7 @@ const FinanceView: React.FC<FinanceViewProps> = ({ user, onBack }) => {
             plan: 'Premium',
             phone: c.phone || '',
         }));
+    };
 
     useEffect(() => {
         const timer = window.setTimeout(() => setEnableHeavyUI(true), 0);
@@ -92,7 +98,7 @@ const FinanceView: React.FC<FinanceViewProps> = ({ user, onBack }) => {
 
             try {
                 if (user.isDemo) {
-                    return buildDemoPayments();
+                    return await buildDemoPayments();
                 }
 
                 const dbPayments = await withTimeout(getPayments(user.id));

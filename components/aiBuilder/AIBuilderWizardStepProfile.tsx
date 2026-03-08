@@ -12,6 +12,7 @@ interface AIBuilderWizardStepProfileProps {
   setSelectedDays: (days: number) => void;
   handleContinueFromProfile: () => void;
   canAdvanceFromProfileStep: boolean;
+  emptyClientsMessage: string;
 }
 
 const goals = ['Hipertrofia', 'Emagrecimento', 'Resistência', 'Saúde'];
@@ -27,7 +28,8 @@ const AIBuilderWizardStepProfile: React.FC<AIBuilderWizardStepProfileProps> = ({
   setSelectedGoal,
   setSelectedDays,
   handleContinueFromProfile,
-  canAdvanceFromProfileStep
+  canAdvanceFromProfileStep,
+  emptyClientsMessage
 }) => {
   return (
     <section className="space-y-6">
@@ -71,7 +73,10 @@ const AIBuilderWizardStepProfile: React.FC<AIBuilderWizardStepProfileProps> = ({
               </button>
             ))}
             {clients.length === 0 && (
-              <p className="text-xs text-slate-500 font-bold px-2 italic">Nenhum aluno cadastrado.</p>
+              <div className="glass-card rounded-[24px] p-4 min-w-full border border-amber-500/20 bg-amber-500/5">
+                <p className="text-sm font-bold text-white">Nenhum aluno disponível</p>
+                <p className="text-xs text-slate-300 mt-1">{emptyClientsMessage}</p>
+              </div>
             )}
           </div>
         )}

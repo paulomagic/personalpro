@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Plus, Dumbbell, Timer, Zap, Layers, Trash2, Save, Heart, Activity, Mountain, Footprints, Sparkles, Copy, FileText, Star } from 'lucide-react';
-import { Client, ExerciseCategory, TrainingMethod, WorkoutExercise, ExerciseSet, WorkoutTemplate } from '../types';
-import { mockExercises, mockTemplates, mockCustomMethods } from '../mocks/demoData';
+import { Client, ExerciseCategory, TrainingMethod, WorkoutExercise, ExerciseSet, WorkoutTemplate, CustomMethod } from '../types';
 import { saveWorkout } from '../services/supabase/domains/workoutsDomain';
 import { createScopedLogger } from '../services/appLogger';
+import { fetchAllExercises, type Exercise as CatalogExercise, type MovementPattern } from '../services/exerciseService';
+import { WORKOUT_TEMPLATES, type WorkoutTemplate as EngineWorkoutTemplate } from '../services/ai/workoutTemplates';
 
 interface WorkoutBuilderViewProps {
     user: any;
@@ -78,6 +79,162 @@ const categoryLabels: Record<ExerciseCategory, string> = {
     'esporte': 'Esporte',
 };
 
+const PREMIUM_METHOD_INFOS: CustomMethod[] = [
+    {
+        id: 'dropset',
+        name: 'Drop-Set',
+        description: 'Reduz a carga sem descanso para ampliar o estímulo metabólico no fim da série.',
+        icon: '⬇️',
+        structure: {
+            sets: 3,
+            repsPattern: '10-12 + queda de carga',
+            restPattern: '15-20s',
+            specialInstructions: 'Use apenas na última série do exercício principal.'
+        },
+        createdBy: 'system'
+    },
+    {
+        id: 'restPause',
+        name: 'Rest-Pause',
+        description: 'Quebra a série com pausas curtas para acumular repetições de alta qualidade.',
+        icon: '⏸️',
+        structure: {
+            sets: 3,
+            repsPattern: '6-8 + mini blocos',
+            restPattern: '10-15s',
+            specialInstructions: 'Ideal para compostos com boa técnica e carga controlada.'
+        },
+        createdBy: 'system'
+    },
+    {
+        id: 'myo',
+        name: 'Myo Reps',
+        description: 'Usa ativação inicial e blocos curtos subsequentes para eficiência em hipertrofia.',
+        icon: '⚡',
+        structure: {
+            sets: 4,
+            repsPattern: '12-15 + blocos de 3-5 reps',
+            restPattern: '15s',
+            specialInstructions: 'Prefira exercícios seguros e estáveis.'
+        },
+        createdBy: 'system'
+    },
+    {
+        id: 'cluster',
+        name: 'Cluster Set',
+        description: 'Fragmenta uma série pesada em pequenas repetições com micro pausas.',
+        icon: '🧱',
+        structure: {
+            sets: 4,
+            repsPattern: '2-3 reps por bloco',
+            restPattern: '15-20s',
+            specialInstructions: 'Útil para força técnica com baixa fadiga local.'
+        },
+        createdBy: 'system'
+    }
+];
+
+function normalizeMuscleLabel(value?: string | null): string {
+    if (!value) return 'Geral';
+    return value
+        .replace(/_/g, ' ')
+        .split(' ')
+        .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+        .join(' ');
+}
+
+function mapCatalogCategory(exercise: CatalogExercise): ExerciseCategory {
+    if (exercise.category === 'mobilidade') return 'mobilidade';
+    if (exercise.category === 'cardio') {
+        if (/corrida|esteira|trote|sprint/i.test(exercise.name)) return 'corrida';
+        if (/escada|stair|degrau/i.test(exercise.name)) return 'escada';
+        return 'cardio';
+    }
+    if (exercise.category === 'core') return 'funcional';
+    if (/salto|plio|jump|bound/i.test(exercise.name)) return 'pliometria';
+    if (/sport|esporte|agility|sprint/i.test(exercise.slug || exercise.name)) return 'esporte';
+    return 'musculacao';
+}
+
+function buildDefaultSet(method: TrainingMethod = 'simples'): ExerciseSet {
+    return {
+        method,
+        reps: '10-12',
+        load: '',
+        rest: '60s',
+        time: '',
+    };
+}
+
+function mapCatalogExerciseToWorkout(exercise: CatalogExercise, overrideSet?: Partial<ExerciseSet>): WorkoutExercise {
+    return {
+        id: exercise.id,
+        name: exercise.name,
+        category: mapCatalogCategory(exercise),
+        sets: [{ ...buildDefaultSet(), ...overrideSet }],
+        targetMuscle: normalizeMuscleLabel(exercise.primary_muscle),
+        videoUrl: exercise.video_url,
+        notes: exercise.execution_tips || ''
+    };
+}
+
+function mapGoalToTemplateCategory(goal?: string): WorkoutTemplate['category'] {
+    if (goal === 'forca') return 'forca';
+    if (goal === 'emagrecimento') return 'emagrecimento';
+    if (goal === 'condicionamento') return 'condicionamento';
+    if (goal === 'saude') return 'reabilitacao';
+    return 'hipertrofia';
+}
+
+function mapLevelToDifficulty(level?: string): WorkoutTemplate['difficulty'] {
+    if (level === 'atleta' || level === 'avancado') return 'avancado';
+    if (level === 'intermediario') return 'intermediario';
+    return 'iniciante';
+}
+
+function buildSetOverridesFromIntensity(intensity: EngineWorkoutTemplate['days'][number]['slots'][number]['intensity']): Partial<ExerciseSet> {
+    if (intensity === 'very_high') return { reps: '4-6', rest: '120s' };
+    if (intensity === 'high') return { reps: '6-8', rest: '90s' };
+    if (intensity === 'moderate') return { reps: '8-12', rest: '75s' };
+    if (intensity === 'low') return { reps: '12-15', rest: '60s' };
+    return { reps: '15-20', rest: '45s' };
+}
+
+function scoreCatalogExercise(exercise: CatalogExercise, slot: EngineWorkoutTemplate['days'][number]['slots'][number]) {
+    let score = 0;
+    if (exercise.movement_pattern === slot.movement_pattern) score += 50;
+    if (slot.target_muscles?.some((muscle) => normalizeMuscleLabel(exercise.primary_muscle).toLowerCase().includes(muscle.toLowerCase()))) score += 20;
+    if (slot.preferred_load === 'axial' && exercise.spinal_load === 'alto') score += 8;
+    if (slot.preferred_load === 'non_axial' && exercise.spinal_load === 'baixo') score += 8;
+    if (slot.allow_unilateral && exercise.is_unilateral) score += 4;
+    if (exercise.is_machine) score += 2;
+    return score;
+}
+
+function resolveTemplateExercises(template: EngineWorkoutTemplate, catalog: CatalogExercise[]): WorkoutExercise[] {
+    const usedIds = new Set<string>();
+    const resolvedExercises: WorkoutExercise[] = [];
+
+    template.days.forEach((day) => {
+        day.slots.forEach((slot) => {
+            const selected = [...catalog]
+                .filter((exercise) => exercise.movement_pattern === slot.movement_pattern && !usedIds.has(exercise.id))
+                .sort((a, b) => scoreCatalogExercise(b, slot) - scoreCatalogExercise(a, slot))[0];
+
+            if (!selected) return;
+
+            usedIds.add(selected.id);
+            resolvedExercises.push({
+                ...mapCatalogExerciseToWorkout(selected, buildSetOverridesFromIntensity(slot.intensity)),
+                id: `${day.day_id}-${slot.id}-${selected.id}`,
+                notes: `${day.label}${selected.execution_tips ? ` • ${selected.execution_tips}` : ''}`
+            });
+        });
+    });
+
+    return resolvedExercises;
+}
+
 const WorkoutBuilderView: React.FC<WorkoutBuilderViewProps> = ({ user, client, onBack, onSave }) => {
     // State declarations
     const [workoutTitle, setWorkoutTitle] = useState('Novo Treino');
@@ -89,19 +246,80 @@ const WorkoutBuilderView: React.FC<WorkoutBuilderViewProps> = ({ user, client, o
     const [selectedCategory, setSelectedCategory] = useState<ExerciseCategory>('musculacao');
     const [selectedMuscleGroup, setSelectedMuscleGroup] = useState<string | null>(null);
     const [bodyPartFilter, setBodyPartFilter] = useState<'superior' | 'inferior'>('superior');
+    const [catalogExercises, setCatalogExercises] = useState<CatalogExercise[]>([]);
+    const [isCatalogLoading, setIsCatalogLoading] = useState(true);
 
     // Muscle group lists
     const upperMuscles = ['Peito', 'Costas', 'Ombro/Trapézio', 'Bíceps', 'Tríceps'];
     const lowerMuscles = ['Quadríceps', 'Posterior de Coxa', 'Glúteo', 'Panturrilha', 'Parte Interna da Coxa'];
 
+    useEffect(() => {
+        let cancelled = false;
+
+        const loadCatalog = async () => {
+            setIsCatalogLoading(true);
+            try {
+                const allExercises = await fetchAllExercises();
+                if (!cancelled) {
+                    setCatalogExercises(allExercises);
+                }
+            } catch (error) {
+                workoutBuilderViewLogger.error('Error loading exercise catalog for workout builder', error, {
+                    coachId: user?.id || 'unknown'
+                });
+                if (!cancelled) {
+                    setCatalogExercises([]);
+                }
+            } finally {
+                if (!cancelled) {
+                    setIsCatalogLoading(false);
+                }
+            }
+        };
+
+        void loadCatalog();
+        return () => {
+            cancelled = true;
+        };
+    }, [user?.id]);
+
     // Get available exercises based on filters
-    const availableExercises = mockExercises.filter(ex => {
+    const availableExercises = useMemo(() => catalogExercises
+        .map((exercise) => mapCatalogExerciseToWorkout(exercise))
+        .filter(ex => {
         if (ex.category !== selectedCategory) return false;
         if (selectedCategory === 'musculacao' && selectedMuscleGroup) {
             return ex.targetMuscle === selectedMuscleGroup;
         }
         return true;
-    });
+    }), [catalogExercises, selectedCategory, selectedMuscleGroup]);
+
+    const availableTemplates = useMemo(() => WORKOUT_TEMPLATES.map((template) => {
+        const exercisesForTemplate = resolveTemplateExercises(template, catalogExercises);
+        return {
+            id: template.template_id,
+            name: template.name,
+            description: `${template.frequency}x por semana • ${template.days.map((day) => day.label).join(' / ')}`,
+            duration: `${template.frequency} sessões`,
+            difficulty: mapLevelToDifficulty(template.suitable_levels[0]),
+            exercises: exercisesForTemplate,
+            tags: template.suitable_goals,
+            category: mapGoalToTemplateCategory(template.suitable_goals[0]),
+            createdBy: 'system',
+            isPublic: true
+        } satisfies WorkoutTemplate;
+    }), [catalogExercises]);
+
+    const hasUsableTemplates = useMemo(
+        () => availableTemplates.some((template) => template.exercises.length > 0),
+        [availableTemplates]
+    );
+
+    const estimatedDurationMinutes = useMemo(() => {
+        const totalSets = exercises.reduce((acc, exercise) => acc + exercise.sets.length, 0);
+        if (totalSets === 0) return 0;
+        return Math.max(15, Math.round(totalSets * 2.5));
+    }, [exercises]);
 
     // Add exercise to workout
     const handleAddExercise = (exercise: WorkoutExercise) => {
@@ -207,14 +425,19 @@ const WorkoutBuilderView: React.FC<WorkoutBuilderViewProps> = ({ user, client, o
             {/* Header */}
             <header className="sticky top-0 z-40 bg-slate-950/80 backdrop-blur-md border-b border-white/5 px-4 py-4">
                 <div className="flex items-center justify-between max-w-md mx-auto">
-                    <button onClick={onBack} className="p-2 rounded-xl hover:bg-white/10 transition-colors">
+                    <button onClick={onBack} aria-label="Voltar" className="p-2 rounded-xl hover:bg-white/10 transition-colors">
                         <ArrowLeft size={24} />
                     </button>
                     <div className="text-center">
                         <h1 className="font-black text-sm uppercase tracking-widest text-slate-400">Builder Pro</h1>
                         <p className="font-bold text-white text-xs">{client?.name || 'Template'}</p>
                     </div>
-                    <button onClick={handleSave} className="p-2 rounded-xl bg-blue-600 text-white shadow-glow hover:bg-blue-500 transition-all">
+                    <button
+                        onClick={handleSave}
+                        disabled={!client || !user || exercises.length === 0 || workoutTitle.trim().length === 0}
+                        aria-label="Salvar treino manual"
+                        className={`p-2 rounded-xl transition-all ${client && user && exercises.length > 0 && workoutTitle.trim().length > 0 ? 'bg-blue-600 text-white shadow-glow hover:bg-blue-500' : 'bg-slate-800 text-slate-500'}`}
+                    >
                         <Save size={20} />
                     </button>
                 </div>
@@ -249,13 +472,16 @@ const WorkoutBuilderView: React.FC<WorkoutBuilderViewProps> = ({ user, client, o
                 <div className="flex gap-2">
                     <button
                         onClick={() => setShowTemplates(true)}
-                        className="flex-1 glass-card p-3 rounded-xl flex items-center justify-center gap-2 text-xs font-bold text-slate-400 hover:text-white hover:border-blue-500/50 transition-all"
+                        disabled={isCatalogLoading || !hasUsableTemplates}
+                        aria-label="Abrir templates de treino"
+                        className={`flex-1 glass-card p-3 rounded-xl flex items-center justify-center gap-2 text-xs font-bold transition-all ${isCatalogLoading || !hasUsableTemplates ? 'text-slate-600 cursor-not-allowed opacity-60' : 'text-slate-400 hover:text-white hover:border-blue-500/50'}`}
                     >
                         <FileText size={16} />
                         Usar Template
                     </button>
                     <button
                         onClick={() => setShowMethodInfo('info')}
+                        aria-label="Abrir métodos de treino"
                         className="flex-1 glass-card p-3 rounded-xl flex items-center justify-center gap-2 text-xs font-bold text-slate-400 hover:text-white hover:border-purple-500/50 transition-all"
                     >
                         <Star size={16} />
@@ -290,10 +516,10 @@ const WorkoutBuilderView: React.FC<WorkoutBuilderViewProps> = ({ user, client, o
                                     </div>
                                 </div>
                                 <div className="flex gap-1">
-                                    <button onClick={() => duplicateExercise(index)} className="text-slate-600 hover:text-blue-400 p-1" title="Duplicar">
+                                    <button onClick={() => duplicateExercise(index)} aria-label={`Duplicar exercício ${exercise.name}`} className="text-slate-600 hover:text-blue-400 p-1" title="Duplicar">
                                         <Copy size={16} />
                                     </button>
-                                    <button onClick={() => handleRemoveExercise(index)} className="text-slate-600 hover:text-red-400 p-1">
+                                    <button onClick={() => handleRemoveExercise(index)} aria-label={`Remover exercício ${exercise.name}`} className="text-slate-600 hover:text-red-400 p-1">
                                         <Trash2 size={18} />
                                     </button>
                                 </div>
@@ -315,6 +541,7 @@ const WorkoutBuilderView: React.FC<WorkoutBuilderViewProps> = ({ user, client, o
                                         <div className="col-span-1 flex justify-center">
                                             <button
                                                 onClick={() => removeSet(index, setIndex)}
+                                                aria-label={`Remover série ${setIndex + 1} do exercício ${exercise.name}`}
                                                 className="size-5 rounded-full bg-white/10 flex items-center justify-center text-[10px] font-bold text-slate-400 hover:bg-red-500/20 hover:text-red-400 transition-colors"
                                             >
                                                 {setIndex + 1}
@@ -325,6 +552,7 @@ const WorkoutBuilderView: React.FC<WorkoutBuilderViewProps> = ({ user, client, o
                                                 type="text"
                                                 value={set.load}
                                                 onChange={(e) => updateSet(index, setIndex, 'load', e.target.value)}
+                                                aria-label={`Carga da série ${setIndex + 1} do exercício ${exercise.name}`}
                                                 className="w-full bg-slate-900/50 rounded-lg py-2 px-2 text-center text-xs font-bold font-mono focus:ring-1 ring-blue-500 outline-none transition-all placeholder:text-slate-700"
                                                 placeholder="kg"
                                             />
@@ -334,6 +562,7 @@ const WorkoutBuilderView: React.FC<WorkoutBuilderViewProps> = ({ user, client, o
                                                 type="text"
                                                 value={set.reps}
                                                 onChange={(e) => updateSet(index, setIndex, 'reps', e.target.value)}
+                                                aria-label={`Repetições da série ${setIndex + 1} do exercício ${exercise.name}`}
                                                 className="w-full bg-slate-900/50 rounded-lg py-2 px-2 text-center text-xs font-bold font-mono focus:ring-1 ring-blue-500 outline-none transition-all placeholder:text-slate-700"
                                                 placeholder="-"
                                             />
@@ -343,6 +572,7 @@ const WorkoutBuilderView: React.FC<WorkoutBuilderViewProps> = ({ user, client, o
                                                 type="text"
                                                 value={set.time || ''}
                                                 onChange={(e) => updateSet(index, setIndex, 'time', e.target.value)}
+                                                aria-label={`Tempo da série ${setIndex + 1} do exercício ${exercise.name}`}
                                                 className="w-full bg-slate-900/50 rounded-lg py-2 px-2 text-center text-xs font-bold font-mono focus:ring-1 ring-blue-500 outline-none transition-all placeholder:text-slate-700"
                                                 placeholder="s"
                                             />
@@ -352,6 +582,7 @@ const WorkoutBuilderView: React.FC<WorkoutBuilderViewProps> = ({ user, client, o
                                                 type="text"
                                                 value={set.rest}
                                                 onChange={(e) => updateSet(index, setIndex, 'rest', e.target.value)}
+                                                aria-label={`Descanso da série ${setIndex + 1} do exercício ${exercise.name}`}
                                                 className="w-full bg-slate-900/50 rounded-lg py-2 px-2 text-center text-xs font-bold font-mono focus:ring-1 ring-blue-500 outline-none transition-all placeholder:text-slate-700"
                                                 placeholder="s"
                                             />
@@ -360,6 +591,7 @@ const WorkoutBuilderView: React.FC<WorkoutBuilderViewProps> = ({ user, client, o
                                             <select
                                                 value={set.method}
                                                 onChange={(e) => updateSet(index, setIndex, 'method', e.target.value)}
+                                                aria-label={`Método da série ${setIndex + 1} do exercício ${exercise.name}`}
                                                 className={`appearance-none w-full text-[8px] font-black px-1 py-2 rounded uppercase tracking-wider bg-gradient-to-r ${methodColors[set.method || 'simples']} text-white/90 outline-none cursor-pointer hover:brightness-110 transition-all text-center`}
                                             >
                                                 <optgroup label="MVP">
@@ -383,6 +615,7 @@ const WorkoutBuilderView: React.FC<WorkoutBuilderViewProps> = ({ user, client, o
 
                                 <button
                                     onClick={() => addSet(index)}
+                                    aria-label={`Adicionar série ao exercício ${exercise.name}`}
                                     className="w-full py-2 mt-2 flex items-center justify-center gap-2 text-xs font-bold text-slate-500 hover:text-white hover:bg-white/5 rounded-xl transition-all border border-dashed border-white/10 hover:border-white/20"
                                 >
                                     <Plus size={14} /> Adicionar Série
@@ -406,6 +639,7 @@ const WorkoutBuilderView: React.FC<WorkoutBuilderViewProps> = ({ user, client, o
                 {/* Add Exercise Button */}
                 <button
                     onClick={() => setShowExerciseSelector(true)}
+                    aria-label="Adicionar exercício ao treino manual"
                     className="w-full py-4 rounded-2xl border-2 border-dashed border-white/10 text-slate-400 font-bold flex flex-col items-center justify-center gap-2 hover:border-blue-500/50 hover:text-blue-400 hover:bg-blue-500/5 transition-all group"
                 >
                     <div className="size-10 rounded-full bg-slate-800 group-hover:bg-blue-500/20 flex items-center justify-center transition-colors">
@@ -428,7 +662,7 @@ const WorkoutBuilderView: React.FC<WorkoutBuilderViewProps> = ({ user, client, o
                         </div>
                         <div className="w-px bg-white/10"></div>
                         <div className="text-center">
-                            <p className="text-2xl font-black text-blue-400">~45</p>
+                            <p className="text-2xl font-black text-blue-400">{estimatedDurationMinutes}</p>
                             <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Minutos</p>
                         </div>
                     </div>
@@ -447,7 +681,7 @@ const WorkoutBuilderView: React.FC<WorkoutBuilderViewProps> = ({ user, client, o
                         <div className="flex-1 overflow-y-auto p-4 max-w-md mx-auto w-full">
                             <header className="flex justify-between items-center mb-6 pt-4">
                                 <h2 className="text-xl font-black text-white">Biblioteca de Exercícios</h2>
-                                <button onClick={() => setShowExerciseSelector(false)} className="size-10 rounded-full bg-slate-800 flex items-center justify-center">
+                                <button onClick={() => setShowExerciseSelector(false)} aria-label="Fechar biblioteca de exercícios" className="size-10 rounded-full bg-slate-800 flex items-center justify-center">
                                     <span className="material-symbols-outlined">close</span>
                                 </button>
                             </header>
@@ -505,6 +739,12 @@ const WorkoutBuilderView: React.FC<WorkoutBuilderViewProps> = ({ user, client, o
 
                             {/* List */}
                             <div className="space-y-3 pb-32">
+                                {isCatalogLoading && (
+                                    <div className="py-12 text-center text-slate-400 font-bold text-xs uppercase tracking-widest">
+                                        Carregando catálogo real de exercícios...
+                                    </div>
+                                )}
+
                                 {availableExercises.map(ex => (
                                     <button
                                         key={ex.id}
@@ -533,9 +773,11 @@ const WorkoutBuilderView: React.FC<WorkoutBuilderViewProps> = ({ user, client, o
                                     </button>
                                 ))}
 
-                                {availableExercises.length === 0 && (
+                                {!isCatalogLoading && availableExercises.length === 0 && (
                                     <div className="py-12 text-center text-slate-500 font-bold text-xs uppercase tracking-widest opacity-50">
-                                        Nenhum exercício encontrado para {categoryLabels[selectedCategory]}
+                                        {catalogExercises.length === 0
+                                            ? 'Catálogo real indisponível no momento'
+                                            : `Nenhum exercício encontrado para ${categoryLabels[selectedCategory]}`}
                                     </div>
                                 )}
                             </div>
@@ -556,17 +798,24 @@ const WorkoutBuilderView: React.FC<WorkoutBuilderViewProps> = ({ user, client, o
                         <div className="flex-1 overflow-y-auto p-4 max-w-md mx-auto w-full">
                             <header className="flex justify-between items-center mb-6 pt-4">
                                 <h2 className="text-xl font-black text-white">Templates de Treino</h2>
-                                <button onClick={() => setShowTemplates(false)} className="size-10 rounded-full bg-slate-800 flex items-center justify-center">
+                                <button onClick={() => setShowTemplates(false)} aria-label="Fechar templates de treino" className="size-10 rounded-full bg-slate-800 flex items-center justify-center">
                                     <span className="material-symbols-outlined">close</span>
                                 </button>
                             </header>
 
                             <div className="space-y-3 pb-32">
-                                {mockTemplates.map(template => (
+                                {isCatalogLoading && (
+                                    <div className="py-12 text-center text-slate-400 font-bold text-xs uppercase tracking-widest">
+                                        Montando templates com o catálogo real...
+                                    </div>
+                                )}
+
+                                {availableTemplates.map(template => (
                                     <button
                                         key={template.id}
                                         onClick={() => loadTemplate(template)}
-                                        className="w-full glass-card p-4 rounded-2xl text-left hover:border-purple-500/50 transition-all active:scale-[0.98]"
+                                        disabled={template.exercises.length === 0}
+                                        className={`w-full glass-card p-4 rounded-2xl text-left transition-all ${template.exercises.length === 0 ? 'opacity-60 cursor-not-allowed' : 'hover:border-purple-500/50 active:scale-[0.98]'}`}
                                     >
                                         <div className="flex justify-between items-start mb-2">
                                             <h4 className="font-bold text-white">{template.name}</h4>
@@ -590,6 +839,12 @@ const WorkoutBuilderView: React.FC<WorkoutBuilderViewProps> = ({ user, client, o
                                         )}
                                     </button>
                                 ))}
+
+                                {!isCatalogLoading && !hasUsableTemplates && (
+                                    <div className="py-12 text-center text-slate-500 font-bold text-xs uppercase tracking-widest opacity-70">
+                                        Nenhum template pôde ser montado com o catálogo atual
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </motion.div>
@@ -608,15 +863,15 @@ const WorkoutBuilderView: React.FC<WorkoutBuilderViewProps> = ({ user, client, o
                         <div className="flex-1 overflow-y-auto p-4 max-w-md mx-auto w-full">
                             <header className="flex justify-between items-center mb-6 pt-4">
                                 <h2 className="text-xl font-black text-white">Métodos de Treino</h2>
-                                <button onClick={() => setShowMethodInfo(null)} className="size-10 rounded-full bg-slate-800 flex items-center justify-center">
+                                <button onClick={() => setShowMethodInfo(null)} aria-label="Fechar métodos de treino" className="size-10 rounded-full bg-slate-800 flex items-center justify-center">
                                     <span className="material-symbols-outlined">close</span>
                                 </button>
                             </header>
 
                             <div className="space-y-4 pb-32">
                                 <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest">Métodos Premium ⭐</h3>
-                                {mockCustomMethods.map(method => (
-                                    <div key={method.id} className={`glass-card p-4 rounded-2xl border-l-4 border-${method.color?.split(' ')[0].replace('from-', '')}`}>
+                                {PREMIUM_METHOD_INFOS.map(method => (
+                                    <div key={method.id} className="glass-card p-4 rounded-2xl border-l-4 border-cyan-500/40">
                                         <div className="flex items-center gap-3 mb-3">
                                             <span className="text-2xl">{method.icon}</span>
                                             <div>

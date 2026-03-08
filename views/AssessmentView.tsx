@@ -5,6 +5,7 @@ import { Client, Assessment } from '../types';
 import { uploadAssessmentPhoto } from '../services/supabase/domains/storageDomain';
 import { createAssessment } from '../services/supabase/domains/assessmentsDomain';
 import PageHeader from '../components/PageHeader';
+import { createScopedLogger } from '../services/appLogger';
 
 interface AssessmentViewProps {
     user: any;
@@ -12,6 +13,8 @@ interface AssessmentViewProps {
     onBack: () => void;
     onSave: (assessment: Assessment) => void;
 }
+
+const assessmentViewLogger = createScopedLogger('AssessmentView');
 
 const AssessmentView: React.FC<AssessmentViewProps> = ({ user, client, onBack, onSave }) => {
     const [activeTab, setActiveTab] = useState<'measures' | 'photos'>('measures');
@@ -85,7 +88,7 @@ const AssessmentView: React.FC<AssessmentViewProps> = ({ user, client, onBack, o
 
         for (const file of fileList) {
             if (!file.type.startsWith('image/')) {
-                console.warn('File is not an image:', file.name);
+                assessmentViewLogger.warn('File is not an image', { fileName: file.name });
                 continue;
             }
 

@@ -24,12 +24,15 @@ import { getCompletedWorkouts } from '../services/supabase/domains/completedWork
 import { getCurrentWorkoutByClient, type Workout } from '../services/supabase/domains/workoutsDomain';
 import { buildConsistencyRecommendation, deriveSmartGoals, deriveStudentConsistencyStats } from '../services/product/trainingConsistency';
 import { AppUser, Client, CompletedWorkout } from '../types';
+import { createScopedLogger } from '../services/appLogger';
 
 interface StudentProfileViewProps {
     user: AppUser;
     onBack: () => void;
     onSettings: () => void;
 }
+
+const studentProfileViewLogger = createScopedLogger('StudentProfileView');
 
 
 
@@ -74,7 +77,7 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({
                     }
                 }
             } catch (error) {
-                console.error('Error loading student profile:', error);
+                studentProfileViewLogger.error('Error loading student profile', error, { userId: user.id });
             } finally {
                 setLoading(false);
             }

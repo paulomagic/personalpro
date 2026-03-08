@@ -3,8 +3,10 @@
 // Previne overtraining ajustando séries dinamicamente
 
 import { getVolumeForMuscle, type TrainingLevel } from './knowledge/volume';
+import { createScopedLogger } from '../appLogger';
 
 const isDev = import.meta.env.DEV;
+const volumeCounterLogger = createScopedLogger('volumeCounter');
 const debugLog = (...args: unknown[]) => {
     if (isDev) console.log(...args);
 };
@@ -129,9 +131,11 @@ export function adjustSetsToFitMRV(
     const adjusted = Math.min(requestedSets, Math.max(0, available));
 
     if (adjusted < requestedSets) {
-        console.warn(
-            `[VolumeCounter] Ajustando ${muscle} de ${requestedSets} para ${adjusted} sets (MRV limit)`
-        );
+        volumeCounterLogger.warn('Adjusting sets to fit MRV', {
+            muscle,
+            requestedSets,
+            adjustedSets: adjusted
+        });
     }
 
     return adjusted;

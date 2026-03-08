@@ -43,6 +43,13 @@ const MonthlyScheduleModal: React.FC<MonthlyScheduleModalProps> = ({
     const [selectedClientName, setSelectedClientName] = useState<string>(initialClientName || '');
     const [clients, setClients] = useState<DBClient[]>([]);
     const [loadingClients, setLoadingClients] = useState(false);
+    const [notice, setNotice] = useState<{ type: 'error' | 'success'; message: string } | null>(null);
+
+    useEffect(() => {
+        if (!notice) return;
+        const timeout = window.setTimeout(() => setNotice(null), 3200);
+        return () => window.clearTimeout(timeout);
+    }, [notice]);
 
     // Load clients on mount
     useEffect(() => {
@@ -112,10 +119,11 @@ const MonthlyScheduleModal: React.FC<MonthlyScheduleModalProps> = ({
             const result = await createMonthlyScheduleBatch(coachId, finalConfig);
 
             if (result) {
+                setNotice({ type: 'success', message: 'Agendamento mensal criado com sucesso.' });
                 onSuccess();
                 onClose();
             } else {
-                alert('Erro ao criar agendamento mensal. Tente novamente.');
+                setNotice({ type: 'error', message: 'Erro ao criar agendamento mensal. Tente novamente.' });
                 setIsCreating(false);
             }
         } catch (error: any) {
@@ -128,7 +136,7 @@ const MonthlyScheduleModal: React.FC<MonthlyScheduleModalProps> = ({
             const errorMessage = error?.message?.includes('Conflito')
                 ? error.message
                 : 'Erro ao criar agendamento mensal. Tente novamente.';
-            alert(errorMessage);
+            setNotice({ type: 'error', message: errorMessage });
             setIsCreating(false);
         }
     };
@@ -151,6 +159,23 @@ const MonthlyScheduleModal: React.FC<MonthlyScheduleModalProps> = ({
 
     return (
         <AnimatePresence mode="wait">
+            {notice && (
+                <motion.div
+                    initial={{ opacity: 0, y: -12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -12 }}
+                    className="fixed top-5 left-1/2 z-[80] w-[calc(100%-2rem)] max-w-md -translate-x-1/2"
+                >
+                    <div className={`rounded-2xl border px-4 py-3 text-sm font-bold shadow-2xl backdrop-blur-xl ${
+                        notice.type === 'error'
+                            ? 'bg-[rgba(255,51,102,0.14)] border-[rgba(255,51,102,0.22)] text-[#FFD1DD]'
+                            : 'bg-[rgba(0,255,136,0.12)] border-[rgba(0,255,136,0.2)] text-[#B6FFD8]'
+                    }`}>
+                        {notice.message}
+                    </div>
+                </motion.div>
+            )}
+
             {step === 'select-client' && (
                 <motion.div
                     key="select-client"

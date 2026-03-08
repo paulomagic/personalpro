@@ -223,6 +223,7 @@ const ClientsView: React.FC<ClientsViewProps> = ({ user, onBack, onSelectClient 
                 rightSlot={
                     <button
                         onClick={() => setShowAddModal(true)}
+                        aria-label="Adicionar aluno"
                         className="size-10 rounded-2xl flex items-center justify-center active:scale-90 transition-all bg-[linear-gradient(135deg,#1E3A8A,#3B82F6)] shadow-[0_4px_16px_rgba(30,58,138,0.35)]"
                     >
                         <Plus size={18} color="white" />
@@ -236,7 +237,7 @@ const ClientsView: React.FC<ClientsViewProps> = ({ user, onBack, onSelectClient 
                     { tab: 'all', label: 'Total', value: stats.total, icon: Users, activeClassName: 'bg-[rgba(59,130,246,0.1)] border-[rgba(59,130,246,0.25)]', iconClassName: 'text-[#3B82F6]', valueActiveClassName: 'text-[#3B82F6]' },
                     { tab: 'active', label: 'Ativos', value: stats.active, icon: CheckCircle, activeClassName: 'bg-[rgba(0,255,136,0.1)] border-[rgba(0,255,136,0.25)]', iconClassName: 'text-[#00FF88]', valueActiveClassName: 'text-[#00FF88]' },
                     { tab: 'at-risk', label: 'Alerta', value: stats.atRisk, icon: AlertTriangle, activeClassName: 'bg-[rgba(255,184,0,0.1)] border-[rgba(255,184,0,0.25)]', iconClassName: 'text-[#FFB800]', valueActiveClassName: 'text-[#FFB800]' },
-                    { tab: 'paused', label: 'Pausa', value: stats.paused, icon: Pause, activeClassName: 'bg-[rgba(61,90,128,0.15)] border-[rgba(61,90,128,0.3)]', iconClassName: 'text-[#3D5A80]', valueActiveClassName: 'text-[#3D5A80]' },
+                    { tab: 'paused', label: 'Pausa', value: stats.paused, icon: Pause, activeClassName: 'bg-[rgba(61,90,128,0.15)] border-[rgba(61,90,128,0.3)]', iconClassName: 'text-[#A9C4E8]', valueActiveClassName: 'text-[#A9C4E8]' },
                 ].map(({ tab, label, value, icon: Icon, activeClassName, iconClassName, valueActiveClassName }) => {
                     const isActive = statusFilter === tab;
                     return (
@@ -248,9 +249,9 @@ const ClientsView: React.FC<ClientsViewProps> = ({ user, onBack, onSelectClient 
                                 : 'bg-[rgba(59,130,246,0.03)] border-[rgba(59,130,246,0.06)]'
                                 }`}
                         >
-                            <Icon size={15} className={`mx-auto mb-1 ${isActive ? iconClassName : 'text-[#3D5A80]'}`} />
+                            <Icon size={15} className={`mx-auto mb-1 ${isActive ? iconClassName : 'text-[#A9C4E8]'}`} />
                             <p className={`text-base font-black ${isActive ? valueActiveClassName : 'text-[#7A9FCC]'}`}>{value}</p>
-                            <p className="text-[8px] font-black uppercase tracking-widest text-[#3D5A80]">{label}</p>
+                            <p className="text-[8px] font-black uppercase tracking-widest text-[#B8D3FF]">{label}</p>
                         </button>
                     );
                 })}
@@ -259,13 +260,15 @@ const ClientsView: React.FC<ClientsViewProps> = ({ user, onBack, onSelectClient 
             {/* Search */}
             <motion.div variants={itemVariants} className="px-5 mb-5">
                 <div className="relative">
-                    <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#3D5A80]" />
+                    <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#A9C4E8]" />
+                    <label htmlFor="clients-search" className="sr-only">Buscar aluno</label>
                     <input
+                        id="clients-search"
                         type="text"
                         placeholder="Buscar aluno..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full h-12 pl-11 pr-5 rounded-2xl text-sm font-bold text-white placeholder:text-[#3D5A80] outline-none bg-[rgba(59,130,246,0.04)] border border-[rgba(59,130,246,0.1)]"
+                        className="w-full h-12 pl-11 pr-5 rounded-2xl text-sm font-bold text-white placeholder:text-[#A9C4E8] outline-none bg-[rgba(59,130,246,0.04)] border border-[rgba(59,130,246,0.1)]"
                     />
                 </div>
             </motion.div>
@@ -325,7 +328,7 @@ const ClientsView: React.FC<ClientsViewProps> = ({ user, onBack, onSelectClient 
                                         />
                                     ) : (
                                         <div className="flex items-center justify-center w-[52px] h-[52px] rounded-2xl bg-[rgba(59,130,246,0.07)] border border-[rgba(59,130,246,0.1)]">
-                                            <User size={20} className="text-[#3D5A80]" />
+                                            <User size={20} className="text-[#A9C4E8]" />
                                         </div>
                                     )}
                                     <StatusBadge status={client.status} />
@@ -335,9 +338,9 @@ const ClientsView: React.FC<ClientsViewProps> = ({ user, onBack, onSelectClient 
                                 <div className="flex-1 min-w-0">
                                     <div className="flex items-center gap-2 mb-0.5">
                                         <h4 className="font-black text-white text-sm tracking-tight truncate">{client.name}</h4>
-                                        <span className="px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-widest shrink-0 bg-[rgba(59,130,246,0.07)] text-[#3D5A80]">{client.level}</span>
+                                        <span className="px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-widest shrink-0 bg-[rgba(59,130,246,0.07)] text-[#B8D3FF]">{client.level}</span>
                                     </div>
-                                    <p className="text-[10px] font-black uppercase tracking-wider truncate mb-1.5 text-[#3B82F6]/70">{client.goal}</p>
+                                    <p className="text-[10px] font-black uppercase tracking-wider truncate mb-1.5 text-[#93C5FD]">{client.goal}</p>
                                     {/* Progress */}
                                     <div className="flex items-center gap-2">
                                         <div className="h-1 flex-1 rounded-full overflow-hidden bg-[rgba(59,130,246,0.06)] max-w-20">
@@ -362,7 +365,7 @@ const ClientsView: React.FC<ClientsViewProps> = ({ user, onBack, onSelectClient 
                                     </div>
                                 </div>
 
-                                <ChevronRight size={13} className="shrink-0 text-[#3D5A80]" />
+                                <ChevronRight size={13} className="shrink-0 text-[#A9C4E8]" />
                             </motion.button>
                         ))}
                     </AnimatePresence>

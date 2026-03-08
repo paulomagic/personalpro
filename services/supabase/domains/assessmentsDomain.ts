@@ -1,4 +1,7 @@
 import { supabase } from '../../supabaseCore';
+import { createScopedLogger } from '../../appLogger';
+
+const assessmentsDomainLogger = createScopedLogger('assessmentsDomain');
 
 export interface Assessment {
     id: string;
@@ -34,7 +37,7 @@ export async function getAssessmentsByClient(clientId: string): Promise<Assessme
         .order('date', { ascending: false });
 
     if (error) {
-        console.error('Error fetching assessments:', error);
+        assessmentsDomainLogger.error('Error fetching assessments', error, { clientId });
         return [];
     }
 
@@ -43,7 +46,10 @@ export async function getAssessmentsByClient(clientId: string): Promise<Assessme
 
 export async function createAssessment(data: CreateAssessmentData): Promise<Assessment | null> {
     if (!supabase) {
-        console.warn('Supabase not configured - assessment not saved');
+        assessmentsDomainLogger.warn('Supabase not configured - assessment not saved', {
+            clientId: data.client_id,
+            coachId: data.coach_id
+        });
         return null;
     }
 
@@ -66,13 +72,21 @@ export async function createAssessment(data: CreateAssessmentData): Promise<Asse
             .single();
 
         if (error) {
-            console.error('Error creating assessment:', error);
+            assessmentsDomainLogger.error('Error creating assessment', error, {
+                clientId: data.client_id,
+                coachId: data.coach_id,
+                date: data.date
+            });
             return null;
         }
 
         return result as Assessment;
     } catch (error) {
-        console.error('Error in createAssessment:', error);
+        assessmentsDomainLogger.error('Error in createAssessment', error, {
+            clientId: data.client_id,
+            coachId: data.coach_id,
+            date: data.date
+        });
         return null;
     }
 }

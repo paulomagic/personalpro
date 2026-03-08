@@ -407,6 +407,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({ user, onBack, onSelectClien
                             <button
                                 onClick={() => setConfirmCleanupOpen(true)}
                                 disabled={cleaningUp}
+                                aria-label="Limpar agendamentos do mês"
                                 className="size-10 rounded-2xl flex items-center justify-center active:scale-90 transition-all disabled:opacity-60 bg-[rgba(255,51,102,0.08)] border border-[rgba(255,51,102,0.15)]"
                                 title="Limpar Agendamentos"
                             >
@@ -415,6 +416,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({ user, onBack, onSelectClien
                         )}
                         <button
                             onClick={() => setShowNewModal(true)}
+                            aria-label="Novo agendamento"
                             className="size-10 rounded-2xl flex items-center justify-center active:scale-90 transition-all bg-[linear-gradient(135deg,#1E3A8A,#3B82F6)] shadow-[0_4px_16px_rgba(30,58,138,0.35)]"
                         >
                             <Plus size={18} color="white" />
@@ -437,7 +439,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({ user, onBack, onSelectClien
                             onClick={() => setViewMode(mode)}
                             className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === mode
                                 ? 'bg-[linear-gradient(135deg,#1E3A8A,#3B82F6)] text-white'
-                                : 'text-[#3D5A80]'
+                                : 'text-[#B8D3FF]'
                                 }`}
                         >
                             {mode === 'day' ? 'Dia' : 'Semana'}
@@ -459,7 +461,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({ user, onBack, onSelectClien
                                 : 'bg-[rgba(59,130,246,0.03)] border border-[rgba(59,130,246,0.06)]'
                             }`}
                     >
-                        <span className={`text-[9px] font-black uppercase tracking-widest mb-1 ${isSelected(day) ? 'text-[rgba(255,255,255,0.8)]' : 'text-[#3D5A80]'}`}>
+                        <span className={`text-[9px] font-black uppercase tracking-widest mb-1 ${isSelected(day) ? 'text-[rgba(255,255,255,0.8)]' : 'text-[#B8D3FF]'}`}>
                             {dayNames[i]}
                         </span>
                         <span className={`text-base font-black ${isSelected(day) ? 'text-white' : isToday(day) ? 'text-[#3B82F6]' : 'text-[#7A9FCC]'}`}>
@@ -480,14 +482,14 @@ const CalendarView: React.FC<CalendarViewProps> = ({ user, onBack, onSelectClien
                     <div
                         className="p-4 rounded-2xl bg-[rgba(59,130,246,0.04)] border border-[rgba(59,130,246,0.1)]"
                     >
-                        <p className="text-[10px] font-black uppercase tracking-widest mb-1 text-[#3D5A80]">Hoje</p>
+                        <p className="text-[10px] font-black uppercase tracking-widest mb-1 text-[#B8D3FF]">Hoje</p>
                         <p className="text-3xl font-black text-white">{appointments.length}</p>
                         <p className="text-[10px] font-semibold mt-0.5 text-[#7A9FCC]">sessões</p>
                     </div>
                     <div
                         className="p-4 rounded-2xl bg-[rgba(0,255,136,0.04)] border border-[rgba(0,255,136,0.1)]"
                     >
-                        <p className="text-[10px] font-black uppercase tracking-widest mb-1 text-[#3D5A80]">Próximo</p>
+                        <p className="text-[10px] font-black uppercase tracking-widest mb-1 text-[#B8D3FF]">Próximo</p>
                         <p className="text-2xl font-black text-white">{appointments[0]?.time || '--:--'}</p>
                         <p className="text-[10px] font-semibold mt-0.5 text-[#00FF88]">{appointments[0]?.clientName?.split(' ')[0] || 'Livre'}</p>
                     </div>
@@ -503,7 +505,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({ user, onBack, onSelectClien
                 {/* Appointments List */}
                 {!loading && (
                     <div>
-                        <h3 className="text-[10px] font-black uppercase tracking-[0.2em] mb-3 text-[#3D5A80]">Fluxo de Protocolos</h3>
+                        <h3 className="text-[10px] font-black uppercase tracking-[0.2em] mb-3 text-[#B8D3FF]">Fluxo de Protocolos</h3>
 
                         {appointments.length === 0 ? (
                             <div className="glass-card rounded-[28px] p-8 text-center">
@@ -520,58 +522,62 @@ const CalendarView: React.FC<CalendarViewProps> = ({ user, onBack, onSelectClien
                             <div className="space-y-2.5">
                                 <AnimatePresence>
                                     {appointments.map((apt) => (
-                                        <motion.button
+                                    <motion.div
                                             key={apt.id}
                                             initial={{ opacity: 0, y: 10 }}
                                             animate={{ opacity: 1, y: 0 }}
                                             exit={{ opacity: 0, x: -100 }}
-                                            onClick={() => setShowDetailModal(apt)}
-                                            className="w-full rounded-2xl p-4 flex items-center gap-4 active:scale-[0.99] transition-all text-left group bg-[rgba(59,130,246,0.03)] border border-[rgba(59,130,246,0.07)]"
+                                            className="w-full rounded-2xl p-4 flex items-center gap-3 transition-all group bg-[rgba(59,130,246,0.03)] border border-[rgba(59,130,246,0.07)]"
                                         >
-                                            {/* Time */}
-                                            <div className="text-center w-14 border-r border-white/5 pr-4 mr-1">
-                                                <p className="text-lg font-black text-white leading-none mb-1">{(apt.time || '').slice(0, 5)}</p>
-                                                <p className="text-[9px] text-slate-500 font-black uppercase tracking-widest">{apt.duration}</p>
-                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowDetailModal(apt)}
+                                                className="flex flex-1 items-center gap-4 active:scale-[0.99] transition-all text-left min-w-0"
+                                                aria-label={`Abrir agendamento de ${apt.clientName} às ${apt.time}`}
+                                            >
+                                                <div className="text-center w-14 border-r border-white/5 pr-4 mr-1">
+                                                    <p className="text-lg font-black text-white leading-none mb-1">{(apt.time || '').slice(0, 5)}</p>
+                                                    <p className="text-[9px] text-slate-300 font-black uppercase tracking-widest">{apt.duration}</p>
+                                                </div>
 
-                                            {/* Client Info */}
-                                            <div className="flex-1 min-w-0">
-                                                <div className="flex items-center gap-3">
-                                                    <img
-                                                        className="size-11 rounded-2xl object-cover border-2 border-white/10 group-hover:border-blue-500/30 transition-colors"
-                                                        src={apt.clientAvatar}
-                                                        alt={apt.clientName}
-                                                    />
-                                                    <div>
-                                                        <h4 className="font-black text-white text-sm leading-tight mb-0.5">{apt.clientName}</h4>
-                                                        <div className="flex items-center gap-1.5">
-                                                            <div className={`size-1.5 rounded-full ${getTypeColor(apt.type)}`}></div>
-                                                            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{getTypeLabel(apt.type)}</p>
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="flex items-center gap-3">
+                                                        <img
+                                                            className="size-11 rounded-2xl object-cover border-2 border-white/10 group-hover:border-blue-500/30 transition-colors"
+                                                            src={apt.clientAvatar}
+                                                            alt={apt.clientName}
+                                                        />
+                                                        <div>
+                                                            <h4 className="font-black text-white text-sm leading-tight mb-0.5">{apt.clientName}</h4>
+                                                            <div className="flex items-center gap-1.5">
+                                                                <div className={`size-1.5 rounded-full ${getTypeColor(apt.type)}`}></div>
+                                                                <p className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">{getTypeLabel(apt.type)}</p>
+                                                            </div>
                                                         </div>
                                                     </div>
                                                 </div>
-                                            </div>
 
-                                            {/* Status */}
-                                            <div className={`px-2 py-1 rounded-lg text-[8px] font-black uppercase tracking-widest ${apt.status === 'confirmed' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
-                                                apt.status === 'pending' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' :
-                                                    'bg-white/5 text-slate-500 border border-white/5'
-                                                }`}>
-                                                {apt.status === 'confirmed' ? '✓' : apt.status === 'pending' ? '⋯' : '●'}
-                                            </div>
+                                                <div className={`px-2 py-1 rounded-lg text-[8px] font-black uppercase tracking-widest ${apt.status === 'confirmed' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
+                                                    apt.status === 'pending' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' :
+                                                        'bg-white/5 text-slate-300 border border-white/5'
+                                                    }`}>
+                                                    {apt.status === 'confirmed' ? '✓' : apt.status === 'pending' ? '⋯' : '●'}
+                                                </div>
+                                            </button>
 
-                                            {/* Quick Delete Button */}
                                             <button
+                                                type="button"
                                                 onClick={(e) => {
                                                     e.stopPropagation();
                                                     setAppointmentPendingDelete(apt);
                                                 }}
                                                 className="size-8 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400 hover:bg-red-500 hover:text-white transition-all opacity-0 group-hover:opacity-100"
+                                                aria-label={`Excluir agendamento de ${apt.clientName} às ${apt.time}`}
                                                 title="Excluir agendamento"
                                             >
                                                 <span className="material-symbols-outlined text-sm">close</span>
                                             </button>
-                                        </motion.button>
+                                        </motion.div>
                                     ))}
                                 </AnimatePresence>
                             </div>
@@ -582,7 +588,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({ user, onBack, onSelectClien
                 {/* Available Slots */}
                 {!loading && freeSlots.length > 0 && (
                     <div className="pb-8">
-                        <h3 className="text-[10px] font-black uppercase tracking-[0.2em] mb-3 text-[#3D5A80]">Janelas Disponíveis</h3>
+                        <h3 className="text-[10px] font-black uppercase tracking-[0.2em] mb-3 text-[#B8D3FF]">Janelas Disponíveis</h3>
                         <div className="grid grid-cols-4 gap-2">
                             {freeSlots.map((time) => (
                                 <button
@@ -619,6 +625,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({ user, onBack, onSelectClien
                             {/* Close button */}
                             <button
                                 onClick={() => setShowDetailModal(null)}
+                                aria-label="Fechar detalhes do agendamento"
                                 className="absolute top-6 right-6 size-10 rounded-full bg-white/10 flex items-center justify-center text-white hover:bg-white/20 transition-colors"
                             >
                                 <span className="material-symbols-outlined">close</span>
@@ -638,7 +645,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({ user, onBack, onSelectClien
                                         <span className={`px-2 py-0.5 rounded-full text-[9px] font-black text-white uppercase tracking-widest ${getTypeColor(showDetailModal.type)}`}>
                                             {getTypeLabel(showDetailModal.type)}
                                         </span>
-                                        <span className="text-slate-500 text-sm font-bold">•</span>
+                                        <span className="text-slate-300 text-sm font-bold">•</span>
                                         <span className="text-slate-400 font-black text-sm">{showDetailModal.time}</span>
                                     </div>
                                 </div>
@@ -673,7 +680,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({ user, onBack, onSelectClien
 
                                 <button
                                     onClick={() => setShowDetailModal(null)}
-                                    className="w-full h-14 bg-white/5 text-slate-500 font-bold rounded-2xl active:scale-[0.98] transition-all uppercase tracking-widest text-[10px]"
+                                    className="w-full h-14 bg-white/5 text-slate-300 font-bold rounded-2xl active:scale-[0.98] transition-all uppercase tracking-widest text-[10px]"
                                 >
                                     Fechar
                                 </button>
@@ -690,15 +697,19 @@ const CalendarView: React.FC<CalendarViewProps> = ({ user, onBack, onSelectClien
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         className="fixed inset-0 z-[65] flex items-end bg-slate-950/80 backdrop-blur-sm"
+                        role="presentation"
                     >
                         <motion.div
                             initial={{ y: '100%' }}
                             animate={{ y: 0 }}
                             exit={{ y: '100%' }}
+                            role="dialog"
+                            aria-modal="true"
+                            aria-labelledby="calendar-delete-appointment-title"
                             className="w-full max-w-md mx-auto rounded-t-[32px] border-t border-white/10 bg-slate-900 p-6"
                         >
                             <div className="mx-auto mb-5 h-1.5 w-12 rounded-full bg-white/10" />
-                            <h3 className="text-xl font-black text-white mb-2">Excluir agendamento?</h3>
+                            <h3 id="calendar-delete-appointment-title" className="text-xl font-black text-white mb-2">Excluir agendamento?</h3>
                             <p className="text-sm text-slate-400 mb-6">
                                 {appointmentPendingDelete.clientName} às {appointmentPendingDelete.time} será removido permanentemente.
                             </p>
@@ -728,15 +739,19 @@ const CalendarView: React.FC<CalendarViewProps> = ({ user, onBack, onSelectClien
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         className="fixed inset-0 z-[65] flex items-end bg-slate-950/80 backdrop-blur-sm"
+                        role="presentation"
                     >
                         <motion.div
                             initial={{ y: '100%' }}
                             animate={{ y: 0 }}
                             exit={{ y: '100%' }}
+                            role="dialog"
+                            aria-modal="true"
+                            aria-labelledby="calendar-cleanup-title"
                             className="w-full max-w-md mx-auto rounded-t-[32px] border-t border-white/10 bg-slate-900 p-6"
                         >
                             <div className="mx-auto mb-5 h-1.5 w-12 rounded-full bg-white/10" />
-                            <h3 className="text-xl font-black text-white mb-2">Limpar agenda do mês?</h3>
+                            <h3 id="calendar-cleanup-title" className="text-xl font-black text-white mb-2">Limpar agenda do mês?</h3>
                             <p className="text-sm text-slate-400 mb-6">
                                 Esta ação remove todos os agendamentos do mês atual. Use apenas se a agenda estiver corrompida ou duplicada.
                             </p>
@@ -767,11 +782,15 @@ const CalendarView: React.FC<CalendarViewProps> = ({ user, onBack, onSelectClien
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-end"
+                        role="presentation"
                     >
                         <motion.div
                             initial={{ y: '100%' }}
                             animate={{ y: 0 }}
                             exit={{ y: '100%' }}
+                            role="dialog"
+                            aria-modal="true"
+                            aria-labelledby="calendar-new-appointment-title"
                             className="w-full max-w-md mx-auto bg-slate-900 rounded-t-[40px] p-8 pb-28 border-t border-white/10 max-h-[85vh] overflow-y-auto"
                         >
                             <div className="w-12 h-1 bg-white/10 rounded-full mx-auto mb-6"></div>
@@ -780,11 +799,12 @@ const CalendarView: React.FC<CalendarViewProps> = ({ user, onBack, onSelectClien
                             <div className="mb-6">
                                 <button
                                     onClick={() => setShowNewModal(false)}
+                                    aria-label="Fechar novo agendamento"
                                     className="text-blue-400 hover:text-blue-300 mb-3 flex items-center gap-2"
                                 >
                                     <span>←</span> Voltar
                                 </button>
-                                <h2 className="text-2xl font-bold text-white mb-1">
+                                <h2 id="calendar-new-appointment-title" className="text-2xl font-bold text-white mb-1">
                                     Novo Agendamento
                                 </h2>
                                 <p className="text-sm text-gray-400">
@@ -798,7 +818,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({ user, onBack, onSelectClien
                                     <div className="flex items-center gap-3">
                                         <span className="material-symbols-outlined text-red-500 text-xl">error</span>
                                         <p className="text-red-400 text-sm font-bold flex-1">{errorMessage}</p>
-                                        <button onClick={() => setErrorMessage(null)} className="text-red-500/50 hover:text-red-500">
+                                        <button onClick={() => setErrorMessage(null)} aria-label="Fechar erro de agendamento" className="text-red-500/50 hover:text-red-500">
                                             <span className="material-symbols-outlined text-base">close</span>
                                         </button>
                                     </div>

@@ -15,6 +15,7 @@ import { getCurrentWorkoutByClient } from '../services/supabase/domains/workouts
 import { getClientById } from '../services/supabase/domains/clientsDomain';
 import { getUserProfile } from '../services/userProfileService';
 import { AppUser, Client, Workout } from '../types';
+import { createScopedLogger } from '../services/appLogger';
 
 interface StudentDashboardViewProps {
     user: AppUser;
@@ -22,6 +23,8 @@ interface StudentDashboardViewProps {
     onNavigate: (view: string) => void;
     onLogout: () => void;
 }
+
+const studentDashboardViewLogger = createScopedLogger('StudentDashboardView');
 
 const StudentDashboardView: React.FC<StudentDashboardViewProps> = ({
     user,
@@ -61,7 +64,7 @@ const StudentDashboardView: React.FC<StudentDashboardViewProps> = ({
                     setCoachName((profile as any).coach_name);
                 }
             } catch (error) {
-                console.error('Error loading student data:', error);
+                studentDashboardViewLogger.error('Error loading student data', error, { userId: user.id });
             } finally {
                 setLoading(false);
             }

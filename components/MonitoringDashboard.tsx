@@ -10,6 +10,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { createScopedLogger } from '../services/appLogger';
 
 // ============ TYPES ============
 
@@ -74,6 +75,8 @@ function MetricCard({ title, value, subtitle, trend, color = 'blue' }: MetricCar
 
 // ============ MONITORING DASHBOARD ============
 
+const monitoringDashboardLogger = createScopedLogger('MonitoringDashboard');
+
 export function MonitoringDashboard() {
     const [metrics, setMetrics] = useState<GenerationMetrics | null>(null);
     const [loading, setLoading] = useState(true);
@@ -108,7 +111,7 @@ export function MonitoringDashboard() {
 
             setMetrics(mockMetrics);
         } catch (error) {
-            console.error('[Monitoring] Error fetching metrics:', error);
+            monitoringDashboardLogger.error('Error fetching metrics', error, { timeRange });
         } finally {
             setLoading(false);
         }

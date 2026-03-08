@@ -3,6 +3,7 @@ import { View } from '../../types';
 import { supabase } from '../supabaseCore';
 import { getUserProfile, type DBUserProfile } from '../userProfileService';
 import type { AppSessionUser } from '../auth/authFlow';
+import { createScopedLogger } from '../appLogger';
 
 interface UseAuthSessionSyncParams {
     onPasswordRecovery: () => void;
@@ -11,6 +12,8 @@ interface UseAuthSessionSyncParams {
     setCurrentView: Dispatch<SetStateAction<View>>;
     requestServiceWorkerUserCachePurge: () => void;
 }
+
+const authSessionSyncLogger = createScopedLogger('useAuthSessionSync');
 
 export function useAuthSessionSync({
     onPasswordRecovery,
@@ -102,7 +105,10 @@ export function useAuthSessionSync({
                             setUser({ ...signedInUser, profile });
                         }
                     }).catch((error) => {
-                        console.error('Error loading profile on SIGNED_IN:', error);
+                        authSessionSyncLogger.error('Error loading profile on SIGNED_IN', error, {
+                            userId: session.user.id,
+                            event
+                        });
                     });
                 }
             }

@@ -31,8 +31,10 @@ import {
     parseInjuries
 } from './trainingEngineUtils';
 import { applyIntelligentVariation, enforceCrossDayUniqueness } from './trainingEngineVariation';
+import { createScopedLogger } from '../appLogger';
 
 const isDev = import.meta.env.DEV;
+const trainingEngineLogger = createScopedLogger('trainingEngine');
 const debugLog = (...args: unknown[]) => {
     if (isDev) console.log(...args);
 };
@@ -147,7 +149,12 @@ export async function generateWorkout(params: {
     // 5. SELECIONAR TEMPLATE (agora com idade)
     const template = selectTemplate(goal, daysPerWeek, level, clientAge);
     if (!template) {
-        console.error('[TrainingEngine] No template found for params:', params);
+        trainingEngineLogger.error('No template found for params', null, {
+            goal,
+            level,
+            daysPerWeek,
+            clientAge
+        });
         return null;
     }
 
@@ -272,7 +279,11 @@ export async function generateWorkout(params: {
                     if (!volumeCheck.success) {
                         // Ajustar séries para caber no MRV
                         const adjustedSets = adjustSetsToFitMRV(volumeCounter, targetMuscle, config.sets);
-                        console.warn(`[VolumeCounter] ${volumeCheck.reason}`);
+                        trainingEngineLogger.warn('Volume counter adjusted slot sets', {
+                            slotId: task.slot.id,
+                            targetMuscle,
+                            reason: volumeCheck.reason
+                        });
                         debugLog(`[VolumeCounter] Ajustando ${task.slot.id} de ${config.sets} para ${adjustedSets} séries`);
 
                         config = { ...config, sets: adjustedSets };
@@ -329,7 +340,11 @@ export async function generateWorkout(params: {
                     };
 
                 } catch (error) {
-                    console.error(`[TrainingEngine] Error processing slot ${task.slot.id}:`, error);
+                    trainingEngineLogger.error('Error processing slot', error, {
+                        slotId: task.slot.id,
+                        dayLabel: task.day.label,
+                        movementPattern: task.slot.movement_pattern
+                    });
 
                     // Fallback em caso de erro
                     const config = getPersonalizedConfig(task.slot.intensity, level, goal, 1.0);
@@ -389,8 +404,9 @@ export async function generateWorkout(params: {
     debugLog('\n' + volumeValidation.summary);
 
     if (volumeValidation.warnings.length > 0) {
-        console.warn('[VolumeCounter] Warnings detected:');
-        volumeValidation.warnings.forEach(w => console.warn(w));
+        trainingEngineLogger.warn('Volume counter warnings detected', {
+            warnings: volumeValidation.warnings
+        });
     } else {
         debugLog('[VolumeCounter] ✅ All muscle groups within optimal volume ranges');
     }
@@ -404,8 +420,10 @@ export async function generateWorkout(params: {
         const duplicateCheck = validateNoDuplicatesInDay(day.slots, day.label);
 
         if (!duplicateCheck.valid) {
-            console.error(`\n❌ DUPLICATAS DETECTADAS em ${day.label}:`);
-            duplicateCheck.warnings.forEach(w => console.error(`   ${w}`));
+            trainingEngineLogger.error('Duplicates detected in generated day', null, {
+                dayLabel: day.label,
+                warnings: duplicateCheck.warnings
+            });
 
             // AÇÃO CORRETIVA: Remover duplicatas automaticamente
             const { cleaned, removed } = removeDuplicatesFromDay(day.slots);
@@ -419,17 +437,18 @@ export async function generateWorkout(params: {
     });
 
     if (totalDuplicatesRemoved > 0) {
-        console.warn(`\n⚠️  Total de duplicatas removidas: ${totalDuplicatesRemoved}`);
+        trainingEngineLogger.warn('Duplicates removed from generated workout', {
+            totalDuplicatesRemoved
+        });
     }
 
     // Validar cobertura muscular
     const muscleCoverageResult = validateMuscleCoverage(template, variedResolvedDays);
 
     if (!muscleCoverageResult.valid) {
-        console.warn('\n⚠️  GRUPOS MUSCULARES NÃO COBERTOS:');
-        muscleCoverageResult.missing.forEach(m =>
-            console.warn(`   - ${m}`)
-        );
+        trainingEngineLogger.warn('Required muscle groups not covered', {
+            missing: muscleCoverageResult.missing
+        });
     } else {
         debugLog('\n✅ Todos os grupos musculares obrigatórios foram cobertos');
     }

@@ -1,6 +1,8 @@
 import { supabase } from '../../supabaseCore';
+import { createScopedLogger } from '../../appLogger';
 
 const STORAGE_BUCKET = 'assessment-photos';
+const storageDomainLogger = createScopedLogger('storageDomain');
 
 function compressImageToDataUrl(file: File, maxSize: number, quality: number): Promise<string> {
     return new Promise((resolve, reject) => {
@@ -50,7 +52,10 @@ export async function uploadAvatar(
     try {
         return await compressImageToDataUrl(file, 200, 0.8);
     } catch (error) {
-        console.error('[uploadAvatar] Error processing image:', error);
+        storageDomainLogger.error('Error processing avatar image', error, {
+            fileName: file.name,
+            fileSize: file.size
+        });
         return null;
     }
 }
@@ -61,7 +66,10 @@ export async function uploadAssessmentPhoto(
     coachId: string
 ): Promise<string | null> {
     if (!supabase) {
-        console.warn('Supabase not configured - photo upload skipped');
+        storageDomainLogger.warn('Supabase not configured - photo upload skipped', {
+            clientId,
+            coachId
+        });
         return null;
     }
 
@@ -78,7 +86,11 @@ export async function uploadAssessmentPhoto(
             });
 
         if (error) {
-            console.error('Error uploading photo:', error.message);
+            storageDomainLogger.error('Error uploading assessment photo', error, {
+                clientId,
+                coachId,
+                fileName: file.name
+            });
             if (error.message.includes('Bucket not found') || error.message.includes('not found')) {
                 return 'https://ui-avatars.com/api/?name=Photo&background=3b82f6&color=fff&size=400';
             }
@@ -90,13 +102,21 @@ export async function uploadAssessmentPhoto(
             .createSignedUrl(data.path, 60 * 60 * 24 * 7);
 
         if (signedError) {
-            console.error('Error creating signed URL:', signedError.message);
+            storageDomainLogger.error('Error creating signed URL for assessment photo', signedError, {
+                clientId,
+                coachId,
+                path: data.path
+            });
             return null;
         }
 
         return signedData.signedUrl;
     } catch (error) {
-        console.error('Error in uploadAssessmentPhoto:', error);
+        storageDomainLogger.error('Error in uploadAssessmentPhoto', error, {
+            clientId,
+            coachId,
+            fileName: file.name
+        });
         return null;
     }
 }

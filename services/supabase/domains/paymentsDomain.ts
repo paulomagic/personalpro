@@ -1,4 +1,7 @@
 import { supabase } from '../../supabaseCore';
+import { createScopedLogger } from '../../appLogger';
+
+const paymentsDomainLogger = createScopedLogger('paymentsDomain');
 
 export interface Payment {
     id: string;
@@ -24,7 +27,7 @@ export async function getPayments(coachId: string, status?: string): Promise<Pay
     if (status) query = query.eq('status', status);
     const { data, error } = await query;
     if (error) {
-        console.error('Error fetching payments:', error);
+        paymentsDomainLogger.error('Error fetching payments', error, { coachId, status });
         return [];
     }
     return data || [];
@@ -34,7 +37,11 @@ export async function createPayment(payment: Omit<Payment, 'id' | 'created_at'>)
     if (!supabase) return null;
     const { data, error } = await supabase.from('payments').insert(payment).select().single();
     if (error) {
-        console.error('Error creating payment:', error);
+        paymentsDomainLogger.error('Error creating payment', error, {
+            coachId: payment.coach_id,
+            clientId: payment.client_id,
+            dueDate: payment.due_date
+        });
         return null;
     }
     return data;
@@ -48,7 +55,7 @@ export async function getPaymentsByClient(clientId: string): Promise<Payment[]> 
         .eq('client_id', clientId)
         .order('due_date', { ascending: false });
     if (error) {
-        console.error('Error fetching payments by client:', error);
+        paymentsDomainLogger.error('Error fetching payments by client', error, { clientId });
         return [];
     }
     return data || [];
@@ -63,7 +70,10 @@ export async function updatePayment(id: string, updates: Partial<Payment>): Prom
         .select()
         .single();
     if (error) {
-        console.error('Error updating payment:', error);
+        paymentsDomainLogger.error('Error updating payment', error, {
+            paymentId: id,
+            updateKeys: Object.keys(updates)
+        });
         return null;
     }
     return data;

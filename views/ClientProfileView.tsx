@@ -1,4 +1,4 @@
-import React, { Suspense, lazy, useState } from 'react';
+import React, { Suspense, lazy, useEffect, useState } from 'react';
 import type { Client } from '../types';
 import ClientProfileHeroHeader from '../components/clientProfile/ClientProfileHeroHeader';
 import ClientProfileQuickWorkoutFab from '../components/clientProfile/ClientProfileQuickWorkoutFab';
@@ -29,9 +29,16 @@ const ClientProfileView: React.FC<ClientProfileViewProps> = ({ client: initialCl
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showContactModal, setShowContactModal] = useState(false);
+  const [notice, setNotice] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const tabs = ['Bio', 'Treinos', 'Avaliações', 'Evolução'];
   const [showGalleryModal, setShowGalleryModal] = useState(false);
   const hasOpenModal = showStatusModal || showMissedClassModal || showInviteModal || showDeleteConfirm || showContactModal || showGalleryModal;
+
+  useEffect(() => {
+    if (!notice) return;
+    const timeout = window.setTimeout(() => setNotice(null), 3200);
+    return () => window.clearTimeout(timeout);
+  }, [notice]);
   const {
     client,
     setClient,
@@ -76,6 +83,18 @@ const ClientProfileView: React.FC<ClientProfileViewProps> = ({ client: initialCl
 
   return (
     <div className="max-w-md mx-auto min-h-screen text-white selection:bg-cyan-500/20 bg-[var(--bg-void)]">
+      {notice && (
+        <div className="fixed top-5 left-1/2 z-[70] w-[calc(100%-2rem)] max-w-md -translate-x-1/2">
+          <div className={`rounded-2xl border px-4 py-3 text-sm font-bold shadow-2xl backdrop-blur-xl ${
+            notice.type === 'error'
+              ? 'bg-[rgba(255,51,102,0.14)] border-[rgba(255,51,102,0.22)] text-[#FFD1DD]'
+              : 'bg-[rgba(0,255,136,0.12)] border-[rgba(0,255,136,0.2)] text-[#B6FFD8]'
+          }`}>
+            {notice.message}
+          </div>
+        </div>
+      )}
+
       <ClientProfileHeroHeader
         client={client}
         coachId={coachId}
@@ -85,7 +104,10 @@ const ClientProfileView: React.FC<ClientProfileViewProps> = ({ client: initialCl
           const hadFile = Boolean(event.target.files?.[0]);
           const success = await handleAvatarChange(event);
           if (hadFile && !success) {
-            alert('Erro ao alterar foto. Verifique o bucket "avatars" e tente novamente.');
+            setNotice({
+              type: 'error',
+              message: 'Erro ao alterar foto. Verifique o bucket "avatars" e tente novamente.'
+            });
           }
         }}
         onInviteStudent={() => setShowInviteModal(true)}
@@ -189,17 +211,18 @@ const ClientProfileView: React.FC<ClientProfileViewProps> = ({ client: initialCl
             handleDeleteClient={async () => {
               const success = await handleDeleteClient();
               if (!success) {
-                alert('Erro ao deletar aluno. Tente novamente.');
                 setShowDeleteConfirm(false);
+                setNotice({ type: 'error', message: 'Erro ao deletar aluno. Tente novamente.' });
               }
             }}
             handleSaveContact={async () => {
               const success = await handleSaveContact();
               if (success) {
                 setShowContactModal(false);
+                setNotice({ type: 'success', message: 'Dados de contato atualizados com sucesso.' });
                 return;
               }
-              alert('Erro ao salvar dados de contato. Tente novamente.');
+              setNotice({ type: 'error', message: 'Erro ao salvar dados de contato. Tente novamente.' });
             }}
             missedDate={missedDate}
             setMissedDate={setMissedDate}

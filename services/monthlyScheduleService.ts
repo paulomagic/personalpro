@@ -1,5 +1,8 @@
 import { supabase } from './supabaseCore';
 import { MonthlyScheduleConfig, MonthlyScheduleBatch, ConflictInfo } from '../types';
+import { createScopedLogger } from './appLogger';
+
+const monthlyScheduleLogger = createScopedLogger('monthlyScheduleService');
 
 /**
  * Generate dates for a month based on weekly pattern
@@ -74,7 +77,11 @@ export async function detectScheduleConflicts(
             .eq('time', time);
 
         if (error) {
-            console.error('Error checking conflicts:', error);
+            monthlyScheduleLogger.error('Error checking conflicts', error, {
+                coachId,
+                date: dateStr,
+                time
+            });
             continue;
         }
 
@@ -154,7 +161,12 @@ export async function createMonthlyScheduleBatch(
             .neq('status', 'cancelled');
 
         if (conflictError) {
-            console.error('Error checking conflicts:', conflictError);
+            monthlyScheduleLogger.error('Error checking conflicts before batch creation', conflictError, {
+                coachId,
+                clientId: config.clientId,
+                month: config.month,
+                year: config.year
+            });
         }
 
         if (existingAppointments && existingAppointments.length > 0) {
@@ -182,7 +194,12 @@ export async function createMonthlyScheduleBatch(
             .single();
 
         if (batchError) {
-            console.error('Error creating batch:', batchError);
+            monthlyScheduleLogger.error('Error creating batch', batchError, {
+                coachId,
+                clientId: config.clientId,
+                month: config.month,
+                year: config.year
+            });
             throw batchError;
         }
 
@@ -208,7 +225,12 @@ export async function createMonthlyScheduleBatch(
             .insert(appointments);
 
         if (appointmentsError) {
-            console.error('Error creating appointments:', appointmentsError);
+            monthlyScheduleLogger.error('Error creating appointments for batch', appointmentsError, {
+                coachId,
+                clientId: config.clientId,
+                batchId: batch.id,
+                appointmentsCount: appointments.length
+            });
             // Rollback: delete batch
             await supabase.from('monthly_schedule_batches').delete().eq('id', batch.id);
             throw appointmentsError;
@@ -234,7 +256,12 @@ export async function createMonthlyScheduleBatch(
 
         return batch;
     } catch (error) {
-        console.error('Error in createMonthlyScheduleBatch:', error);
+        monthlyScheduleLogger.error('Error in createMonthlyScheduleBatch', error, {
+            coachId,
+            clientId: config.clientId,
+            month: config.month,
+            year: config.year
+        });
         return null;
     }
 }
@@ -255,7 +282,7 @@ export async function updateMonthlyScheduleBatch(
             .single();
 
         if (fetchError || !batch) {
-            console.error('Error fetching batch:', fetchError);
+            monthlyScheduleLogger.error('Error fetching batch', fetchError, { batchId });
             return false;
         }
 
@@ -311,7 +338,10 @@ export async function updateMonthlyScheduleBatch(
             .insert(appointments);
 
         if (appointmentsError) {
-            console.error('Error updating appointments:', appointmentsError);
+            monthlyScheduleLogger.error('Error updating appointments', appointmentsError, {
+                batchId,
+                appointmentsCount: appointments.length
+            });
             return false;
         }
 
@@ -330,7 +360,7 @@ export async function updateMonthlyScheduleBatch(
 
         return true;
     } catch (error) {
-        console.error('Error in updateMonthlyScheduleBatch:', error);
+        monthlyScheduleLogger.error('Error in updateMonthlyScheduleBatch', error, { batchId });
         return false;
     }
 }
@@ -353,13 +383,13 @@ export async function deleteMonthlyScheduleBatch(batchId: string): Promise<boole
             .eq('id', batchId);
 
         if (error) {
-            console.error('Error deleting batch:', error);
+            monthlyScheduleLogger.error('Error deleting batch', error, { batchId });
             return false;
         }
 
         return true;
     } catch (error) {
-        console.error('Error in deleteMonthlyScheduleBatch:', error);
+        monthlyScheduleLogger.error('Error in deleteMonthlyScheduleBatch', error, { batchId });
         return false;
     }
 }
@@ -375,7 +405,7 @@ export async function getAppointmentsByBatch(batchId: string) {
         .order('date', { ascending: true });
 
     if (error) {
-        console.error('Error fetching batch appointments:', error);
+        monthlyScheduleLogger.error('Error fetching batch appointments', error, { batchId });
         return [];
     }
 
@@ -398,7 +428,11 @@ export async function getMonthlyBatches(
         .eq('month', month);
 
     if (error) {
-        console.error('Error fetching monthly batches:', error);
+        monthlyScheduleLogger.error('Error fetching monthly batches', error, {
+            clientId,
+            month,
+            year
+        });
         return [];
     }
 
@@ -421,7 +455,11 @@ export async function getAllBatchesForCoach(
         .eq('month', month);
 
     if (error) {
-        console.error('Error fetching coach batches:', error);
+        monthlyScheduleLogger.error('Error fetching coach batches', error, {
+            coachId,
+            month,
+            year
+        });
         return [];
     }
 
@@ -444,7 +482,10 @@ export async function getTemplatesForClient(
         .order('last_used_at', { ascending: false });
 
     if (error) {
-        console.error('Error fetching templates:', error);
+        monthlyScheduleLogger.error('Error fetching templates', error, {
+            coachId,
+            clientId
+        });
         return [];
     }
 

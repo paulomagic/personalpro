@@ -4,8 +4,10 @@
 
 import { supabase } from './supabaseCore';
 import { evaluateExerciseTier } from './ai/knowledge/exerciseTiering';
+import { createScopedLogger } from './appLogger';
 
 const isDev = import.meta.env.DEV;
+const exerciseServiceLogger = createScopedLogger('exerciseService');
 const debugLog = (...args: unknown[]) => {
     if (isDev) console.log(...args);
 };
@@ -156,7 +158,7 @@ export async function fetchAllExercises(): Promise<Exercise[]> {
     }
 
     if (!supabase) {
-        console.warn('Supabase not configured - cannot fetch exercises');
+        exerciseServiceLogger.warn('Supabase not configured - cannot fetch exercises');
         return [];
     }
 
@@ -170,7 +172,7 @@ export async function fetchAllExercises(): Promise<Exercise[]> {
     debugTimeEnd('[ExerciseService] fetchAllExercises');
 
     if (error) {
-        console.error('Error fetching all exercises:', error);
+        exerciseServiceLogger.error('Error fetching all exercises', error);
         return [];
     }
 
@@ -203,7 +205,7 @@ export async function fetchExercisesByPatterns(patterns: MovementPattern[]): Pro
     debugTimeEnd('[ExerciseService] fetchExercisesByPatterns');
 
     if (error) {
-        console.error('Error fetching exercises by patterns:', error);
+        exerciseServiceLogger.error('Error fetching exercises by patterns', error, { patterns });
         return [];
     }
 
@@ -298,7 +300,10 @@ export async function resolveExercise(
     intention: ExerciseIntention
 ): Promise<Exercise[]> {
     if (!supabase) {
-        console.warn('Supabase not configured - cannot resolve exercises');
+        exerciseServiceLogger.warn('Supabase not configured - cannot resolve exercises', {
+            movementPattern: intention.movement_pattern,
+            primaryMuscle: intention.primary_muscle
+        });
         return [];
     }
 
@@ -327,7 +332,10 @@ export async function resolveExercise(
     const { data, error } = await query;
 
     if (error) {
-        console.error('Error resolving exercise:', error);
+        exerciseServiceLogger.error('Error resolving exercise', error, {
+            movementPattern: intention.movement_pattern,
+            primaryMuscle: intention.primary_muscle
+        });
         return [];
     }
 
@@ -357,7 +365,10 @@ export async function resolveExercise(
     const { data: fallbackData, error: fallbackError } = await fallbackQuery;
 
     if (fallbackError) {
-        console.error('Error in fallback resolution:', fallbackError);
+        exerciseServiceLogger.error('Error in fallback resolution', fallbackError, {
+            movementPattern: intention.movement_pattern,
+            primaryMuscle: intention.primary_muscle
+        });
         return [];
     }
 
@@ -438,7 +449,7 @@ export async function getAllExercises(): Promise<Exercise[]> {
         .order('name');
 
     if (error) {
-        console.error('Error fetching exercises:', error);
+        exerciseServiceLogger.error('Error fetching exercises', error);
         return [];
     }
 
@@ -461,7 +472,7 @@ export async function getExercisesByPattern(
         .order('name');
 
     if (error) {
-        console.error('Error fetching exercises by pattern:', error);
+        exerciseServiceLogger.error('Error fetching exercises by pattern', error, { pattern });
         return [];
     }
 
@@ -482,7 +493,7 @@ export async function getExerciseBySlug(slug: string): Promise<Exercise | null> 
 
     if (error) {
         if (error.code !== 'PGRST116') {
-            console.error('Error fetching exercise by slug:', error);
+            exerciseServiceLogger.error('Error fetching exercise by slug', error, { slug });
         }
         return null;
     }
@@ -519,7 +530,11 @@ export async function findSafeAlternatives(
     const { data, error } = await query;
 
     if (error) {
-        console.error('Error finding safe alternatives:', error);
+        exerciseServiceLogger.error('Error finding safe alternatives', error, {
+            exerciseId: originalExercise.id,
+            movementPattern: originalExercise.movement_pattern,
+            injuries
+        });
         return [];
     }
 
@@ -698,7 +713,7 @@ export async function hydrateWorkoutWithVideos(workout: any): Promise<any> {
         return workoutCopy;
 
     } catch (err) {
-        console.error('Error hydrating workout videos:', err);
+        exerciseServiceLogger.error('Error hydrating workout videos', err);
         return workout; // Retorna original em caso de erro
     }
 }

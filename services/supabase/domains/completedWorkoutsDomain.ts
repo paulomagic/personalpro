@@ -1,4 +1,7 @@
 import { supabase } from '../../supabaseCore';
+import { createScopedLogger } from '../../appLogger';
+
+const completedWorkoutsDomainLogger = createScopedLogger('completedWorkoutsDomain');
 
 export interface CompletedWorkoutInput {
     client_id: string;
@@ -27,7 +30,10 @@ export async function saveCompletedWorkout(workoutData: CompletedWorkoutInput): 
         .single();
 
     if (error) {
-        console.error('Error saving completed workout:', error);
+        completedWorkoutsDomainLogger.error('Error saving completed workout', error, {
+            clientId: workoutData.client_id,
+            workoutId: workoutData.workout_id
+        });
         return null;
     }
 
@@ -44,7 +50,7 @@ export async function getCompletedWorkouts(clientId: string): Promise<CompletedW
         .order('date', { ascending: false });
 
     if (error) {
-        console.error('Error fetching completed workouts:', error);
+        completedWorkoutsDomainLogger.error('Error fetching completed workouts', error, { clientId });
         return [];
     }
 

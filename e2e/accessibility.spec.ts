@@ -24,3 +24,32 @@ test('dashboard shell has no serious accessibility violations', async ({ page })
   await page.waitForLoadState('networkidle');
   await expectNoSeriousViolations(page);
 });
+
+test('clients screen has no serious accessibility violations', async ({ page }) => {
+  await page.goto('/');
+  await page.getByTestId('demo-login-button').click();
+  await page.getByRole('button', { name: 'Alunos' }).first().click();
+  await expect(page.getByRole('heading', { name: 'Alunos' })).toBeVisible();
+  await page.waitForLoadState('networkidle');
+  await expectNoSeriousViolations(page);
+});
+
+test('calendar screen has no serious accessibility violations', async ({ page }) => {
+  await page.goto('/');
+  await page.getByTestId('demo-login-button').click();
+  await page.getByRole('button', { name: 'Agenda' }).first().click();
+  await expect(page.getByRole('heading', { name: 'Agenda' })).toBeVisible();
+  await page.waitForLoadState('networkidle');
+  await expectNoSeriousViolations(page);
+});
+
+test('settings profile modal has no serious accessibility violations', async ({ page }) => {
+  await page.goto('/');
+  await page.getByTestId('demo-login-button').click();
+  await page.getByRole('button', { name: 'Abrir perfil' }).click();
+  await expect(page.getByText('Configurações')).toBeVisible();
+  await page.getByRole('button', { name: 'Editar perfil' }).click();
+  const profileDialog = page.getByRole('dialog', { name: 'Editar Perfil' });
+  await expect(profileDialog).toBeVisible();
+  await expectNoSeriousViolations(page);
+});

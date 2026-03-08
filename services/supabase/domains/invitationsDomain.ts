@@ -3,6 +3,7 @@ import {
     normalizeAcceptInvitationResult,
     normalizeInvitationPreviewFromRpc,
 } from '../../invitations/invitationUtils';
+import { createScopedLogger } from '../../appLogger';
 
 export interface DBUserProfile {
     id: string;
@@ -35,6 +36,8 @@ export interface DBInvitationPreview {
     expires_at: string;
 }
 
+const invitationsDomainLogger = createScopedLogger('invitationsDomain');
+
 function generateInvitationToken(): string {
     const bytes = new Uint8Array(32);
     crypto.getRandomValues(bytes);
@@ -65,7 +68,10 @@ export async function createInvitation(
         .single();
 
     if (error) {
-        console.error('Error creating invitation:', error);
+        invitationsDomainLogger.error('Error creating invitation', error, {
+            coachId,
+            clientId
+        });
         return null;
     }
 
@@ -78,7 +84,9 @@ export async function getInvitationByToken(token: string): Promise<DBInvitationP
         invitation_token: token
     });
     if (error) {
-        if (error.code !== 'PGRST116') console.error('Error fetching invitation:', error);
+        if (error.code !== 'PGRST116') {
+            invitationsDomainLogger.error('Error fetching invitation', error, { token });
+        }
         return null;
     }
     return normalizeInvitationPreviewFromRpc(data);
@@ -91,7 +99,7 @@ export async function acceptInvitation(token: string, userId: string): Promise<{
         invitation_token: token
     });
     if (error) {
-        console.error('Error accepting invitation:', error);
+        invitationsDomainLogger.error('Error accepting invitation', error, { token, userId });
         return { success: false, error: 'Erro ao aceitar convite' };
     }
     return normalizeAcceptInvitationResult(data);
@@ -105,7 +113,7 @@ export async function getCoachInvitations(coachId: string): Promise<DBInvitation
         .eq('coach_id', coachId)
         .order('created_at', { ascending: false });
     if (error) {
-        console.error('Error fetching coach invitations:', error);
+        invitationsDomainLogger.error('Error fetching coach invitations', error, { coachId });
         return [];
     }
     return data || [];
@@ -119,7 +127,10 @@ export async function cancelInvitation(invitationId: string, coachId: string): P
         .eq('id', invitationId)
         .eq('coach_id', coachId);
     if (error) {
-        console.error('Error cancelling invitation:', error);
+        invitationsDomainLogger.error('Error cancelling invitation', error, {
+            invitationId,
+            coachId
+        });
         return false;
     }
     return true;
@@ -133,7 +144,7 @@ export async function getCoachStudents(coachId: string): Promise<DBUserProfile[]
         .eq('coach_id', coachId)
         .eq('role', 'student');
     if (error) {
-        console.error('Error fetching coach students:', error);
+        invitationsDomainLogger.error('Error fetching coach students', error, { coachId });
         return [];
     }
     return data || [];

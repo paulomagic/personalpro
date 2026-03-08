@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { getClients, DBClient } from '../services/supabase/domains/clientsDomain';
 import { getAllAppointmentsForCoach } from '../services/supabase/domains/appointmentsDomain';
+import { createScopedLogger } from '../services/appLogger';
 
 interface WeeklyPatternSelectorProps {
     coachId: string;
@@ -27,6 +28,8 @@ const WEEKDAYS = [
     { id: 6, label: 'SÁB', name: 'Sábado' },
     { id: 7, label: 'DOM', name: 'Domingo' }
 ];
+
+const weeklyPatternSelectorLogger = createScopedLogger('WeeklyPatternSelector');
 
 const WeeklyPatternSelector: React.FC<WeeklyPatternSelectorProps> = ({
     coachId,
@@ -63,20 +66,20 @@ const WeeklyPatternSelector: React.FC<WeeklyPatternSelectorProps> = ({
     useEffect(() => {
         const fetchOccupiedTimes = async () => {
             if (!coachId) {
-                console.log('⚠️ WeeklyPattern: Missing coachId');
+                weeklyPatternSelectorLogger.warn('Missing coachId while fetching occupied times');
                 return;
             }
-
-            console.log('📅 WeeklyPattern: Fetching occupied times for coach:', coachId);
 
             // Usar a função helper que já existe e funciona
             const appointments = await getAllAppointmentsForCoach(coachId);
 
-            console.log('📊 WeeklyPattern: Found appointments:', appointments);
-
             // Extrair horários únicos ocupados
             const times = [...new Set(appointments?.map(a => (a.time || '').slice(0, 5)) || [])];
-            console.log('🔴 WeeklyPattern: Occupied times:', times);
+            weeklyPatternSelectorLogger.debug('Loaded occupied times for weekly pattern', {
+                coachId,
+                appointmentsCount: appointments?.length || 0,
+                occupiedTimesCount: times.length
+            });
             setOccupiedTimes(times);
         };
 

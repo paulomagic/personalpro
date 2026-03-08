@@ -44,6 +44,7 @@ export function FeedbackForm({
     const [rir, setRir] = useState<number | undefined>();
     const [notes, setNotes] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [validationError, setValidationError] = useState<string | null>(null);
 
     // ============ HANDLERS ============
 
@@ -65,14 +66,16 @@ export function FeedbackForm({
     };
 
     const handleSubmit = async () => {
+        setValidationError(null);
+
         // Validação
         if (!rpe && !rir) {
-            alert('Por favor, informe RPE ou RIR');
+            setValidationError('Informe RPE ou RIR para registrar o esforço.');
             return;
         }
 
         if (repsPerSet.some(r => r === 0)) {
-            alert('Por favor, preencha todas as repetições');
+            setValidationError('Preencha todas as repetições antes de enviar.');
             return;
         }
 
@@ -119,6 +122,12 @@ export function FeedbackForm({
             </div>
 
             <div className="space-y-6">
+                {validationError && (
+                    <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+                        {validationError}
+                    </div>
+                )}
+
                 {/* Séries Completadas */}
                 <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">

@@ -17,11 +17,14 @@ import { getUserProfile } from '../services/userProfileService';
 import { getStudentAppointmentsByClient, Appointment } from '../services/supabase/domains/appointmentsDomain';
 import { AppUser } from '../types';
 import RescheduleRequestModal from '../components/RescheduleRequestModal';
+import { createScopedLogger } from '../services/appLogger';
 
 interface StudentCalendarViewProps {
     user: AppUser;
     onBack: () => void;
 }
+
+const studentCalendarViewLogger = createScopedLogger('StudentCalendarView');
 
 const StudentCalendarView: React.FC<StudentCalendarViewProps> = ({ user, onBack }) => {
     const [appointments, setAppointments] = useState<Appointment[]>([]);
@@ -47,7 +50,7 @@ const StudentCalendarView: React.FC<StudentCalendarViewProps> = ({ user, onBack 
                 setAppointments(data);
             }
         } catch (error) {
-            console.error('Error loading appointments:', error);
+            studentCalendarViewLogger.error('Error loading appointments', error, { userId: user.id });
         } finally {
             setLoading(false);
         }

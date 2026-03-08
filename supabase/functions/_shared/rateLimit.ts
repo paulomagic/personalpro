@@ -1,3 +1,5 @@
+import { createEdgeLogger } from "./edgeLogger.ts";
+
 interface RateLimitResult {
     allowed: boolean;
     remaining: number;
@@ -6,6 +8,7 @@ interface RateLimitResult {
 
 const memoryRequestsByKey = new Map<string, { count: number; resetAt: number }>();
 let requestCounter = 0;
+const rateLimitLogger = createEdgeLogger("rate-limit");
 
 function checkRateLimitInMemory(rateKey: string, max: number, windowMs: number): RateLimitResult {
     const now = Date.now();
@@ -88,7 +91,7 @@ export async function checkRateLimit(
         });
 
         if (!response.ok) {
-            console.warn("[rate-limit] RPC failed, using in-memory fallback:", response.status);
+            rateLimitLogger.warn("RPC failed, using in-memory fallback", { rateKey, status: response.status });
             return checkRateLimitInMemory(rateKey, max, windowMs);
         }
 
@@ -104,7 +107,7 @@ export async function checkRateLimit(
             retryAfterSeconds: Math.max(0, Number(payload?.retry_after_seconds ?? 0)),
         };
     } catch (error) {
-        console.warn("[rate-limit] Unexpected RPC error, using in-memory fallback:", error);
+        rateLimitLogger.warn("Unexpected RPC error, using in-memory fallback", { rateKey, error });
         return checkRateLimitInMemory(rateKey, max, windowMs);
     }
 }

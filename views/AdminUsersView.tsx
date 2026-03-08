@@ -116,7 +116,11 @@ const AdminUsersView: React.FC<AdminUsersViewProps> = ({ onBack }) => {
             <header className="sticky top-0 z-10 bg-slate-950/80 backdrop-blur-xl border-b border-white/5 px-6 py-4">
                 <div className="flex items-center justify-between gap-4">
                     <div className="flex items-center gap-4">
-                        <button onClick={onBack} className="size-10 rounded-full glass-card flex items-center justify-center hover:bg-white/10 transition-colors">
+                        <button
+                            onClick={onBack}
+                            aria-label="Voltar para painel admin"
+                            className="size-10 rounded-full glass-card flex items-center justify-center hover:bg-white/10 transition-colors"
+                        >
                             <ArrowLeft size={20} />
                         </button>
                         <div>

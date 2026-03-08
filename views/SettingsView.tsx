@@ -52,6 +52,16 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user, onBack, onLogout }) =
     const [toastMessage, setToastMessage] = React.useState<string | null>(null);
     const [toastType, setToastType] = React.useState<'success' | 'error'>('success');
 
+    const activeModalTitle = React.useMemo(() => {
+        if (activeModal === 'profile') return 'Editar Perfil';
+        if (activeModal === 'notifications') return 'Notificações';
+        if (activeModal === 'appearance') return 'Aparência';
+        if (activeModal === 'security') return 'Segurança';
+        if (activeModal === 'help') return 'Ajuda';
+        if (activeModal === 'privacy') return 'Privacidade e Dados';
+        return undefined;
+    }, [activeModal]);
+
     React.useEffect(() => {
         setProfileName(coachName);
     }, [coachName]);
@@ -407,9 +417,9 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user, onBack, onLogout }) =
                 </button>
             </div>
 
-            <p className="text-center text-[9px] font-black mt-10 uppercase tracking-[0.3em] text-[#1E3A5F]">Apex Elite Framework • v1.1.0</p>
+            <p className="text-center text-[9px] font-black mt-10 uppercase tracking-[0.3em] text-[#7A9FCC]">Apex Elite Framework • v1.1.0</p>
 
-            <BottomSheet isOpen={!!activeModal} onClose={() => setActiveModal(null)}>
+            <BottomSheet isOpen={!!activeModal} onClose={() => setActiveModal(null)} title={activeModalTitle}>
                 <SettingsModalContent
                     activeModal={activeModal}
                     coachAvatar={coachAvatar}

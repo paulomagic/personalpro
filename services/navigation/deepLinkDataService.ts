@@ -1,5 +1,6 @@
 import type { Client, Workout, WorkoutSplit, Exercise, WorkoutExercise } from '../../types';
 import { supabase } from '../supabaseCore';
+import { createScopedLogger } from '../appLogger';
 
 interface DBClientRow {
     id: string;
@@ -26,6 +27,8 @@ interface DBWorkoutRow {
     splits?: unknown;
     exercises?: unknown;
 }
+
+const deepLinkDataLogger = createScopedLogger('deepLinkDataService');
 
 function normalizeLevel(level: string | undefined | null): Client['level'] {
     const normalized = (level || '').toLowerCase();
@@ -94,7 +97,7 @@ export async function fetchClientByIdForDeepLink(clientId: string): Promise<Clie
 
     if (error || !data) {
         if (error?.code !== 'PGRST116') {
-            console.error('[DeepLink] Error fetching client:', error);
+            deepLinkDataLogger.error('Error fetching client', error, { clientId });
         }
         return null;
     }
@@ -113,11 +116,10 @@ export async function fetchWorkoutByIdForDeepLink(workoutId: string): Promise<Wo
 
     if (error || !data) {
         if (error?.code !== 'PGRST116') {
-            console.error('[DeepLink] Error fetching workout:', error);
+            deepLinkDataLogger.error('Error fetching workout', error, { workoutId });
         }
         return null;
     }
 
     return mapWorkoutRowToWorkout(data as DBWorkoutRow);
 }
-

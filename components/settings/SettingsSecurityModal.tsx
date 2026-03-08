@@ -17,6 +17,9 @@ export default function SettingsSecurityModal({
   onConfirmPasswordChange,
   onSave
 }: SettingsSecurityModalProps) {
+  const newPasswordId = 'settings-security-new-password';
+  const confirmPasswordId = 'settings-security-confirm-password';
+
   return (
     <>
       <div className="text-center mb-8">
@@ -28,27 +31,31 @@ export default function SettingsSecurityModal({
       </div>
       <div className="space-y-4 mb-8">
         <div className="bg-white/5 rounded-2xl p-4 border border-white/5">
-          <p className="text-[10px] font-bold text-blue-400 uppercase tracking-widest mb-1">Nova Senha</p>
+          <p id={`${newPasswordId}-label`} className="text-[10px] font-bold text-blue-400 uppercase tracking-widest mb-1">Nova Senha</p>
           <div className="flex items-center gap-3">
             <span className="material-symbols-outlined text-blue-400">key</span>
             <input
+              id={newPasswordId}
               type="password"
               placeholder="Mínimo 8 caracteres"
               value={newPassword}
               onChange={(event) => onNewPasswordChange(event.target.value)}
+              aria-labelledby={`${newPasswordId}-label`}
               className="bg-transparent text-white font-bold w-full outline-none placeholder:text-slate-600"
             />
           </div>
         </div>
         <div className="bg-white/5 rounded-2xl p-4 border border-white/5">
-          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Confirmar Nova Senha</p>
+          <p id={`${confirmPasswordId}-label`} className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Confirmar Nova Senha</p>
           <div className="flex items-center gap-3">
             <span className="material-symbols-outlined text-slate-400">password</span>
             <input
+              id={confirmPasswordId}
               type="password"
               placeholder="Repita a senha"
               value={confirmPassword}
               onChange={(event) => onConfirmPasswordChange(event.target.value)}
+              aria-labelledby={`${confirmPasswordId}-label`}
               className="bg-transparent text-white font-bold w-full outline-none placeholder:text-slate-600"
             />
           </div>

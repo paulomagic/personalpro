@@ -29,8 +29,8 @@ test('demo user can open privacy controls from settings', async ({ page }) => {
   await expect(page.getByText('Configurações')).toBeVisible();
 
   await page.getByRole('button', { name: /Privacidade e Dados/i }).click();
-  const privacyDialog = page.getByLabel('Painel');
-  await expect(privacyDialog.getByRole('heading', { name: 'Privacidade e Dados' })).toBeVisible();
+  const privacyDialog = page.getByRole('dialog', { name: 'Privacidade e Dados' });
+  await expect(privacyDialog).toBeVisible();
   await expect(privacyDialog.getByRole('button', { name: 'Exportar Dados LGPD' })).toBeVisible();
   await expect(privacyDialog.getByText('Histórico LGPD')).toBeVisible();
 });

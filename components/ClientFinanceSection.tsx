@@ -4,6 +4,7 @@ import { DollarSign, Calendar, Edit, Save, X, Repeat, Plus, Clock, CheckCircle, 
 import { DBClient, updateClientById } from '../services/supabase/domains/clientsDomain';
 import { createPayment, getPaymentsByClient, Payment } from '../services/supabase/domains/paymentsDomain';
 import { useTheme } from '../services/ThemeContext';
+import { createScopedLogger } from '../services/appLogger';
 
 interface ClientFinanceSectionProps {
     client: {
@@ -18,6 +19,8 @@ interface ClientFinanceSectionProps {
     coachId?: string;
     onUpdate?: (updates: Partial<DBClient>) => void;
 }
+
+const clientFinanceSectionLogger = createScopedLogger('ClientFinanceSection');
 
 const ClientFinanceSection: React.FC<ClientFinanceSectionProps> = ({ client, coachId, onUpdate }) => {
     const { resolvedTheme } = useTheme();
@@ -53,7 +56,10 @@ const ClientFinanceSection: React.FC<ClientFinanceSectionProps> = ({ client, coa
             }
             setIsEditing(false);
         } catch (error) {
-            console.error('Error saving finance data:', error);
+            clientFinanceSectionLogger.error('Error saving finance data', error, {
+                clientId: client.id,
+                coachId
+            });
         } finally {
             setSaving(false);
         }
@@ -103,7 +109,10 @@ const ClientFinanceSection: React.FC<ClientFinanceSectionProps> = ({ client, coa
                 setPayments(prev => [payment, ...prev]);
             }
         } catch (error) {
-            console.error('Error registering session:', error);
+            clientFinanceSectionLogger.error('Error registering session', error, {
+                clientId: client.id,
+                coachId: coachId || client.coach_id
+            });
         } finally {
             setRegisteringSession(false);
         }

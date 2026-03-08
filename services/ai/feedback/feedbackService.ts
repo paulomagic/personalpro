@@ -10,8 +10,10 @@ import { logAIAction } from '../../loggingService';
 import { buildProgressionPrecisionReport, resolvePrecisionProfile } from '../progressionPrecisionService';
 import { readQueueWithFallback, writeQueueWithFallback } from '../../offline/queueStorage';
 import { isSupabaseUuid } from '../../supabase/utils/identifiers';
+import { createScopedLogger } from '../../appLogger';
 
 const isDev = import.meta.env.DEV;
+const feedbackServiceLogger = createScopedLogger('feedbackService');
 const debugLog = (...args: unknown[]) => {
     if (isDev) console.log(...args);
 };
@@ -126,7 +128,10 @@ async function captureProgressionPrecisionTelemetry(studentId: string): Promise<
             }
         });
     } catch (error: any) {
-        console.warn('[FeedbackService] Precision telemetry failed:', error);
+        feedbackServiceLogger.warn('Precision telemetry failed', {
+            studentId,
+            error
+        });
         await logAIAction({
             action_type: 'analyze_progress',
             model_used: 'progression_precision_v1',
@@ -154,7 +159,7 @@ async function readFeedbackQueue(): Promise<QueuedFeedbackItem[]> {
         }
         return pruned;
     } catch (error) {
-        console.warn('[FeedbackService] Failed to read feedback queue:', error);
+        feedbackServiceLogger.warn('Failed to read feedback queue', { error });
         return [];
     }
 }
@@ -169,7 +174,7 @@ async function writeFeedbackQueue(items: QueuedFeedbackItem[]): Promise<boolean>
             FEEDBACK_QUEUE_STORAGE_KEY
         );
     } catch (error) {
-        console.warn('[FeedbackService] Failed to write feedback queue:', error);
+        feedbackServiceLogger.warn('Failed to write feedback queue', { error });
         return false;
     }
 }
@@ -313,7 +318,11 @@ export async function saveSessionFeedback(
             .single();
 
         if (error) {
-            console.error('[FeedbackService] Error saving feedback:', error);
+            feedbackServiceLogger.error('Error saving feedback', error, {
+                studentId: feedback.student_id,
+                workoutId: feedback.workout_id,
+                exerciseId: feedback.exercise_id
+            });
             return { success: false, error: error.message };
         }
 
@@ -322,7 +331,11 @@ export async function saveSessionFeedback(
         return { success: true, id: data.id };
 
     } catch (error: any) {
-        console.error('[FeedbackService] Unexpected error:', error);
+        feedbackServiceLogger.error('Unexpected error saving feedback', error, {
+            studentId: feedback.student_id,
+            workoutId: feedback.workout_id,
+            exerciseId: feedback.exercise_id
+        });
         return { success: false, error: error.message };
     }
 }
@@ -385,14 +398,22 @@ export async function getExerciseFeedbackHistory(
             .limit(limit);
 
         if (error) {
-            console.error('[FeedbackService] Error fetching history:', error);
+            feedbackServiceLogger.error('Error fetching feedback history', error, {
+                studentId,
+                exerciseId,
+                limit
+            });
             return [];
         }
 
         return data as SessionFeedback[];
 
     } catch (error) {
-        console.error('[FeedbackService] Unexpected error:', error);
+        feedbackServiceLogger.error('Unexpected error fetching feedback history', error, {
+            studentId,
+            exerciseId,
+            limit
+        });
         return [];
     }
 }
@@ -417,14 +438,14 @@ export async function getLatestFeedback(
             .limit(limit);
 
         if (error) {
-            console.error('[FeedbackService] Error fetching latest:', error);
+            feedbackServiceLogger.error('Error fetching latest feedback', error, { studentId, limit });
             return [];
         }
 
         return data as SessionFeedback[];
 
     } catch (error) {
-        console.error('[FeedbackService] Unexpected error:', error);
+        feedbackServiceLogger.error('Unexpected error fetching latest feedback', error, { studentId, limit });
         return [];
     }
 }
@@ -460,7 +481,7 @@ export async function getProgressionSuggestion(
         return adjustment;
 
     } catch (error) {
-        console.error('[FeedbackService] Error analyzing progression:', error);
+        feedbackServiceLogger.error('Error analyzing progression', error, { studentId, exerciseId });
         return null;
     }
 }
@@ -498,7 +519,11 @@ export async function getProgressionTrend(
         return trend;
 
     } catch (error) {
-        console.error('[FeedbackService] Error analyzing trend:', error);
+        feedbackServiceLogger.error('Error analyzing trend', error, {
+            studentId,
+            exerciseId,
+            sessionsCount
+        });
         return null;
     }
 }
@@ -518,14 +543,14 @@ export async function getAverageRIRByExercise(
             .rpc('get_average_rir_by_exercise', { p_student_id: studentId });
 
         if (error) {
-            console.error('[FeedbackService] Error fetching RIR stats:', error);
+            feedbackServiceLogger.error('Error fetching RIR stats', error, { studentId });
             return [];
         }
 
         return data || [];
 
     } catch (error) {
-        console.error('[FeedbackService] Unexpected error:', error);
+        feedbackServiceLogger.error('Unexpected error fetching RIR stats', error, { studentId });
         return [];
     }
 }

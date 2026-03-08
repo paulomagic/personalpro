@@ -7,6 +7,7 @@ import { buildDynamicSystemPrompt, buildUserPrompt, type ClientContext } from '.
 import { validateAIResponse, findSafeAlternative } from './validation/exerciseValidator';
 import { getRelevantRules, formatRulesForPrompt } from './knowledge/exerciseOntology';
 import type { BiomechanicalProfile } from './biomechanicalProfile';
+import { createScopedLogger } from '../appLogger';
 
 export interface WorkoutAIContext {
     clientName: string;
@@ -22,6 +23,7 @@ export interface WorkoutAIContext {
 }
 
 let currentWorkoutContext: WorkoutAIContext | null = null;
+const trainingEngineAILogger = createScopedLogger('trainingEngineAI');
 
 const MAX_AI_RETRIES = 0;
 
@@ -175,7 +177,12 @@ export async function selectSlotExerciseWithAI(
                 }
             }
         } catch (error) {
-            console.warn(`[AI v3.0] Error in attempt ${attempt + 1}:`, error);
+            trainingEngineAILogger.warn('Error selecting slot exercise with AI', {
+                attempt: attempt + 1,
+                slotId: slot.id,
+                movementPattern: slot.movement_pattern,
+                error
+            });
         }
     }
 

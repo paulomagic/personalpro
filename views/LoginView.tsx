@@ -13,10 +13,13 @@ import {
   isCaptchaServiceUnavailableError,
   resolveCaptchaStrictMode
 } from '../services/auth/captchaPolicy';
+import { createScopedLogger } from '../services/appLogger';
 
 interface LoginViewProps {
   onLogin: (user: AppSessionUser | null) => void;
 }
+
+const loginViewLogger = createScopedLogger('LoginView');
 
 interface InputFieldProps {
   id: string;
@@ -92,7 +95,10 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
 
     const result = await acceptInvitation(inviteToken, userId);
     if (!result.success) {
-      console.error('Error accepting invitation:', result.error);
+      loginViewLogger.error('Error accepting invitation', result.error, {
+        inviteToken,
+        userId
+      });
     }
 
     window.history.replaceState({}, document.title, window.location.pathname);

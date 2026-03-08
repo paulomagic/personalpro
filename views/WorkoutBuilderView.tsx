@@ -4,6 +4,7 @@ import { ArrowLeft, Plus, Dumbbell, Timer, Zap, Layers, Trash2, Save, Heart, Act
 import { Client, ExerciseCategory, TrainingMethod, WorkoutExercise, ExerciseSet, WorkoutTemplate } from '../types';
 import { mockExercises, mockTemplates, mockCustomMethods } from '../mocks/demoData';
 import { saveWorkout } from '../services/supabase/domains/workoutsDomain';
+import { createScopedLogger } from '../services/appLogger';
 
 interface WorkoutBuilderViewProps {
     user: any;
@@ -11,6 +12,8 @@ interface WorkoutBuilderViewProps {
     onBack: () => void;
     onSave: () => void;
 }
+
+const workoutBuilderViewLogger = createScopedLogger('WorkoutBuilderView');
 
 // ============ METHOD COLORS & LABELS ============
 const methodColors: Record<TrainingMethod, string> = {
@@ -191,7 +194,11 @@ const WorkoutBuilderView: React.FC<WorkoutBuilderViewProps> = ({ user, client, o
             await saveWorkout(workoutToSave);
             onSave();
         } catch (error) {
-            console.error('Error saving workout:', error);
+            workoutBuilderViewLogger.error('Error saving workout', error, {
+                clientId: client.id,
+                coachId: user.id || 'unknown',
+                exercisesCount: exercises.length
+            });
         }
     };
 

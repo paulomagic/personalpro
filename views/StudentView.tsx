@@ -71,6 +71,7 @@ const StudentView: React.FC<StudentViewProps> = ({
     const [showFeedbackForm, setShowFeedbackForm] = useState(false);
     const [feedbackExerciseIndex, setFeedbackExerciseIndex] = useState(0);
     const [feedbackCompletedExercises, setFeedbackCompletedExercises] = useState<Set<number>>(new Set());
+    const [notice, setNotice] = useState<{ type: 'error' | 'info'; message: string } | null>(null);
     const [oneHandMode, setOneHandMode] = useState<boolean>(() => {
         if (typeof window === 'undefined') return false;
         return window.localStorage.getItem('personalpro:quick_one_hand_mode') === '1';
@@ -122,6 +123,12 @@ const StudentView: React.FC<StudentViewProps> = ({
         if (typeof window === 'undefined') return;
         window.localStorage.setItem('personalpro:quick_one_hand_mode', oneHandMode ? '1' : '0');
     }, [oneHandMode]);
+
+    useEffect(() => {
+        if (!notice) return;
+        const timeout = window.setTimeout(() => setNotice(null), 3200);
+        return () => window.clearTimeout(timeout);
+    }, [notice]);
 
     // Helper to normalize exercises with default sets
     const normalizeExercises = (exercises: WorkoutExercise[]): WorkoutExercise[] => {
@@ -315,7 +322,7 @@ const StudentView: React.FC<StudentViewProps> = ({
         const result = await saveSessionFeedbackWithRetry(feedback);
 
         if (!result.success) {
-            alert('Erro ao salvar feedback. Tente novamente.');
+            setNotice({ type: 'error', message: 'Erro ao salvar feedback. Tente novamente.' });
             void logFunnelEvent('feedback_failed', {
                 workoutId: feedback.workout_id,
                 exerciseId: feedback.exercise_id,
@@ -348,7 +355,10 @@ const StudentView: React.FC<StudentViewProps> = ({
 
     const handleSkipExerciseFeedback = () => {
         if (isColdStartWorkout) {
-            alert('No modo inicial, o feedback por exercício é obrigatório.');
+            setNotice({
+                type: 'info',
+                message: 'No modo inicial, o feedback por exercício é obrigatório.'
+            });
             return;
         }
         setShowFeedbackForm(false);
@@ -481,6 +491,25 @@ const StudentView: React.FC<StudentViewProps> = ({
     // Workout Execution View (existing functionality)
     return (
         <div className="min-h-screen text-white bg-[var(--bg-void)]">
+            <AnimatePresence>
+                {notice && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -12 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -12 }}
+                        className="fixed top-5 left-1/2 z-[70] w-[calc(100%-2rem)] max-w-md -translate-x-1/2"
+                    >
+                        <div className={`rounded-2xl border px-4 py-3 text-sm font-bold shadow-2xl backdrop-blur-xl ${
+                            notice.type === 'error'
+                                ? 'bg-[rgba(255,51,102,0.14)] border-[rgba(255,51,102,0.22)] text-[#FFD1DD]'
+                                : 'bg-[rgba(59,130,246,0.14)] border-[rgba(59,130,246,0.22)] text-[#D9E7FF]'
+                        }`}>
+                            {notice.message}
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
             {/* Header Execution Premium */}
             <StudentExecutionHeader
                 isLightTheme={isLightTheme}

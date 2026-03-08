@@ -51,7 +51,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({ isOpen, onClose, title
                         role="dialog"
                         aria-modal="true"
                         aria-label={title || 'Painel'}
-                        className="fixed bottom-0 left-0 right-0 z-50 border-t border-white/10 rounded-t-[32px] overflow-hidden shadow-2xl safe-area-bottom w-full max-w-md mx-auto bg-[var(--bg-surface)]"
+                        className="fixed bottom-0 left-0 right-0 z-[70] border-t border-white/10 rounded-t-[32px] overflow-hidden shadow-2xl safe-area-bottom w-full max-w-md mx-auto bg-[var(--bg-surface)]"
                     >
                         {/* Drag Handle */}
                         <div className="w-full flex justify-center py-4 cursor-grab active:cursor-grabbing">
@@ -64,7 +64,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({ isOpen, onClose, title
                             </div>
                         )}
 
-                        <div className="px-6 pb-28 max-h-[80vh] overflow-y-auto custom-scrollbar">
+                        <div className="px-6 pb-[calc(11rem+env(safe-area-inset-bottom))] max-h-[85vh] overflow-y-auto custom-scrollbar">
                             {children}
                         </div>
                     </motion.div>

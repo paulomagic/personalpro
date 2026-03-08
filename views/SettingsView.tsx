@@ -86,7 +86,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user, onBack, onLogout }) =
         window.setTimeout(() => setToastMessage(null), 3000);
     }, []);
 
-    const supportCtaLabel = supportEmail ? 'Abrir Contato com Suporte' : 'Copiar Diagnóstico do App';
+    const supportCtaLabel = supportEmail ? 'Abrir Contato com Suporte' : 'Copiar Informações para Suporte';
 
     const handleExportPrivacyReport = React.useCallback(() => {
         const report = {
@@ -137,9 +137,9 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user, onBack, onLogout }) =
 
         try {
             await navigator.clipboard.writeText(diagnostics);
-            showToast('Diagnóstico copiado. Configure VITE_SUPPORT_EMAIL para contato direto.');
+            showToast('Informações copiadas para enviar ao suporte.');
         } catch {
-            showToast('Não foi possível copiar o diagnóstico.', 'error');
+            showToast('Não foi possível copiar as informações.', 'error');
         }
     }, [coachEmail, isDemo, notifState.push, selectedTheme, showToast, supportEmail]);
 

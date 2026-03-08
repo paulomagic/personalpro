@@ -128,7 +128,13 @@ const SettingsModalContent: React.FC<SettingsModalContentProps> = ({
     }
 
     if (activeModal === 'help') {
-        return <SettingsHelpModal onContactSupport={onContactSupport} supportCtaLabel={supportCtaLabel} />;
+        return (
+            <SettingsHelpModal
+                onContactSupport={onContactSupport}
+                supportCtaLabel={supportCtaLabel}
+                hasDirectSupportEmail={supportCtaLabel === 'Abrir Contato com Suporte'}
+            />
+        );
     }
 
     if (activeModal === 'appearance') {

@@ -36,3 +36,19 @@ organizacao-alteracoes-20260215/
 playwright-report/
 test-results/
 .agent/
+
+# Test Coverage
+coverage/
+
+# Linters & Compilers Caches
+.eslintcache
+.tsbuildinfo
+
+# Supabase Local
+supabase/functions/**/.env
+supabase/.branches/
+
+# Local TLS/HTTPS Certificates
+*.pem
+*.crt
+*.key

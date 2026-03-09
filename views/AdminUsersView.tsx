@@ -33,18 +33,27 @@ function statusLabel(status: AdminManagedUser['status']): string {
 }
 
 const AdminUsersView: React.FC<AdminUsersViewProps> = ({ onBack }) => {
+    const PAGE_SIZE = 20;
     const queryClient = useQueryClient();
     const [searchQuery, setSearchQuery] = useState('');
     const deferredSearch = useDeferredValue(searchQuery);
+    const [page, setPage] = useState(0);
     const [showInviteSheet, setShowInviteSheet] = useState(false);
     const [inviteName, setInviteName] = useState('');
     const [inviteEmail, setInviteEmail] = useState('');
     const [inviteError, setInviteError] = useState<string | null>(null);
     const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
 
+    React.useEffect(() => {
+        setPage(0);
+    }, [deferredSearch]);
+
     const { data, isLoading, isFetching, refetch } = useQuery({
-        queryKey: ['admin-users', deferredSearch],
-        queryFn: () => listAdminUsers(deferredSearch),
+        queryKey: ['admin-users', deferredSearch, page],
+        queryFn: () => listAdminUsers(deferredSearch, {
+            limit: PAGE_SIZE,
+            offset: page * PAGE_SIZE
+        }),
         staleTime: 30_000
     });
 
@@ -78,7 +87,9 @@ const AdminUsersView: React.FC<AdminUsersViewProps> = ({ onBack }) => {
     };
 
     const users = data?.users || [];
+    const pagination = data?.pagination || { limit: PAGE_SIZE, offset: page * PAGE_SIZE, total: 0 };
     const loading = isLoading || isFetching;
+    const totalPages = Math.max(1, Math.ceil((pagination.total || 0) / PAGE_SIZE));
 
     const summaryCards = useMemo(() => ([
         { label: 'Total', value: counts.total, tone: 'text-white' },
@@ -128,7 +139,7 @@ const AdminUsersView: React.FC<AdminUsersViewProps> = ({ onBack }) => {
                                 <Users size={20} className="text-blue-400" />
                                 Gestão de Usuários
                             </h1>
-                            <p className="text-xs text-slate-500">{counts.total} usuário(s) reais no sistema</p>
+                            <p className="text-xs text-slate-500">{pagination.total} usuário(s) no resultado atual</p>
                         </div>
                     </div>
                     <button
@@ -275,6 +286,35 @@ const AdminUsersView: React.FC<AdminUsersViewProps> = ({ onBack }) => {
                             </div>
                         </motion.div>
                     ))
+                )}
+
+                {!loading && pagination.total > PAGE_SIZE && (
+                    <div className="glass-card rounded-2xl p-4 border border-white/5 flex items-center justify-between gap-3">
+                        <button
+                            type="button"
+                            onClick={() => setPage((current) => Math.max(0, current - 1))}
+                            disabled={page === 0 || isFetching}
+                            className="px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest bg-white/5 text-white disabled:opacity-40 disabled:cursor-not-allowed"
+                        >
+                            Anterior
+                        </button>
+                        <div className="text-center min-w-0">
+                            <p className="text-xs font-black uppercase tracking-widest text-white">
+                                Página {page + 1} de {totalPages}
+                            </p>
+                            <p className="text-[11px] text-slate-400">
+                                {pagination.total} usuário(s) encontrados
+                            </p>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={() => setPage((current) => Math.min(totalPages - 1, current + 1))}
+                            disabled={page >= totalPages - 1 || isFetching}
+                            className="px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest bg-white/5 text-white disabled:opacity-40 disabled:cursor-not-allowed"
+                        >
+                            Próxima
+                        </button>
+                    </div>
                 )}
             </main>
 

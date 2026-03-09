@@ -37,6 +37,18 @@ function getProviderHealthTone(status?: 'ok' | 'warning' | 'critical') {
     return 'text-gray-600';
 }
 
+function getLatencyLabel(latencyMs: number) {
+    if (latencyMs <= 5000) return '✅ Dentro da meta';
+    if (latencyMs <= 8000) return '⚠️ Atenção';
+    return '❌ Lento';
+}
+
+function getLatencyTone(latencyMs: number) {
+    if (latencyMs <= 5000) return 'text-green-600';
+    if (latencyMs <= 8000) return 'text-yellow-600';
+    return 'text-red-600';
+}
+
 export function MonitoringStatusSummary({ metrics }: MonitoringStatusSummaryProps) {
     return (
         <div className="bg-white border rounded-lg p-6">
@@ -61,6 +73,13 @@ export function MonitoringStatusSummary({ metrics }: MonitoringStatusSummaryProp
                     <span className="text-sm">Sistema de Fallback</span>
                     <span className={`text-sm font-medium ${metrics.fallback_usage_percent < 10 ? 'text-green-600' : 'text-yellow-600'}`}>
                         {metrics.fallback_usage_percent < 10 ? '✅ Saudável' : '⚠️ Uso elevado'}
+                    </span>
+                </div>
+
+                <div className="flex items-center justify-between">
+                    <span className="text-sm">Latência de Geração</span>
+                    <span className={`text-sm font-medium ${getLatencyTone(metrics.avg_generation_time_ms)}`}>
+                        {getLatencyLabel(metrics.avg_generation_time_ms)}
                     </span>
                 </div>
 

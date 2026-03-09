@@ -4,6 +4,7 @@
 
 import React, { useState } from 'react';
 import { MonitoringMetricCard } from './monitoring/MonitoringMetricCard';
+import { MonitoringAlertsPanel } from './monitoring/MonitoringAlertsPanel';
 import { MonitoringStatusSummary } from './monitoring/MonitoringStatusSummary';
 import { useMonitoringMetrics, type MonitoringTimeRange } from '../hooks/useMonitoringMetrics';
 
@@ -15,7 +16,7 @@ const TIME_RANGE_LABELS: Record<MonitoringTimeRange, string> = {
 
 export function MonitoringDashboardConnected() {
     const [timeRange, setTimeRange] = useState<MonitoringTimeRange>('24h');
-    const { metrics, loading, error, fetchMetrics } = useMonitoringMetrics(timeRange);
+    const { metrics, alerts, loading, error, fetchMetrics } = useMonitoringMetrics(timeRange);
 
     const getSuccessRateColor = (rate: number): 'green' | 'yellow' | 'red' => {
         if (rate >= 95) return 'green';
@@ -162,7 +163,10 @@ export function MonitoringDashboardConnected() {
                 )}
             </div>
 
-            <MonitoringStatusSummary metrics={metrics} />
+            <div className="grid grid-cols-1 xl:grid-cols-[1.1fr_0.9fr] gap-6 mb-6">
+                <MonitoringStatusSummary metrics={metrics} />
+                <MonitoringAlertsPanel alerts={alerts} />
+            </div>
 
             {metrics.provider_health && (
                 <div className="bg-white border rounded-lg p-6">

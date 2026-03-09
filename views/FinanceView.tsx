@@ -116,7 +116,7 @@ const FinanceView: React.FC<FinanceViewProps> = ({ user, onBack }) => {
                     }));
                 }
 
-                await withTimeout(getClients(user.id, { limit: 120 }));
+                await withTimeout(getClients(user.id, { limit: 120, includeSensitiveData: false }));
                 return [];
             } catch (error) {
                 financeViewLogger.error('Error fetching finance data', error, { userId: user?.id });

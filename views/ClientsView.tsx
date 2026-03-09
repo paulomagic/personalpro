@@ -1,9 +1,15 @@
-import React, { useState } from 'react';
+import React, { useDeferredValue, useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, Plus, Users, AlertTriangle, Pause, CheckCircle, ChevronRight, User } from 'lucide-react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Client } from '../types';
-import { getClients, createClient, DBClient } from '../services/supabase/domains/clientsDomain';
+import {
+    getClientsPage,
+    getClientCounts,
+    createClient,
+    DBClient,
+    type ClientCountsResult
+} from '../services/supabase/domains/clientsDomain';
 import { uploadAvatar } from '../services/supabase/domains/storageDomain';
 import AddClientModal from '../components/AddClientModal';
 import { ClientCardSkeleton } from '../components/Skeleton';
@@ -24,10 +30,14 @@ interface ClientsViewProps {
 }
 
 const ClientsView: React.FC<ClientsViewProps> = ({ user, onBack, onSelectClient }) => {
+    const PAGE_SIZE = 24;
+    const queryClient = useQueryClient();
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'at-risk' | 'paused'>('all');
     const [showAddModal, setShowAddModal] = useState(false);
     const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+    const [page, setPage] = useState(0);
+    const deferredSearchTerm = useDeferredValue(searchTerm);
 
     const showToast = (message: string, type: 'success' | 'error' = 'success') => {
         setToast({ message, type });
@@ -61,29 +71,84 @@ const ClientsView: React.FC<ClientsViewProps> = ({ user, onBack, onSelectClient 
         session_price: dbClient.session_price,
     }));
 
+    useEffect(() => {
+        setPage(0);
+    }, [deferredSearchTerm, statusFilter]);
+
     const {
-        data: clients = [],
+        data: clientsPage,
         isLoading: loading,
+        isFetching,
         refetch: refetchClients
-    } = useQuery<Client[]>({
-        queryKey: ['clients', user?.id, user?.isDemo],
+    } = useQuery<{ items: Client[]; total: number }>({
+        queryKey: ['clients', user?.id, user?.isDemo, deferredSearchTerm, statusFilter, page],
         enabled: Boolean(user?.id || user?.isDemo),
         queryFn: async () => {
             if (user?.isDemo || user?.id === 'demo-user-id') {
-                return await loadDemoClients();
+                const demoClients = await loadDemoClients();
+                const normalizedSearch = deferredSearchTerm.trim().toLowerCase();
+                const filtered = demoClients.filter((client) => {
+                    const matchesSearch = !normalizedSearch || client.name.toLowerCase().includes(normalizedSearch);
+                    const matchesStatus = statusFilter === 'all' || client.status === statusFilter;
+                    return matchesSearch && matchesStatus;
+                });
+
+                return {
+                    items: filtered.slice(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE),
+                    total: filtered.length
+                };
             }
             if (!user?.id) {
-                return [];
+                return { items: [], total: 0 };
             }
             try {
-                const data = await getClients(user.id, { limit: 300 });
-                return mapDbClients(data);
+                const result = await getClientsPage(user.id, {
+                    limit: PAGE_SIZE,
+                    offset: page * PAGE_SIZE,
+                    search: deferredSearchTerm,
+                    status: statusFilter === 'all' ? undefined : statusFilter,
+                    includeSensitiveData: false
+                });
+                return {
+                    items: mapDbClients(result.data),
+                    total: result.total
+                };
             } catch (error) {
-                clientsViewLogger.error('Error loading clients list', error, { userId: user.id });
-                return [];
+                clientsViewLogger.error('Error loading paginated clients list', error, {
+                    userId: user.id,
+                    page,
+                    search: deferredSearchTerm,
+                    statusFilter
+                });
+                return { items: [], total: 0 };
             }
         }
     });
+
+    const { data: statsData } = useQuery<ClientCountsResult>({
+        queryKey: ['client-counts', user?.id, user?.isDemo],
+        enabled: Boolean(user?.id || user?.isDemo),
+        staleTime: 60_000,
+        queryFn: async () => {
+            if (user?.isDemo || user?.id === 'demo-user-id') {
+                const demoClients = await loadDemoClients();
+                return {
+                    total: demoClients.length,
+                    active: demoClients.filter((client) => client.status === 'active').length,
+                    atRisk: demoClients.filter((client) => client.status === 'at-risk').length,
+                    paused: demoClients.filter((client) => client.status === 'paused').length
+                };
+            }
+            if (!user?.id) {
+                return { total: 0, active: 0, atRisk: 0, paused: 0 };
+            }
+            return await getClientCounts(user.id);
+        }
+    });
+
+    const clients = clientsPage?.items ?? [];
+    const totalClients = clientsPage?.total ?? 0;
+    const totalPages = Math.max(1, Math.ceil(totalClients / PAGE_SIZE));
 
     // Handle new client
     const handleAddClient = async (newClientData: Partial<Client>) => {
@@ -148,6 +213,7 @@ const ClientsView: React.FC<ClientsViewProps> = ({ user, onBack, onSelectClient 
             }
 
             await refetchClients();
+            await queryClient.invalidateQueries({ queryKey: ['client-counts', user.id, user?.isDemo] });
             showToast('Aluno criado com sucesso!', 'success');
         } catch (error) {
             clientsViewLogger.error('Error creating client from view', error, { userId: user.id });
@@ -156,20 +222,12 @@ const ClientsView: React.FC<ClientsViewProps> = ({ user, onBack, onSelectClient 
         }
     };
 
-    // Filter clients
-    const filteredClients = clients.filter(client => {
-        const matchesSearch = client.name.toLowerCase().includes(searchTerm.toLowerCase());
-        const matchesStatus = statusFilter === 'all' || client.status === statusFilter;
-        return matchesSearch && matchesStatus;
-    });
-
-    // Stats
-    const stats = {
-        total: clients.length,
-        active: clients.filter(c => c.status === 'active').length,
-        atRisk: clients.filter(c => c.status === 'at-risk').length,
-        paused: clients.filter(c => c.status === 'paused').length,
-    };
+    const stats = useMemo(() => ({
+        total: statsData?.total ?? 0,
+        active: statsData?.active ?? 0,
+        atRisk: statsData?.atRisk ?? 0,
+        paused: statsData?.paused ?? 0,
+    }), [statsData]);
 
     // Status badge component
     const StatusBadge: React.FC<{ status: Client['status'] }> = ({ status }) => {
@@ -311,9 +369,9 @@ const ClientsView: React.FC<ClientsViewProps> = ({ user, onBack, onSelectClient 
                         <ClientCardSkeleton />
                         <ClientCardSkeleton />
                     </div>
-                ) : filteredClients.length > 0 ? (
+                ) : clients.length > 0 ? (
                     <AnimatePresence>
-                        {filteredClients.map((client, index) => (
+                        {clients.map((client, index) => (
                             <motion.button
                                 key={client.id}
                                 initial={{ opacity: 0, y: 16 }}
@@ -397,6 +455,35 @@ const ClientsView: React.FC<ClientsViewProps> = ({ user, onBack, onSelectClient 
                     </div>
                 )}
             </motion.div>
+
+            {!loading && totalClients > PAGE_SIZE && (
+                <motion.div variants={itemVariants} className="px-5 mt-5">
+                    <div className="rounded-2xl border border-[rgba(96,165,250,0.18)] bg-[rgba(15,23,42,0.92)] px-4 py-3 flex items-center justify-between gap-3">
+                        <button
+                            onClick={() => setPage((current) => Math.max(0, current - 1))}
+                            disabled={page === 0 || isFetching}
+                            className="px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider disabled:opacity-40 disabled:cursor-not-allowed bg-[rgba(59,130,246,0.12)] text-white"
+                        >
+                            Anterior
+                        </button>
+                        <div className="text-center min-w-0">
+                            <p className="text-xs font-black uppercase tracking-widest text-white">
+                                Página {page + 1} de {totalPages}
+                            </p>
+                            <p className="text-[10px] font-bold text-slate-300">
+                                {totalClients} alunos no total
+                            </p>
+                        </div>
+                        <button
+                            onClick={() => setPage((current) => Math.min(totalPages - 1, current + 1))}
+                            disabled={page >= totalPages - 1 || isFetching}
+                            className="px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider disabled:opacity-40 disabled:cursor-not-allowed bg-[rgba(59,130,246,0.12)] text-white"
+                        >
+                            Próxima
+                        </button>
+                    </div>
+                </motion.div>
+            )}
 
             {/* Add Client Modal */}
             <AnimatePresence>

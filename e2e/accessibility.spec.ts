@@ -2,6 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 
 async function expectNoSeriousViolations(page: Page) {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.addStyleTag({
     content: `
       *,
@@ -10,6 +11,14 @@ async function expectNoSeriousViolations(page: Page) {
         animation: none !important;
         transition: none !important;
         caret-color: auto !important;
+      }
+
+      [style*="opacity: 0"] {
+        opacity: 1 !important;
+      }
+
+      [style*="transform: translate"] {
+        transform: none !important;
       }
     `
   });

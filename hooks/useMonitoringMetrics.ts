@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { createScopedLogger } from '../services/appLogger';
 import { getAIMetrics } from '../services/loggingService';
+import { deriveMonitoringAlerts, type MonitoringAlert } from '../services/monitoring/monitoringAlerts';
 import { supabase } from '../services/supabaseCore';
 
 export type MonitoringTimeRange = '24h' | '7d' | '30d';
@@ -64,6 +65,7 @@ function getTimeRangeHours(timeRange: MonitoringTimeRange): number {
 
 export function useMonitoringMetrics(timeRange: MonitoringTimeRange) {
     const [metrics, setMetrics] = useState<GenerationMetrics | null>(null);
+    const [alerts, setAlerts] = useState<MonitoringAlert[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
@@ -89,6 +91,7 @@ export function useMonitoringMetrics(timeRange: MonitoringTimeRange) {
                 monitoringLogger.error('RPC error while fetching metrics', rpcError, { timeRange });
                 setError('Erro ao buscar métricas. Verifique se a migration foi aplicada.');
                 setMetrics(null);
+                setAlerts([]);
                 return;
             }
 
@@ -106,10 +109,12 @@ export function useMonitoringMetrics(timeRange: MonitoringTimeRange) {
             }
 
             setMetrics(mappedMetrics);
+            setAlerts(deriveMonitoringAlerts(mappedMetrics));
         } catch (fetchError: any) {
             monitoringLogger.error('Unexpected error while fetching metrics', fetchError, { timeRange });
             setError(fetchError.message || 'Erro desconhecido');
             setMetrics(null);
+            setAlerts([]);
         } finally {
             setLoading(false);
         }
@@ -121,6 +126,7 @@ export function useMonitoringMetrics(timeRange: MonitoringTimeRange) {
 
     return {
         metrics,
+        alerts,
         loading,
         error,
         fetchMetrics

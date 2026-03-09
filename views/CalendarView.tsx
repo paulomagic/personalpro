@@ -53,6 +53,19 @@ const demoAppointments: DisplayAppointment[] = [
     { id: '5', clientName: 'Marina Santos', clientAvatar: 'https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?w=100', time: '16:00', duration: '1h', type: 'training', status: 'confirmed', phone: '5561955555555' },
 ];
 
+const mapAppointmentsToDisplay = (appointmentsData: any[]): DisplayAppointment[] =>
+    appointmentsData.map((apt: any) => ({
+        id: apt.id,
+        clientId: apt.client_id,
+        clientName: apt.clients?.name || 'Cliente',
+        clientAvatar: apt.clients?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(apt.clients?.name || 'C')}&background=3b82f6&color=fff`,
+        time: (apt.time || '').slice(0, 5) || '00:00',
+        duration: apt.duration,
+        type: apt.type,
+        status: apt.status,
+        phone: apt.clients?.phone,
+    }));
+
 const CalendarView: React.FC<CalendarViewProps> = ({ user, onBack, onSelectClient }) => {
     const queryClient = useQueryClient();
     const [selectedDate, setSelectedDate] = useState(new Date());
@@ -80,6 +93,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({ user, onBack, onSelectClien
 
     const isDemo = user?.isDemo || !user?.id;
     const dateStr = selectedDate.toISOString().split('T')[0];
+    const monthKey = `${selectedDate.getFullYear()}-${selectedDate.getMonth() + 1}`;
 
     const showToast = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
         setToast({ message, type });
@@ -91,65 +105,86 @@ const CalendarView: React.FC<CalendarViewProps> = ({ user, onBack, onSelectClien
         return () => window.clearTimeout(timeout);
     }, [toast]);
 
-    const calendarQuery = useQuery({
-        queryKey: ['calendar-data', user?.id, isDemo, dateStr],
-        staleTime: 30_000,
+    const clientsQuery = useQuery({
+        queryKey: ['calendar-clients', user?.id, isDemo],
+        enabled: Boolean(isDemo || user?.id),
+        staleTime: 5 * 60_000,
         queryFn: async () => {
             if (isDemo || !user?.id) {
-                const demoClients = await loadDemoClients();
-                return {
-                    clients: demoClients as unknown as DBClient[],
-                    appointments: demoAppointments,
-                    monthlyBatchesCount: 0
-                };
+                return await loadDemoClients() as unknown as DBClient[];
             }
 
             try {
-                const [clientsData, appointmentsData, batches] = await Promise.all([
-                    getClients(user.id, { limit: 300 }),
-                    getAppointments(user.id, dateStr, { limit: 300 }),
-                    getAllBatchesForCoach(user.id, selectedDate.getFullYear(), selectedDate.getMonth() + 1)
-                ]);
-
-                const mappedAppointments: DisplayAppointment[] = appointmentsData.map((apt: any) => ({
-                    id: apt.id,
-                    clientId: apt.client_id,
-                    clientName: apt.clients?.name || 'Cliente',
-                    clientAvatar: apt.clients?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(apt.clients?.name || 'C')}&background=3b82f6&color=fff`,
-                    time: (apt.time || '').slice(0, 5) || '00:00',
-                    duration: apt.duration,
-                    type: apt.type,
-                    status: apt.status,
-                    phone: apt.clients?.phone,
-                }));
-
-                return {
-                    clients: clientsData,
-                    appointments: mappedAppointments,
-                    monthlyBatchesCount: batches.reduce((sum, b) => sum + b.total_sessions, 0)
-                };
+                return await getClients(user.id, {
+                    limit: 200,
+                    includeSensitiveData: false
+                });
             } catch (error) {
-                calendarViewLogger.error('Error fetching calendar data', error, {
+                calendarViewLogger.error('Error fetching calendar clients', error, { userId: user?.id });
+                return [];
+            }
+        }
+    });
+
+    const appointmentsQuery = useQuery({
+        queryKey: ['calendar-appointments', user?.id, isDemo, dateStr],
+        enabled: Boolean(isDemo || user?.id),
+        staleTime: 30_000,
+        queryFn: async () => {
+            if (isDemo || !user?.id) {
+                return demoAppointments;
+            }
+
+            try {
+                const appointmentsData = await getAppointments(user.id, dateStr, { limit: 300 });
+                return mapAppointmentsToDisplay(appointmentsData);
+            } catch (error) {
+                calendarViewLogger.error('Error fetching calendar appointments', error, {
                     userId: user?.id,
                     date: dateStr
                 });
-                return {
-                    clients: [],
-                    appointments: [],
-                    monthlyBatchesCount: 0
-                };
+                return [];
+            }
+        }
+    });
+
+    const monthlyBatchesQuery = useQuery({
+        queryKey: ['calendar-monthly-batches', user?.id, isDemo, monthKey],
+        enabled: Boolean(!isDemo && user?.id),
+        staleTime: 60_000,
+        queryFn: async () => {
+            try {
+                const batches = await getAllBatchesForCoach(user.id, selectedDate.getFullYear(), selectedDate.getMonth() + 1);
+                return batches.reduce((sum, batch) => sum + batch.total_sessions, 0);
+            } catch (error) {
+                calendarViewLogger.error('Error fetching monthly schedule batches', error, {
+                    userId: user?.id,
+                    monthKey
+                });
+                return 0;
             }
         }
     });
 
     useEffect(() => {
-        if (!calendarQuery.data) return;
-        setClients(calendarQuery.data.clients);
-        setAppointments(calendarQuery.data.appointments);
-        setMonthlyBatchesCount(calendarQuery.data.monthlyBatchesCount);
-    }, [calendarQuery.data]);
+        if (!clientsQuery.data) return;
+        setClients(clientsQuery.data);
+    }, [clientsQuery.data]);
 
-    const loading = calendarQuery.isLoading || cleaningUp;
+    useEffect(() => {
+        if (!appointmentsQuery.data) return;
+        setAppointments(appointmentsQuery.data);
+    }, [appointmentsQuery.data]);
+
+    useEffect(() => {
+        setMonthlyBatchesCount(monthlyBatchesQuery.data ?? 0);
+    }, [monthlyBatchesQuery.data]);
+
+    const loading =
+        clientsQuery.isLoading ||
+        appointmentsQuery.isLoading ||
+        monthlyBatchesQuery.isLoading ||
+        cleaningUp;
 
     // Generate week days
     const getWeekDays = () => {
@@ -231,7 +266,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({ user, onBack, onSelectClien
     const handleConfirmAppointment = async (apt: DisplayAppointment) => {
         if (!isDemo && apt.id) {
             await updateAppointment(apt.id, { status: 'confirmed' });
-            void queryClient.invalidateQueries({ queryKey: ['calendar-data', user?.id, isDemo] });
+            void queryClient.invalidateQueries({ queryKey: ['calendar-appointments', user?.id, isDemo, dateStr] });
         }
         setAppointments(prev => prev.map(a =>
             a.id === apt.id ? { ...a, status: 'confirmed' as const } : a
@@ -247,7 +282,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({ user, onBack, onSelectClien
                 showToast('Erro ao excluir agendamento. Tente novamente.', 'error');
                 return;
             }
-            void queryClient.invalidateQueries({ queryKey: ['calendar-data', user?.id, isDemo] });
+            void queryClient.invalidateQueries({ queryKey: ['calendar-appointments', user?.id, isDemo, dateStr] });
         }
         setAppointments(prev => prev.filter(a => a.id !== apt.id));
         setShowDetailModal(null);
@@ -333,7 +368,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({ user, onBack, onSelectClien
                     phone: selectedClient?.phone,
                 };
                 setAppointments(prev => [...prev, newApt].sort((a, b) => a.time.localeCompare(b.time)));
-                void queryClient.invalidateQueries({ queryKey: ['calendar-data', user?.id, isDemo] });
+                void queryClient.invalidateQueries({ queryKey: ['calendar-appointments', user?.id, isDemo, dateStr] });
             }
         }
 
@@ -365,7 +400,8 @@ const CalendarView: React.FC<CalendarViewProps> = ({ user, onBack, onSelectClien
             if (deleted) {
                 showToast(`${idsToDelete.length} agendamentos excluídos com sucesso.`, 'success');
                 setAppointments([]);
-                void queryClient.invalidateQueries({ queryKey: ['calendar-data', user?.id, isDemo] });
+                void queryClient.invalidateQueries({ queryKey: ['calendar-appointments', user?.id, isDemo, dateStr] });
+                void queryClient.invalidateQueries({ queryKey: ['calendar-monthly-batches', user?.id, isDemo, monthKey] });
             } else {
                 showToast('Erro ao excluir agendamentos. Tente novamente.', 'error');
             }
@@ -948,24 +984,8 @@ const CalendarView: React.FC<CalendarViewProps> = ({ user, onBack, onSelectClien
                         onClose={() => setShowMonthlyModal(false)}
                         onSuccess={() => {
                             setShowMonthlyModal(false);
-                            // Refresh appointments
-                            const dateStr = selectedDate.toISOString().split('T')[0];
-                            getAppointments(user.id, dateStr).then(data => {
-                                if (data.length > 0) {
-                                    const mapped = data.map((apt: any) => ({
-                                        id: apt.id,
-                                        clientId: apt.client_id,
-                                        clientName: apt.clients?.name || 'Cliente',
-                                        clientAvatar: apt.clients?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(apt.clients?.name || 'C')}&background=3b82f6&color=fff`,
-                                        time: (apt.time || '').slice(0, 5) || '00:00',
-                                        duration: apt.duration,
-                                        type: apt.type,
-                                        status: apt.status,
-                                        phone: apt.clients?.phone,
-                                    }));
-                                    setAppointments(mapped);
-                                }
-                            });
+                            void queryClient.invalidateQueries({ queryKey: ['calendar-appointments', user?.id, isDemo, dateStr] });
+                            void queryClient.invalidateQueries({ queryKey: ['calendar-monthly-batches', user?.id, isDemo, monthKey] });
                         }}
                     />
                 )}

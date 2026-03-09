@@ -65,7 +65,10 @@ export function useAIBuilderFlow({ user }: UseAIBuilderFlowParams) {
 
                 if (user?.id) {
                     const { getClients, mapDBClientToClient } = await loadClientsDomain();
-                    const dbClients = await getClients(user.id, { limit: 100 });
+                    const dbClients = await getClients(user.id, {
+                        limit: 100,
+                        includeSensitiveData: false
+                    });
                     if (dbClients && dbClients.length > 0) {
                         return dbClients.map(mapDBClientToClient) as Client[];
                     }

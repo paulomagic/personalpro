@@ -34,7 +34,7 @@ const MetricsView: React.FC<MetricsViewProps> = ({ user, onBack }) => {
             if (!user?.id) return emptyMetrics;
 
             try {
-                const clients = await getClients(user.id);
+                const clients = await getClients(user.id, { limit: 500, includeSensitiveData: false });
                 const activeClients = clients.filter((c: any) => c.status === 'active').length;
                 const avgAdherence = clients.length > 0
                     ? Math.round(clients.reduce((sum: number, c: any) => sum + (c.adherence || 0), 0) / clients.length)

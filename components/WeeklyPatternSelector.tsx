@@ -54,7 +54,7 @@ const WeeklyPatternSelector: React.FC<WeeklyPatternSelectorProps> = ({
 
     useEffect(() => {
         const fetchClients = async () => {
-            const data = await getClients(coachId);
+            const data = await getClients(coachId, { limit: 200, includeSensitiveData: false });
             setClients(data);
         };
         if (coachId) {

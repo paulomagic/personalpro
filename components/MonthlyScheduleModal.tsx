@@ -56,7 +56,7 @@ const MonthlyScheduleModal: React.FC<MonthlyScheduleModalProps> = ({
         const fetchClients = async () => {
             setLoadingClients(true);
             try {
-                const clientsData = await getClients(coachId);
+                const clientsData = await getClients(coachId, { limit: 200, includeSensitiveData: false });
                 setClients(clientsData);
             } catch (error) {
                 monthlyScheduleLogger.error('Error fetching clients for monthly schedule', error, { coachId });

@@ -133,7 +133,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
           setRevenue(12450);
         } else {
           const [clientsData, todayAppts, payments] = await Promise.all([
-            getClients(user.id, { limit: 50 }),
+            getClients(user.id, { limit: 50, includeSensitiveData: false }),
             getAppointments(user.id, today, { limit: 20 }),
             getPayments(user.id),
           ]);

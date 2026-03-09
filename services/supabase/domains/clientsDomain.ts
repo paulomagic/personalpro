@@ -42,6 +42,19 @@ export interface ClientsQueryOptions {
     offset?: number;
     search?: string;
     status?: 'active' | 'inactive' | 'at-risk' | 'paused';
+    includeSensitiveData?: boolean;
+}
+
+export interface ClientsPageResult {
+    data: DBClient[];
+    total: number;
+}
+
+export interface ClientCountsResult {
+    total: number;
+    active: number;
+    atRisk: number;
+    paused: number;
 }
 
 export interface CreateClientInput extends Omit<DBClient, 'id' | 'created_at'> {}
@@ -136,11 +149,13 @@ export function mapDBClientToClient(dbClient: DBClient & { avatar?: string }): a
     };
 }
 
-export async function getClients(
+export async function getClientsPage(
     coachId: string,
     options: ClientsQueryOptions = {}
-): Promise<DBClient[]> {
-    if (!supabase || !isSupabaseUuid(coachId)) return [];
+): Promise<ClientsPageResult> {
+    if (!supabase || !isSupabaseUuid(coachId)) {
+        return { data: [], total: 0 };
+    }
 
     const limit = Math.min(Math.max(options.limit ?? 200, 1), 500);
     const offset = Math.max(options.offset ?? 0, 0);
@@ -148,7 +163,7 @@ export async function getClients(
 
     let query = supabase
         .from('clients')
-        .select('id, name, email, phone, avatar:avatar_url, avatar_url, goal, level, age, weight, height, body_fat, status, adherence, created_at, coach_id, monthly_fee, payment_day, payment_type, session_price')
+        .select('id, name, email, phone, avatar:avatar_url, avatar_url, goal, level, age, weight, height, body_fat, status, adherence, created_at, coach_id, monthly_fee, payment_day, payment_type, session_price', { count: 'exact' })
         .eq('coach_id', coachId)
         .order('name')
         .range(offset, offset + limit - 1);
@@ -160,7 +175,7 @@ export async function getClients(
         query = query.eq('status', normalizedStatus);
     }
 
-    const { data, error } = await query;
+    const { data, error, count } = await query;
 
     if (error) {
         clientsDomainLogger.error('Error fetching clients', error, {
@@ -170,11 +185,57 @@ export async function getClients(
             limit,
             offset
         });
-        return [];
+        return { data: [], total: 0 };
     }
 
     const clients = (data || []) as DBClient[];
-    return enrichClientsWithSensitiveData(clients);
+    const includeSensitiveData = options.includeSensitiveData === true;
+    const finalData = includeSensitiveData
+        ? await enrichClientsWithSensitiveData(clients)
+        : clients;
+
+    return {
+        data: finalData,
+        total: count ?? 0
+    };
+}
+
+export async function getClients(
+    coachId: string,
+    options: ClientsQueryOptions = {}
+): Promise<DBClient[]> {
+    const result = await getClientsPage(coachId, options);
+    return result.data;
+}
+
+export async function getClientCounts(coachId: string): Promise<ClientCountsResult> {
+    if (!supabase || !isSupabaseUuid(coachId)) {
+        return { total: 0, active: 0, atRisk: 0, paused: 0 };
+    }
+
+    try {
+        const [
+            totalResult,
+            activeResult,
+            atRiskResult,
+            pausedResult
+        ] = await Promise.all([
+            supabase.from('clients').select('id', { count: 'exact', head: true }).eq('coach_id', coachId),
+            supabase.from('clients').select('id', { count: 'exact', head: true }).eq('coach_id', coachId).eq('status', 'active'),
+            supabase.from('clients').select('id', { count: 'exact', head: true }).eq('coach_id', coachId).eq('status', 'at-risk'),
+            supabase.from('clients').select('id', { count: 'exact', head: true }).eq('coach_id', coachId).eq('status', 'inactive')
+        ]);
+
+        return {
+            total: totalResult.count ?? 0,
+            active: activeResult.count ?? 0,
+            atRisk: atRiskResult.count ?? 0,
+            paused: pausedResult.count ?? 0
+        };
+    } catch (error) {
+        clientsDomainLogger.error('Error fetching client counts', error, { coachId });
+        return { total: 0, active: 0, atRisk: 0, paused: 0 };
+    }
 }
 
 export async function getClientById(

@@ -9,6 +9,7 @@ interface AdminUsersRequest {
     action?: "list" | "invite_coach";
     search?: string;
     limit?: number;
+    offset?: number;
     email?: string;
     name?: string;
 }
@@ -298,12 +299,14 @@ serve(async (req: Request) => {
         }
 
         const search = String(body.search || "").trim().toLowerCase();
-        const limit = Math.min(200, Math.max(20, Number(body.limit || 100)));
+        const limit = Math.min(50, Math.max(10, Number(body.limit || 20)));
+        const offset = Math.max(0, Number(body.offset || 0));
+        const scanLimit = Math.min(500, Math.max(100, offset + limit + 100));
 
-        const authUsers = await listAllUsers(adminClient, limit);
+        const authUsers = await listAllUsers(adminClient, scanLimit);
         const profileMap = await fetchProfilesByIds(adminClient, authUsers.map((user) => user.id));
 
-        const users = authUsers
+        const filteredUsers = authUsers
             .map((user) => {
                 const profile = profileMap.get(user.id);
                 const displayName = resolveDisplayName(user, profile);
@@ -334,12 +337,14 @@ serve(async (req: Request) => {
                 return bTime - aTime;
             });
 
-        const counts = users.reduce<Record<string, number>>((acc, user) => {
+        const counts = filteredUsers.reduce<Record<string, number>>((acc, user) => {
             acc.total = (acc.total || 0) + 1;
             acc[user.role] = (acc[user.role] || 0) + 1;
             acc[user.status] = (acc[user.status] || 0) + 1;
             return acc;
         }, {});
+
+        const users = filteredUsers.slice(offset, offset + limit);
 
         return new Response(
             JSON.stringify({
@@ -353,6 +358,11 @@ serve(async (req: Request) => {
                     active: counts.active || 0,
                     invited: counts.invited || 0,
                     inactive: counts.inactive || 0
+                },
+                pagination: {
+                    limit,
+                    offset,
+                    total: filteredUsers.length
                 }
             }),
             { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }

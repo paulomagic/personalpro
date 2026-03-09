@@ -1,8 +1,10 @@
 import type { MovementPattern } from '../types';
+import { createScopedLogger } from '../../appLogger';
 
 const isDev = import.meta.env.DEV;
-const debugLog = (...args: unknown[]) => {
-    if (isDev) console.log(...args);
+const patternValidatorLogger = createScopedLogger('patternValidator');
+const debugLog = (message: string, metadata?: Record<string, unknown>) => {
+    if (isDev) patternValidatorLogger.debug(message, metadata);
 };
 
 // ============ TYPES ============
@@ -134,7 +136,12 @@ export function validateConsecutivePatterns(
                 } else {
                     // Low severity - apenas log, não warning
                     debugLog(
-                        `[PatternValidator] ℹ️ Padrão "${pattern}" repetido em ${currentDay.label} e ${nextDay.label} (baixa severidade - OK).`
+                        'Low severity consecutive pattern detected',
+                        {
+                            pattern,
+                            currentDay: currentDay.label,
+                            nextDay: nextDay.label
+                        }
                     );
                 }
             });

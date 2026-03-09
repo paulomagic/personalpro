@@ -22,6 +22,7 @@ import {
     downloadPrivacyJson,
 } from '../services/privacyService';
 import { useSettingsPrivacy } from '../hooks/useSettingsPrivacy';
+import { getBrowserSummary } from '../utils/browserInfo';
 
 interface SettingsViewProps {
     user?: any;
@@ -124,8 +125,36 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user, onBack, onLogout }) =
             `Modo demo: ${isDemo ? 'sim' : 'não'}`,
             `Tema: ${selectedTheme}`,
             `Push ativo: ${notifState.push ? 'sim' : 'não'}`,
-            `Navegador: ${typeof navigator !== 'undefined' ? navigator.userAgent : 'indisponível'}`
+            `Navegador: ${getBrowserSummary()}`
         ].join('\n');
+
+        const copyDiagnostics = async () => {
+            if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+                try {
+                    await navigator.clipboard.writeText(diagnostics);
+                    return true;
+                } catch {
+                    // fallback below
+                }
+            }
+
+            if (typeof document !== 'undefined') {
+                const textarea = document.createElement('textarea');
+                textarea.value = diagnostics;
+                textarea.setAttribute('readonly', 'true');
+                textarea.style.position = 'fixed';
+                textarea.style.opacity = '0';
+                textarea.style.pointerEvents = 'none';
+                document.body.appendChild(textarea);
+                textarea.select();
+                textarea.setSelectionRange(0, textarea.value.length);
+                const copied = document.execCommand('copy');
+                document.body.removeChild(textarea);
+                return copied;
+            }
+
+            return false;
+        };
 
         if (supportEmail) {
             const subject = encodeURIComponent('PersonalPro - Solicitação de suporte');
@@ -136,8 +165,8 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user, onBack, onLogout }) =
         }
 
         try {
-            await navigator.clipboard.writeText(diagnostics);
-            showToast('Informações copiadas para enviar ao suporte.');
+            const copied = await copyDiagnostics();
+            showToast(copied ? 'Informações copiadas para enviar ao suporte.' : 'Não foi possível copiar as informações.', copied ? 'success' : 'error');
         } catch {
             showToast('Não foi possível copiar as informações.', 'error');
         }
@@ -148,6 +177,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user, onBack, onLogout }) =
         privacyConsents,
         privacyLoading,
         privacyConsentSaving,
+        privacyDeleteReadiness,
         loadPrivacyHistory,
         handleExportLivePrivacyData,
         handlePrivacyRequest,
@@ -185,7 +215,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user, onBack, onLogout }) =
                     endpoint: subscription.endpoint,
                     p256dh: subscription.toJSON()?.keys?.p256dh || null,
                     auth: subscription.toJSON()?.keys?.auth || null,
-                    user_agent: typeof navigator !== 'undefined' ? navigator.userAgent : null,
+                    user_agent: getBrowserSummary(),
                     updated_at: new Date().toISOString()
                 }, {
                     onConflict: 'user_id,endpoint'
@@ -471,6 +501,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user, onBack, onLogout }) =
                     privacyConsents={privacyConsents}
                     privacyLoading={privacyLoading}
                     privacyConsentSaving={privacyConsentSaving}
+                    privacyDeleteReadiness={privacyDeleteReadiness}
                     supportCtaLabel={supportCtaLabel}
                     onProfileNameChange={setProfileName}
                     onSaveProfile={handleSaveProfile}
@@ -484,7 +515,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user, onBack, onLogout }) =
                     onThemeChange={setPendingTheme}
                     onApplyTheme={applyTheme}
                     onExportPrivacy={handleExportLivePrivacyData}
-                    onRequestDelete={() => handlePrivacyRequest('delete')}
+                    onRequestDelete={(notes) => handlePrivacyRequest('delete', notes)}
                     onRequestAccess={() => handlePrivacyRequest('access')}
                     onRequestRectify={() => handlePrivacyRequest('rectify')}
                     onCancelRequest={handleCancelPrivacyRequest}

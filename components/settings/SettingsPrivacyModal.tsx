@@ -1,16 +1,17 @@
 import React from 'react';
 import { Download } from 'lucide-react';
-import type { PrivacyConsentSummary, PrivacyRequestSummary } from '../../services/privacyService';
+import type { PrivacyConsentSummary, PrivacyDeleteReadinessSummary, PrivacyRequestSummary } from '../../services/privacyService';
 
 interface SettingsPrivacyModalProps {
   onExport: () => void;
-  onRequestDelete: () => void;
+  onRequestDelete: (notes?: string) => void;
   onRequestAccess: () => void;
   onRequestRectify: () => void;
   onCancelRequest: (requestId: string) => void;
   onConsentChange: (consentType: 'privacy_policy' | 'ai_data_processing' | 'clinical_data_processing', granted: boolean) => void;
   requests: PrivacyRequestSummary[];
   consents: PrivacyConsentSummary[];
+  deleteReadiness: PrivacyDeleteReadinessSummary | null;
   loadingRequests: boolean;
   savingConsent: string | null;
 }
@@ -24,10 +25,17 @@ export default function SettingsPrivacyModal({
   onConsentChange,
   requests,
   consents,
+  deleteReadiness,
   loadingRequests,
   savingConsent
 }: SettingsPrivacyModalProps) {
+  const [showDeleteConfirm, setShowDeleteConfirm] = React.useState(false);
+  const [deleteConfirmation, setDeleteConfirmation] = React.useState('');
+  const [deleteNotes, setDeleteNotes] = React.useState('');
+
   const consentMap = new Map(consents.map((consent) => [consent.consent_type, consent]));
+  const openDeleteRequest = requests.find((request) => request.request_type === 'delete' && (request.status === 'open' || request.status === 'in_review'));
+  const canSubmitDeleteRequest = deleteConfirmation.trim().toUpperCase() === 'EXCLUIR' && !openDeleteRequest;
   const consentItems = [
     {
       key: 'privacy_policy' as const,
@@ -135,12 +143,98 @@ export default function SettingsPrivacyModal({
             Exportar Dados LGPD
           </span>
         </button>
-        <button
-          onClick={onRequestDelete}
-          className="w-full h-14 rounded-2xl border border-[rgba(248,113,113,0.2)] bg-[rgba(239,68,68,0.08)] text-sm font-black uppercase tracking-widest text-red-200"
-        >
-          Solicitar Exclusão
-        </button>
+        <div className="rounded-2xl border border-[rgba(248,113,113,0.2)] bg-[rgba(239,68,68,0.08)] p-4">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-sm font-black uppercase tracking-widest text-red-200">Solicitar Exclusão</p>
+              <p className="mt-2 text-xs leading-5 text-slate-300">
+                Use esta opção para abrir o processo de exclusão da sua conta e dos dados associados.
+                Antes de confirmar, exporte seus dados se quiser guardar um arquivo local.
+              </p>
+              {openDeleteRequest && (
+                <p className="mt-2 text-xs font-bold text-amber-200">
+                  Já existe uma solicitação de exclusão em andamento.
+                </p>
+              )}
+            </div>
+            <button
+              onClick={() => setShowDeleteConfirm((current) => !current)}
+              className="rounded-xl border border-[rgba(248,113,113,0.2)] px-3 py-2 text-[10px] font-black uppercase tracking-widest text-red-200"
+            >
+              {showDeleteConfirm ? 'Fechar' : 'Revisar'}
+            </button>
+          </div>
+
+          {showDeleteConfirm && (
+            <div className="mt-4 space-y-3 rounded-2xl border border-white/5 bg-[rgba(15,23,42,0.45)] p-4">
+              <div className="space-y-2 text-xs text-slate-300">
+                <p>1. Exporte seus dados antes de seguir, se quiser manter uma cópia.</p>
+                <p>2. O pedido entra no histórico LGPD com trilha auditável.</p>
+                <p>3. Quando aprovado, o backend executa anonimização e limpeza dos dados de aplicação vinculados à sua conta.</p>
+              </div>
+
+              {deleteReadiness && (
+                <div className="rounded-2xl border border-white/5 bg-slate-950/50 p-3">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                    Escopo estimado da exclusão
+                  </p>
+                  <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-slate-300">
+                    <p>Perfil: {deleteReadiness.profile_exists ? '1 conta' : '0'}</p>
+                    <p>Alunos: {deleteReadiness.clients_count}</p>
+                    <p>Agenda: {deleteReadiness.appointments_count}</p>
+                    <p>Pagamentos: {deleteReadiness.payments_count}</p>
+                    <p>Push: {deleteReadiness.push_subscriptions_count}</p>
+                    <p>Logs IA: {deleteReadiness.ai_logs_count}</p>
+                    <p>Logs app: {deleteReadiness.activity_logs_count}</p>
+                    <p>Consentimentos: {deleteReadiness.privacy_consents_count}</p>
+                  </div>
+                  <p className="mt-2 text-[11px] leading-5 text-slate-400">
+                    O processamento atual remove ou anonimiza dados da aplicação. A exclusão da credencial de autenticação depende da esteira administrativa do ambiente.
+                  </p>
+                </div>
+              )}
+
+              <div>
+                <label className="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-400">
+                  Observação opcional
+                </label>
+                <textarea
+                  value={deleteNotes}
+                  onChange={(event) => setDeleteNotes(event.target.value)}
+                  rows={3}
+                  className="w-full rounded-2xl border border-white/10 bg-slate-950/60 px-3 py-3 text-sm text-white outline-none placeholder:text-slate-600"
+                  placeholder="Ex: quero encerrar a conta e remover meus dados operacionais."
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-400">
+                  Digite EXCLUIR para confirmar
+                </label>
+                <input
+                  type="text"
+                  value={deleteConfirmation}
+                  onChange={(event) => setDeleteConfirmation(event.target.value)}
+                  className="w-full rounded-2xl border border-white/10 bg-slate-950/60 px-3 py-3 text-sm font-bold uppercase tracking-widest text-white outline-none placeholder:text-slate-600"
+                  placeholder="EXCLUIR"
+                />
+              </div>
+
+              <button
+                onClick={() => {
+                  onRequestDelete(deleteNotes.trim() || undefined);
+                  setShowDeleteConfirm(false);
+                  setDeleteConfirmation('');
+                  setDeleteNotes('');
+                }}
+                disabled={!canSubmitDeleteRequest}
+                className="w-full h-12 rounded-2xl border border-[rgba(248,113,113,0.2)] bg-[rgba(239,68,68,0.14)] text-xs font-black uppercase tracking-widest text-red-100 disabled:opacity-50"
+              >
+                Confirmar Solicitação de Exclusão
+              </button>
+            </div>
+          )}
+        </div>
         <button
           onClick={onRequestAccess}
           className="w-full h-14 rounded-2xl border border-[rgba(96,165,250,0.2)] bg-[rgba(59,130,246,0.08)] text-sm font-black uppercase tracking-widest text-blue-200"

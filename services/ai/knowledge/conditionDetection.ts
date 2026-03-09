@@ -3,10 +3,21 @@
 // Complementa specialConditions.ts com detecção mais inteligente
 
 import type { Injury } from '../../exerciseService';
+import { createScopedLogger } from '../../appLogger';
 
 const isDev = import.meta.env.DEV;
-const debugLog = (...args: unknown[]) => {
-    if (isDev) console.log(...args);
+const conditionDetectionLogger = createScopedLogger('conditionDetection');
+const debugLog = (message: string, metadata?: unknown) => {
+    if (!isDev) return;
+    if (metadata === undefined) {
+        conditionDetectionLogger.debug(message);
+        return;
+    }
+    if (typeof metadata === 'object' && metadata !== null && !Array.isArray(metadata)) {
+        conditionDetectionLogger.debug(message, metadata as Record<string, unknown>);
+        return;
+    }
+    conditionDetectionLogger.debug(message, { detail: metadata });
 };
 
 // ============ TIPOS EXPANDIDOS ============

@@ -1,4 +1,5 @@
 import { supabase } from './supabaseCore';
+import { getBrowserSummary } from '../utils/browserInfo';
 
 const isDev = typeof window !== 'undefined'
     && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
@@ -208,7 +209,7 @@ export async function logActivity(entry: ActivityLogEntry): Promise<void> {
             action: entry.action,
             resource_type: entry.resource_type,
             resource_id: entry.resource_id,
-            user_agent: typeof navigator !== 'undefined' ? navigator.userAgent : 'unknown',
+            user_agent: getBrowserSummary(),
             metadata: sanitizeLogMetadata(entry.metadata)
         });
 

@@ -14,8 +14,17 @@ import { createScopedLogger } from '../../appLogger';
 
 const isDev = import.meta.env.DEV;
 const feedbackServiceLogger = createScopedLogger('feedbackService');
-const debugLog = (...args: unknown[]) => {
-    if (isDev) console.log(...args);
+const debugLog = (message: string, metadata?: unknown) => {
+    if (!isDev) return;
+    if (metadata === undefined) {
+        feedbackServiceLogger.debug(message);
+        return;
+    }
+    if (typeof metadata === 'object' && metadata !== null && !Array.isArray(metadata)) {
+        feedbackServiceLogger.debug(message, metadata as Record<string, unknown>);
+        return;
+    }
+    feedbackServiceLogger.debug(message, { detail: metadata });
 };
 
 const FEEDBACK_QUEUE_STORAGE_KEY = 'personalpro_feedback_queue_v1';

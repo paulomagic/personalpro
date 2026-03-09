@@ -3,10 +3,12 @@ import {
     cancelPrivacyRequest,
     createPrivacyRequest,
     exportMyPrivacyData,
+    getPrivacyDeleteReadiness,
     listPrivacyConsents,
     listPrivacyRequests,
     upsertPrivacyConsent,
     type PrivacyConsentSummary,
+    type PrivacyDeleteReadinessSummary,
     type PrivacyRequestSummary
 } from '../services/privacyService';
 
@@ -33,19 +35,22 @@ export function useSettingsPrivacy({
     const [privacyConsents, setPrivacyConsents] = React.useState<PrivacyConsentSummary[]>([]);
     const [privacyLoading, setPrivacyLoading] = React.useState(false);
     const [privacyConsentSaving, setPrivacyConsentSaving] = React.useState<string | null>(null);
+    const [privacyDeleteReadiness, setPrivacyDeleteReadiness] = React.useState<PrivacyDeleteReadinessSummary | null>(null);
 
     const loadPrivacyHistory = React.useCallback(async () => {
         if (isDemo) {
             setPrivacyRequests([]);
             setPrivacyConsents([]);
+            setPrivacyDeleteReadiness(null);
             return;
         }
 
         setPrivacyLoading(true);
         try {
-            const [requestsResult, consentsResult] = await Promise.all([
+            const [requestsResult, consentsResult, deleteReadinessResult] = await Promise.all([
                 listPrivacyRequests(),
-                listPrivacyConsents()
+                listPrivacyConsents(),
+                getPrivacyDeleteReadiness()
             ]);
 
             if (!requestsResult.success) {
@@ -58,8 +63,14 @@ export function useSettingsPrivacy({
                 return;
             }
 
+            if (!deleteReadinessResult.success) {
+                showToast(deleteReadinessResult.error || 'Erro ao carregar escopo de exclusão', 'error');
+                return;
+            }
+
             setPrivacyRequests(requestsResult.data || []);
             setPrivacyConsents(consentsResult.data || []);
+            setPrivacyDeleteReadiness(deleteReadinessResult.data || null);
         } finally {
             setPrivacyLoading(false);
         }
@@ -81,13 +92,19 @@ export function useSettingsPrivacy({
         await loadPrivacyHistory();
     }, [isDemo, loadPrivacyHistory, onDownloadExport, onExportDemoFallback, showToast]);
 
-    const handlePrivacyRequest = React.useCallback(async (requestType: 'access' | 'delete' | 'rectify') => {
+    const handlePrivacyRequest = React.useCallback(async (
+        requestType: 'access' | 'delete' | 'rectify',
+        notes?: string
+    ) => {
         if (isDemo) {
             showToast('Modo demo: solicitação LGPD indisponível', 'error');
             return;
         }
 
-        const result = await createPrivacyRequest(requestType, PRIVACY_REQUEST_LABELS[requestType]);
+        const result = await createPrivacyRequest(
+            requestType,
+            notes?.trim() || PRIVACY_REQUEST_LABELS[requestType]
+        );
         if (!result.success) {
             showToast(result.error || 'Erro ao abrir solicitação', 'error');
             return;
@@ -139,6 +156,7 @@ export function useSettingsPrivacy({
         privacyConsents,
         privacyLoading,
         privacyConsentSaving,
+        privacyDeleteReadiness,
         loadPrivacyHistory,
         handleExportLivePrivacyData,
         handlePrivacyRequest,

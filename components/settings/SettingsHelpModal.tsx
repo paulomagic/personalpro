@@ -63,7 +63,7 @@ export default function SettingsHelpModal({
           <span className="material-symbols-outlined text-3xl text-[#3B82F6]">support_agent</span>
         </div>
         <h3 className="text-2xl font-black text-white">Central de Ajuda</h3>
-        <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mt-2">Como podemos ajudar?</p>
+        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-2">Como podemos ajudar?</p>
       </div>
 
       <div className="flex-1 min-h-0 space-y-3 overflow-y-auto pr-2 custom-scrollbar">
@@ -98,7 +98,7 @@ export default function SettingsHelpModal({
         <p className="mb-3 text-center text-xs leading-5 text-slate-400">
           {hasDirectSupportEmail
             ? 'Esse botão abre o canal de suporte configurado no app.'
-            : 'Esse botão copia um resumo técnico da sua sessão para você colar no atendimento.'}
+            : 'Esse botão copia nome do app, data, conta, tema, status do push e navegador resumido para você colar no atendimento.'}
         </p>
         <button onClick={onContactSupport} className="w-full h-16 text-white font-black rounded-3xl active:scale-[0.98] transition-all uppercase tracking-widest bg-[linear-gradient(135deg,#1E3A8A,#3B82F6)] shadow-[0_0_24px_rgba(30,58,138,0.35)]">
           {supportCtaLabel}

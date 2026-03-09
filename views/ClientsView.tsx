@@ -238,9 +238,9 @@ const ClientsView: React.FC<ClientsViewProps> = ({ user, onBack, onSelectClient 
             {/* Stats Row */}
             <motion.div variants={itemVariants} className="px-5 grid grid-cols-4 gap-2 mb-5">
                 {[
-                    { tab: 'all', label: 'Total', value: stats.total, icon: Users, activeClassName: 'bg-[rgba(59,130,246,0.16)] border-[rgba(96,165,250,0.38)]', iconClassName: 'text-[#93C5FD]', valueActiveClassName: 'text-[#DBEAFE]' },
-                    { tab: 'active', label: 'Ativos', value: stats.active, icon: CheckCircle, activeClassName: 'bg-[rgba(16,185,129,0.16)] border-[rgba(52,211,153,0.38)]', iconClassName: 'text-[#6EE7B7]', valueActiveClassName: 'text-[#D1FAE5]' },
-                    { tab: 'at-risk', label: 'Alerta', value: stats.atRisk, icon: AlertTriangle, activeClassName: 'bg-[rgba(245,158,11,0.16)] border-[rgba(251,191,36,0.38)]', iconClassName: 'text-[#FCD34D]', valueActiveClassName: 'text-[#FEF3C7]' },
+                    { tab: 'all', label: 'Total', value: stats.total, icon: Users, activeClassName: 'bg-[rgba(30,64,175,0.52)] border-[rgba(147,197,253,0.52)]', iconClassName: 'text-[#E0F2FE]', valueActiveClassName: 'text-white' },
+                    { tab: 'active', label: 'Ativos', value: stats.active, icon: CheckCircle, activeClassName: 'bg-[rgba(5,150,105,0.42)] border-[rgba(110,231,183,0.5)]', iconClassName: 'text-[#D1FAE5]', valueActiveClassName: 'text-white' },
+                    { tab: 'at-risk', label: 'Alerta', value: stats.atRisk, icon: AlertTriangle, activeClassName: 'bg-[rgba(180,83,9,0.46)] border-[rgba(252,211,77,0.52)]', iconClassName: 'text-[#FEF3C7]', valueActiveClassName: 'text-white' },
                     { tab: 'paused', label: 'Pausa', value: stats.paused, icon: Pause, activeClassName: 'bg-[rgba(71,85,105,0.32)] border-[rgba(148,163,184,0.4)]', iconClassName: 'text-[#E2E8F0]', valueActiveClassName: 'text-[#F8FAFC]' },
                 ].map(({ tab, label, value, icon: Icon, activeClassName, iconClassName, valueActiveClassName }) => {
                     const isActive = statusFilter === tab;
@@ -250,12 +250,12 @@ const ClientsView: React.FC<ClientsViewProps> = ({ user, onBack, onSelectClient 
                             onClick={() => setStatusFilter(tab as any)}
                             className={`rounded-2xl p-3 text-center transition-all border ${isActive
                                 ? activeClassName
-                                : 'bg-[rgba(15,23,42,0.72)] border-[rgba(148,163,184,0.16)]'
+                                : 'bg-[rgba(15,23,42,0.92)] border-[rgba(148,163,184,0.28)]'
                                 }`}
                         >
-                            <Icon size={15} className={`mx-auto mb-1 ${isActive ? iconClassName : 'text-[#D1E3FF]'}`} />
+                            <Icon size={15} className={`mx-auto mb-1 ${isActive ? iconClassName : 'text-slate-300'}`} />
                             <p className={`text-base font-black ${isActive ? valueActiveClassName : 'text-white'}`}>{value}</p>
-                            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#D1E3FF]">{label}</p>
+                            <p className={`text-[10px] font-black uppercase tracking-[0.16em] ${isActive ? 'text-slate-100' : 'text-slate-300'}`}>{label}</p>
                         </button>
                     );
                 })}
@@ -272,7 +272,7 @@ const ClientsView: React.FC<ClientsViewProps> = ({ user, onBack, onSelectClient 
                         placeholder="Buscar aluno..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full h-12 pl-11 pr-5 rounded-2xl text-sm font-bold text-white placeholder:text-[#D1E3FF] outline-none bg-[rgba(15,23,42,0.78)] border border-[rgba(148,163,184,0.18)]"
+                        className="w-full h-12 pl-11 pr-5 rounded-2xl text-sm font-bold text-white placeholder:text-slate-400 outline-none bg-[rgba(15,23,42,0.92)] border border-[rgba(148,163,184,0.24)]"
                     />
                 </div>
             </motion.div>
@@ -320,7 +320,7 @@ const ClientsView: React.FC<ClientsViewProps> = ({ user, onBack, onSelectClient 
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: index * 0.04 }}
                                 onClick={() => onSelectClient(client)}
-                                className="w-full rounded-2xl p-4 flex items-center gap-3.5 active:scale-[0.99] transition-all group text-left bg-[rgba(59,130,246,0.03)] border border-[rgba(59,130,246,0.06)]"
+                                className="w-full rounded-2xl p-4 flex items-center gap-3.5 active:scale-[0.99] transition-all group text-left bg-[rgba(15,23,42,0.92)] border border-[rgba(96,165,250,0.18)]"
                             >
                                 {/* Avatar */}
                                 <div className="relative shrink-0">
@@ -342,9 +342,9 @@ const ClientsView: React.FC<ClientsViewProps> = ({ user, onBack, onSelectClient 
                                 <div className="flex-1 min-w-0">
                                     <div className="flex items-center gap-2 mb-0.5">
                                         <h4 className="font-black text-white text-sm tracking-tight truncate">{client.name}</h4>
-                                        <span className="px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-widest shrink-0 bg-[rgba(59,130,246,0.07)] text-[#B8D3FF]">{client.level}</span>
+                                        <span className="px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-widest shrink-0 bg-[rgba(30,64,175,0.32)] text-slate-100">{client.level}</span>
                                     </div>
-                                    <p className="text-[10px] font-black uppercase tracking-wider truncate mb-1.5 text-[#93C5FD]">{client.goal}</p>
+                                    <p className="text-[10px] font-black uppercase tracking-wider truncate mb-1.5 text-slate-300">{client.goal}</p>
                                     {/* Progress */}
                                     <div className="flex items-center gap-2">
                                         <div className="h-1 flex-1 rounded-full overflow-hidden bg-[rgba(59,130,246,0.06)] max-w-20">
@@ -365,7 +365,7 @@ const ClientsView: React.FC<ClientsViewProps> = ({ user, onBack, onSelectClient 
                                                 />
                                             </svg>
                                         </div>
-                                        <span className={`text-[10px] font-black ${client.adherence < 50 ? 'text-[#FFB800]' : 'text-[#00FF88]'}`}>{client.adherence}%</span>
+                                        <span className={`text-[10px] font-black ${client.adherence < 50 ? 'text-amber-300' : 'text-emerald-300'}`}>{client.adherence}%</span>
                                     </div>
                                 </div>
 

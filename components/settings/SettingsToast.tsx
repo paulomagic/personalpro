@@ -9,9 +9,9 @@ export default function SettingsToast({ message, type }: SettingsToastProps) {
   if (!message) return null;
 
   return (
-    <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[80] animate-slide-down w-[calc(100%-2rem)] max-w-sm">
+    <div className="fixed top-6 left-4 right-4 z-[80] animate-slide-down sm:left-1/2 sm:right-auto sm:w-[calc(100%-2rem)] sm:max-w-sm sm:-translate-x-1/2">
       <div
-        className={`px-4 py-3 rounded-3xl flex items-start gap-3 backdrop-blur-xl border ${type === 'error'
+        className={`w-full px-4 py-3 rounded-3xl flex items-start gap-3 backdrop-blur-xl border ${type === 'error'
           ? 'bg-[rgba(255,51,102,0.15)] border-[rgba(255,51,102,0.25)]'
           : 'bg-[rgba(59,130,246,0.1)] border-[rgba(59,130,246,0.2)]'
           }`}

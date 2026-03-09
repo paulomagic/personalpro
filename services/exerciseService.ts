@@ -8,14 +8,21 @@ import { createScopedLogger } from './appLogger';
 
 const isDev = import.meta.env.DEV;
 const exerciseServiceLogger = createScopedLogger('exerciseService');
-const debugLog = (...args: unknown[]) => {
-    if (isDev) console.log(...args);
+const debugTimers = new Map<string, number>();
+const debugLog = (message: string, metadata?: Record<string, unknown>) => {
+    if (isDev) exerciseServiceLogger.debug(message, metadata);
 };
 const debugTime = (label: string) => {
-    if (isDev) console.time(label);
+    if (isDev) debugTimers.set(label, performance.now());
 };
 const debugTimeEnd = (label: string) => {
-    if (isDev) console.timeEnd(label);
+    if (!isDev) return;
+    const startedAt = debugTimers.get(label);
+    if (startedAt == null) return;
+    debugTimers.delete(label);
+    exerciseServiceLogger.debug(label, {
+        elapsedMs: Number((performance.now() - startedAt).toFixed(1))
+    });
 };
 
 export type MovementPattern =

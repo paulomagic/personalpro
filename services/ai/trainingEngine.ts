@@ -35,14 +35,30 @@ import { createScopedLogger } from '../appLogger';
 
 const isDev = import.meta.env.DEV;
 const trainingEngineLogger = createScopedLogger('trainingEngine');
-const debugLog = (...args: unknown[]) => {
-    if (isDev) console.log(...args);
+const debugTimers = new Map<string, number>();
+const debugLog = (message: string, metadata?: unknown) => {
+    if (!isDev) return;
+    if (metadata === undefined) {
+        trainingEngineLogger.debug(message);
+        return;
+    }
+    if (typeof metadata === 'object' && metadata !== null && !Array.isArray(metadata)) {
+        trainingEngineLogger.debug(message, metadata as Record<string, unknown>);
+        return;
+    }
+    trainingEngineLogger.debug(message, { detail: metadata });
 };
 const debugTime = (label: string) => {
-    if (isDev) console.time(label);
+    if (isDev) debugTimers.set(label, performance.now());
 };
 const debugTimeEnd = (label: string) => {
-    if (isDev) console.timeEnd(label);
+    if (!isDev) return;
+    const startedAt = debugTimers.get(label);
+    if (startedAt == null) return;
+    debugTimers.delete(label);
+    trainingEngineLogger.debug(label, {
+        elapsedMs: Number((performance.now() - startedAt).toFixed(1))
+    });
 };
 
 // ============ ENGINE ============

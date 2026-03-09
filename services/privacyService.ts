@@ -27,6 +27,20 @@ export interface PrivacyConsentSummary {
   metadata?: Record<string, unknown> | null;
 }
 
+export interface PrivacyDeleteReadinessSummary {
+  profile_exists: boolean;
+  clients_count: number;
+  appointments_count: number;
+  payments_count: number;
+  push_subscriptions_count: number;
+  ai_logs_count: number;
+  activity_logs_count: number;
+  privacy_consents_count: number;
+  has_open_delete_request: boolean;
+  open_delete_request_id?: string | null;
+  deletion_mode: 'application_data_erasure';
+}
+
 export async function createPrivacyRequest(
   requestType: PrivacyRequestType,
   notes?: string
@@ -113,6 +127,20 @@ export async function listPrivacyConsents(): Promise<{ success: boolean; data?: 
   }
 
   return { success: true, data: (data ?? []) as PrivacyConsentSummary[] };
+}
+
+export async function getPrivacyDeleteReadiness(): Promise<{ success: boolean; data?: PrivacyDeleteReadinessSummary; error?: string }> {
+  if (!supabase) {
+    return { success: false, error: 'Supabase indisponível.' };
+  }
+
+  const { data, error } = await supabase.rpc('get_my_privacy_delete_readiness');
+
+  if (error) {
+    return { success: false, error: error.message };
+  }
+
+  return { success: true, data: data as PrivacyDeleteReadinessSummary };
 }
 
 export async function upsertPrivacyConsent(

@@ -7,8 +7,8 @@ import { createScopedLogger } from '../appLogger';
 
 const isDev = import.meta.env.DEV;
 const volumeCounterLogger = createScopedLogger('volumeCounter');
-const debugLog = (...args: unknown[]) => {
-    if (isDev) console.log(...args);
+const debugLog = (message: string, metadata?: Record<string, unknown>) => {
+    if (isDev) volumeCounterLogger.debug(message, metadata);
 };
 
 // ============ TIPOS ============
@@ -67,8 +67,10 @@ export function initializeVolumeCounter(level: TrainingLevel): VolumeCounter {
         }
     }
 
-    debugLog(`[VolumeCounter] Initialized for level ${level}:`,
-        Object.keys(counter).length, 'muscle groups tracked');
+    debugLog('Initialized volume counter', {
+        level,
+        trackedMuscleGroups: Object.keys(counter).length
+    });
 
     return counter;
 }
@@ -87,7 +89,7 @@ export function addSetsToCounter(
 
     // Músculo não rastreado (ex: exercício genérico)
     if (!counter[muscle]) {
-        debugLog(`[VolumeCounter] Muscle "${muscle}" not tracked, allowing ${sets} sets`);
+        debugLog('Muscle not tracked in counter', { muscle, sets });
         return { success: true };
     }
 
@@ -106,7 +108,12 @@ export function addSetsToCounter(
     // Sucesso: adicionar ao contador
     counter[muscle].current = newTotal;
 
-    debugLog(`[VolumeCounter] ${muscle}: ${state.current}/${state.mrv} sets (added ${sets})`);
+    debugLog('Added sets to counter', {
+        muscle,
+        currentSets: state.current,
+        mrv: state.mrv,
+        addedSets: sets
+    });
 
     return { success: true };
 }

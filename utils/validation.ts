@@ -2,6 +2,8 @@
  * Validation utilities for security and data integrity
  */
 
+import { createScopedLogger } from '../services/appLogger';
+
 // Valid domains for avatar images
 const ALLOWED_AVATAR_DOMAINS = [
     'ui-avatars.com',
@@ -119,9 +121,16 @@ export function sanitizeText(text: string): string {
  */
 const isDev = typeof window !== 'undefined'
     && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+const validationLogger = createScopedLogger('validation');
 
 export const logger = {
-    log: (...args: any[]) => isDev && console.log(...args),
-    warn: (...args: any[]) => isDev && console.warn(...args),
-    error: (...args: any[]) => console.error(...args), // Always log errors
+    log: (message: string, metadata?: Record<string, unknown>) => {
+        if (isDev) validationLogger.debug(message, metadata);
+    },
+    warn: (message: string, metadata?: Record<string, unknown>) => {
+        if (isDev) validationLogger.warn(message, metadata);
+    },
+    error: (message: string, error?: unknown, metadata?: Record<string, unknown>) => {
+        validationLogger.error(message, error, metadata);
+    },
 };

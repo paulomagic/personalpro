@@ -4,10 +4,21 @@
 
 import { SpecialCondition, SPECIAL_CONDITION_RULES } from './knowledge/specialConditions';
 import type { Injury } from '../exerciseService';
+import { createScopedLogger } from '../appLogger';
 
 const isDev = import.meta.env.DEV;
-const debugLog = (...args: unknown[]) => {
-    if (isDev) console.log(...args);
+const biomechanicalProfileLogger = createScopedLogger('biomechanicalProfile');
+const debugLog = (message: string, metadata?: unknown) => {
+    if (!isDev) return;
+    if (metadata === undefined) {
+        biomechanicalProfileLogger.debug(message);
+        return;
+    }
+    if (typeof metadata === 'object' && metadata !== null && !Array.isArray(metadata)) {
+        biomechanicalProfileLogger.debug(message, metadata as Record<string, unknown>);
+        return;
+    }
+    biomechanicalProfileLogger.debug(message, { detail: metadata });
 };
 
 // ============ TIPOS BIOMECÂNICOS PRECISOS ============

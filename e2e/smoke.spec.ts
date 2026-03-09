@@ -35,6 +35,34 @@ test('demo user can open privacy controls from settings', async ({ page }) => {
   await expect(privacyDialog.getByText('Histórico LGPD')).toBeVisible();
 });
 
+test('demo user can copy support info and toast stays inside mobile viewport', async ({ page }) => {
+  await page.goto('/');
+  await page.getByTestId('demo-login-button').click();
+
+  await page.getByRole('button', { name: 'Abrir perfil' }).click();
+  await expect(page.getByText('Configurações')).toBeVisible();
+
+  await page.getByRole('button', { name: 'Ajuda' }).click();
+  const helpDialog = page.getByRole('dialog', { name: 'Ajuda' });
+  await expect(helpDialog).toBeVisible();
+
+  await helpDialog.getByRole('button', { name: 'Copiar Informações para Suporte' }).click();
+
+  const toast = page.getByRole('status');
+  await expect(toast).toContainText('Informações copiadas para enviar ao suporte.');
+
+  const box = await toast.boundingBox();
+  expect(box).not.toBeNull();
+  if (box) {
+    const viewport = page.viewportSize();
+    expect(viewport).not.toBeNull();
+    if (viewport) {
+      expect(box.x).toBeGreaterThanOrEqual(0);
+      expect(box.x + box.width).toBeLessThanOrEqual(viewport.width);
+    }
+  }
+});
+
 test('invite token invalid path shows error feedback', async ({ page }) => {
   await page.goto('/?invite=invalid-token-e2e');
 

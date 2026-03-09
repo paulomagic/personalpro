@@ -7,7 +7,7 @@ import SettingsAppearanceModal from './SettingsAppearanceModal';
 import SettingsPrivacyModal from './SettingsPrivacyModal';
 import type { ThemeMode } from '../../services/ThemeContext';
 import { isPushSupported, type NotificationPrefs } from '../../services/pushNotifications';
-import type { PrivacyConsentSummary, PrivacyRequestSummary } from '../../services/privacyService';
+import type { PrivacyConsentSummary, PrivacyDeleteReadinessSummary, PrivacyRequestSummary } from '../../services/privacyService';
 
 export type SettingsModalType = 'profile' | 'notifications' | 'security' | 'help' | 'appearance' | 'privacy' | null;
 
@@ -29,6 +29,7 @@ interface SettingsModalContentProps {
     privacyConsents: PrivacyConsentSummary[];
     privacyLoading: boolean;
     privacyConsentSaving: string | null;
+    privacyDeleteReadiness: PrivacyDeleteReadinessSummary | null;
     onProfileNameChange: (value: string) => void;
     onSaveProfile: () => void;
     onToggleNotif: (key: keyof NotificationPrefs) => void;
@@ -42,7 +43,7 @@ interface SettingsModalContentProps {
     onThemeChange: (value: ThemeMode) => void;
     onApplyTheme: () => void;
     onExportPrivacy: () => void;
-    onRequestDelete: () => void;
+    onRequestDelete: (notes?: string) => void;
     onRequestAccess: () => void;
     onRequestRectify: () => void;
     onCancelRequest: (requestId: string) => void;
@@ -67,6 +68,7 @@ const SettingsModalContent: React.FC<SettingsModalContentProps> = ({
     privacyConsents,
     privacyLoading,
     privacyConsentSaving,
+    privacyDeleteReadiness,
     onProfileNameChange,
     onSaveProfile,
     onToggleNotif,
@@ -157,6 +159,7 @@ const SettingsModalContent: React.FC<SettingsModalContentProps> = ({
                 onCancelRequest={onCancelRequest}
                 requests={privacyRequests}
                 consents={privacyConsents}
+                deleteReadiness={privacyDeleteReadiness}
                 loadingRequests={privacyLoading}
                 savingConsent={privacyConsentSaving}
                 onConsentChange={onConsentChange}

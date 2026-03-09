@@ -2,10 +2,21 @@
 // Previne exercícios inadequados para determinados contextos (academia vs. casa)
 
 import type { Exercise } from '../../exerciseService';
+import { createScopedLogger } from '../../appLogger';
 
 const isDev = import.meta.env.DEV;
-const debugLog = (...args: unknown[]) => {
-    if (isDev) console.log(...args);
+const exerciseBlacklistLogger = createScopedLogger('exerciseBlacklist');
+const debugLog = (message: string, metadata?: unknown) => {
+    if (!isDev) return;
+    if (metadata === undefined) {
+        exerciseBlacklistLogger.debug(message);
+        return;
+    }
+    if (typeof metadata === 'object' && metadata !== null && !Array.isArray(metadata)) {
+        exerciseBlacklistLogger.debug(message, metadata as Record<string, unknown>);
+        return;
+    }
+    exerciseBlacklistLogger.debug(message, { detail: metadata });
 };
 
 export type TrainingContext = 'academia' | 'casa' | 'parque' | 'ginastica';
@@ -178,7 +189,11 @@ export function filterByContext(
         );
 
         if (isBlacklistedName) {
-            debugLog(`[Blacklist] ❌ Removido "${ex.name}": ${blacklist.reason}`);
+            debugLog('Removed blacklisted exercise by exact name', {
+                exerciseName: ex.name,
+                context,
+                reason: blacklist.reason
+            });
             return false;
         }
 
@@ -188,7 +203,11 @@ export function filterByContext(
         );
 
         if (isBlacklistedPattern) {
-            debugLog(`[Blacklist] ❌ Removido "${ex.name}" (pattern match): ${blacklist.reason}`);
+            debugLog('Removed blacklisted exercise by pattern match', {
+                exerciseName: ex.name,
+                context,
+                reason: blacklist.reason
+            });
             return false;
         }
 
@@ -204,7 +223,10 @@ export function filterByContext(
             ex.equipment.length === 1 &&
             ex.equipment[0] === 'peso_corporal'
         ) {
-            debugLog(`[Blacklist] ❌ Removido "${ex.name}" (bodyweight-only em academia)`);
+            debugLog('Removed bodyweight-only exercise for gym context', {
+                exerciseName: ex.name,
+                context
+            });
             return false;
         }
 
@@ -215,14 +237,23 @@ export function filterByContext(
         });
 
         if (antiPattern && !isExplicitException(ex.name, options)) {
-            debugLog(`[Blacklist] ❌ Removido "${ex.name}" (anti-padrão): ${antiPattern.reason}`);
+            debugLog('Removed anti-pattern exercise for context', {
+                exerciseName: ex.name,
+                context,
+                reason: antiPattern.reason
+            });
             return false;
         }
 
         return true;
     });
 
-    debugLog(`[Blacklist] ${exercises.length - filtered.length} exercícios removidos para contexto "${context}"`);
+    debugLog('Context filtering completed', {
+        context,
+        removedCount: exercises.length - filtered.length,
+        inputCount: exercises.length,
+        outputCount: filtered.length
+    });
     return filtered;
 }
 

@@ -18,6 +18,7 @@ Migrations mínimas deste fluxo:
 1. `20260306_add_privacy_requests_and_export_rpc.sql`
 2. `20260306_expand_privacy_operations.sql`
 3. `20260308_add_privacy_consents.sql`
+4. `20260308_add_privacy_delete_processing.sql`
 
 Complemento importante para dados sensíveis:
 
@@ -35,6 +36,8 @@ Funções principais:
 - `export_my_privacy_data`
 - `cancel_my_privacy_request`
 - `upsert_my_privacy_consent`
+- `get_my_privacy_delete_readiness`
+- `admin_complete_delete_privacy_request`
 
 ## Camada de aplicação
 
@@ -108,10 +111,12 @@ Implementado:
 - histórico e auditoria
 - consentimento explícito registrável para política, IA e dados clínicos
 - inventário resumido de dados e política pública alinhada com a interface
+- leitura do escopo de exclusão antes da confirmação
+- processamento administrativo com anonimização e limpeza dos dados de aplicação
 
 Ainda não fechado ponta a ponta:
 
-- exclusão material completa orquestrada em todos os domínios
+- exclusão da credencial em `auth.users` precisa passar pela esteira administrativa/service role do ambiente
 - política operacional completa de retenção por tipo de dado
 - revisão final das telas de entrada para consentimento contextual por fluxo
 

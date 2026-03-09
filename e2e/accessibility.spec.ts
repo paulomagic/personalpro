@@ -2,6 +2,18 @@ import { expect, test, type Page } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 
 async function expectNoSeriousViolations(page: Page) {
+  await page.addStyleTag({
+    content: `
+      *,
+      *::before,
+      *::after {
+        animation: none !important;
+        transition: none !important;
+        caret-color: auto !important;
+      }
+    `
+  });
+  await page.waitForTimeout(350);
   const accessibilityScanResults = await new AxeBuilder({ page }).analyze();
   const blockingViolations = accessibilityScanResults.violations.filter((violation) =>
     violation.impact === 'critical' || violation.impact === 'serious'
@@ -51,5 +63,16 @@ test('settings profile modal has no serious accessibility violations', async ({ 
   await page.getByRole('button', { name: 'Editar perfil' }).click();
   const profileDialog = page.getByRole('dialog', { name: 'Editar Perfil' });
   await expect(profileDialog).toBeVisible();
+  await expectNoSeriousViolations(page);
+});
+
+test('settings help modal has no serious accessibility violations', async ({ page }) => {
+  await page.goto('/');
+  await page.getByTestId('demo-login-button').click();
+  await page.getByRole('button', { name: 'Abrir perfil' }).click();
+  await expect(page.getByText('Configurações')).toBeVisible();
+  await page.getByRole('button', { name: 'Ajuda' }).click();
+  const helpDialog = page.getByRole('dialog', { name: 'Ajuda' });
+  await expect(helpDialog).toBeVisible();
   await expectNoSeriousViolations(page);
 });

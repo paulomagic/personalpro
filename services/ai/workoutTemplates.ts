@@ -3,10 +3,21 @@
 // A IA apenas escolhe entre opções pré-validadas
 
 import type { MovementPattern } from './types';
+import { createScopedLogger } from '../appLogger';
 
 const isDev = import.meta.env.DEV;
-const debugLog = (...args: unknown[]) => {
-    if (isDev) console.log(...args);
+const workoutTemplatesLogger = createScopedLogger('workoutTemplates');
+const debugLog = (message: string, metadata?: unknown) => {
+    if (!isDev) return;
+    if (metadata === undefined) {
+        workoutTemplatesLogger.debug(message);
+        return;
+    }
+    if (typeof metadata === 'object' && metadata !== null && !Array.isArray(metadata)) {
+        workoutTemplatesLogger.debug(message, metadata as Record<string, unknown>);
+        return;
+    }
+    workoutTemplatesLogger.debug(message, { detail: metadata });
 };
 
 // ============ TIPOS FUNDAMENTAIS ============

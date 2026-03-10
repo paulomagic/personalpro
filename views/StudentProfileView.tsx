@@ -98,21 +98,31 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({
         return parsed.toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' });
     };
 
-    // Biometrics data (would come from client/assessments)
     // Detecta automaticamente se altura está em metros (< 3) ou centímetros (>= 100)
     const getHeightInMeters = (h: number | undefined) => {
-        if (!h) return 1.75; // default
+        if (!h) return null;
         return h < 3 ? h : h / 100;
     };
     const biometrics = {
-        weight: clientData?.weight || 72,
-        height: clientData?.height || 175,
-        bodyFat: clientData?.bodyFat || 18,
-        muscleMass: 35,
-        hydration: 55,
+        weight: clientData?.weight ?? null,
+        height: clientData?.height ?? null,
+        bodyFat: clientData?.bodyFat ?? null,
+        muscleMass: null,
+        hydration: null,
         bmi: clientData?.weight && clientData?.height
-            ? (clientData.weight / Math.pow(getHeightInMeters(clientData.height), 2)).toFixed(1)
-            : '23.5'
+            ? (clientData.weight / Math.pow(getHeightInMeters(clientData.height) || 1, 2)).toFixed(1)
+            : null
+    };
+    const formatMetric = (value: number | string | null | undefined, suffix?: string) => {
+        if (value === null || value === undefined || value === '') {
+            return <span className="text-lg font-black text-slate-500">Sem dados</span>;
+        }
+        return (
+            <>
+                {value}
+                {suffix ? <span className="text-sm font-bold text-slate-500 ml-1">{suffix}</span> : null}
+            </>
+        );
     };
 
     const weeklyStats = useMemo(() => deriveStudentConsistencyStats({
@@ -155,12 +165,14 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({
                 <div className="absolute top-0 left-0 right-0 pt-14 px-6 flex justify-between items-center z-10">
                     <button
                         onClick={onBack}
+                        aria-label="Voltar para a tela inicial do aluno"
                         className="size-11 rounded-2xl bg-white/10 backdrop-blur-xl text-white border border-white/20 flex items-center justify-center hover:bg-white/20 transition-all shadow-lg active:scale-95"
                     >
                         <ArrowLeft size={20} strokeWidth={2.5} />
                     </button>
                     <button
                         onClick={onSettings}
+                        aria-label="Abrir configuracoes"
                         className="size-11 rounded-2xl bg-white/10 backdrop-blur-xl text-white border border-white/20 flex items-center justify-center hover:bg-white/20 transition-all shadow-lg active:scale-95"
                     >
                         <Settings size={20} strokeWidth={2.5} />
@@ -171,7 +183,11 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({
                 <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10">
                     <div className="size-28 rounded-3xl bg-slate-800 border-4 border-slate-950 flex items-center justify-center overflow-hidden shadow-2xl">
                         {clientData?.avatar_url || user?.user_metadata?.avatar_url ? (
-                            <img src={clientData?.avatar_url || user?.user_metadata?.avatar_url} alt="Profile" className="w-full h-full object-cover" />
+                            <img
+                                src={clientData?.avatar_url || user?.user_metadata?.avatar_url}
+                                alt={`Foto de perfil de ${studentName}`}
+                                className="w-full h-full object-cover"
+                            />
                         ) : (
                             <div className="size-full flex items-center justify-center bg-[linear-gradient(135deg,#1E3A8A,#3B82F6)]">
                                 <span className="text-4xl font-black text-white">
@@ -197,7 +213,11 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({
 
             {/* Premium Segmented Control (Tabs) */}
             <div className="px-6 mb-6 animate-fade-in">
-                <div className="flex bg-slate-900/60 rounded-[18px] backdrop-blur-md p-1 border border-white/5 relative">
+                <div
+                    role="tablist"
+                    aria-label="Secoes do perfil do aluno"
+                    className="flex bg-slate-900/60 rounded-[18px] backdrop-blur-md p-1 border border-white/5 relative"
+                >
                     {[
                         { key: 'bio', label: 'Biometria', icon: Activity },
                         { key: 'goals', label: 'Metas', icon: Target },
@@ -206,6 +226,11 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({
                         <button
                             key={tab.key}
                             onClick={() => setActiveTab(tab.key as any)}
+                            id={`student-profile-tab-${tab.key}`}
+                            role="tab"
+                            type="button"
+                            aria-selected={activeTab === tab.key}
+                            aria-controls={`student-profile-panel-${tab.key}`}
                             className={`relative z-10 flex-1 py-3 px-2 rounded-[14px] flex items-center justify-center gap-2 transition-all ${activeTab === tab.key
                                 ? 'bg-blue-600 shadow-glow text-white'
                                 : 'text-slate-500 hover:text-slate-300'
@@ -222,7 +247,12 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({
             <div className="px-6">
                 {/* Biometry Tab */}
                 {activeTab === 'bio' && (
-                    <div className="space-y-4 animate-fade-in">
+                    <div
+                        id="student-profile-panel-bio"
+                        role="tabpanel"
+                        aria-labelledby="student-profile-tab-bio"
+                        className="space-y-4 animate-fade-in"
+                    >
                             {/* Main Stats Grid */}
                             <div className="grid grid-cols-2 gap-3 pb-2">
                                 <div className="glass-card p-5 text-center rounded-3xl relative overflow-hidden group">
@@ -230,7 +260,7 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({
                                     <div className="size-12 rounded-[14px] bg-blue-600/10 flex items-center justify-center mx-auto mb-3 border border-blue-500/20">
                                         <Scale size={24} className="text-blue-400" />
                                     </div>
-                                    <p className="text-2xl font-black text-white tracking-tight">{biometrics.weight}<span className="text-sm font-bold text-slate-500 ml-1">kg</span></p>
+                                    <p className="text-2xl font-black text-white tracking-tight">{formatMetric(biometrics.weight, 'kg')}</p>
                                     <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mt-1">Peso Atual</p>
                                 </div>
 
@@ -239,7 +269,7 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({
                                     <div className="size-12 rounded-[14px] bg-emerald-500/10 flex items-center justify-center mx-auto mb-3 border border-emerald-500/20">
                                         <Ruler size={24} className="text-emerald-400" />
                                     </div>
-                                    <p className="text-2xl font-black text-white tracking-tight">{biometrics.height}<span className="text-sm font-bold text-slate-500 ml-1">cm</span></p>
+                                    <p className="text-2xl font-black text-white tracking-tight">{formatMetric(biometrics.height, 'cm')}</p>
                                     <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mt-1">Estatura</p>
                                 </div>
 
@@ -248,7 +278,7 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({
                                     <div className="size-12 rounded-[14px] bg-indigo-500/10 flex items-center justify-center mx-auto mb-3 border border-indigo-500/20">
                                         <TrendingUp size={24} className="text-indigo-400" />
                                     </div>
-                                    <p className="text-2xl font-black text-white tracking-tight">{biometrics.bmi}</p>
+                                    <p className="text-2xl font-black text-white tracking-tight">{formatMetric(biometrics.bmi)}</p>
                                     <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mt-1">Índice IMC</p>
                                 </div>
 
@@ -257,7 +287,7 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({
                                     <div className="size-12 rounded-[14px] bg-red-500/10 flex items-center justify-center mx-auto mb-3 border border-red-500/20">
                                         <Heart size={24} className="text-red-400" />
                                     </div>
-                                    <p className="text-2xl font-black text-white tracking-tight">{biometrics.bodyFat}<span className="text-sm font-bold text-slate-500 ml-1">%</span></p>
+                                    <p className="text-2xl font-black text-white tracking-tight">{formatMetric(biometrics.bodyFat, '%')}</p>
                                     <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mt-1">Tx Gordura</p>
                                 </div>
                             </div>
@@ -269,41 +299,57 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({
                                     <Activity size={12} className="text-cyan-400" />
                                     Composição Corporal
                                 </h4>
-                                <div className="space-y-6 relative z-10">
-                                    <div>
-                                        <div className="flex justify-between items-center mb-2">
-                                            <span className="text-xs font-bold text-slate-300">Massa Muscular</span>
-                                            <span className="text-sm font-black text-white">{biometrics.muscleMass} <span className="text-[10px] text-slate-500">kg</span></span>
-                                        </div>
-                                        <div className="h-2.5 bg-slate-900/50 rounded-full overflow-hidden border border-white/5">
-                                            <div className="h-full w-[65%] bg-gradient-to-r from-blue-600 to-cyan-400 rounded-full shadow-[0_0_10px_rgba(59,130,246,0.5)]" />
-                                        </div>
+                                {biometrics.muscleMass !== null || biometrics.hydration !== null ? (
+                                    <div className="space-y-6 relative z-10">
+                                        {biometrics.muscleMass !== null && (
+                                            <div>
+                                                <div className="flex justify-between items-center mb-2">
+                                                    <span className="text-xs font-bold text-slate-300">Massa Muscular</span>
+                                                    <span className="text-sm font-black text-white">{biometrics.muscleMass} <span className="text-[10px] text-slate-500">kg</span></span>
+                                                </div>
+                                                <div className="h-2.5 bg-slate-900/50 rounded-full overflow-hidden border border-white/5">
+                                                    <div className="h-full w-[65%] bg-gradient-to-r from-blue-600 to-cyan-400 rounded-full shadow-[0_0_10px_rgba(59,130,246,0.5)]" />
+                                                </div>
+                                            </div>
+                                        )}
+                                        {biometrics.hydration !== null && (
+                                            <div>
+                                                <div className="flex justify-between items-center mb-2">
+                                                    <span className="text-xs font-bold text-slate-300">Hidratação</span>
+                                                    <span className="text-sm font-black text-white">{biometrics.hydration}<span className="text-[10px] text-slate-500">%</span></span>
+                                                </div>
+                                                <div className="h-2.5 bg-slate-900/50 rounded-full overflow-hidden border border-white/5">
+                                                    <svg viewBox="0 0 100 10" preserveAspectRatio="none" className="h-full w-full rounded-full">
+                                                        <defs>
+                                                            <linearGradient id="student-hydration-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                                                                <stop offset="0%" stopColor="#06B6D4" />
+                                                                <stop offset="100%" stopColor="#34D399" />
+                                                            </linearGradient>
+                                                        </defs>
+                                                        <rect x="0" y="0" width={biometrics.hydration} height="10" rx="5" fill="url(#student-hydration-gradient)" />
+                                                    </svg>
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
-                                    <div>
-                                        <div className="flex justify-between items-center mb-2">
-                                            <span className="text-xs font-bold text-slate-300">Hidratação</span>
-                                            <span className="text-sm font-black text-white">{biometrics.hydration}<span className="text-[10px] text-slate-500">%</span></span>
-                                        </div>
-                                        <div className="h-2.5 bg-slate-900/50 rounded-full overflow-hidden border border-white/5">
-                                            <svg viewBox="0 0 100 10" preserveAspectRatio="none" className="h-full w-full rounded-full">
-                                                <defs>
-                                                    <linearGradient id="student-hydration-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                                                        <stop offset="0%" stopColor="#06B6D4" />
-                                                        <stop offset="100%" stopColor="#34D399" />
-                                                    </linearGradient>
-                                                </defs>
-                                                <rect x="0" y="0" width={biometrics.hydration} height="10" rx="5" fill="url(#student-hydration-gradient)" />
-                                            </svg>
-                                        </div>
+                                ) : (
+                                    <div className="relative z-10 rounded-2xl border border-white/5 bg-slate-900/35 px-4 py-5">
+                                        <p className="text-sm font-bold text-slate-300">Sem composição corporal registrada</p>
+                                        <p className="text-xs text-slate-500 mt-1">Seu personal ainda não adicionou medições detalhadas como massa muscular e hidratação.</p>
                                     </div>
-                                </div>
+                                )}
                             </div>
                     </div>
                 )}
 
                 {/* Goals Tab */}
                 {activeTab === 'goals' && (
-                    <div className="space-y-4 animate-fade-in">
+                    <div
+                        id="student-profile-panel-goals"
+                        role="tabpanel"
+                        aria-labelledby="student-profile-tab-goals"
+                        className="space-y-4 animate-fade-in"
+                    >
                             {/* Weekly Progress Card */}
                             <div className="card-blue p-5 relative overflow-hidden">
                                 <div className="absolute inset-0 bg-gradient-to-br from-blue-600 to-indigo-800 opacity-90" />
@@ -410,7 +456,12 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({
 
                 {/* History Tab */}
                 {activeTab === 'history' && (
-                    <div className="space-y-4 animate-fade-in">
+                    <div
+                        id="student-profile-panel-history"
+                        role="tabpanel"
+                        aria-labelledby="student-profile-tab-history"
+                        className="space-y-4 animate-fade-in"
+                    >
                             {/* Stats Summary */}
                             <div className="grid grid-cols-2 gap-3 mb-6">
                                 <div className="glass-card p-5 text-center rounded-3xl relative overflow-hidden group">

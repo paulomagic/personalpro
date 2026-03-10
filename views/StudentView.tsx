@@ -68,6 +68,7 @@ const StudentView: React.FC<StudentViewProps> = ({
     const [showVideoModal, setShowVideoModal] = useState(false);
     const [activeVideo, setActiveVideo] = useState<{ url: string; name: string } | null>(null);
     const [workoutStartTime, setWorkoutStartTime] = useState<Date | null>(null);
+    const [completionDurationLabel, setCompletionDurationLabel] = useState('0 min');
     const [showFeedbackForm, setShowFeedbackForm] = useState(false);
     const [feedbackExerciseIndex, setFeedbackExerciseIndex] = useState(0);
     const [feedbackCompletedExercises, setFeedbackCompletedExercises] = useState<Set<number>>(new Set());
@@ -318,6 +319,18 @@ const StudentView: React.FC<StudentViewProps> = ({
         return match ? Number(match[0]) : 0;
     };
 
+    const calculateDurationLabel = () => {
+        if (!workoutStartTime) return '0 min';
+        const diffMs = new Date().getTime() - workoutStartTime.getTime();
+        const diffMins = Math.max(1, Math.round(diffMs / 60000));
+        if (diffMins >= 60) {
+            const hours = Math.floor(diffMins / 60);
+            const mins = diffMins % 60;
+            return `${hours}h ${mins}min`;
+        }
+        return `${diffMins} min`;
+    };
+
     const handleExerciseFeedbackSubmit = async (feedback: Omit<SessionFeedback, 'session_date'>) => {
         const result = await saveSessionFeedbackWithRetry(feedback);
 
@@ -375,6 +388,8 @@ const StudentView: React.FC<StudentViewProps> = ({
             return;
         }
 
+        const durationLabel = calculateDurationLabel();
+        setCompletionDurationLabel(durationLabel);
         setShowCompleteModal(true);
 
         // Save to history if we have a real client
@@ -386,24 +401,11 @@ const StudentView: React.FC<StudentViewProps> = ({
                 );
 
                 // Calculate actual duration
-                let duration = '0 min';
-                if (workoutStartTime) {
-                    const diffMs = new Date().getTime() - workoutStartTime.getTime();
-                    const diffMins = Math.round(diffMs / 60000);
-                    if (diffMins >= 60) {
-                        const hours = Math.floor(diffMins / 60);
-                        const mins = diffMins % 60;
-                        duration = `${hours}h ${mins}min`;
-                    } else {
-                        duration = `${diffMins} min`;
-                    }
-                }
-
                 await saveCompletedWorkout({
                     client_id: clientId,
                     workout_id: workout?.id,
                     title: `Treino ${selectedSplit.name}`,
-                    duration: duration,
+                    duration: durationLabel,
                     exercises_count: selectedSplit.exercises.length,
                     sets_completed: completedSetsCount,
                     total_load_volume: 0, // Not tracked in this view
@@ -463,6 +465,7 @@ const StudentView: React.FC<StudentViewProps> = ({
                     {onBack && (
                         <button
                             onClick={onBack}
+                            aria-label="Voltar para a tela anterior"
                             className="px-6 py-3 bg-blue-600 text-white font-bold rounded-xl"
                         >
                             Voltar
@@ -504,7 +507,7 @@ const StudentView: React.FC<StudentViewProps> = ({
                                 ? 'bg-[rgba(255,51,102,0.14)] border-[rgba(255,51,102,0.22)] text-[#FFD1DD]'
                                 : 'bg-[rgba(59,130,246,0.14)] border-[rgba(59,130,246,0.22)] text-[#D9E7FF]'
                         }`}>
-                            {notice.message}
+                            <p aria-live="polite">{notice.message}</p>
                         </div>
                     </motion.div>
                 )}
@@ -598,6 +601,7 @@ const StudentView: React.FC<StudentViewProps> = ({
                                             setActiveVideo({ url: exercise.videoUrl!, name: exercise.name });
                                             setShowVideoModal(true);
                                         }}
+                                        aria-label={`Ver execucao do exercicio ${exercise.name}`}
                                         className="flex items-center gap-2 px-3 py-1.5 bg-blue-500/10 hover:bg-blue-500/20 rounded-lg text-blue-400 text-[10px] font-black uppercase tracking-widest transition-all active:scale-95"
                                     >
                                         <Play size={12} fill="currentColor" />
@@ -654,6 +658,8 @@ const StudentView: React.FC<StudentViewProps> = ({
                                                                 if ('vibrate' in navigator) navigator.vibrate([15, 30, 15]);
                                                                 toggleSetComplete(exerciseIndex, setIndex);
                                                             }}
+                                                            aria-label={`Marcar serie ${setIndex + 1} do exercicio ${exercise.name} como ${isSetComplete ? 'nao concluida' : 'concluida'}`}
+                                                            aria-pressed={isSetComplete}
                                                             className={`size-[42px] rounded-[14px] border-2 flex items-center justify-center transition-all active:scale-90 ${isSetComplete
                                                                 ? 'bg-blue-500 border-blue-500 text-white shadow-lg shadow-blue-500/30'
                                                                 : 'bg-white/5 border-white/10 text-slate-500 hover:border-blue-500 hover:text-blue-500 hover:bg-blue-500/10'
@@ -705,6 +711,9 @@ const StudentView: React.FC<StudentViewProps> = ({
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
+                        role="dialog"
+                        aria-modal="true"
+                        aria-label="Feedback do exercicio"
                         className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4"
                     >
                         <div className="max-w-2xl w-full max-h-[90vh] overflow-y-auto">
@@ -732,11 +741,13 @@ const StudentView: React.FC<StudentViewProps> = ({
                 studentName={studentName}
                 exerciseCount={selectedSplit?.exercises.length || 0}
                 totalSets={totalSets}
+                durationLabel={completionDurationLabel}
                 onClose={() => {
                     setShowCompleteModal(false);
                     setSelectedSplit(null);
                     setProcessedSplitId(null);
                     setWorkoutStartTime(null);
+                    setCompletionDurationLabel('0 min');
                     setShowFeedbackForm(false);
                     setFeedbackCompletedExercises(new Set());
                 }}

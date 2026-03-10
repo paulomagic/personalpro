@@ -35,7 +35,11 @@ export default function StudentSplitSelection({
                 accentColor="blue"
                 rightSlot={
                     coachLogo ? (
-                        <img src={coachLogo} alt={coachName} className="h-11 w-auto rounded-[14px] border border-white/10 shadow-lg" />
+                        <img
+                            src={coachLogo}
+                            alt={`Logo de ${coachName}`}
+                            className="h-11 w-auto rounded-[14px] border border-white/10 shadow-lg"
+                        />
                     ) : (
                         <div className="text-right flex flex-col justify-center">
                             <span className="text-[9px] font-black text-slate-500 uppercase tracking-[0.15em] mb-0.5">Personal</span>
@@ -66,6 +70,7 @@ export default function StudentSplitSelection({
                                     if ('vibrate' in navigator) navigator.vibrate(20);
                                     onSelectSplit(split);
                                 }}
+                                aria-label={`Selecionar treino ${splitLetter}: ${splitDescription}`}
                                 className="w-full glass-card p-5 rounded-[24px] text-left relative overflow-hidden group hover:border-blue-500/30 transition-all active:scale-[0.98]"
                             >
                                 <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-full blur-3xl group-hover:bg-blue-500/20 transition-all pointer-events-none" />

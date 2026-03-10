@@ -35,7 +35,7 @@ const StudentDashboardView: React.FC<StudentDashboardViewProps> = ({
     const [loading, setLoading] = useState(true);
     const [currentWorkout, setCurrentWorkout] = useState<Workout | null>(null);
     const [clientData, setClientData] = useState<Client | null>(null);
-    const [coachName, setCoachName] = useState('Seu Personal');
+    const [coachName, setCoachName] = useState<string | null>(null);
 
     const studentName = user?.user_metadata?.name || user?.user_metadata?.full_name || 'Aluno';
 
@@ -96,6 +96,19 @@ const StudentDashboardView: React.FC<StudentDashboardViewProps> = ({
         return 'Boa noite';
     };
 
+    const formatStudentMetric = (value: string | number | null | undefined, suffix?: string) => {
+        if (value === null || value === undefined || value === '') {
+            return <span className="text-base font-black text-slate-500">Sem dados</span>;
+        }
+
+        return (
+            <>
+                {value}
+                {suffix ? <span className="text-sm font-bold text-slate-500 ml-1">{suffix}</span> : null}
+            </>
+        );
+    };
+
     if (loading) {
         return (
             <div className="min-h-screen bg-slate-950 flex items-center justify-center">
@@ -124,15 +137,20 @@ const StudentDashboardView: React.FC<StudentDashboardViewProps> = ({
                         {studentName.split(' ')[0]}
                     </h1>
                     <p className="text-xs text-slate-500 mt-1">
-                        Treinando com {coachName}
+                        Treinando com {coachName || 'personal nao identificado'}
                     </p>
                 </div>
                 <button
                     onClick={() => onNavigate('student_profile')}
+                    aria-label="Abrir meu perfil"
                     className="size-12 rounded-full bg-slate-800 flex items-center justify-center ring-2 ring-white/10 overflow-hidden"
                 >
                     {clientData?.avatar_url || user?.user_metadata?.avatar_url ? (
-                        <img src={clientData?.avatar_url || user?.user_metadata?.avatar_url} alt="Profile" className="w-full h-full object-cover" />
+                        <img
+                            src={clientData?.avatar_url || user?.user_metadata?.avatar_url}
+                            alt={`Foto de perfil de ${studentName}`}
+                            className="w-full h-full object-cover"
+                        />
                     ) : (
                         <User size={24} className="text-slate-400" />
                     )}
@@ -154,16 +172,16 @@ const StudentDashboardView: React.FC<StudentDashboardViewProps> = ({
                             </span>
                         </div>
                         <h2 className="text-3xl font-display font-black text-white mb-2 tracking-tight">
-                            {currentWorkout.title || 'Treino A'}
+                            {currentWorkout.title || 'Treino disponível'}
                         </h2>
                         <p className="text-sm text-blue-200/80 mb-4">
-                            {currentWorkout.objective || 'Vamos treinar!'}
+                            {currentWorkout.objective || 'Objetivo nao informado'}
                         </p>
 
                         <div className="flex items-center gap-4 mb-6">
                             <div className="flex items-center gap-2 text-blue-200/80">
                                 <Clock size={14} />
-                                <span className="text-xs font-bold">{currentWorkout.duration || '45 min'}</span>
+                                <span className="text-xs font-bold">{currentWorkout.duration || 'Duracao nao informada'}</span>
                             </div>
                             <div className="flex items-center gap-2 text-blue-200/80">
                                 <Dumbbell size={14} />
@@ -181,6 +199,7 @@ const StudentDashboardView: React.FC<StudentDashboardViewProps> = ({
                                 if ('vibrate' in navigator) navigator.vibrate(50);
                                 onNavigate('student_workouts');
                             }}
+                            aria-label={`Iniciar treino ${currentWorkout.title || 'do dia'}`}
                             className="w-full py-4 rounded-xl glass-pure text-white font-bold flex items-center justify-center gap-2"
                         >
                             <Play size={20} fill="currentColor" />
@@ -220,7 +239,7 @@ const StudentDashboardView: React.FC<StudentDashboardViewProps> = ({
                         <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Meta</span>
                     </div>
                     <p className="text-2xl font-display font-black text-white">
-                        {clientData?.goal || 'Definir meta'}
+                        {formatStudentMetric(clientData?.goal)}
                     </p>
                 </div>
 
@@ -232,7 +251,7 @@ const StudentDashboardView: React.FC<StudentDashboardViewProps> = ({
                         <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Adesão</span>
                     </div>
                     <p className="text-2xl font-display font-black text-white">
-                        {clientData?.adherence || 0}%
+                        {formatStudentMetric(clientData?.adherence, '%')}
                     </p>
                 </div>
             </motion.div>

@@ -7,6 +7,7 @@ interface StudentCompletionModalProps {
     studentName: string;
     exerciseCount: number;
     totalSets: number;
+    durationLabel: string;
     onClose: () => void;
 }
 
@@ -15,6 +16,7 @@ export default function StudentCompletionModal({
     studentName,
     exerciseCount,
     totalSets,
+    durationLabel,
     onClose
 }: StudentCompletionModalProps) {
     return (
@@ -24,6 +26,9 @@ export default function StudentCompletionModal({
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby="student-workout-completion-title"
                     className="fixed inset-0 z-50 bg-slate-950/95 backdrop-blur-md flex items-center justify-center p-4"
                 >
                     <motion.div
@@ -44,6 +49,7 @@ export default function StudentCompletionModal({
                             initial={{ y: 20, opacity: 0 }}
                             animate={{ y: 0, opacity: 1 }}
                             transition={{ delay: 0.4 }}
+                            id="student-workout-completion-title"
                             className="text-3xl font-black text-white mb-2"
                         >
                             Treino Concluído! 🎉
@@ -75,9 +81,9 @@ export default function StudentCompletionModal({
                             <div className="bg-white/5 rounded-2xl p-4">
                                 <div className="flex items-center justify-center gap-1">
                                     <Flame size={20} className="text-orange-400" />
-                                    <span className="text-2xl font-black text-orange-400">45</span>
+                                    <span className="text-2xl font-black text-orange-400">{durationLabel}</span>
                                 </div>
-                                <p className="text-[9px] font-black text-slate-500 uppercase">Minutos</p>
+                                <p className="text-[9px] font-black text-slate-500 uppercase">Duração</p>
                             </div>
                         </motion.div>
 

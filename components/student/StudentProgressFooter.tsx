@@ -46,6 +46,7 @@ export default function StudentProgressFooter({
                                 type="button"
                                 onClick={onQuickCompleteNextSet}
                                 disabled={!canQuickCompleteSet}
+                                aria-label="Marcar a proxima serie como concluida"
                                 className="h-12 rounded-xl bg-blue-600 text-white text-[10px] font-black uppercase tracking-widest disabled:opacity-40 disabled:cursor-not-allowed"
                             >
                                 Próxima Série
@@ -53,6 +54,7 @@ export default function StudentProgressFooter({
                             <button
                                 type="button"
                                 onClick={onMoveToNextExercise}
+                                aria-label="Ir para o proximo exercicio"
                                 className={`h-12 rounded-xl border text-[10px] font-black uppercase tracking-widest ${isLightTheme
                                     ? 'border-[rgba(130,170,235,0.42)] text-[#355680] bg-[rgba(255,255,255,0.75)]'
                                     : 'border-[rgba(148,163,184,0.35)] text-[#CBD5E1] bg-[rgba(15,23,42,0.65)]'
@@ -67,6 +69,7 @@ export default function StudentProgressFooter({
                     <button
                         onClick={onFinishWorkout}
                         disabled={!canFinishWorkout}
+                        aria-label="Encerrar sessao de treino"
                         className={`w-full py-4 rounded-2xl relative overflow-hidden group disabled:opacity-35 transition-all active:scale-[0.98] ${canFinishWorkout
                             ? 'cursor-pointer bg-[var(--btn-primary-bg)] border border-[var(--btn-primary-border)] shadow-[var(--btn-primary-shadow)]'
                             : 'opacity-80 cursor-not-allowed'

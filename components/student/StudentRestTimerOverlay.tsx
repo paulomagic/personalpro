@@ -22,6 +22,8 @@ export default function StudentRestTimerOverlay({
                     initial={{ opacity: 0, y: 50 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: 50 }}
+                    role="status"
+                    aria-live="polite"
                     className="fixed bottom-20 left-4 right-4 z-50 max-w-md mx-auto"
                 >
                     <div className="rounded-[24px] p-6 shadow-2xl bg-[linear-gradient(135deg,#1E3A8A,#3B82F6)] shadow-[0_16px_48px_rgba(30,58,138,0.3)]">
@@ -37,6 +39,7 @@ export default function StudentRestTimerOverlay({
                             </div>
                             <button
                                 onClick={onSkip}
+                                aria-label="Pular descanso"
                                 className="size-12 rounded-full bg-white/20 flex items-center justify-center hover:bg-white/30 transition-colors"
                             >
                                 <Play size={24} className="ml-1" />

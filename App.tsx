@@ -19,6 +19,7 @@ import {
   type AppSessionUser,
   type NavigationIntent
 } from './services/auth/authFlow';
+import { createScopedLogger } from './services/appLogger';
 import { logFrontendError } from './services/loggingService';
 import { useAuthSessionSync } from './services/app/useAuthSessionSync';
 import { useServiceWorkerUpdates } from './services/app/useServiceWorkerUpdates';
@@ -30,6 +31,7 @@ import { usePasswordRecovery } from './services/app/usePasswordRecovery';
 import { appShellActions, useAppShellStore } from './services/appShellStore';
 
 const Layout = lazy(() => import('./components/Layout'));
+const appLogger = createScopedLogger('App');
 
 // Loading fallback component
 const ViewLoader = () => (
@@ -190,7 +192,9 @@ function App() {
           return;
         }
       } catch (error) {
-        console.error('Error loading user profile:', error);
+        appLogger.error('Error loading user profile', error, {
+          userId: loggedUser.id
+        });
       }
 
       const routeView = typeof window !== 'undefined' ? resolveViewFromPath(window.location.pathname) : null;

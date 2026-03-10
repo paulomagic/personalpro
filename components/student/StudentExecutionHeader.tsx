@@ -51,6 +51,7 @@ export default function StudentExecutionHeader({
                         <div className="flex items-center gap-3">
                             <button
                                 onClick={onBack}
+                                aria-label="Voltar para a selecao de treino"
                                 className={`size-11 rounded-2xl backdrop-blur-xl text-white flex items-center justify-center shadow-lg transition-all active:scale-95 border ${isLightTheme
                                     ? 'bg-[rgba(255,255,255,0.66)] border-[rgba(130,170,235,0.35)] shadow-[0_8px_22px_rgba(63,93,152,0.16)]'
                                     : 'bg-[rgba(255,255,255,0.10)] border-[rgba(255,255,255,0.20)]'
@@ -66,6 +67,8 @@ export default function StudentExecutionHeader({
                         <button
                             type="button"
                             onClick={onToggleOneHandMode}
+                            aria-pressed={oneHandMode}
+                            aria-label={oneHandMode ? 'Desativar modo uma mao' : 'Ativar modo uma mao'}
                             className={`h-11 px-3 rounded-2xl border text-[10px] font-black uppercase tracking-widest transition-all ${oneHandMode
                                 ? 'bg-blue-500/20 border-blue-400/60 text-blue-300'
                                 : (isLightTheme

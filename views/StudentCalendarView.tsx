@@ -129,6 +129,7 @@ const StudentCalendarView: React.FC<StudentCalendarViewProps> = ({ user, onBack 
                 <div className="max-w-md mx-auto flex items-center gap-4">
                     <button
                         onClick={onBack}
+                        aria-label="Voltar para a tela inicial do aluno"
                         className="size-10 rounded-full bg-white/10 flex items-center justify-center text-white hover:bg-white/20 transition-colors"
                     >
                         <ArrowLeft size={20} />
@@ -160,6 +161,7 @@ const StudentCalendarView: React.FC<StudentCalendarViewProps> = ({ user, onBack 
                 <div className="flex items-center justify-between mb-6">
                     <button
                         onClick={() => navigateMonth(-1)}
+                        aria-label="Ver mes anterior"
                         className="size-10 rounded-full bg-white/10 flex items-center justify-center text-slate-400 hover:bg-white/20 transition-colors"
                     >
                         <ChevronLeft size={20} />
@@ -169,6 +171,7 @@ const StudentCalendarView: React.FC<StudentCalendarViewProps> = ({ user, onBack 
                     </h2>
                     <button
                         onClick={() => navigateMonth(1)}
+                        aria-label="Ver proximo mes"
                         className="size-10 rounded-full bg-white/10 flex items-center justify-center text-slate-400 hover:bg-white/20 transition-colors"
                     >
                         <ChevronRight size={20} />
@@ -234,6 +237,7 @@ const StudentCalendarView: React.FC<StudentCalendarViewProps> = ({ user, onBack 
                                                     setSelectedAppointment(apt);
                                                     setShowRescheduleModal(true);
                                                 }}
+                                                aria-label={`Solicitar reagendamento para ${getTypeLabel(apt.type || 'training')} em ${(apt.time || '00:00').slice(0, 5)}`}
                                                 className="mt-3 w-full py-2 px-4 rounded-xl bg-blue-500/10 border border-blue-500/30 text-blue-400 text-sm font-bold flex items-center justify-center gap-2 hover:bg-blue-500/20 transition-colors"
                                             >
                                                 <RefreshCw size={16} />

@@ -1,5 +1,5 @@
 -- ============================================
--- STORAGE SECURITY POLICIES - PersonalPro
+-- STORAGE SECURITY POLICIES - Personal Pro
 -- Execute este SQL no Supabase SQL Editor
 -- ============================================
 

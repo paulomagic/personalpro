@@ -45,7 +45,7 @@ export function MonitoringDashboardConnected() {
                 <h2 className="text-2xl font-bold mb-6">Monitoramento de Produção</h2>
                 <div className="text-center py-12">
                     <div className="animate-spin text-4xl mb-4">⏳</div>
-                    <p className="text-gray-600">Carregando métricas...</p>
+                    <p className="text-gray-600">Carregando leitura operacional...</p>
                 </div>
             </div>
         );
@@ -57,6 +57,7 @@ export function MonitoringDashboardConnected() {
                 <h2 className="text-2xl font-bold mb-6">Monitoramento de Produção</h2>
                 <div className="text-center py-12">
                     <p className="text-red-600">❌ {error}</p>
+                    <p className="mt-2 text-sm text-gray-500">O painel nao conseguiu ler os indicadores atuais. Tente atualizar para buscar a leitura mais recente.</p>
                     <button
                         onClick={fetchMetrics}
                         className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
@@ -73,7 +74,7 @@ export function MonitoringDashboardConnected() {
             <div className="p-6">
                 <h2 className="text-2xl font-bold mb-6">Monitoramento de Produção</h2>
                 <div className="text-center py-12">
-                    <p className="text-gray-600">Nenhum dado disponível</p>
+                    <p className="text-gray-600">Ainda nao ha dados suficientes para exibir o painel.</p>
                 </div>
             </div>
         );
@@ -185,7 +186,7 @@ export function MonitoringDashboardConnected() {
                             <p className="mt-1 text-sm font-semibold text-gray-900">
                                 {metrics.provider_health.last_groq_success_at
                                     ? new Date(metrics.provider_health.last_groq_success_at).toLocaleString('pt-BR')
-                                    : 'Nenhum registro'}
+                                    : 'Sem sucesso registrado'}
                             </p>
                         </div>
                     </div>

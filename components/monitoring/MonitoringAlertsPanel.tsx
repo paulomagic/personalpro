@@ -18,7 +18,7 @@ function getAlertStyles(severity: MonitoringAlert['severity']) {
 function getAlertBadge(severity: MonitoringAlert['severity']) {
   if (severity === 'critical') return 'Crítico';
   if (severity === 'warning') return 'Atenção';
-  return 'Estável';
+  return 'Informativo';
 }
 
 export function MonitoringAlertsPanel({ alerts }: MonitoringAlertsPanelProps) {
@@ -35,6 +35,11 @@ export function MonitoringAlertsPanel({ alerts }: MonitoringAlertsPanelProps) {
       </div>
 
       <div className="space-y-3">
+        {alerts.length === 0 && (
+          <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
+            Nenhum alerta ativo no momento. O painel segue acompanhando sucesso, latencia, fallback e saude do provider.
+          </div>
+        )}
         {alerts.map((alert) => (
           <div key={`${alert.severity}:${alert.title}`} className={`rounded-lg border p-4 ${getAlertStyles(alert.severity)}`}>
             <div className="flex items-center justify-between gap-3">

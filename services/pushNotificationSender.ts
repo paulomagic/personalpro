@@ -18,10 +18,10 @@ export async function sendPushTestNotification(payload: SendPushPayload = {}): P
 
     const { data, error } = await supabase.functions.invoke('send-push', {
         body: {
-            title: payload.title || 'Apex PersonalPro',
+            title: payload.title || 'Personal Pro',
             body: payload.body || 'Push de teste enviado com sucesso.',
             url: payload.url || '/settings',
-            tag: payload.tag || 'apex-test-push',
+            tag: payload.tag || 'personalpro-test-push',
             data: payload.data || { source: 'settings_test' }
         }
     });

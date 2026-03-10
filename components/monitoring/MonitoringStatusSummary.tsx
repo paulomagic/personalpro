@@ -12,22 +12,22 @@ function getStatusTone(condition: boolean, warningCondition?: boolean) {
 }
 
 function getSuccessRateLabel(rate: number) {
-    if (rate >= 95) return '✅ Excelente';
-    if (rate >= 85) return '⚠️ Atenção';
-    return '❌ Crítico';
+    if (rate >= 95) return 'Excelente';
+    if (rate >= 85) return 'Atencao';
+    return 'Critico';
 }
 
 function getRateLimitLabel(errors: number) {
-    if (errors <= 2) return '✅ Otimizado';
-    if (errors <= 5) return '⚠️ Verificar';
-    return '❌ Ajustar limites';
+    if (errors <= 2) return 'Baixo';
+    if (errors <= 5) return 'Atencao';
+    return 'Revisar';
 }
 
 function getProviderHealthLabel(status?: 'ok' | 'warning' | 'critical') {
-    if (status === 'ok') return '✅ Estável';
-    if (status === 'warning') return '⚠️ Atenção';
-    if (status === 'critical') return '❌ Instável';
-    return 'ℹ️ Sem leitura';
+    if (status === 'ok') return 'Estavel';
+    if (status === 'warning') return 'Atencao';
+    if (status === 'critical') return 'Instavel';
+    return 'Sem leitura';
 }
 
 function getProviderHealthTone(status?: 'ok' | 'warning' | 'critical') {
@@ -38,9 +38,9 @@ function getProviderHealthTone(status?: 'ok' | 'warning' | 'critical') {
 }
 
 function getLatencyLabel(latencyMs: number) {
-    if (latencyMs <= 5000) return '✅ Dentro da meta';
-    if (latencyMs <= 8000) return '⚠️ Atenção';
-    return '❌ Lento';
+    if (latencyMs <= 5000) return 'Dentro da meta';
+    if (latencyMs <= 8000) return 'Atencao';
+    return 'Lento';
 }
 
 function getLatencyTone(latencyMs: number) {
@@ -52,7 +52,7 @@ function getLatencyTone(latencyMs: number) {
 export function MonitoringStatusSummary({ metrics }: MonitoringStatusSummaryProps) {
     return (
         <div className="bg-white border rounded-lg p-6">
-            <h3 className="font-semibold mb-4">📊 Resumo do Status</h3>
+            <h3 className="font-semibold mb-4">Resumo do Status</h3>
 
             <div className="space-y-3">
                 <div className="flex items-center justify-between">
@@ -72,7 +72,7 @@ export function MonitoringStatusSummary({ metrics }: MonitoringStatusSummaryProp
                 <div className="flex items-center justify-between">
                     <span className="text-sm">Sistema de Fallback</span>
                     <span className={`text-sm font-medium ${metrics.fallback_usage_percent < 10 ? 'text-green-600' : 'text-yellow-600'}`}>
-                        {metrics.fallback_usage_percent < 10 ? '✅ Saudável' : '⚠️ Uso elevado'}
+                        {metrics.fallback_usage_percent < 10 ? 'Saudavel' : 'Uso elevado'}
                     </span>
                 </div>
 

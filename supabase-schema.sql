@@ -1,5 +1,5 @@
 -- ============================================
--- SCHEMA DO BANCO DE DADOS - PersonalPro
+-- SCHEMA DO BANCO DE DADOS - Personal Pro
 -- Execute este SQL no Supabase SQL Editor
 -- ============================================
 

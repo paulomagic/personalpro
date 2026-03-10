@@ -108,18 +108,18 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user, onBack, onLogout }) =
             }
         };
 
-        const result = downloadPrivacyJson(report, 'personalpro-privacy-report');
+        const result = downloadPrivacyJson(report, 'personal-pro-privacy-report');
         showToast(result.success ? 'Relatório de privacidade exportado.' : (result.error || 'Erro ao exportar relatório'), result.success ? 'success' : 'error');
     }, [coachEmail, isDemo, notifState, profileName, selectedTheme, showToast]);
 
     const handleDownloadLivePrivacyExport = React.useCallback((data: unknown) => {
-        const downloadResult = downloadPrivacyJson(data, 'personalpro-lgpd-export');
+        const downloadResult = downloadPrivacyJson(data, 'personal-pro-lgpd-export');
         showToast(downloadResult.success ? 'Exportação LGPD concluída.' : (downloadResult.error || 'Erro ao finalizar exportação'), downloadResult.success ? 'success' : 'error');
     }, [showToast]);
 
     const handleContactSupport = React.useCallback(async () => {
         const diagnostics = [
-            `App: PersonalPro`,
+            `App: Personal Pro`,
             `Data: ${new Date().toISOString()}`,
             `Usuário: ${coachEmail}`,
             `Modo demo: ${isDemo ? 'sim' : 'não'}`,
@@ -157,7 +157,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user, onBack, onLogout }) =
         };
 
         if (supportEmail) {
-            const subject = encodeURIComponent('PersonalPro - Solicitação de suporte');
+            const subject = encodeURIComponent('Personal Pro - Solicitação de suporte');
             const body = encodeURIComponent(`Descreva o problema abaixo:\n\n---\n${diagnostics}\n---\n`);
             window.open(`mailto:${supportEmail}?subject=${subject}&body=${body}`, '_blank', 'noopener,noreferrer');
             showToast('Canal de suporte aberto.');
@@ -428,7 +428,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user, onBack, onLogout }) =
             icon: CreditCard,
             label: 'Assinatura',
             subtitle: 'Plano Premium',
-            action: () => showToast('Você possui o plano Apex Elite'),
+            action: () => showToast('Seu plano atual já está ativo'),
             chipClassName: 'bg-[#3B82F61F] border border-[#3B82F633]',
             iconClassName: 'text-[#3B82F6]'
         },
@@ -456,7 +456,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user, onBack, onLogout }) =
 
             <PageHeader
                 title="Configurações"
-                subtitle="Ajustes Elite"
+                subtitle="Preferências do app"
                 onBack={onBack}
                 accentColor="cyan"
             />
@@ -480,7 +480,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user, onBack, onLogout }) =
                 </button>
             </div>
 
-            <p className="text-center text-[9px] font-black mt-10 uppercase tracking-[0.3em] text-[#7A9FCC]">Apex Elite Framework • v1.1.0</p>
+            <p className="text-center text-[9px] font-black mt-10 uppercase tracking-[0.3em] text-[#7A9FCC]">Personal Pro • v1.1.0</p>
 
             <BottomSheet isOpen={!!activeModal} onClose={() => setActiveModal(null)} title={activeModalTitle}>
                 <SettingsModalContent

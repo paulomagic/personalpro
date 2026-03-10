@@ -6,16 +6,16 @@ interface ClientProfileQuickWorkoutFabProps {
 }
 
 const QUICK_WORKOUT_TEMPLATE = {
-  id: 'quick-workout-demo',
+  id: 'quick-workout-template',
   clientId: 'quick-workout-client',
   title: 'Treino Rápido',
-  objective: 'Demonstração',
+  objective: 'Sessão curta de treino',
   duration: '20min',
   days: 1,
   splits: [],
   exercises: [
     {
-      id: 'demo-1',
+      id: 'quick-template-1',
       name: 'Supino Reto',
       category: 'chest',
       targetMuscle: 'Peitoral',
@@ -26,7 +26,7 @@ const QUICK_WORKOUT_TEMPLATE = {
       ]
     },
     {
-      id: 'demo-2',
+      id: 'quick-template-2',
       name: 'Agachamento Livre',
       category: 'legs',
       targetMuscle: 'Quadríceps',

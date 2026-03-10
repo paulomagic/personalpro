@@ -1,5 +1,5 @@
 -- ============================================
--- STUDENT MODE SCHEMA - PersonalPro
+-- STUDENT MODE SCHEMA - Personal Pro
 -- Execute este SQL no Supabase SQL Editor
 -- ============================================
 

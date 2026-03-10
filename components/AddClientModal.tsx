@@ -144,7 +144,7 @@ const AddClientModal: React.FC<AddClientModalProps> = ({ isOpen, onClose, onSave
                         <span>←</span> Voltar
                     </button>
                     <h2 className="text-2xl font-bold text-white mb-1">Novo Aluno</h2>
-                    <p className="text-sm text-gray-400">Cadastro de Protocolo</p>
+                    <p className="text-sm text-gray-400">Cadastro do aluno</p>
                 </div>
 
                 {/* Tabs */}

@@ -1,5 +1,5 @@
 -- ================================================
--- APEX ADMIN - Tabelas de Logs
+-- PERSONAL PRO ADMIN - Tabelas de Logs
 -- Execute este SQL no Supabase SQL Editor
 -- ================================================
 

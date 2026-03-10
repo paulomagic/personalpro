@@ -1,6 +1,6 @@
 
 {
-  "name": "Apex - Premium PT Assistant",
+  "name": "Personal Pro",
   "description": "Uma plataforma B2B premium para Personal Trainers que utiliza IA para elevar o nível de serviço, retenção e resultados dos alunos.",
   "requestFramePermissions": [
     "camera"

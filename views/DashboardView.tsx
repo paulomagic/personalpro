@@ -32,6 +32,7 @@ import { getPayments, type Payment } from '../services/supabase/domains/payments
 import type { AppSessionUser } from '../services/auth/authFlow';
 import { useTheme } from '../services/ThemeContext';
 import { getSafeAvatarUrl } from '../utils/validation';
+import DemoModeNotice from '../components/DemoModeNotice';
 
 interface DashboardViewProps {
   user: AppSessionUser | null;
@@ -61,6 +62,13 @@ const loadDemoClients = async () => {
   const { mockClients } = await import('../mocks/demoData');
   return mockClients;
 };
+
+const formatDashboardRevenue = (value: number) =>
+  new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+    maximumFractionDigits: 0,
+  }).format(value);
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 const timeOfDay = () => {
@@ -224,7 +232,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
           >
             <Cpu size={10} className="text-[#3B82F6]" />
             <span className="text-[10px] font-black uppercase tracking-[0.15em] text-[#3B82F6]">
-              Apex AI
+              Personal Pro
             </span>
           </div>
           <h1 className="text-[26px] font-black text-white tracking-tight leading-tight">
@@ -270,6 +278,12 @@ const DashboardView: React.FC<DashboardViewProps> = ({
         </div>
       </motion.header>
 
+      {isDemoUser && (
+        <motion.div variants={item}>
+          <DemoModeNotice description="Você está vendo dados de demonstração nesta dashboard. Agenda, alunos e financeiro mostrados aqui servem apenas para teste visual do app." />
+        </motion.div>
+      )}
+
       {/* ─── Quick Actions ─────────────────────────────────────────────── */}
       <motion.div variants={item} className="px-5 mb-4">
         <div className="grid grid-cols-4 gap-2">
@@ -312,7 +326,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                 <div className="flex items-center gap-1.5 mb-2">
                   <Activity size={10} className={heroTextMutedClassName} />
                   <span className={`text-[10px] font-black uppercase tracking-[0.15em] ${heroTextMutedClassName}`}>
-                    Protocolo do Dia
+                    Agenda do dia
                   </span>
                 </div>
                 <div className="flex items-end gap-2">
@@ -383,11 +397,11 @@ const DashboardView: React.FC<DashboardViewProps> = ({
               {revenueMonthLabel}
             </p>
             <p className="text-lg font-black text-white leading-tight">
-              R$ {(revenue / 1000).toFixed(1)}k
+              {formatDashboardRevenue(revenue)}
             </p>
             <div className="flex items-center gap-1 mt-1">
               <TrendingUp size={10} className="text-[#00FF88]" />
-              <span className="text-[10px] font-black text-[#00FF88]">+18%</span>
+              <span className="text-[10px] font-black text-[#00FF88]">Recebido</span>
             </div>
           </div>
 
@@ -406,7 +420,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
             <p className="text-lg font-black text-white leading-tight">{activeClients}</p>
             <div className="flex items-center gap-1 mt-1">
               <Zap size={10} className="text-[#3B82F6]" />
-              <span className="text-[10px] font-black text-[#3B82F6]">Sincronizado</span>
+              <span className="text-[10px] font-black text-[#3B82F6]">Dados atuais</span>
             </div>
           </div>
         </div>

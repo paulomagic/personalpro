@@ -17,6 +17,24 @@ const ThemeContext = createContext<ThemeContextValue>({
 
 export const useTheme = () => useContext(ThemeContext);
 
+const NEW_THEME_STORAGE_KEY = 'personalpro_theme';
+const LEGACY_THEME_STORAGE_KEY = 'apex_theme';
+
+function readStoredTheme(): ThemeMode | null {
+    if (typeof window === 'undefined') return null;
+    try {
+        const next = localStorage.getItem(NEW_THEME_STORAGE_KEY) as ThemeMode | null;
+        if (next === 'dark' || next === 'light' || next === 'system') return next;
+
+        const legacy = localStorage.getItem(LEGACY_THEME_STORAGE_KEY) as ThemeMode | null;
+        if (legacy === 'dark' || legacy === 'light' || legacy === 'system') {
+            localStorage.setItem(NEW_THEME_STORAGE_KEY, legacy);
+            return legacy;
+        }
+    } catch {}
+    return null;
+}
+
 function getSystemTheme(): 'dark' | 'light' {
     if (typeof window === 'undefined') return 'dark';
     return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
@@ -33,17 +51,11 @@ function applyTheme(resolved: 'dark' | 'light') {
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [theme, setThemeState] = useState<ThemeMode>(() => {
-        try {
-            const stored = localStorage.getItem('apex_theme') as ThemeMode | null;
-            if (stored === 'dark' || stored === 'light' || stored === 'system') return stored;
-        } catch {}
-        return 'dark';
+        return readStoredTheme() || 'dark';
     });
 
     const [resolvedTheme, setResolvedTheme] = useState<'dark' | 'light'>(() => {
-        const stored = typeof localStorage !== 'undefined'
-            ? (localStorage.getItem('apex_theme') as ThemeMode | null)
-            : null;
+        const stored = readStoredTheme();
         const initial = (stored === 'dark' || stored === 'light' || stored === 'system') ? stored : 'dark';
         return initial === 'system' ? getSystemTheme() : initial;
     });
@@ -67,7 +79,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     const setTheme = (next: ThemeMode) => {
         setThemeState(next);
-        localStorage.setItem('apex_theme', next);
+        localStorage.setItem(NEW_THEME_STORAGE_KEY, next);
         const resolved = next === 'system' ? getSystemTheme() : next;
         setResolvedTheme(resolved);
     };

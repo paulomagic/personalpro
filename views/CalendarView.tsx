@@ -14,6 +14,7 @@ import {
 } from '../services/supabase/domains/appointmentsDomain';
 import PendingRequestsPanel from '../components/PendingRequestsPanel';
 import MonthlyScheduleModal from '../components/MonthlyScheduleModal';
+import DemoModeNotice from '../components/DemoModeNotice';
 import { getAllBatchesForCoach } from '../services/monthlyScheduleService';
 import PageHeader from '../components/PageHeader';
 import { createScopedLogger } from '../services/appLogger';
@@ -439,7 +440,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({ user, onBack, onSelectClien
             {/* AI Header */}
             <PageHeader
                 title="Agenda"
-                subtitle="Sincronização Elite"
+                subtitle="Horários e sessões"
                 onBack={onBack}
                 accentColor="cyan"
                 rightSlot={
@@ -465,6 +466,10 @@ const CalendarView: React.FC<CalendarViewProps> = ({ user, onBack, onSelectClien
                     </div>
                 }
             />
+
+            {isDemo && (
+                <DemoModeNotice description="Esta agenda usa horários e alunos de exemplo. Novos agendamentos e alterações ficam apenas nesta sessão." />
+            )}
 
             {/* Month & View Toggle */}
             <div className="px-5 flex items-center justify-between mb-4">
@@ -546,7 +551,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({ user, onBack, onSelectClien
                 {/* Appointments List */}
                 {!loading && (
                     <div>
-                        <h3 className="text-[10px] font-black uppercase tracking-[0.2em] mb-3 text-[#B8D3FF]">Fluxo de Protocolos</h3>
+                        <h3 className="text-[10px] font-black uppercase tracking-[0.2em] mb-3 text-[#B8D3FF]">Sessões do dia</h3>
 
                         {appointments.length === 0 ? (
                             <div className="glass-card rounded-[28px] p-8 text-center">
@@ -707,7 +712,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({ user, onBack, onSelectClien
                                         className="w-full h-16 bg-blue-600 hover:bg-blue-500 text-white font-black rounded-3xl flex items-center justify-center gap-3 active:scale-[0.98] transition-all uppercase tracking-widest shadow-lg shadow-blue-900/20"
                                     >
                                         <span className="material-symbols-outlined">check</span>
-                                        Confirmar Protocolo
+                                        Confirmar agendamento
                                     </button>
                                 )}
 

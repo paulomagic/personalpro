@@ -71,7 +71,7 @@ export function resolveNavigationView(intent: NavigationIntent, role: UserRole):
 export function createDemoUser(): AppSessionUser & { isDemo: true } {
     return {
         id: 'demo-user-id',
-        email: 'demo@apex.com',
+        email: 'demo@personalpro.app',
         user_metadata: {
             name: 'Modo Demonstração',
             avatar_url: '',

@@ -1,6 +1,6 @@
 {
-    "name": "PersonalPro",
-    "short_name": "PersonalPro",
+    "name": "Personal Pro",
+    "short_name": "Personal Pro",
     "description": "App premium para personal trainers com IA",
     "start_url": "/",
     "display": "standalone",

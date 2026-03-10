@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v62';
+const CACHE_VERSION = 'v63';
 const STATIC_CACHE = `personalpro-static-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `personalpro-runtime-${CACHE_VERSION}`;
 const API_CACHE = `personalpro-api-${CACHE_VERSION}`;
@@ -231,12 +231,12 @@ self.addEventListener('push', (event) => {
         payload = { body: event.data?.text?.() || 'Você tem uma nova atualização.' };
     }
 
-    const title = payload.title || 'Apex PersonalPro';
+    const title = payload.title || 'Personal Pro';
     const options = {
         body: payload.body || 'Você tem uma nova atualização.',
         icon: payload.icon || '/icons/icon-192.png',
         badge: payload.badge || '/icons/icon-192.png',
-        tag: payload.tag || 'apex-push',
+        tag: payload.tag || 'personalpro-push',
         data: {
             url: payload.url || '/dashboard',
             ...(payload.data || {})

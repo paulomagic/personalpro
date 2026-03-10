@@ -6,6 +6,7 @@ export interface AIBuilderExercise {
     name: string;
     targetMuscle?: string;
     category?: string;
+    videoUrl?: string;
     sets?: Array<{ reps?: string }>;
 }
 
@@ -17,6 +18,7 @@ export function mapCatalogExerciseToAIBuilder(exercise: CatalogExercise): AIBuil
             ? exercise.primary_muscle.replace(/_/g, ' ')
             : 'geral',
         category: exercise.category,
+        videoUrl: exercise.video_url,
         sets: [{ reps: exercise.category === 'cardio' ? '' : '10-12' }]
     };
 }
@@ -42,7 +44,7 @@ export function mapToLocalExercises(aiResult: any, localExercises: AIBuilderExer
                 return {
                     ...exercise,
                     id: localMatch.id,
-                    videoUrl: `https://videos.apex-app.com/${localMatch.id}.mp4`,
+                    videoUrl: localMatch.videoUrl || exercise.videoUrl,
                     isVerified: true
                 };
             }
@@ -235,7 +237,7 @@ export function generateSmartWorkout(client: Client, observations: string, exerc
     }
 
     if (goal.toLowerCase().includes('hipertrofia') || goal.toLowerCase().includes('glúteo')) {
-        title = `Protocolo Hipertrofia - ${name}`;
+        title = `Treino de Hipertrofia - ${name}`;
         objective = `Foco em tensão mecânica e volume progressivo. ${level === 'Iniciante' ? 'Ênfase em técnica.' : 'Métodos avançados aplicados.'}`;
 
         const isGlutesFocus = goal.toLowerCase().includes('glúteo');
@@ -254,7 +256,7 @@ export function generateSmartWorkout(client: Client, observations: string, exerc
             ];
         }
     } else if (goal.toLowerCase().includes('perda') || goal.toLowerCase().includes('emagrecimento')) {
-        title = `Protocolo Fat Burn - ${name}`;
+        title = `Treino para Emagrecimento - ${name}`;
         objective = `Alta densidade metabólica. Descansos curtos. ${adherence < 60 ? 'Adaptado ao seu ritmo.' : 'Intensidade máxima.'}`;
 
         splits = [
@@ -262,7 +264,7 @@ export function generateSmartWorkout(client: Client, observations: string, exerc
             { name: 'B - Inferior + HIIT', exercises: [...getEx('Glúteo', 2), ...getEx('Posterior de Coxa', 1), ...getEx('Cardio', 2)] }
         ];
     } else if (goal.toLowerCase().includes('força')) {
-        title = `Protocolo Força Máxima - ${name}`;
+        title = `Treino de Força - ${name}`;
         objective = `Foco em cargas altas e descansos longos para máxima força. Métodos: ${allowedMethods.slice(0, 2).join(', ')}.`;
 
         splits = [
@@ -271,7 +273,7 @@ export function generateSmartWorkout(client: Client, observations: string, exerc
             { name: 'C - Terra & Costas', exercises: [...getEx('Costas', 3), ...getEx('Bíceps', 2)] }
         ];
     } else if (goal.toLowerCase().includes('condicionamento')) {
-        title = `Protocolo Condicionamento - ${name}`;
+        title = `Treino de Condicionamento - ${name}`;
         objective = 'Treino funcional e metabólico para condicionamento geral.';
 
         splits = [

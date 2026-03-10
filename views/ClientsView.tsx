@@ -12,6 +12,7 @@ import { uploadAvatar } from '../services/supabase/domains/storageDomain';
 import AddClientModal from '../components/AddClientModal';
 import { ClientCardSkeleton } from '../components/Skeleton';
 import PageHeader from '../components/PageHeader';
+import DemoModeNotice from '../components/DemoModeNotice';
 import { createScopedLogger } from '../services/appLogger';
 
 const clientsViewLogger = createScopedLogger('ClientsView');
@@ -94,6 +95,11 @@ const ClientsView: React.FC<ClientsViewProps> = ({ user, onBack, onSelectClient 
 
     // Handle new client
     const handleAddClient = async (newClientData: Partial<Client>) => {
+        if (user?.isDemo) {
+            showToast('Modo demonstração: cadastros não são salvos.', 'error');
+            throw new Error('Demo mode does not persist clients');
+        }
+
         if (!user?.id) {
             showToast('Usuário inválido para criar aluno', 'error');
             throw new Error('Missing user');
@@ -229,7 +235,7 @@ const ClientsView: React.FC<ClientsViewProps> = ({ user, onBack, onSelectClient 
             {/* AI Header */}
             <PageHeader
                 title="Alunos"
-                subtitle={`Base de Elite • ${stats.total} protocolos`}
+                subtitle={`${stats.total} aluno${stats.total === 1 ? '' : 's'} cadastrados`}
                 onBack={onBack}
                 accentColor="cyan"
                 rightSlot={
@@ -242,6 +248,10 @@ const ClientsView: React.FC<ClientsViewProps> = ({ user, onBack, onSelectClient 
                     </button>
                 }
             />
+
+            {user?.isDemo && (
+                <DemoModeNotice description="Você está vendo uma lista de alunos de exemplo. Cadastros e edições feitos aqui não são enviados para a base real." />
+            )}
 
             {/* Stats Row */}
             <motion.div variants={itemVariants} className="px-5 grid grid-cols-4 gap-2 mb-5">
@@ -388,7 +398,7 @@ const ClientsView: React.FC<ClientsViewProps> = ({ user, onBack, onSelectClient 
                         </div>
                         <p className="font-bold text-sm mb-2">Nenhum aluno encontrado</p>
                         <p className="text-xs text-slate-500 mb-6">
-                            {searchTerm ? 'Tente outra busca' : 'Comece adicionando seu primeiro protocolo de elite'}
+                            {searchTerm ? 'Tente outra busca' : 'Comece adicionando seu primeiro aluno'}
                         </p>
 
                         <div className="flex flex-col gap-3 items-center">

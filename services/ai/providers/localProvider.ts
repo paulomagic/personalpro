@@ -50,7 +50,7 @@ function generateSplits(days: number, goal: string): Array<{
 
     if (days === 2) {
         splits.push({
-            name: 'Treino A',
+            name: 'Sessão 1',
             focus: 'Full Body',
             intentions: [
                 ...MOVEMENT_TEMPLATES.push.slice(0, 2),
@@ -59,7 +59,7 @@ function generateSplits(days: number, goal: string): Array<{
             ]
         });
         splits.push({
-            name: 'Treino B',
+            name: 'Sessão 2',
             focus: 'Full Body',
             intentions: [
                 ...MOVEMENT_TEMPLATES.legs.slice(0, 2),
@@ -69,40 +69,40 @@ function generateSplits(days: number, goal: string): Array<{
         });
     } else if (days === 3) {
         splits.push({
-            name: 'Treino A',
+            name: 'Sessão 1',
             focus: 'Push',
             intentions: [...MOVEMENT_TEMPLATES.push, ...MOVEMENT_TEMPLATES.core.slice(0, 1)]
         });
         splits.push({
-            name: 'Treino B',
+            name: 'Sessão 2',
             focus: 'Pull',
             intentions: [...MOVEMENT_TEMPLATES.pull, ...MOVEMENT_TEMPLATES.core.slice(0, 1)]
         });
         splits.push({
-            name: 'Treino C',
+            name: 'Sessão 3',
             focus: 'Legs',
             intentions: [...MOVEMENT_TEMPLATES.legs, ...MOVEMENT_TEMPLATES.core]
         });
     } else {
         // 4+ days - Push/Pull/Legs/Upper
         splits.push({
-            name: 'Treino A',
+            name: 'Sessão 1',
             focus: 'Push',
             intentions: MOVEMENT_TEMPLATES.push
         });
         splits.push({
-            name: 'Treino B',
+            name: 'Sessão 2',
             focus: 'Pull',
             intentions: MOVEMENT_TEMPLATES.pull
         });
         splits.push({
-            name: 'Treino C',
+            name: 'Sessão 3',
             focus: 'Legs',
             intentions: MOVEMENT_TEMPLATES.legs
         });
         if (days >= 4) {
             splits.push({
-                name: 'Treino D',
+                name: 'Sessão 4',
                 focus: 'Upper Mix',
                 intentions: [
                     ...MOVEMENT_TEMPLATES.push.slice(0, 2),

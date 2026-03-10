@@ -27,7 +27,7 @@ export default function SettingsProfileCard({
         <div className="flex-1 relative z-10">
           <h2 className="text-lg font-black text-white leading-tight">{coachName}</h2>
           <p className="text-[10px] font-bold uppercase tracking-wider mt-1 text-[#B8D3FF]">
-            {isDemo ? 'Modo Demonstração' : 'Personal Trainer Elite'}
+            {isDemo ? 'Modo demonstração' : 'Personal trainer'}
           </p>
         </div>
         <button

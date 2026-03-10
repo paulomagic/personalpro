@@ -166,7 +166,7 @@ export async function upsertPrivacyConsent(
   return { success: true, data: data as PrivacyConsentSummary };
 }
 
-export function buildPrivacyExportFilename(prefix = 'personalpro-lgpd-export'): string {
+export function buildPrivacyExportFilename(prefix = 'personal-pro-lgpd-export'): string {
   return `${prefix}-${new Date().toISOString().slice(0, 10)}.json`;
 }
 

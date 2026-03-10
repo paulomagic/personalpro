@@ -234,16 +234,16 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
 
   const slides = [
     {
-      title: "Performance de Elite",
-      subtitle: "A plataforma definitiva para personal trainers que buscam resultados extraordinários."
+      title: "Gestão do Personal",
+      subtitle: "Organize alunos, agenda e evolução em um só lugar."
     },
     {
       title: "Inteligência Artificial",
-      subtitle: "Gere protocolos personalizados em segundos e monitore a evolução com precisão."
+      subtitle: "Gere sugestões de treino em segundos e ajuste tudo antes de salvar."
     },
     {
-      title: "Gestão Exclusiva",
-      subtitle: "Organize sua agenda, financeiro e métricas em um único lugar."
+      title: "Rotina mais simples",
+      subtitle: "Acompanhe agenda, financeiro e métricas sem trocar de ferramenta."
     }
   ];
 
@@ -754,7 +754,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
             data-testid="demo-login-button"
             className="w-full h-14 bg-white/5 hover:bg-white/10 active:scale-[0.98] text-white font-bold rounded-2xl text-sm transition-all border border-white/10 uppercase tracking-wider"
           >
-            Modo Demonstração
+            Entrar em demonstração
           </button>
         </div>
 

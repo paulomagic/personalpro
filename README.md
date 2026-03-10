@@ -1,4 +1,4 @@
-# PersonalPro
+# Personal Pro
 
 Aplicação web para personal trainers com foco em gestão de alunos, treinos, agenda, financeiro, IA para prescrição e operação mobile-first.
 

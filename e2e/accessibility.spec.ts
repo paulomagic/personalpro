@@ -85,3 +85,14 @@ test('settings help modal has no serious accessibility violations', async ({ pag
   await expect(helpDialog).toBeVisible();
   await expectNoSeriousViolations(page);
 });
+
+test('quick workout execution screen has no serious accessibility violations', async ({ page }) => {
+  await page.goto('/');
+  await page.getByTestId('demo-login-button').click();
+  await page.getByTestId('dashboard-client-card-1').click();
+  await expect(page.getByTestId('quick-workout-button')).toBeVisible();
+  await page.getByTestId('quick-workout-button').click();
+  await expect(page.getByTestId('training-execution-screen')).toBeVisible();
+  await page.waitForLoadState('networkidle');
+  await expectNoSeriousViolations(page);
+});

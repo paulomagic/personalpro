@@ -310,7 +310,7 @@ export function exportAIBuilderWorkoutToPdf(result: any, selectedClient?: { name
     printWindow.document.write(`
         <html>
           <head>
-            <title>${escapeHtml(result.title || 'Treino Apex')}</title>
+            <title>${escapeHtml(result.title || 'Treino Personal Pro')}</title>
             <style>
               body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 40px; color: #1e293b; }
               h1 { color: #2563eb; font-size: 24px; margin-bottom: 10px; }

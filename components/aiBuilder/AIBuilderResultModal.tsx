@@ -389,7 +389,7 @@ const AIBuilderResultModal: React.FC<AIBuilderResultModalProps> = ({
             className="w-full h-14 text-white font-black rounded-2xl flex items-center justify-center gap-3 uppercase tracking-widest active:scale-95 transition-all bg-[linear-gradient(135deg,#1E3A8A,#3B82F6)] shadow-[0_8px_32px_rgba(30,58,138,0.35)]"
           >
             <span className="material-symbols-outlined">check_circle</span>
-            Salvar Protocolo
+            Salvar treino
           </button>
         </footer>
       </div>

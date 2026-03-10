@@ -16,7 +16,7 @@ const LOADING_MESSAGES = [
     'Otimizando volume de treinamento...',
     'Selecionando exercícios de alta sinergia...',
     'Ajustando densidade e descanso...',
-    'Finalizando protocolo de elite...'
+    'Finalizando sugestão de treino...'
 ];
 const aiBuilderFlowLogger = createScopedLogger('AIBuilderFlow');
 

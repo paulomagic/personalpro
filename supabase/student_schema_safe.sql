@@ -1,5 +1,5 @@
 -- ============================================
--- STUDENT MODE SCHEMA - PersonalPro (SAFE VERSION)
+-- STUDENT MODE SCHEMA - Personal Pro (SAFE VERSION)
 -- Remove policies antigas antes de criar novas
 -- Execute este SQL no Supabase SQL Editor
 -- ============================================

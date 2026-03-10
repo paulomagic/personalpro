@@ -48,7 +48,7 @@ interface StudentWorkoutState {
 const StudentView: React.FC<StudentViewProps> = ({
     clientId,
     studentName,
-    coachName = 'Seu Personal',
+    coachName = 'Personal responsavel',
     coachLogo,
     onCompleteWorkout,
     onBack

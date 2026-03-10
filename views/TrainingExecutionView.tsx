@@ -547,7 +547,7 @@ const TrainingExecutionView: React.FC<TrainingExecutionViewProps> = ({ workout, 
                 : currentSet === totalSets
                   ? 'Ir para próximo exercício'
                   : 'Concluir série atual'}
-              className="w-full h-20 bg-blue-600 hover:bg-blue-500 text-white rounded-[32px] font-black text-lg uppercase tracking-[0.2em] flex items-center justify-center gap-4 shadow-2xl shadow-blue-900/40 active:scale-95 transition-all animate-slide-up stagger-2"
+              className="w-full h-20 bg-blue-700 hover:bg-blue-600 text-white rounded-[32px] font-black text-lg uppercase tracking-[0.2em] flex items-center justify-center gap-4 shadow-2xl shadow-blue-950/40 active:scale-95 transition-all animate-slide-up stagger-2"
             >
               <span className="material-symbols-outlined text-3xl font-bold" aria-hidden="true">check</span>
               {currentSet === totalSets && currentExerciseIndex === exercises.length - 1

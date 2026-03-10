@@ -1,6 +1,6 @@
 -- ============================================
 -- MONTHLY SCHEDULE SCHEMA
--- Agendamento Mensal - PersonalPro
+-- Agendamento Mensal - Personal Pro
 -- ============================================
 
 -- ============ MONTHLY SCHEDULE TEMPLATES TABLE ============
@@ -174,4 +174,3 @@ CREATE TRIGGER trigger_update_batch_count_delete
   FOR EACH ROW
   WHEN (OLD.batch_id IS NOT NULL)
   EXECUTE FUNCTION update_batch_total_sessions();
-

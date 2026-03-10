@@ -62,7 +62,7 @@ const AIBuilderWizardStepGenerate: React.FC<AIBuilderWizardStepGenerateProps> = 
           <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-indigo-600 opacity-90 transition-all group-hover:opacity-100" />
           <div className="absolute inset-0 flex items-center justify-center gap-3 z-10">
             <span className="material-symbols-outlined text-white">bolt</span>
-            <span className="text-white font-black uppercase tracking-[0.2em] text-[13px] text-shadow-sm">Forjar Protocolo de Elite</span>
+            <span className="text-white font-black uppercase tracking-[0.2em] text-[13px] text-shadow-sm">Gerar sugestão de treino</span>
           </div>
         </button>
 

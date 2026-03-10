@@ -147,8 +147,8 @@ const AppContentRouter: React.FC<AppContentRouterProps> = ({
         ) : (
           <StudentView
             clientId={selectedClient?.id}
-            studentName={selectedClient?.name || 'Aluno Demo'}
-            coachName={user?.user_metadata?.name || 'Personal'}
+            studentName={selectedClient?.name || 'Aluno'}
+            coachName={user?.user_metadata?.name || 'Personal responsavel'}
             onCompleteWorkout={() => navigateTo(View.DASHBOARD)}
             onBack={() => selectedClient ? navigateTo(View.CLIENT_PROFILE, selectedClient) : navigateTo(View.DASHBOARD)}
           />
@@ -164,7 +164,7 @@ const AppContentRouter: React.FC<AppContentRouterProps> = ({
           <StudentView
             clientId={userProfile?.client_id || undefined}
             studentName={user?.user_metadata?.name || user?.user_metadata?.full_name || 'Aluno'}
-            coachName="Seu Personal"
+            coachName={user?.profile?.name || user?.user_metadata?.coach_name || 'Personal responsavel'}
             onCompleteWorkout={() => navigateTo(View.STUDENT)}
             onBack={() => navigateTo(View.STUDENT)}
           />

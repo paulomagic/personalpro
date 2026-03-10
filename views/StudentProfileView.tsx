@@ -202,7 +202,7 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({
             {/* Profile Info */}
             <div className="pt-6 px-6 text-center mb-6 animate-fade-in">
                 <h1 className="text-2xl font-black text-white">{studentName}</h1>
-                <p className="text-sm text-slate-500 mt-1">{clientData?.goal || 'Definir objetivo'}</p>
+                <p className="text-sm text-slate-500 mt-1">{clientData?.goal || 'Objetivo ainda nao informado'}</p>
 
                 {/* Streak Badge */}
                 <div className="inline-flex items-center gap-2 mt-3 px-4 py-2 bg-blue-500/10 border border-blue-500/20 rounded-full">

@@ -472,7 +472,7 @@ Responda APENAS com JSON puro:
   "objective": "Estratégia geral",
   "splits": [
     {
-      "name": "Treino A",
+      "name": "Sessão 1",
       "focus": "Superior - Push",
       "intentions": [
         {

@@ -1,5 +1,5 @@
 -- ============================================
--- LOGGING INFRASTRUCTURE - PersonalPro
+-- LOGGING INFRASTRUCTURE - Personal Pro
 -- Execute este SQL no Supabase SQL Editor
 -- ============================================
 

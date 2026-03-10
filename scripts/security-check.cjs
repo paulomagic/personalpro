@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
 
-console.log('\x1b[36m%s\x1b[0m', '🛡️  Iniciando Verificação de Segurança PersonalPro...');
+console.log('\x1b[36m%s\x1b[0m', '🛡️  Iniciando Verificação de Segurança Personal Pro...');
 
 let hasErrors = false;
 const OPTIONAL_ENV_KEYS = new Set(['VITE_TURNSTILE_SITE_KEY', 'VITE_CAPTCHA_STRICT_MODE', 'VITE_AUTH_GUARD_STRICT_MODE']);

@@ -22,7 +22,7 @@ const AIBuilderLoadingScreen: React.FC<AIBuilderLoadingScreenProps> = ({
                         <span className="material-symbols-outlined text-white text-[48px]">psychology</span>
                     </div>
 
-                    <h2 className="text-2xl font-black text-white mb-4 tracking-tight">PersonalPro IA</h2>
+                    <h2 className="text-2xl font-black text-white mb-4 tracking-tight">Personal Pro IA</h2>
                     <div className="h-6 overflow-hidden">
                         <p className="text-xs font-black uppercase tracking-[0.2em] text-[#3B82F6]">
                             {messages[loadingMessageIndex]}

@@ -6,6 +6,7 @@ import { getClients } from '../services/supabase/domains/clientsDomain';
 import { PaymentCardSkeleton } from '../components/Skeleton';
 import EmptyState from '../components/EmptyState';
 import PageHeader from '../components/PageHeader';
+import DemoModeNotice from '../components/DemoModeNotice';
 import { createScopedLogger } from '../services/appLogger';
 
 const FinanceOverviewChart = lazy(() => import('../components/FinanceOverviewChart'));
@@ -29,6 +30,8 @@ interface Payment {
     clientAvatar: string;
     amount: number;
     dueDate: string;
+    dueDateIso?: string;
+    paidDateIso?: string;
     status: 'paid' | 'pending' | 'overdue';
     plan: string;
     phone?: string;
@@ -53,6 +56,35 @@ const paymentStatusIconClassName: Record<Payment['status'], string> = {
     pending: 'text-[#030712]'
 };
 
+const buildFinanceHistory = (payments: Payment[]) => {
+    const now = new Date();
+    const monthKeys = Array.from({ length: 4 }, (_, index) => {
+        const monthDate = new Date(now.getFullYear(), now.getMonth() - (3 - index), 1);
+        return {
+            key: `${monthDate.getFullYear()}-${monthDate.getMonth()}`,
+            label: monthDate.toLocaleDateString('pt-BR', { month: 'short' }).replace('.', ''),
+            date: monthDate
+        };
+    });
+
+    return monthKeys.map(({ key, label, date }) => {
+        const amount = payments
+            .filter((payment) => payment.status === 'paid')
+            .filter((payment) => {
+                const sourceDate = payment.paidDateIso || payment.dueDateIso;
+                if (!sourceDate) return false;
+                const parsed = new Date(sourceDate);
+                return parsed.getFullYear() === date.getFullYear() && parsed.getMonth() === date.getMonth();
+            })
+            .reduce((sum, payment) => sum + payment.amount, 0);
+
+        return {
+            month: label.charAt(0).toUpperCase() + label.slice(1),
+            amount
+        };
+    });
+};
+
 const FinanceView: React.FC<FinanceViewProps> = ({ user, onBack }) => {
     const queryClient = useQueryClient();
     const [activeTab, setActiveTab] = useState<'overview' | 'pending' | 'history'>('overview');
@@ -70,6 +102,7 @@ const FinanceView: React.FC<FinanceViewProps> = ({ user, onBack }) => {
             clientAvatar: c.avatar || c.avatar_url || '',
             amount: 350 + i * 50,
             dueDate: new Date(new Date().setDate(10 + i)).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }),
+            dueDateIso: new Date(new Date().setDate(10 + i)).toISOString(),
             status: i % 3 === 0 ? 'paid' : i % 3 === 1 ? 'pending' : 'overdue' as any,
             plan: 'Premium',
             phone: c.phone || '',
@@ -110,6 +143,8 @@ const FinanceView: React.FC<FinanceViewProps> = ({ user, onBack }) => {
                         clientAvatar: p.clients?.avatar_url || '',
                         amount: p.amount,
                         dueDate: new Date(p.due_date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }),
+                        dueDateIso: p.due_date,
+                        paidDateIso: p.paid_date,
                         status: p.status as 'paid' | 'pending' | 'overdue',
                         plan: p.plan || 'Mensal',
                         phone: p.clients?.phone || ''
@@ -141,12 +176,7 @@ const FinanceView: React.FC<FinanceViewProps> = ({ user, onBack }) => {
         overdue: pendingPayments.filter(p => p.status === 'overdue').reduce((acc, p) => acc + p.amount, 0)
     };
 
-    const financeData = [
-        { month: 'Set', amount: 4900 },
-        { month: 'Out', amount: 6100 },
-        { month: 'Nov', amount: 5800 },
-        { month: 'Hoje', amount: stats.monthlyRevenue },
-    ];
+    const financeData = buildFinanceHistory(payments);
 
     const showToast = (message: string) => {
         setShowSuccessToast(message);
@@ -154,6 +184,12 @@ const FinanceView: React.FC<FinanceViewProps> = ({ user, onBack }) => {
     };
 
     const handleSendReminder = (payment: Payment) => {
+        if (user?.isDemo) {
+            showToast('Modo demonstração: cobranças não são enviadas.');
+            setShowPaymentModal(null);
+            return;
+        }
+
         const phone = payment.phone || '';
         const message = `Olá ${payment.clientName}! 🏋️‍♂️\n\nPassando para lembrar que sua fatura do *Plano ${payment.plan}* (vencimento ${payment.dueDate}) no valor de R$ ${payment.amount} está pendente.\n\nQualquer dúvida estou à disposição!`;
 
@@ -216,7 +252,7 @@ const FinanceView: React.FC<FinanceViewProps> = ({ user, onBack }) => {
     };
 
     const handleGenerateReport = () => {
-        const report = `📊 RELATÓRIO FINANCEIRO - APEX ULTRA\n\n` +
+        const report = `${user?.isDemo ? 'MODO DEMONSTRAÇÃO\n\n' : ''}Resumo financeiro - Personal Pro\n\n` +
             `💰 Receita Confirmada: R$ ${stats.monthlyRevenue.toLocaleString('pt-BR')}\n` +
             `⏳ Pendente: R$ ${stats.pending.toLocaleString('pt-BR')}\n` +
             `⚠️ Atrasado: R$ ${stats.overdue.toLocaleString('pt-BR')}\n\n` +
@@ -251,7 +287,7 @@ const FinanceView: React.FC<FinanceViewProps> = ({ user, onBack }) => {
             {/* AI Header */}
             <PageHeader
                 title="Financeiro"
-                subtitle="Fluxo de Caixa Elite"
+                subtitle="Pagamentos e recebimentos"
                 onBack={onBack}
                 accentColor="green"
                 rightSlot={
@@ -263,6 +299,10 @@ const FinanceView: React.FC<FinanceViewProps> = ({ user, onBack }) => {
                     </button>
                 }
             />
+
+            {user?.isDemo && (
+                <DemoModeNotice description="Os valores e pagamentos desta tela são exemplos. Alterações de status e relatórios servem apenas para simulação." />
+            )}
 
             {loading ? (
                 <div className="px-5 space-y-4">
@@ -305,7 +345,7 @@ const FinanceView: React.FC<FinanceViewProps> = ({ user, onBack }) => {
                                 <span
                                     className="mb-1 text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full flex items-center gap-1 bg-[rgba(0,255,136,0.1)] text-[#00FF88] border border-[rgba(0,255,136,0.15)]"
                                 >
-                                    <TrendingUp size={10} /> Live
+                                    <TrendingUp size={10} /> Histórico real
                                 </span>
                             </div>
 
@@ -429,7 +469,7 @@ const FinanceView: React.FC<FinanceViewProps> = ({ user, onBack }) => {
                         </div>
 
                         <div className="bg-slate-950/50 rounded-3xl p-6 mb-8 text-center border border-white/5">
-                            <p className="text-slate-500 text-[9px] uppercase tracking-[0.2em] font-black mb-1">Valor do Protocolo</p>
+                            <p className="text-slate-500 text-[9px] uppercase tracking-[0.2em] font-black mb-1">Valor do pagamento</p>
                             <p className="text-4xl font-black text-white tracking-tighter">R$ {showPaymentModal.amount}</p>
                         </div>
 

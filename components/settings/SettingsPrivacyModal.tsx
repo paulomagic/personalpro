@@ -194,6 +194,17 @@ export default function SettingsPrivacyModal({
                 </div>
               )}
 
+              {!deleteReadiness && (
+                <div className="rounded-2xl border border-white/5 bg-slate-950/50 p-3">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                    Escopo estimado da exclusão
+                  </p>
+                  <p className="mt-2 text-xs leading-5 text-slate-400">
+                    O app ainda não conseguiu carregar a estimativa de dados afetados. Você pode fechar e abrir novamente este painel antes de confirmar.
+                  </p>
+                </div>
+              )}
+
               <div>
                 <label className="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-400">
                   Observação opcional
@@ -227,7 +238,7 @@ export default function SettingsPrivacyModal({
                   setDeleteConfirmation('');
                   setDeleteNotes('');
                 }}
-                disabled={!canSubmitDeleteRequest}
+                disabled={!canSubmitDeleteRequest || !deleteReadiness}
                 className="w-full h-12 rounded-2xl border border-[rgba(248,113,113,0.2)] bg-[rgba(239,68,68,0.14)] text-xs font-black uppercase tracking-widest text-red-100 disabled:opacity-50"
               >
                 Confirmar Solicitação de Exclusão

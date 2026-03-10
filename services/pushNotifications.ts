@@ -1,4 +1,5 @@
-const PUSH_PREFS_STORAGE_KEY = 'apex_notifications';
+const PUSH_PREFS_STORAGE_KEY = 'personalpro_notifications';
+const LEGACY_PUSH_PREFS_STORAGE_KEY = 'apex_notifications';
 
 export interface NotificationPrefs {
     push: boolean;
@@ -30,8 +31,13 @@ export function loadNotificationPrefs(): NotificationPrefs {
 
     try {
         const raw = window.localStorage.getItem(PUSH_PREFS_STORAGE_KEY);
-        if (!raw) return { push: false, email: false, sms: true, promo: false };
-        const parsed = JSON.parse(raw);
+        const legacyRaw = window.localStorage.getItem(LEGACY_PUSH_PREFS_STORAGE_KEY);
+        const resolvedRaw = raw || legacyRaw;
+        if (!resolvedRaw) return { push: false, email: false, sms: true, promo: false };
+        if (!raw && legacyRaw) {
+            window.localStorage.setItem(PUSH_PREFS_STORAGE_KEY, legacyRaw);
+        }
+        const parsed = JSON.parse(resolvedRaw);
         return {
             push: Boolean(parsed?.push),
             email: Boolean(parsed?.email),

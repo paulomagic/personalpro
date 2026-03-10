@@ -410,7 +410,7 @@ const SportTrainingView: React.FC<SportTrainingViewProps> = ({ clientName = 'Alu
                                 </div>
                                 <div>
                                     <h4 className="font-bold text-white text-sm">Escada de Oxigênio</h4>
-                                    <p className="text-[10px] text-slate-500">Protocolo de intensidade crescente</p>
+                                    <p className="text-[10px] text-slate-500">Bloco com intensidade crescente</p>
                                 </div>
                             </div>
                             <button

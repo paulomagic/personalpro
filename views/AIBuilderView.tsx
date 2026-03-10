@@ -10,6 +10,7 @@ import AIBuilderWizardStepRisk from '../components/aiBuilder/AIBuilderWizardStep
 import AIBuilderWizardStepGenerate from '../components/aiBuilder/AIBuilderWizardStepGenerate';
 import AIBuilderErrorToast from '../components/aiBuilder/AIBuilderErrorToast';
 import AIBuilderLoadingScreen from '../components/aiBuilder/AIBuilderLoadingScreen';
+import DemoModeNotice from '../components/DemoModeNotice';
 import { fetchAllExercises } from '../services/exerciseService';
 
 interface AIBuilderViewProps {
@@ -252,7 +253,7 @@ const AIBuilderView: React.FC<AIBuilderViewProps> = ({ user, onBack, onDone }) =
     <div className="max-w-md mx-auto min-h-screen text-white selection:bg-blue-500/30 bg-[var(--bg-void)]">
       <PageHeader
         title="AI Builder"
-        subtitle="Protocolos de Elite"
+        subtitle="Sugestão assistida de treino"
         onBack={onBack}
         accentColor="blue"
       />
@@ -262,6 +263,13 @@ const AIBuilderView: React.FC<AIBuilderViewProps> = ({ user, onBack, onDone }) =
       )}
 
       <div className="px-6 space-y-8 pb-32">
+        {isDemo && (
+          <DemoModeNotice
+            className="mx-0 mb-0"
+            description="O AI Builder está usando alunos e exercícios de demonstração. Você pode testar o fluxo, mas o salvamento continua desabilitado."
+          />
+        )}
+
         <AIBuilderWizardHeader
           wizardStep={wizardStep}
           canAdvanceFromProfileStep={canAdvanceFromProfileStep}

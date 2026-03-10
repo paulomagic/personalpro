@@ -84,7 +84,7 @@ async function getAuthenticatedUserId(req: Request): Promise<string | null> {
 function getWebPushConfig() {
     const publicKey = Deno.env.get("WEB_PUSH_VAPID_PUBLIC_KEY") || "";
     const privateKey = Deno.env.get("WEB_PUSH_VAPID_PRIVATE_KEY") || "";
-    const subject = Deno.env.get("WEB_PUSH_SUBJECT") || "mailto:suporte@apex-personalpro.app";
+    const subject = Deno.env.get("WEB_PUSH_SUBJECT") || "mailto:suporte@personalpro.app";
 
     if (!publicKey || !privateKey) {
         throw new Error("missing_vapid_configuration");
@@ -187,12 +187,12 @@ serve(async (req: Request) => {
     try {
         getWebPushConfig();
         const body = await req.json() as SendPushRequest;
-        const title = String(body?.title || "Apex PersonalPro");
+        const title = String(body?.title || "Personal Pro");
         const notificationPayload = JSON.stringify({
             title,
             body: String(body?.body || "Teste de notificação enviado com sucesso."),
             url: String(body?.url || "/settings"),
-            tag: String(body?.tag || "apex-test-push"),
+            tag: String(body?.tag || "personalpro-test-push"),
             data: body?.data || {}
         });
 

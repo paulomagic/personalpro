@@ -232,7 +232,7 @@ const AdminSettingsView: React.FC<AdminSettingsViewProps> = ({ onBack }) => {
                     <div className={`rounded-2xl border px-4 py-3 ${providerHealthTone}`}>
                         <p className="text-xs font-black uppercase tracking-widest">Saúde do provider</p>
                         <p className="mt-1 text-sm font-semibold">
-                            {loading ? 'Carregando...' : (providerHealth?.reason || 'Sem dados recentes.')}
+                            {loading ? 'Carregando...' : (providerHealth?.reason || 'Ainda nao ha eventos recentes suficientes para avaliar o provider.')}
                         </p>
                     </div>
 
@@ -331,7 +331,7 @@ const AdminSettingsView: React.FC<AdminSettingsViewProps> = ({ onBack }) => {
                                         : 'text-emerald-300'
                             }`}>
                                 {providerHealth?.status === 'critical' ? <AlertTriangle size={14} /> : <Bell size={14} />}
-                                {loading ? 'Carregando...' : providerHealth?.status === 'critical' ? 'Ação imediata' : providerHealth?.status === 'warning' ? 'Monitorar' : 'Estável'}
+                                {loading ? 'Carregando...' : providerHealth?.status === 'critical' ? 'Revisar agora' : providerHealth?.status === 'warning' ? 'Acompanhar' : 'Operacao estavel'}
                             </span>
                         </div>
                     </div>
@@ -386,6 +386,11 @@ const AdminSettingsView: React.FC<AdminSettingsViewProps> = ({ onBack }) => {
                                             </p>
                                             {request.notes && (
                                                 <p className="mt-2 text-xs text-slate-400">{request.notes}</p>
+                                            )}
+                                            {request.request_type === 'delete' && (
+                                                <p className="mt-2 text-[11px] text-slate-500">
+                                                    A conclusao executa a limpeza/anonimizacao prevista no backend e registra auditoria da operacao.
+                                                </p>
                                             )}
                                         </div>
 

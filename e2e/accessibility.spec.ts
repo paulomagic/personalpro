@@ -86,6 +86,17 @@ test('settings help modal has no serious accessibility violations', async ({ pag
   await expectNoSeriousViolations(page);
 });
 
+test('settings privacy modal has no serious accessibility violations', async ({ page }) => {
+  await page.goto('/');
+  await page.getByTestId('demo-login-button').click();
+  await page.getByRole('button', { name: 'Abrir perfil' }).click();
+  await expect(page.getByText('Configurações')).toBeVisible();
+  await page.getByRole('button', { name: 'Privacidade e Dados' }).click();
+  const privacyDialog = page.getByRole('dialog', { name: 'Privacidade e Dados' });
+  await expect(privacyDialog).toBeVisible();
+  await expectNoSeriousViolations(page);
+});
+
 test('quick workout execution screen has no serious accessibility violations', async ({ page }) => {
   await page.goto('/');
   await page.getByTestId('demo-login-button').click();

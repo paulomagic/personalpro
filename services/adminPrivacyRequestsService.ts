@@ -20,6 +20,15 @@ export interface AdminPrivacyRequestsListResult {
     openDeleteRequests: number;
 }
 
+export interface AdminPrivacyDeleteProcessingResult {
+    appointments_deleted?: number;
+    payments_deleted?: number;
+    push_subscriptions_deleted?: number;
+    ai_logs_deleted?: number;
+    activity_logs_deleted?: number;
+    profile_deleted?: number;
+}
+
 const adminPrivacyLogger = createScopedLogger('AdminPrivacyRequestsService');
 
 export async function listAdminPrivacyRequests(limit = 20): Promise<AdminPrivacyRequestsListResult> {
@@ -53,7 +62,7 @@ export async function listAdminPrivacyRequests(limit = 20): Promise<AdminPrivacy
 export async function completeAdminDeletePrivacyRequest(
     requestId: string,
     resolutionNotes?: string
-): Promise<void> {
+): Promise<AdminPrivacyDeleteProcessingResult | null> {
     if (!supabase) {
         throw new Error('Supabase indisponível.');
     }
@@ -74,4 +83,8 @@ export async function completeAdminDeletePrivacyRequest(
     if (!data?.success) {
         throw new Error(data?.error || 'Falha ao concluir exclusão LGPD.');
     }
+
+    return data?.payload && typeof data.payload === 'object'
+        ? data.payload as AdminPrivacyDeleteProcessingResult
+        : null;
 }

@@ -19,6 +19,7 @@ import { CURRENT_PRIVACY_POLICY_VERSION } from '../services/privacyService';
 import {
     completeAdminDeletePrivacyRequest,
     listAdminPrivacyRequests,
+    type AdminPrivacyDeleteProcessingResult,
     type AdminPrivacyRequestSummary
 } from '../services/adminPrivacyRequestsService';
 
@@ -58,6 +59,21 @@ function privacyStatusTone(status: AdminPrivacyRequestSummary['status']): string
     if (status === 'rejected') return 'bg-rose-500/15 text-rose-200 border-rose-500/20';
     if (status === 'in_review') return 'bg-amber-500/15 text-amber-100 border-amber-500/20';
     return 'bg-blue-500/15 text-blue-100 border-blue-500/20';
+}
+
+function buildDeleteCompletionMessage(payload: AdminPrivacyDeleteProcessingResult | null): string {
+    if (!payload) return 'Exclusão LGPD concluída com sucesso.';
+
+    const parts = [
+        `perfil ${payload.profile_deleted || 0}`,
+        `agenda ${payload.appointments_deleted || 0}`,
+        `pagamentos ${payload.payments_deleted || 0}`,
+        `push ${payload.push_subscriptions_deleted || 0}`,
+        `logs IA ${payload.ai_logs_deleted || 0}`,
+        `logs app ${payload.activity_logs_deleted || 0}`
+    ];
+
+    return `Exclusão LGPD concluída. Itens processados: ${parts.join(' • ')}.`;
 }
 
 const AdminSettingsView: React.FC<AdminSettingsViewProps> = ({ onBack }) => {
@@ -115,8 +131,8 @@ const AdminSettingsView: React.FC<AdminSettingsViewProps> = ({ onBack }) => {
 
     const completeDeleteMutation = useMutation({
         mutationFn: (requestId: string) => completeAdminDeletePrivacyRequest(requestId),
-        onSuccess: async () => {
-            setPrivacyFeedback({ type: 'success', message: 'Exclusão LGPD concluída com sucesso.' });
+        onSuccess: async (payload) => {
+            setPrivacyFeedback({ type: 'success', message: buildDeleteCompletionMessage(payload) });
             await queryClient.invalidateQueries({ queryKey: ['admin-privacy-requests'] });
         },
         onError: (error) => {
@@ -225,14 +241,14 @@ const AdminSettingsView: React.FC<AdminSettingsViewProps> = ({ onBack }) => {
                         </div>
                         <div>
                             <h2 className="font-bold">Operação de IA</h2>
-                            <p className="text-xs text-slate-500">Métricas atuais, sem placeholder</p>
+                            <p className="text-xs text-slate-500">Métricas atuais do ambiente</p>
                         </div>
                     </div>
 
                     <div className={`rounded-2xl border px-4 py-3 ${providerHealthTone}`}>
                         <p className="text-xs font-black uppercase tracking-widest">Saúde do provider</p>
                         <p className="mt-1 text-sm font-semibold">
-                            {loading ? 'Carregando...' : (providerHealth?.reason || 'Ainda nao ha eventos recentes suficientes para avaliar o provider.')}
+                            {loading ? 'Carregando...' : (providerHealth?.reason || 'Ainda não há eventos recentes suficientes para avaliar o provider.')}
                         </p>
                     </div>
 
@@ -331,7 +347,7 @@ const AdminSettingsView: React.FC<AdminSettingsViewProps> = ({ onBack }) => {
                                         : 'text-emerald-300'
                             }`}>
                                 {providerHealth?.status === 'critical' ? <AlertTriangle size={14} /> : <Bell size={14} />}
-                                {loading ? 'Carregando...' : providerHealth?.status === 'critical' ? 'Revisar agora' : providerHealth?.status === 'warning' ? 'Acompanhar' : 'Operacao estavel'}
+                                {loading ? 'Carregando...' : providerHealth?.status === 'critical' ? 'Revisar agora' : providerHealth?.status === 'warning' ? 'Acompanhar' : 'Operação estável'}
                             </span>
                         </div>
                     </div>
@@ -389,7 +405,7 @@ const AdminSettingsView: React.FC<AdminSettingsViewProps> = ({ onBack }) => {
                                             )}
                                             {request.request_type === 'delete' && (
                                                 <p className="mt-2 text-[11px] text-slate-500">
-                                                    A conclusao executa a limpeza/anonimizacao prevista no backend e registra auditoria da operacao.
+                                                    A conclusão executa a limpeza e a anonimização previstas no backend e registra auditoria da operação.
                                                 </p>
                                             )}
                                         </div>

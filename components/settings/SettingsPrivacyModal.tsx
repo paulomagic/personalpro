@@ -61,7 +61,7 @@ export default function SettingsPrivacyModal({
           <span className="material-symbols-outlined text-3xl text-teal-300">privacy_tip</span>
         </div>
         <h3 className="text-2xl font-black text-white">Privacidade e Dados</h3>
-        <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mt-2">LGPD operacional</p>
+        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-2">LGPD operacional</p>
       </div>
 
       <div className="space-y-3 mb-8">

@@ -104,7 +104,7 @@ export default function StudentSplitSelection({
                 {!clientId && (
                     <div className="mt-6 p-4 bg-blue-500/10 border border-blue-500/20 rounded-2xl">
                         <p className="text-xs text-blue-400 text-center">
-                            Modo demonstração - treino de exemplo
+                            Modo demonstração: este treino é apenas para teste e não salva progresso.
                         </p>
                     </div>
                 )}

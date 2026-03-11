@@ -122,7 +122,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user, onBack, onLogout }) =
             `App: Personal Pro`,
             `Data: ${new Date().toISOString()}`,
             `Usuário: ${coachEmail}`,
-            `Modo demo: ${isDemo ? 'sim' : 'não'}`,
+            `Sessão: ${isDemo ? 'demonstração' : 'real'}`,
             `Tema: ${selectedTheme}`,
             `Push ativo: ${notifState.push ? 'sim' : 'não'}`,
             `Navegador: ${getBrowserSummary()}`
